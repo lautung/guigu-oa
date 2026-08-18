@@ -8,3 +8,18 @@ export function findPending(page, limit) {
     method: 'get'
   })
 }
+
+export function show(id) {
+  return request({
+    url: `${api_name}/show/${id}`,
+    method: 'get'
+  })
+}
+
+export function approve(approvalVo) {
+  return request({
+    url: `${api_name}/approve`,
+    method: 'post',
+    data: approvalVo
+  })
+}

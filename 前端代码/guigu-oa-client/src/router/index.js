@@ -18,6 +18,12 @@ const workChildren = [
     meta: { title: '待处理' }
   },
   {
+    path: 'pending/:id/:taskId',
+    name: 'PendingDetail',
+    component: () => import('@/views/work/pending/detail'),
+    meta: { title: '审批详情' }
+  },
+  {
     path: 'processed',
     name: 'WorkProcessed',
     component: () => import('@/views/work/StubPage'),

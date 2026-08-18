@@ -9,23 +9,20 @@
         v-for="item in list"
         :key="`${item.id}-${item.taskId}`"
         class="pending-item"
+        @click="openDetail(item)"
       >
         <div class="item-header">
           <h3>{{ item.title }}</h3>
           <span class="time">{{ item.createTime }}</span>
         </div>
-        <div v-if="item.formValues && item.formValues.formShowData" class="item-fields">
-          <p
-            v-for="(value, key) in item.formValues.formShowData"
-            v-show="key !== '图片'"
-            :key="key"
-          >
-            {{ key }}：<span v-html="value" />
+        <div v-if="item.summaryFields.length" class="item-fields">
+          <p v-for="field in item.summaryFields" :key="field.key">
+            {{ field.key }}：<span v-html="field.value" />
           </p>
         </div>
         <div class="item-status">
-          <el-tag size="mini" :type="statusTagType(item.status)">
-            {{ statusLabel(item.status) }}
+          <el-tag size="mini" :type="item.statusTagType">
+            {{ item.statusLabel }}
           </el-tag>
         </div>
       </div>
@@ -46,6 +43,7 @@
 
 <script>
 import { findPending } from '@/api/process'
+import { presentListPage } from '@/work/pending-flow'
 
 export default {
   name: 'PendingList',
@@ -62,27 +60,12 @@ export default {
     this.fetchList()
   },
   methods: {
-    statusLabel(status) {
-      if (status === 1) return '审批中'
-      if (status === 2) return '审批通过'
-      if (status === -1) return '审批拒绝'
-      return '未知'
-    },
-    statusTagType(status) {
-      if (status === 1) return 'warning'
-      if (status === 2) return 'success'
-      if (status === -1) return 'danger'
-      return 'info'
-    },
     fetchList() {
       this.loading = true
       findPending(this.pageNo, this.pageSize).then(response => {
-        const page = response.data
-        this.total = page.total || 0
-        this.list = (page.records || []).map(item => ({
-          ...item,
-          formValues: item.formValues ? JSON.parse(item.formValues) : null
-        }))
+        const page = presentListPage(response.data || {})
+        this.total = page.total
+        this.list = page.records
       }).finally(() => {
         this.loading = false
       })
@@ -90,6 +73,9 @@ export default {
     handlePageChange(page) {
       this.pageNo = page
       this.fetchList()
+    },
+    openDetail(item) {
+      this.$router.push(item.detailPath)
     }
   }
 }
@@ -110,6 +96,11 @@ export default {
   padding: 16px;
   margin-bottom: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .item-header {
@@ -140,6 +131,11 @@ export default {
   p {
     margin: 4px 0;
     line-height: 1.5;
+  }
+
+  ::v-deep img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
