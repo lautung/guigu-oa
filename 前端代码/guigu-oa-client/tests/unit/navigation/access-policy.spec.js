@@ -104,6 +104,24 @@ describe('navigation/access-policy', () => {
       expect(paths).not.toContain('/wechat')
       expect(paths).not.toContain('/dashboard')
     })
+
+    it('removes Activiti online iframe designer entries', () => {
+      const filtered = filterConfigMenus([
+        {
+          path: '/processSet',
+          meta: { title: '审批设置' },
+          children: [
+            { path: 'processTemplate', meta: { title: '审批模板' } },
+            { path: 'onlineProcessSet', component: 'processSet/processTemplate/onlineProcessSet', meta: { title: '在线流程设置' } }
+          ]
+        }
+      ])
+
+      const childPaths = (filtered[0].children || []).map(item => item.path)
+      expect(childPaths).toContain('/processSet/processTemplate')
+      expect(childPaths).not.toContain('/processSet/onlineProcessSet')
+    })
+
   })
 
   describe('buildSidebarTree', () => {
@@ -178,6 +196,18 @@ describe('navigation/access-policy', () => {
       })).toEqual({
         action: 'allow'
       })
+    })
+
+    it('blocks 审批模板 and 审批模板设置 on mobile', () => {
+      expect(resolveViewportPolicy({
+        path: '/processSet/processTemplate',
+        viewportWidth: 375
+      }).action).toBe('block')
+
+      expect(resolveViewportPolicy({
+        path: '/processSet/templateSet',
+        viewportWidth: 375
+      }).action).toBe('block')
     })
 
     it('allows config routes on desktop', () => {

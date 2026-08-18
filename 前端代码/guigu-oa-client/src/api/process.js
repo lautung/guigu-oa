@@ -37,3 +37,10 @@ export function findStarted(page, limit) {
     method: 'get'
   })
 }
+
+export function findProcessType() {
+  return request({
+    url: `${api_name}/findProcessType`,
+    method: 'get'
+  })
+}

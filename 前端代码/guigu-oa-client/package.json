@@ -9,6 +9,8 @@
     "test:unit": "jest --clearCache && vue-cli-service test:unit"
   },
   "dependencies": {
+    "@form-create/designer": "1.0.8",
+    "@form-create/element-ui": "2.5.17",
     "axios": "0.18.1",
     "core-js": "3.6.5",
     "element-ui": "2.13.2",

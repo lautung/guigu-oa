@@ -28,7 +28,8 @@ export const WORK_BUILTIN_ITEMS = [
 
 const EXCLUDED_CONFIG_PATH_PATTERNS = [
   /^\/wechat/i,
-  /^\/dashboard/i
+  /^\/dashboard/i,
+  /onlineProcessSet/i
 ]
 
 const EXCLUDED_CONFIG_COMPONENTS = [

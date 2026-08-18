@@ -1,5 +1,6 @@
 import {
   emptyForm,
+  findAllRequest,
   getRequest,
   listRequest,
   presentForm,
@@ -86,6 +87,13 @@ describe('config/process-type', () => {
       expect(removeRequest(1)).toEqual({
         method: 'delete',
         url: '/admin/process/processType/remove/1'
+      })
+    })
+
+    it('lists all 审批类型 with GET /admin/process/processType/findAll', () => {
+      expect(findAllRequest()).toEqual({
+        method: 'get',
+        url: '/admin/process/processType/findAll'
       })
     })
   })

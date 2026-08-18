@@ -8,7 +8,7 @@ const workChildren = [
   {
     path: 'start',
     name: 'WorkStart',
-    component: () => import('@/views/work/StubPage'),
+    component: () => import('@/views/work/start/index'),
     meta: { title: '发起审批' }
   },
   {
@@ -95,13 +95,13 @@ const processSetChildren = [
   {
     path: 'processTemplate',
     name: 'ProcessTemplate',
-    component: configPlaceholder,
+    component: () => import('@/views/config/processTemplate/index'),
     meta: { title: '审批模板' }
   },
   {
     path: 'templateSet',
     name: 'TemplateSet',
-    component: configPlaceholder,
+    component: () => import('@/views/config/processTemplate/templateSet'),
     meta: { title: '审批模板设置' },
     hidden: true
   }

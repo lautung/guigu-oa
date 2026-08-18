@@ -39,6 +39,13 @@ export function removeRequest(id) {
   }
 }
 
+export function findAllRequest() {
+  return {
+    method: 'get',
+    url: `${PROCESS_TYPE_API}/findAll`
+  }
+}
+
 export function writeRequest(form) {
   if (form.id) {
     return {

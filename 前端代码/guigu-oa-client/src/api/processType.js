@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 import {
+  findAllRequest,
   getRequest,
   listRequest,
   removeRequest,
@@ -20,4 +21,8 @@ export function saveOrUpdate(form) {
 
 export function removeById(id) {
   return request(removeRequest(id))
+}
+
+export function findAll() {
+  return request(findAllRequest())
 }
