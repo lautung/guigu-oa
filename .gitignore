@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+unpackage/
+
+# Build output
+dist/
+target/
+out/
+*.class
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sw?
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
