@@ -163,6 +163,23 @@ describe('navigation/access-policy', () => {
       })
     })
 
+    it('blocks 审批类型 on mobile and allows it on desktop', () => {
+      expect(resolveViewportPolicy({
+        path: '/processSet/processType',
+        viewportWidth: 375
+      })).toEqual({
+        action: 'block',
+        message: DESKTOP_CONFIG_HINT,
+        redirectTo: ROUTES.MOBILE_CONFIG_BLOCK
+      })
+      expect(resolveViewportPolicy({
+        path: '/processSet/processType',
+        viewportWidth: 1200
+      })).toEqual({
+        action: 'allow'
+      })
+    })
+
     it('allows config routes on desktop', () => {
       expect(resolveViewportPolicy({ path: '/system/sysUser', viewportWidth: 1200 })).toEqual({
         action: 'allow'

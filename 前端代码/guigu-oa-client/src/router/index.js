@@ -89,7 +89,7 @@ const processSetChildren = [
   {
     path: 'processType',
     name: 'ProcessType',
-    component: configPlaceholder,
+    component: () => import('@/views/config/processType/index'),
     meta: { title: '审批类型' }
   },
   {
