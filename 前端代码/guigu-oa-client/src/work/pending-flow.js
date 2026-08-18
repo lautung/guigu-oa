@@ -44,7 +44,15 @@ export function pendingDetailPath(id, taskId) {
   return `${ROUTES.PENDING}/${id}/${taskId}`
 }
 
-export function presentListItem(record) {
+export function processedDetailPath(id, taskId) {
+  return `${ROUTES.PROCESSED}/${id}/${taskId}`
+}
+
+export function startedDetailPath(id, taskId) {
+  return `${ROUTES.STARTED}/${id}/${taskId}`
+}
+
+export function presentListItem(record, detailPathBuilder = pendingDetailPath) {
   const formValues = parseFormValues(record.formValues)
   const formShowData = formValues.formShowData || {}
 
@@ -57,19 +65,35 @@ export function presentListItem(record) {
     statusLabel: statusLabel(record.status),
     statusTagType: statusTagType(record.status),
     summaryFields: summaryFields(formShowData),
-    detailPath: pendingDetailPath(record.id, record.taskId)
+    detailPath: detailPathBuilder(record.id, record.taskId)
   }
 }
 
-export function presentListPage(page = {}) {
+export function presentListPage(page = {}, detailPathBuilder = pendingDetailPath) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(record => presentListItem(record, detailPathBuilder)),
     total: page.total || 0,
     pages: page.pages || 0
   }
 }
 
-export function presentDetail(payload = {}) {
+export function presentProcessedListItem(record) {
+  return presentListItem(record, processedDetailPath)
+}
+
+export function presentStartedListItem(record) {
+  return presentListItem(record, startedDetailPath)
+}
+
+export function presentProcessedListPage(page = {}) {
+  return presentListPage(page, processedDetailPath)
+}
+
+export function presentStartedListPage(page = {}) {
+  return presentListPage(page, startedDetailPath)
+}
+
+export function presentDetail(payload = {}, { readOnly = false } = {}) {
   const process = payload.process || {}
   const formValues = parseFormValues(process.formValues)
   const formShowData = formValues.formShowData || {}
@@ -87,8 +111,14 @@ export function presentDetail(payload = {}) {
       description: record.description,
       createTime: record.createTime
     })),
-    canApprove: !!payload.isApprove
+    canApprove: !readOnly && !!payload.isApprove
   }
+}
+
+export const READ_ONLY_DETAIL_ROUTE_NAMES = ['ProcessedDetail', 'StartedDetail']
+
+export function isReadOnlyDetailRoute(routeName) {
+  return READ_ONLY_DETAIL_ROUTE_NAMES.includes(routeName)
 }
 
 export function buildApprovalPayload({ processId, taskId, status }) {

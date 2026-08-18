@@ -26,14 +26,26 @@ const workChildren = [
   {
     path: 'processed',
     name: 'WorkProcessed',
-    component: () => import('@/views/work/StubPage'),
+    component: () => import('@/views/work/processed/index'),
     meta: { title: '已处理' }
+  },
+  {
+    path: 'processed/:id/:taskId',
+    name: 'ProcessedDetail',
+    component: () => import('@/views/work/pending/detail'),
+    meta: { title: '审批详情' }
   },
   {
     path: 'started',
     name: 'WorkStarted',
-    component: () => import('@/views/work/StubPage'),
+    component: () => import('@/views/work/started/index'),
     meta: { title: '已发起' }
+  },
+  {
+    path: 'started/:id/:taskId',
+    name: 'StartedDetail',
+    component: () => import('@/views/work/pending/detail'),
+    meta: { title: '审批详情' }
   },
   {
     path: 'profile',

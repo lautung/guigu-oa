@@ -23,3 +23,17 @@ export function approve(approvalVo) {
     data: approvalVo
   })
 }
+
+export function findProcessed(page, limit) {
+  return request({
+    url: `${api_name}/findProcessed/${page}/${limit}`,
+    method: 'get'
+  })
+}
+
+export function findStarted(page, limit) {
+  return request({
+    url: `${api_name}/findStarted/${page}/${limit}`,
+    method: 'get'
+  })
+}

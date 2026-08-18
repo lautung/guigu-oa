@@ -133,6 +133,22 @@ describe('work/pending-flow', () => {
       ])
       expect(detail.canApprove).toBe(true)
     })
+
+    it('forces read-only detail when opened from processed or started routes', () => {
+      const payload = {
+        process: {
+          id: 12,
+          title: '张三提交的请假申请',
+          createTime: '2026-08-18 10:00:00',
+          status: 1,
+          formValues: FORM_VALUES
+        },
+        processRecordList: [],
+        isApprove: true
+      }
+
+      expect(presentDetail(payload, { readOnly: true }).canApprove).toBe(false)
+    })
   })
 
   describe('approve / reject', () => {

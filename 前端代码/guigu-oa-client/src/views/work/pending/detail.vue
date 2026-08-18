@@ -44,6 +44,7 @@
 import { show, approve } from '@/api/process'
 import {
   buildApprovalPayload,
+  isReadOnlyDetailRoute,
   postApprovalRoute,
   presentDetail
 } from '@/work/pending-flow'
@@ -64,7 +65,9 @@ export default {
     fetchDetail() {
       this.loading = true
       show(this.$route.params.id).then(response => {
-        this.detail = presentDetail(response.data || {})
+        this.detail = presentDetail(response.data || {}, {
+          readOnly: isReadOnlyDetailRoute(this.$route.name)
+        })
       }).finally(() => {
         this.loading = false
       })
@@ -83,6 +86,15 @@ export default {
       })
     },
     goBack() {
+      const routeName = this.$route.name
+      if (routeName === 'ProcessedDetail') {
+        this.$router.push({ name: 'WorkProcessed' })
+        return
+      }
+      if (routeName === 'StartedDetail') {
+        this.$router.push({ name: 'WorkStarted' })
+        return
+      }
       this.$router.push({ name: 'Pending' })
     }
   }
