@@ -4,56 +4,56 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import com.atguigu.model.base.BaseEntity;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-@ApiModel(description = "用户")
+@Schema(description = "用户")
 @TableName("sys_user")
 public class SysUser extends BaseEntity {
 	
 	private static final long serialVersionUID = 1L;
 
-	@ApiModelProperty(value = "用户名")
+	@Schema(description = "用户名")
 	@TableField("username")
 	private String username;
 
-	@ApiModelProperty(value = "密码")
+	@Schema(description = "密码")
 	@TableField("password")
 	private String password;
 
-	@ApiModelProperty(value = "姓名")
+	@Schema(description = "姓名")
 	@TableField("name")
 	private String name;
 
-	@ApiModelProperty(value = "手机")
+	@Schema(description = "手机")
 	@TableField("phone")
 	private String phone;
 
-	@ApiModelProperty(value = "头像地址")
+	@Schema(description = "头像地址")
 	@TableField("head_url")
 	private String headUrl;
 
-	@ApiModelProperty(value = "部门id")
+	@Schema(description = "部门id")
 	@TableField("dept_id")
 	private Long deptId;
 
-	@ApiModelProperty(value = "岗位id")
+	@Schema(description = "岗位id")
 	@TableField("post_id")
 	private Long postId;
 
-	@ApiModelProperty(value = "描述")
+	@Schema(description = "描述")
 	@TableField("description")
 	private String description;
 
-	@ApiModelProperty(value = "openId")
+	@Schema(description = "openId")
 	@TableField("open_id")
 	private String openId;
 
-	@ApiModelProperty(value = "状态（1：正常 0：停用）")
+	@Schema(description = "状态（1：正常 0：停用）")
 	@TableField("status")
 	private Integer status;
 

@@ -6,7 +6,7 @@ import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.parameters.P;
 import org.springframework.util.ResourceUtils;
@@ -35,7 +35,7 @@ public class OaProcessTemplateController {
     private OaProcessTemplateService processTemplateService;
 
     //分页查询审批模板
-    @ApiOperation("获取分页审批模板数据")
+    @Operation(summary = "获取分页审批模板数据")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit) {

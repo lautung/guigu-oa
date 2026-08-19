@@ -1,15 +1,15 @@
 package com.atguigu.vo.wechat;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
 public class BindPhoneVo {
 
-    @ApiModelProperty(value = "手机")
+    @Schema(description = "手机")
     private String phone;
 
-    @ApiModelProperty(value = "openId")
+    @Schema(description = "openId")
     private String openId;
 }

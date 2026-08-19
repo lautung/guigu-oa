@@ -3,35 +3,35 @@ package com.atguigu.model.system;
 import com.atguigu.model.base.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.util.Date;
 
 @Data
-@ApiModel(description = "SysLoginLog")
+@Schema(description = "SysLoginLog")
 @TableName("sys_login_log")
 public class SysLoginLog extends BaseEntity {
 
 	private static final long serialVersionUID = 1L;
 
-	@ApiModelProperty(value = "用户账号")
+	@Schema(description = "用户账号")
 	@TableField("username")
 	private String username;
 
-	@ApiModelProperty(value = "登录IP地址")
+	@Schema(description = "登录IP地址")
 	@TableField("ipaddr")
 	private String ipaddr;
 
-	@ApiModelProperty(value = "登录状态（0成功 1失败）")
+	@Schema(description = "登录状态（0成功 1失败）")
 	@TableField("status")
 	private Integer status;
 
-	@ApiModelProperty(value = "提示信息")
+	@Schema(description = "提示信息")
 	@TableField("msg")
 	private String msg;
 
-	@ApiModelProperty(value = "访问时间")
+	@Schema(description = "访问时间")
 	@TableField("access_time")
 	private Date accessTime;
 

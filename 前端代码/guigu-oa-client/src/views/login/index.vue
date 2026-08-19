@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <el-form
-      ref="loginForm"
+      ref="loginFormRef"
       :model="loginForm"
       :rules="loginRules"
       class="login-form"
@@ -15,9 +15,8 @@
         <el-input
           v-model="loginForm.username"
           placeholder="用户名"
-          prefix-icon="el-icon-user"
           tabindex="1"
-          @keyup.enter.native="handleLogin"
+          @keyup.enter="handleLogin"
         />
       </el-form-item>
 
@@ -26,10 +25,9 @@
           v-model="loginForm.password"
           type="password"
           placeholder="密码"
-          prefix-icon="el-icon-lock"
           tabindex="2"
           show-password
-          @keyup.enter.native="handleLogin"
+          @keyup.enter="handleLogin"
         />
       </el-form-item>
 
@@ -37,7 +35,7 @@
         :loading="loading"
         type="primary"
         class="login-btn"
-        @click.native.prevent="handleLogin"
+        @click="handleLogin"
       >
         登录
       </el-button>
@@ -45,46 +43,50 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/store/modules/user'
 import { buildLoginRedirectPath } from '@/navigation/access-policy'
 
-export default {
-  name: 'Login',
-  data() {
-    return {
-      loginForm: {
-        username: '',
-        password: ''
-      },
-      loginRules: {
-        username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-        password: [{ required: true, message: '请输入密码', trigger: 'blur', min: 6 }]
-      },
-      loading: false,
-      redirect: undefined
-    }
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+
+const loginFormRef = ref(null)
+const loading = ref(false)
+const redirect = ref(undefined)
+
+const loginForm = ref({
+  username: '',
+  password: ''
+})
+
+const loginRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur', min: 6 }]
+}
+
+watch(
+  () => route.query,
+  query => {
+    redirect.value = query && query.redirect
   },
-  watch: {
-    $route: {
-      handler(route) {
-        this.redirect = route.query && route.query.redirect
-      },
-      immediate: true
+  { immediate: true }
+)
+
+async function handleLogin() {
+  if (!loginFormRef.value) return
+  await loginFormRef.value.validate(async valid => {
+    if (!valid) return
+    loading.value = true
+    try {
+      await userStore.login(loginForm.value)
+      router.push({ path: buildLoginRedirectPath(redirect.value) })
+    } finally {
+      loading.value = false
     }
-  },
-  methods: {
-    handleLogin() {
-      this.$refs.loginForm.validate(valid => {
-        if (!valid) return
-        this.loading = true
-        this.$store.dispatch('user/login', this.loginForm).then(() => {
-          this.$router.push({ path: buildLoginRedirectPath(this.redirect) })
-        }).finally(() => {
-          this.loading = false
-        })
-      })
-    }
-  }
+  })
 }
 </script>
 

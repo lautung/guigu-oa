@@ -10,8 +10,8 @@ import com.atguigu.vo.system.SysUserQueryVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
  * @author atguigu
  * @since 2023-02-02
  */
-@Api(tags = "用户管理接口")
+@Tag(name = "用户管理接口")
 @RestController
 @RequestMapping("/admin/system/sysUser")
 public class SysUserController {
@@ -40,7 +40,7 @@ public class SysUserController {
     }
 
     //用户条件分页查询
-    @ApiOperation("用户条件分页查询")
+    @Operation(summary = "用户条件分页查询")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit,

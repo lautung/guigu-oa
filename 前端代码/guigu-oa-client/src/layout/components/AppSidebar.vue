@@ -3,10 +3,9 @@
     <nav v-for="group in sidebarTree" :key="group.key" class="sidebar-group">
       <div class="group-title" @click="toggleGroup(group.key)">
         <span>{{ group.title }}</span>
-        <i
-          v-if="group.key === 'config'"
-          :class="groupCollapsed[group.key] ? 'el-icon-arrow-down' : 'el-icon-arrow-up'"
-        />
+        <span v-if="group.key === 'config'">
+          {{ groupCollapsed[group.key] ? '▼' : '▲' }}
+        </span>
       </div>
 
       <p v-if="group.hint && groupCollapsed[group.key]" class="group-hint">
@@ -25,62 +24,51 @@
   </aside>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script setup>
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
+import { useUserStore } from '@/store/modules/user'
 import { buildSidebarTree, isMobileViewport } from '@/navigation/access-policy'
-import SidebarNode from './SidebarNode'
+import SidebarNode from './SidebarNode.vue'
 
-export default {
-  name: 'AppSidebar',
-  components: { SidebarNode },
-  data() {
-    return {
-      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1024,
-      groupCollapsed: {}
-    }
+const route = useRoute()
+const userStore = useUserStore()
+
+const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+const groupCollapsed = ref({})
+
+const activePath = computed(() => route.path)
+
+const sidebarTree = computed(() =>
+  buildSidebarTree({
+    menus: userStore.menus,
+    viewportWidth: viewportWidth.value
+  })
+)
+
+watch(
+  sidebarTree,
+  tree => {
+    const collapsed = {}
+    tree.forEach(group => {
+      collapsed[group.key] = !!group.collapsed
+    })
+    groupCollapsed.value = collapsed
   },
-  computed: {
-    ...mapGetters(['menus']),
-    activePath() {
-      return this.$route.path
-    },
-    sidebarTree() {
-      return buildSidebarTree({
-        menus: this.menus,
-        viewportWidth: this.viewportWidth
-      })
-    }
-  },
-  watch: {
-    sidebarTree: {
-      immediate: true,
-      handler(tree) {
-        const collapsed = {}
-        tree.forEach(group => {
-          collapsed[group.key] = !!group.collapsed
-        })
-        this.groupCollapsed = collapsed
-      }
-    }
-  },
-  mounted() {
-    window.addEventListener('resize', this.handleResize)
-  },
-  beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize)
-  },
-  methods: {
-    handleResize() {
-      this.viewportWidth = window.innerWidth
-    },
-    toggleGroup(key) {
-      if (key !== 'config' || !isMobileViewport(this.viewportWidth)) {
-        return
-      }
-      this.$set(this.groupCollapsed, key, !this.groupCollapsed[key])
-    }
-  }
+  { immediate: true }
+)
+
+function handleResize() {
+  viewportWidth.value = window.innerWidth
 }
+
+function toggleGroup(key) {
+  if (key !== 'config' || !isMobileViewport(viewportWidth.value)) return
+  groupCollapsed.value = { ...groupCollapsed.value, [key]: !groupCollapsed.value[key] }
+}
+
+onMounted(() => window.addEventListener('resize', handleResize))
+onBeforeUnmount(() => window.removeEventListener('resize', handleResize))
 </script>
 
 <style lang="scss" scoped>
