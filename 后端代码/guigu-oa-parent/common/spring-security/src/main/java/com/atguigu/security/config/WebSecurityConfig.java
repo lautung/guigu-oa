@@ -46,18 +46,7 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/admin/modeler/**",
-                                "/diagram-viewer/**",
-                                "/editor-app/**",
-                                "/*.html",
-                                "/admin/processImage/**",
-                                "/favicon.ico",
-                                "/webjars/**"
-                        ).permitAll()
+                        .requestMatchers(PublicApiPaths.REQUEST_MATCHERS).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new TokenAuthenticationFilter(redisTemplate),

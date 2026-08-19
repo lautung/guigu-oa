@@ -1,7 +1,7 @@
 package com.atguigu.process.service;
 
 import com.atguigu.model.process.ProcessType;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.util.List;
 

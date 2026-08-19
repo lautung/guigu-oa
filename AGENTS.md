@@ -14,7 +14,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 ## Cursor Cloud specific instructions
 
-目标产品是**统一客户端** `前端代码/guigu-oa-client`（Vue 2 + vue-cli）配合后端 `后端代码/guigu-oa-parent`（Spring Boot 2.3.6 多模块）。旧的 `管理端`/`员工端`/`其他` 前端不是目标产品。系统依赖（Maven、JDK8、MySQL8、Redis）已装入环境镜像；update 脚本只刷新 `npm install` 与 `mvn -DskipTests install`。
+目标产品是**统一客户端** `前端代码/guigu-oa-client`（Vue 3.5 + Vite 8 + Element Plus + Pinia）配合后端 `后端代码/guigu-oa-parent`（Spring Boot 4.1.0、JDK 21、Flowable 8.0.0 Process）。旧的 `管理端`/`员工端`/`其他` 前端不是目标产品。系统依赖（Maven、JDK 21、MySQL 8、Redis）已装入环境镜像；update 脚本只刷新 `npm install` 与 `mvn -DskipTests install`。
 
 ### 服务与端口
 
@@ -25,15 +25,16 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 | MySQL | 系统服务 | `sudo service mysql start` | 3306 |
 | Redis | 系统服务 | `sudo service redis-server start` | 6379 |
 
-前端 `vue.config.js` 把 `/dev-api` 代理到 `http://localhost:8800`，所以后端必须在 8800 运行。
+前端 Vite 把 `/dev-api` 代理到 `http://localhost:8800`，所以后端必须在 8800 运行。客户端可见前缀仍是 `/dev-api`（`VITE_APP_BASE_API`）。
 
-### 后端启动（关键 gotcha）
+### 后端启动
 
-1. **必须用 JDK8 运行**：jjwt 0.9.1 依赖 `javax.xml.bind.DatatypeConverter`，该类在 JDK11+ 被移除。环境默认 `java`/`mvn` 是 JDK21，会导致登录时 `ClassNotFoundException`。用 JDK8 二进制启动：`/usr/lib/jvm/java-8-openjdk-amd64/bin/java`（构建也需 `JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64`）。
-2. **必须显式加载配置**：`service-oa` 的 `pom.xml` 自定义了 `<resources>`，导致 `application.yml`/`application-dev.yml` 不会被打进 jar（`target/classes` 里没有 yml）。用 `java -jar` 运行时要加 `--spring.config.additional-location=file:./src/main/resources/`，否则 datasource 未配置、端口回退 8080 启动失败。
-3. 完整启动命令（在 `service-oa` 目录，先 `mvn -DskipTests install` 生成 `target/service-oa.jar`）：
-   `/usr/lib/jvm/java-8-openjdk-amd64/bin/java -jar target/service-oa.jar --spring.config.additional-location=file:./src/main/resources/`
-4. Activiti 的 `ACT_*` 表由引擎首启动时自动建（`application-dev.yml: database-schema-update: true`）。
+1. **用 JDK 21 编译和运行**（`java.version` / `--release` 21）。不要再用 JDK 8 启动路径。
+2. `service-oa` 的 `pom.xml` 已把 `src/main/resources/**` 打进 jar。在 `service-oa` 目录先 `mvn -DskipTests install`，再：
+   `java -jar target/service-oa.jar`
+   若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
+3. Flowable 的 `ACT_*` 表由引擎在空库上首启动时自动建（`application-dev.yml`: `flowable.database-schema-update: true`，`flowable.history-level: full`）。从 Activiti 7 切库见 `后端代码/guigu-oa-parent/sql/flowable8-cutover.md`。
+4. OpenAPI / Swagger UI：`/v3/api-docs` 与 `/swagger-ui.html` 无需登录。业务接口仍用请求头 `token`。
 
 ### 数据库初始化
 
@@ -43,10 +44,11 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 ### 前端 lint / test / build
 
-- 单元测试：`npm run test:unit`（Jest，已验证 40 用例通过）。
+- 单元测试：`npm run test:unit`（Vitest，脚本名不变）。
 - 构建：`npm run build:prod`；开发：`npm run dev`。
-- `npm run lint` 目前**无法运行**：仓库未提交 ESLint 配置文件，且 `vue.config.js` 里 `lintOnSave:false`。这是仓库既有状态，验证以单元测试为准。
+- Node：`engines.node` `^22.18.0`。
+- `npm run lint` 目前**无法运行**：仓库未提交 ESLint 配置文件。这是仓库既有状态，验证以单元测试为准。
 
 ### 已知应用缺陷（非环境问题）
 
-`已发起` 列表接口 `/admin/process/findStarted` 会抛 `MyBatis BindingException: Parameter 'ew' not found`（`OaProcessServiceImpl.findStarted` 与 mapper 参数不匹配的既有代码 bug）。`findPending`/`findProcessed` 正常。登录、`待处理`、`已处理` 均可用。
+`已发起` 列表接口 `/admin/process/findStarted` 的既有 MyBatis 绑定问题不在本次升级范围（升级规格明确不顺手修）。`findPending`/`findProcessed` 正常。登录、`待处理`、`已处理` 均可用。

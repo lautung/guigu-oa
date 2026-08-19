@@ -6,7 +6,7 @@ import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessRecordMapper;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.security.custom.LoginUserInfoHelper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

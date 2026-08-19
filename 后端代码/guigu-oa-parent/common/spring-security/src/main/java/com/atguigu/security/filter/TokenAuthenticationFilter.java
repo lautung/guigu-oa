@@ -4,6 +4,7 @@ import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.ResponseUtil;
 import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
+import com.atguigu.security.config.PublicApiPaths;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -36,7 +37,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        if ("/admin/system/index/login".equals(request.getRequestURI())) {
+        if (PublicApiPaths.permitsAnonymous(request.getRequestURI())) {
             chain.doFilter(request, response);
             return;
         }

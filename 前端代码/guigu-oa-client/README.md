@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-API 代理见 `.env.example` 与 `vue.config.js`（默认 `/dev-api` → `http://localhost:8800`）。
+API 代理见 `.env.example` 与 `vite.config.js`（默认 `/dev-api` → `http://localhost:8800`）。

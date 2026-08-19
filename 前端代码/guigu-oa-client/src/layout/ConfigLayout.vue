@@ -11,8 +11,8 @@
 </template>
 
 <script>
-import TopBar from './components/TopBar'
-import AppSidebar from './components/AppSidebar'
+import TopBar from './components/TopBar.vue'
+import AppSidebar from './components/AppSidebar.vue'
 
 export default {
   name: 'ConfigLayout',
