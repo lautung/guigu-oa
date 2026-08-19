@@ -2,8 +2,11 @@ package com.atguigu.process.service.impl;
 
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.model.process.Process;
+import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.ProcessApprovalSupport;
+import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.service.OaProcessRecordService;
@@ -14,14 +17,17 @@ import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessQueryVo;
 import com.atguigu.vo.process.ProcessVo;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
+import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -32,7 +38,6 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipInputStream;
@@ -48,6 +53,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Autowired
     private TaskService taskService;
+
+    @Autowired
+    private HistoryService historyService;
 
     @Autowired
     private SysUserService sysUserService;
@@ -102,17 +110,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
                 String.valueOf(process.getId()),
                 ProcessStartSupport.engineVariables(processFormVo.getFormValues()));
 
-        List<String> nameList = new ArrayList<>();
-        for (Task task : getCurrentTaskList(processInstance.getId())) {
-            String assigneeName = task.getAssignee();
-            if (!StringUtils.hasText(assigneeName)) {
-                continue;
-            }
-            SysUser assignee = sysUserService.getUserByUserName(assigneeName);
-            nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
-                    ? assignee.getName()
-                    : assigneeName);
-        }
+        List<String> nameList = approverNames(ProcessEngineApproval.currentTasks(taskService, processInstance.getId()));
         process.setProcessInstanceId(processInstance.getId());
         process.setDescription(ProcessStartSupport.waitingDescription(nameList));
         baseMapper.updateById(process);
@@ -122,22 +120,95 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public IPage<ProcessVo> findfindPending(Page<Process> pageParam) {
-        return new Page<>();
+        String username = LoginUserInfoHelper.getUsername();
+        int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
+        int maxResults = (int) pageParam.getSize();
+        List<Task> taskList = ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults);
+        long totalCount = ProcessEngineApproval.pendingCount(taskService, username);
+
+        List<ProcessVo> processVoList = new ArrayList<>();
+        for (Task task : taskList) {
+            ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
+                    .processInstanceId(task.getProcessInstanceId())
+                    .singleResult();
+            if (processInstance == null || !StringUtils.hasText(processInstance.getBusinessKey())) {
+                continue;
+            }
+            Process process = baseMapper.selectById(Long.parseLong(processInstance.getBusinessKey()));
+            if (process == null) {
+                continue;
+            }
+            processVoList.add(ProcessApprovalSupport.toPendingVo(process, task.getId()));
+        }
+        IPage<ProcessVo> page = new Page<>(pageParam.getCurrent(), pageParam.getSize(), totalCount);
+        page.setRecords(processVoList);
+        return page;
     }
 
     @Override
     public Map<String, Object> show(Long id) {
-        return Collections.emptyMap();
+        Process process = baseMapper.selectById(id);
+        LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProcessRecord::getProcessId, id);
+        List<ProcessRecord> processRecordList = processRecordService.list(wrapper);
+        ProcessTemplate processTemplate = processTemplateService.getById(process.getProcessTemplateId());
+
+        List<String> assignees = new ArrayList<>();
+        for (Task task : ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId())) {
+            if (StringUtils.hasText(task.getAssignee())) {
+                assignees.add(task.getAssignee());
+            }
+        }
+        boolean isApprove = ProcessApprovalSupport.isCurrentApprover(assignees, LoginUserInfoHelper.getUsername());
+        return ProcessApprovalSupport.showPayload(process, processRecordList, processTemplate, isApprove);
     }
 
     @Override
+    @Transactional
     public void approve(ApprovalVo approvalVo) {
-        throw new UnsupportedOperationException("流程引擎功能待重新集成");
+        if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
+            ProcessEngineApproval.complete(taskService, approvalVo.getTaskId());
+        } else {
+            ProcessEngineApproval.rejectToEnd(repositoryService, taskService, approvalVo.getTaskId());
+        }
+
+        processRecordService.record(
+                approvalVo.getProcessId(),
+                approvalVo.getStatus(),
+                ProcessApprovalSupport.recordDescription(approvalVo.getStatus()));
+
+        Process process = baseMapper.selectById(approvalVo.getProcessId());
+        List<Task> nextTasks = ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId());
+        ProcessApprovalSupport.applyOutcome(
+                process,
+                approvalVo.getStatus(),
+                approverNames(nextTasks),
+                !nextTasks.isEmpty());
+        baseMapper.updateById(process);
     }
 
     @Override
     public IPage<ProcessVo> findProcessed(Page<Process> pageParam) {
-        return new Page<>();
+        String username = LoginUserInfoHelper.getUsername();
+        int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
+        int maxResults = (int) pageParam.getSize();
+        List<HistoricTaskInstance> historicTasks =
+                ProcessEngineApproval.processedTasks(historyService, username, firstResult, maxResults);
+        long totalCount = ProcessEngineApproval.processedCount(historyService, username);
+
+        List<ProcessVo> processVoList = new ArrayList<>();
+        for (HistoricTaskInstance historicTask : historicTasks) {
+            LambdaQueryWrapper<Process> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Process::getProcessInstanceId, historicTask.getProcessInstanceId());
+            Process process = baseMapper.selectOne(wrapper);
+            if (process == null) {
+                continue;
+            }
+            processVoList.add(ProcessApprovalSupport.toProcessedVo(process));
+        }
+        IPage<ProcessVo> pageModel = new Page<>(pageParam.getCurrent(), pageParam.getSize(), totalCount);
+        pageModel.setRecords(processVoList);
+        return pageModel;
     }
 
     @Override
@@ -164,7 +235,18 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         }
     }
 
-    private List<Task> getCurrentTaskList(String processInstanceId) {
-        return taskService.createTaskQuery().processInstanceId(processInstanceId).list();
+    private List<String> approverNames(List<Task> taskList) {
+        List<String> nameList = new ArrayList<>();
+        for (Task task : taskList) {
+            String assigneeName = task.getAssignee();
+            if (!StringUtils.hasText(assigneeName)) {
+                continue;
+            }
+            SysUser assignee = sysUserService.getUserByUserName(assigneeName);
+            nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
+                    ? assignee.getName()
+                    : assigneeName);
+        }
+        return nameList;
     }
 }

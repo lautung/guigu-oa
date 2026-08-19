@@ -21,7 +21,7 @@
           </p>
         </div>
         <div class="item-status">
-          <el-tag size="mini" :type="item.statusTagType">
+          <el-tag size="small" :type="item.statusTagType">
             {{ item.statusLabel }}
           </el-tag>
         </div>

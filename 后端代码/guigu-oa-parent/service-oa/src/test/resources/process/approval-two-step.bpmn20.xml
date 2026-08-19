@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:activiti="http://activiti.org/bpmn"
+             targetNamespace="http://www.activiti.org/processdef">
+  <process id="approvalTwoStep" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="first" name="一审" activiti:assignee="zhangsan"/>
+    <userTask id="second" name="二审" activiti:assignee="lisi"/>
+    <endEvent id="end"/>
+    <sequenceFlow id="flow1" sourceRef="start" targetRef="first"/>
+    <sequenceFlow id="flow2" sourceRef="first" targetRef="second"/>
+    <sequenceFlow id="flow3" sourceRef="second" targetRef="end"/>
+  </process>
+</definitions>
