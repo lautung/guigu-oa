@@ -95,6 +95,10 @@ export default {
         this.$router.push({ name: 'WorkStarted' })
         return
       }
+      if (routeName === 'ProcessMgrDetail') {
+        this.$router.push({ name: 'ProcessMgr' })
+        return
+      }
       this.$router.push({ name: 'Pending' })
     }
   }

@@ -115,7 +115,7 @@ export function presentDetail(payload = {}, { readOnly = false } = {}) {
   }
 }
 
-export const READ_ONLY_DETAIL_ROUTE_NAMES = ['ProcessedDetail', 'StartedDetail']
+export const READ_ONLY_DETAIL_ROUTE_NAMES = ['ProcessedDetail', 'StartedDetail', 'ProcessMgrDetail']
 
 export function isReadOnlyDetailRoute(routeName) {
   return READ_ONLY_DETAIL_ROUTE_NAMES.includes(routeName)

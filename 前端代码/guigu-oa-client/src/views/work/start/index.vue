@@ -8,10 +8,16 @@
       <div v-for="group in groups" :key="group.id" class="type-group">
         <h3>{{ group.name }}</h3>
         <div class="template-grid">
-          <div v-for="template in group.templates" :key="template.id" class="template-card">
+          <button
+            v-for="template in group.templates"
+            :key="template.id"
+            type="button"
+            class="template-card"
+            @click="openApply(template.id)"
+          >
             <img v-if="template.iconUrl" :src="template.iconUrl" alt="">
             <span>{{ template.name }}</span>
-          </div>
+          </button>
         </div>
       </div>
     </div>
@@ -21,6 +27,7 @@
 <script>
 import { findProcessType } from '@/api/process'
 import { presentStartGroups } from '@/config/process-template'
+import { applyPath } from '@/work/start-flow'
 
 export default {
   name: 'WorkStart',
@@ -41,6 +48,9 @@ export default {
       }).finally(() => {
         this.loading = false
       })
+    },
+    openApply(templateId) {
+      this.$router.push(applyPath(templateId))
     }
   }
 }
@@ -84,12 +94,26 @@ export default {
   color: #606266;
   font-size: 12px;
   text-align: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 
   img {
     width: 40px;
     height: 40px;
     border-radius: 10px;
     margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .template-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .template-card {
+    width: 100%;
   }
 }
 </style>

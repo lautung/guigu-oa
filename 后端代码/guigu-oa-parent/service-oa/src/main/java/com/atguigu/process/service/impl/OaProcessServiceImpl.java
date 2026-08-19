@@ -8,7 +8,6 @@ import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessMapper;
-import com.atguigu.process.service.MessageService;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
@@ -79,9 +78,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Autowired
     private HistoryService historyService;
-
-    @Autowired
-    private MessageService messageService;
 
     //审批管理列表
     @Override
@@ -159,8 +155,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
             SysUser user = sysUserService.getUserByUserName(assigneeName);
             String name = user.getName();
             nameList.add(name);
-            //推送消息
-            messageService.pushPendingMessage(process.getId(),user.getId(),task.getId());
         }
         process.setProcessInstanceId(processInstance.getId());
         process.setDescription("等待"+ StringUtils.join(nameList.toArray(), ",")+"审批");
@@ -292,8 +286,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
                 String assignee = task.getAssignee();
                 SysUser sysUser = sysUserService.getUserByUserName(assignee);
                 assignList.add(sysUser.getName());
-
-                //TODO 公众号消息推送
             }
             //更新process流程信息
             process.setDescription("等待" + StringUtils.join(assignList.toArray(), ",") + "审批");
