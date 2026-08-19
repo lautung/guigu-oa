@@ -34,6 +34,11 @@ const HIDDEN_CONFIG_PATH_FRAGMENTS = [
   'onlineProcessSet'
 ]
 
+const HIDDEN_CONFIG_PARENT_PATHS = {
+  assignAuth: '/system/sysRole',
+  templateSet: '/processSet/processTemplate'
+}
+
 function normalizePath(path) {
   if (!path) return ''
   return path.startsWith('/') ? path : `/${path}`
@@ -135,6 +140,43 @@ function countVisibleConfigEntries(menus = []) {
 export function hasConfigPermission(menus = []) {
   const filtered = filterConfigMenus(menus)
   return countVisibleConfigEntries(filtered) > 0
+}
+
+function collectLeafAndHiddenConfigPaths(menus = [], paths = []) {
+  menus.forEach(menu => {
+    const children = menu.children || []
+    const visibleChildren = children.filter(child => !child.hidden)
+    if (menu.hidden) {
+      paths.push(menu.path)
+    } else if (visibleChildren.length === 0 && children.length === 0) {
+      paths.push(menu.path)
+    }
+    collectLeafAndHiddenConfigPaths(children, paths)
+  })
+  return paths
+}
+
+export function isAuthorizedConfigPath(path, menus = []) {
+  const normalized = normalizePath(path)
+  if (!isConfigRoutePath(normalized)) {
+    return true
+  }
+
+  const granted = collectLeafAndHiddenConfigPaths(filterConfigMenus(menus))
+    .map(item => normalizePath(item))
+    .filter(Boolean)
+
+  if (granted.some(authorized => (
+    normalized === authorized
+    || normalized.startsWith(`${authorized}/`)
+    || authorized.startsWith(`${normalized}/`)
+  ))) {
+    return true
+  }
+
+  return Object.entries(HIDDEN_CONFIG_PARENT_PATHS).some(([fragment, parentPath]) => (
+    normalized.includes(fragment) && granted.includes(parentPath)
+  ))
 }
 
 function mapMenuToSidebarItems(menus = []) {
@@ -255,7 +297,7 @@ export function resolveNavigationGuard({
     }
   }
 
-  if (classifyRoute(path) === 'config' && !hasConfigPermission(menus)) {
+  if (classifyRoute(path) === 'config' && !isAuthorizedConfigPath(path, menus)) {
     return {
       action: 'redirect',
       to: getDefaultPostLoginRoute()

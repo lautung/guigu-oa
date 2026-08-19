@@ -83,6 +83,62 @@ const FULL_TREE = [
     parentId: 0,
     select: false,
     children: []
+  },
+  {
+    id: 7,
+    name: 'Dashboard',
+    path: '/dashboard',
+    component: 'dashboard/index',
+    type: 1,
+    icon: '',
+    perms: '',
+    sortValue: 0,
+    status: 1,
+    parentId: 0,
+    select: true,
+    children: []
+  },
+  {
+    id: 6,
+    name: '岗位管理',
+    path: 'sysPost',
+    component: 'system/sysPost/list',
+    type: 1,
+    icon: '',
+    perms: '',
+    sortValue: 6,
+    status: 1,
+    parentId: 0,
+    select: false,
+    children: []
+  },
+  {
+    id: 5,
+    name: '登录日志',
+    path: 'sysLoginLog',
+    component: 'system/sysLoginLog/list',
+    type: 1,
+    icon: '',
+    perms: '',
+    sortValue: 5,
+    status: 1,
+    parentId: 0,
+    select: false,
+    children: []
+  },
+  {
+    id: 4,
+    name: '操作日志',
+    path: 'sysOperLog',
+    component: 'system/sysOperLog/list',
+    type: 1,
+    icon: '',
+    perms: '',
+    sortValue: 4,
+    status: 1,
+    parentId: 0,
+    select: false,
+    children: []
   }
 ]
 
@@ -101,7 +157,7 @@ describe('config/sys-menu', () => {
     })
 
     it('keeps previously granted out-of-spec menus when saving 配置类 checks', () => {
-      expect(mergeAssignMenuIds([11], FULL_TREE)).toEqual([11, 9, 91])
+      expect(mergeAssignMenuIds([11], FULL_TREE)).toEqual([11, 9, 91, 7])
     })
 
     it('loads 菜单授权 with GET /admin/system/sysMenu/toAssign/{roleId}', () => {

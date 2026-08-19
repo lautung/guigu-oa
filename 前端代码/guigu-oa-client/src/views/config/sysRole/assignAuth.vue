@@ -24,6 +24,7 @@
 <script>
 import { doAssign, getByIdForAssign } from '@/api/sysMenu'
 import { collectCheckedIds, mergeAssignMenuIds, presentConfigMenuTree } from '@/config/sys-menu'
+import { useUserStore } from '@/store/modules/user'
 
 export default {
   name: 'AssignAuth',
@@ -63,6 +64,8 @@ export default {
       this.saving = true
       doAssign(this.$route.query.id, menuIdList).then(response => {
         this.$message.success(response.message || '分配权限成功')
+        return useUserStore().getInfo().catch(() => {})
+      }).then(() => {
         this.$router.push('/system/sysRole')
       }).finally(() => {
         this.saving = false

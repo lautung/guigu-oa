@@ -167,4 +167,96 @@ INSERT INTO `sys_user` (`id`,`username`,`password`,`name`,`phone`,`status`,`crea
 SELECT 1,'admin','96e79218965eb72c92a549dd5a330112','管理员','13800000000',1,NOW(),NOW(),0
 WHERE NOT EXISTS (SELECT 1 FROM `sys_user` WHERE `username`='admin');
 
+INSERT INTO `sys_user` (`username`,`password`,`name`,`phone`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT 'user','96e79218965eb72c92a549dd5a330112','办事用户','13800000001',1,NOW(),NOW(),0
+WHERE NOT EXISTS (SELECT 1 FROM `sys_user` WHERE `username`='user');
+
+-- ----------------------------
+-- 种子数据：配置类 sys_menu（userId=1 登录后自动拥有全部配置菜单）
+-- 不包含公众号 / Dashboard / 部门岗位日志 / 在线流程设计器
+-- ----------------------------
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT 0,'组织与权限',0,'/system','Layout','','el-icon-user-solid',1,1,NOW(),NOW(),0
+WHERE NOT EXISTS (SELECT 1 FROM `sys_menu` WHERE `path`='/system' AND `parent_id`=0 AND `is_deleted`=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'用户管理',1,'sysUser','system/sysUser/list','','',1,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/system' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='sysUser' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'角色管理',1,'sysRole','system/sysRole/list','','',2,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/system' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='sysRole' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'菜单管理',1,'sysMenu','system/sysMenu/list','','',3,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/system' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='sysMenu' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'菜单授权',1,'assignAuth','system/sysRole/assignAuth','','',4,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='sysRole' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='assignAuth' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'角色列表',2,'','','bnt.sysRole.list','',1,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='sysRole' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.perms='bnt.sysRole.list' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'角色新增',2,'','','bnt.sysRole.add','',2,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='sysRole' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.perms='bnt.sysRole.add' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'角色修改',2,'','','bnt.sysRole.update','',3,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='sysRole' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.perms='bnt.sysRole.update' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'角色删除',2,'','','bnt.sysRole.remove','',4,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='sysRole' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.perms='bnt.sysRole.remove' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT 0,'审批设置',0,'/processSet','Layout','','el-icon-s-tools',2,1,NOW(),NOW(),0
+WHERE NOT EXISTS (SELECT 1 FROM `sys_menu` WHERE `path`='/processSet' AND `parent_id`=0 AND `is_deleted`=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'审批类型',1,'processType','processSet/processType/list','','',1,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/processSet' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='processType' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'审批模板',1,'processTemplate','processSet/processTemplate/list','','',2,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/processSet' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='processTemplate' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'审批模板设置',1,'templateSet','processSet/processTemplate/templateSet','','',3,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='processTemplate' AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='templateSet' AND c.is_deleted=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT 0,'审批查询',0,'/processMgr','Layout','','el-icon-s-order',3,1,NOW(),NOW(),0
+WHERE NOT EXISTS (SELECT 1 FROM `sys_menu` WHERE `path`='/processMgr' AND `parent_id`=0 AND `is_deleted`=0);
+
+INSERT INTO `sys_menu` (`parent_id`,`name`,`type`,`path`,`component`,`perms`,`icon`,`sort_value`,`status`,`create_time`,`update_time`,`is_deleted`)
+SELECT p.id,'审批实例查询',1,'process','processMgr/process/list','','',1,1,NOW(),NOW(),0
+FROM `sys_menu` p
+WHERE p.path='/processMgr' AND p.parent_id=0 AND p.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='process' AND c.is_deleted=0);
+
 SET FOREIGN_KEY_CHECKS = 1;

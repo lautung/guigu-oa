@@ -13,11 +13,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Tag(name = "后台登录管理")
 @RestController
@@ -29,6 +33,11 @@ public class IndexController {
 
     @Autowired
     private SysMenuService sysMenuService;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostMapping("login")
     public Result login(@RequestBody LoginVo loginVo) {
@@ -65,6 +74,10 @@ public class IndexController {
         SysUser sysUser = sysUserService.getById(userId);
         List<RouterVo> routerList = sysMenuService.findUserMenuListByUserId(userId);
         List<String> permsList = sysMenuService.findUserPermsByUserId(userId);
+        if (permsList == null) {
+            permsList = List.of();
+        }
+        refreshCachedAuthorities(sysUser.getUsername(), permsList);
 
         Map<String, Object> map = new HashMap<>();
         map.put("roles", "[admin]");
@@ -78,5 +91,16 @@ public class IndexController {
     @PostMapping("logout")
     public Result logout() {
         return Result.ok();
+    }
+
+    private void refreshCachedAuthorities(String username, List<String> permsList) {
+        if (!StringUtils.hasText(username)) {
+            return;
+        }
+        List<Map<String, String>> authorities = permsList.stream()
+                .filter(StringUtils::hasText)
+                .map(perm -> Map.of("authority", perm.trim()))
+                .collect(Collectors.toList());
+        redisTemplate.opsForValue().set(username, objectMapper.writeValueAsString(authorities));
     }
 }
