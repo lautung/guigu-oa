@@ -44,12 +44,12 @@ export function pendingDetailPath(id, taskId) {
   return `${ROUTES.PENDING}/${id}/${taskId}`
 }
 
-export function processedDetailPath(id, taskId) {
-  return `${ROUTES.PROCESSED}/${id}/${taskId}`
+export function processedDetailPath(id) {
+  return `${ROUTES.PROCESSED}/${id}`
 }
 
-export function startedDetailPath(id, taskId) {
-  return `${ROUTES.STARTED}/${id}/${taskId}`
+export function startedDetailPath(id) {
+  return `${ROUTES.STARTED}/${id}`
 }
 
 export function presentListItem(record, detailPathBuilder = pendingDetailPath) {

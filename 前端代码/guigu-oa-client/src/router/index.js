@@ -33,7 +33,7 @@ const workChildren = [
     meta: { title: '已处理' }
   },
   {
-    path: 'processed/:id/:taskId',
+    path: 'processed/:id',
     name: 'ProcessedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情' }
@@ -45,7 +45,7 @@ const workChildren = [
     meta: { title: '已发起' }
   },
   {
-    path: 'started/:id/:taskId',
+    path: 'started/:id',
     name: 'StartedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情' }

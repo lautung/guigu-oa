@@ -28,14 +28,14 @@ describe('work/processed-started-flow', () => {
   })
 
   describe('processedDetailPath', () => {
-    it('opens a processed item at the read-only detail route', () => {
-      expect(processedDetailPath(12, 'task-9')).toBe('/work/processed/12/task-9')
+    it('opens a processed item at the read-only detail route without a task handle', () => {
+      expect(processedDetailPath(12)).toBe('/work/processed/12')
     })
   })
 
   describe('startedDetailPath', () => {
-    it('opens a started item at the read-only detail route', () => {
-      expect(startedDetailPath(12, 'task-9')).toBe('/work/started/12/task-9')
+    it('opens a started item at the read-only detail route without a task handle', () => {
+      expect(startedDetailPath(12)).toBe('/work/started/12')
     })
   })
 
@@ -43,14 +43,13 @@ describe('work/processed-started-flow', () => {
     it('presents a processed list row with a processed detail path', () => {
       const item = presentProcessedListItem({
         id: 12,
-        taskId: 'task-9',
         title: '张三提交的请假申请',
         createTime: '2026-08-18 10:00:00',
         status: 2,
         formValues: FORM_VALUES
       })
 
-      expect(item.detailPath).toBe(`${ROUTES.PROCESSED}/12/task-9`)
+      expect(item.detailPath).toBe(`${ROUTES.PROCESSED}/12`)
       expect(item.statusLabel).toBe('审批通过')
       expect(item.summaryFields.map(field => field.key)).toEqual(['请假天数', '请假原因'])
     })
@@ -60,14 +59,13 @@ describe('work/processed-started-flow', () => {
     it('presents a started list row with a started detail path', () => {
       const item = presentStartedListItem({
         id: 12,
-        taskId: 'task-9',
         title: '我提交的请假申请',
         createTime: '2026-08-18 10:00:00',
         status: 1,
         formValues: FORM_VALUES
       })
 
-      expect(item.detailPath).toBe(`${ROUTES.STARTED}/12/task-9`)
+      expect(item.detailPath).toBe(`${ROUTES.STARTED}/12`)
       expect(item.statusLabel).toBe('审批中')
       expect(item.summaryFields.map(field => field.key)).toEqual(['请假天数', '请假原因'])
     })
@@ -78,7 +76,6 @@ describe('work/processed-started-flow', () => {
       const page = presentProcessedListPage({
         records: [{
           id: 12,
-          taskId: 'task-9',
           title: '张三提交的请假申请',
           createTime: '2026-08-18 10:00:00',
           status: 2,
@@ -90,7 +87,7 @@ describe('work/processed-started-flow', () => {
 
       expect(page.total).toBe(1)
       expect(page.records).toHaveLength(1)
-      expect(page.records[0].detailPath).toBe('/work/processed/12/task-9')
+      expect(page.records[0].detailPath).toBe('/work/processed/12')
     })
   })
 
@@ -99,7 +96,6 @@ describe('work/processed-started-flow', () => {
       const page = presentStartedListPage({
         records: [{
           id: 12,
-          taskId: 'task-9',
           title: '我提交的请假申请',
           createTime: '2026-08-18 10:00:00',
           status: 1,
@@ -111,7 +107,7 @@ describe('work/processed-started-flow', () => {
 
       expect(page.total).toBe(1)
       expect(page.records).toHaveLength(1)
-      expect(page.records[0].detailPath).toBe('/work/started/12/task-9')
+      expect(page.records[0].detailPath).toBe('/work/started/12')
     })
   })
 })

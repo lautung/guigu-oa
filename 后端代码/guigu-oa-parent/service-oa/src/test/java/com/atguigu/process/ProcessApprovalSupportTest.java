@@ -42,25 +42,6 @@ public class ProcessApprovalSupportTest {
     }
 
     @Test
-    public void processedVoCopiesProcessFieldsAndForcesTaskIdZero() {
-        Process process = new Process();
-        process.setId(12L);
-        process.setTitle("张三发起请假申请申请");
-        process.setStatus(2);
-        process.setFormValues("{\"formShowData\":{\"请假天数\":\"3\"}}");
-        process.setProcessInstanceId("proc-1");
-
-        ProcessVo vo = ProcessApprovalSupport.toProcessedVo(process);
-
-        assertEquals(12L, vo.getId());
-        assertEquals("张三发起请假申请申请", vo.getTitle());
-        assertEquals(2, vo.getStatus());
-        assertEquals("{\"formShowData\":{\"请假天数\":\"3\"}}", vo.getFormValues());
-        assertEquals("proc-1", vo.getProcessInstanceId());
-        assertEquals("0", vo.getTaskId());
-    }
-
-    @Test
     public void recordDescriptionUsesPassedOrRejectedWording() {
         assertEquals("已通过", ProcessApprovalSupport.recordDescription(1));
         assertEquals("驳回", ProcessApprovalSupport.recordDescription(-1));

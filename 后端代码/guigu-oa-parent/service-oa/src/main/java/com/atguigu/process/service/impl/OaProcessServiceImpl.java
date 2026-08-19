@@ -214,11 +214,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     public IPage<ProcessVo> findStarted(SysUser user, Page<ProcessVo> pageParam) {
         ProcessQueryVo processQueryVo = new ProcessQueryVo();
         processQueryVo.setUserId(user.getId());
-        IPage<ProcessVo> pageModel = selectPage(pageParam, processQueryVo);
-        for (ProcessVo item : pageModel.getRecords()) {
-            item.setTaskId("0");
-        }
-        return pageModel;
+        return selectPage(pageParam, processQueryVo);
     }
 
     private void ensureDeployed(ProcessTemplate processTemplate) {

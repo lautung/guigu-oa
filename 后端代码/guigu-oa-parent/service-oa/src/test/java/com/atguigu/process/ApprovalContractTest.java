@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -198,6 +199,33 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void 已处理And已发起Identify审批WithoutFakeTaskHandle() {
+        assertNull(LoginUserInfoHelper.getUserId());
+
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+
+        ProcessVo started = started(alice).getRecords().get(0);
+        assertNoFakeTaskHandle(started);
+        assertFalse(approval.show(alice, started.getId()).containsKey("taskId"));
+
+        ProcessVo pending = pending(zhangsan).getRecords().get(0);
+        assertTrue(pending.getTaskId() != null && !pending.getTaskId().isBlank());
+        assertNotEquals("0", pending.getTaskId());
+
+        approve(zhangsan, pending);
+
+        ProcessVo processed = processed(zhangsan).getRecords().get(0);
+        assertEquals(started.getId(), processed.getId());
+        assertNoFakeTaskHandle(processed);
+        assertNoFakeTaskHandle(started(alice).getRecords().get(0));
+        assertFalse(approval.show(zhangsan, processed.getId()).containsKey("taskId"));
+        assertNull(LoginUserInfoHelper.getUserId());
+    }
+
+    @Test
     public void http发起待处理已发起StillWorkWithToken() throws Exception {
         String aliceToken = loginToken("alice");
         mockMvc.perform(post("/admin/process/startUp")
@@ -211,7 +239,8 @@ public class ApprovalContractTest {
                         .header("token", aliceToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.records[0].status").value(审批中));
+                .andExpect(jsonPath("$.data.records[0].status").value(审批中))
+                .andExpect(jsonPath("$.data.records[0].taskId").value(nullValue()));
 
         mockMvc.perform(get("/admin/process/findPending/1/10")
                         .header("token", loginToken("zhangsan")))
@@ -269,6 +298,10 @@ public class ApprovalContractTest {
         List<ProcessRecord> records =
                 (List<ProcessRecord>) approval.show(user, processId).get("processRecordList");
         return records.stream().map(ProcessRecord::getDescription).toList();
+    }
+
+    private static void assertNoFakeTaskHandle(ProcessVo vo) {
+        assertNull(vo.getTaskId());
     }
 
     private static ProcessFormVo publishedLeaveForm() {

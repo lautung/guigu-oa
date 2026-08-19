@@ -20,8 +20,6 @@ public final class ProcessApprovalSupport {
     private ProcessApprovalSupport() {
     }
 
-    public static final String PROCESSED_TASK_ID = "0";
-
     public static ProcessVo toPendingVo(Process process, String taskId) {
         ProcessVo vo = new ProcessVo();
         BeanUtils.copyProperties(process, vo);
@@ -30,7 +28,7 @@ public final class ProcessApprovalSupport {
     }
 
     public static ProcessVo toProcessedVo(Process process) {
-        return toPendingVo(process, PROCESSED_TASK_ID);
+        return toPendingVo(process, null);
     }
 
     public static String recordDescription(Integer status) {

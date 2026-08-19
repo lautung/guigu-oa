@@ -7,7 +7,7 @@
 
       <div
         v-for="item in list"
-        :key="`${item.id}-${item.taskId}`"
+        :key="item.id"
         class="process-item"
         @click="openDetail(item)"
       >
