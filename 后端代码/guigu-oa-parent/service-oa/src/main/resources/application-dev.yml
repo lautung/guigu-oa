@@ -45,3 +45,5 @@ flowable:
   db-history-used: true
   history-level: full
   check-process-definitions: false
+
+# 切库后再部署已发布模板（不改模板状态）：启动时加 --guigu.oa.cutover.redeploy-published=true

@@ -20,4 +20,9 @@ public interface OaProcessTemplateService extends IService<ProcessTemplate> {
 
     //部署流程定义（发布）
     void publish(Long id);
+
+    /**
+     * 切库后再部署全部已发布审批模板的流程 zip。不改模板状态。
+     */
+    int redeployPublished();
 }

@@ -1,6 +1,7 @@
 -- 云尚办公 业务表初始化脚本（开发环境）
--- 说明：Activiti 的 ACT_* 表由引擎在应用启动时自动创建（application-dev.yml: database-schema-update: true），
+-- 说明：Flowable 的 ACT_* / FLW_* 表由引擎在应用启动时自动创建（application-dev.yml: database-schema-update: true），
 --      本脚本只负责业务表（sys_*、oa_*）与最小种子数据。
+--      从 Activiti 7 切到 Flowable 8 见同目录 flowable8-cutover.sh / flowable8-cutover.md。
 -- 使用：mysql -uroot -proot guigu-oa < 后端代码/guigu-oa-parent/sql/guigu-oa-init.sql
 
 SET NAMES utf8mb4;

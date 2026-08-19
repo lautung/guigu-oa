@@ -137,4 +137,29 @@ public class ProcessApprovalSupportTest {
         assertSame(template, payload.get("processTemplate"));
         assertEquals(true, payload.get("isApprove"));
     }
+
+    @Test
+    public void showPayloadKeepsLedgerWhenEngineHasNoCurrentApprover() {
+        Process process = new Process();
+        process.setId(12L);
+        process.setProcessInstanceId("pre-cutover-instance-id");
+        process.setFormValues("{\"formShowData\":{\"请假天数\":\"3\"}}");
+        process.setStatus(2);
+        ProcessRecord record = new ProcessRecord();
+        record.setDescription("发起申请");
+        ProcessTemplate template = new ProcessTemplate();
+        template.setName("请假申请");
+
+        Map<String, Object> payload = ProcessApprovalSupport.showPayload(
+                process,
+                Collections.singletonList(record),
+                template,
+                ProcessApprovalSupport.isCurrentApprover(Collections.emptyList(), "zhangsan")
+        );
+
+        assertSame(process, payload.get("process"));
+        assertEquals(1, ((List<?>) payload.get("processRecordList")).size());
+        assertSame(template, payload.get("processTemplate"));
+        assertEquals(false, payload.get("isApprove"));
+    }
 }

@@ -2,6 +2,7 @@ package com.atguigu.process.service.impl;
 
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
+import com.atguigu.process.ProcessCutoverSupport;
 import com.atguigu.process.mapper.OaProcessTemplateMapper;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
@@ -76,6 +77,17 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         if (StringUtils.hasText(processTemplate.getProcessDefinitionPath())) {
             processService.deployByZip(processTemplate.getProcessDefinitionPath());
         }
+    }
+
+    @Override
+    public int redeployPublished() {
+        LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProcessTemplate::getStatus, 1);
+        List<ProcessTemplate> toRedeploy = ProcessCutoverSupport.publishedToRedeploy(list(wrapper));
+        for (ProcessTemplate processTemplate : toRedeploy) {
+            processService.deployByZip(processTemplate.getProcessDefinitionPath());
+        }
+        return toRedeploy.size();
     }
 
 }

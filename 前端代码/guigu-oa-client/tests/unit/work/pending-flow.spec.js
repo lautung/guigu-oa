@@ -149,6 +149,38 @@ describe('work/pending-flow', () => {
 
       expect(presentDetail(payload, { readOnly: true }).canApprove).toBe(false)
     })
+
+    it('keeps form and flow records read-only when the old engine instance is gone', () => {
+      const detail = presentDetail({
+        process: {
+          id: 12,
+          title: '张三提交的请假申请',
+          createTime: '2026-08-18 10:00:00',
+          status: 2,
+          processInstanceId: 'pre-cutover-instance-id',
+          formValues: FORM_VALUES
+        },
+        processRecordList: [
+          {
+            operateUser: '张三',
+            description: '发起申请',
+            createTime: '2026-08-18 10:00:00'
+          },
+          {
+            operateUser: '李四',
+            description: '已通过',
+            createTime: '2026-08-18 11:00:00'
+          }
+        ],
+        isApprove: false
+      })
+
+      expect(detail.canApprove).toBe(false)
+      expect(detail.statusLabel).toBe('审批通过')
+      expect(detail.formFields.map(field => field.key)).toEqual(['请假天数', '请假原因', '图片'])
+      expect(detail.records).toHaveLength(2)
+      expect(detail.records[0].description).toBe('发起申请')
+    })
   })
 
   describe('approve / reject', () => {
