@@ -1,20 +1,20 @@
 package com.atguigu.vo.process;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
-@ApiModel(description = "流程表单")
+@Schema(description = "流程表单")
 public class ProcessFormVo {
 
-	@ApiModelProperty(value = "审批模板id")
+	@Schema(description = "审批模板id")
 	private Long processTemplateId;
 
-	@ApiModelProperty(value = "审批类型id")
+	@Schema(description = "审批类型id")
 	private Long processTypeId;
 
-	@ApiModelProperty(value = "表单值")
+	@Schema(description = "表单值")
 	private String formValues;
 
 }

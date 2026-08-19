@@ -11,7 +11,6 @@ import com.atguigu.vo.system.AssginMenuVo;
 import com.atguigu.vo.system.MetaVo;
 import com.atguigu.vo.system.RouterVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.api.R;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -61,7 +60,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         //判断当前菜单是否有下一层菜单
         LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysMenu::getParentId,id);
-        Integer count = baseMapper.selectCount(wrapper);
+        Long count = baseMapper.selectCount(wrapper);
         if(count > 0) {
             throw new GuiguException(201,"菜单不能删除");
         }

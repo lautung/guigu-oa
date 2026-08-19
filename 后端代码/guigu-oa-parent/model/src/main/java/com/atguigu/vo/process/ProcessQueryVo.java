@@ -1,30 +1,30 @@
 package com.atguigu.vo.process;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
-@ApiModel(description = "Process")
+@Schema(description = "Process")
 public class ProcessQueryVo {
 
-	@ApiModelProperty(value = "关键字")
+	@Schema(description = "关键字")
 	private String keyword;
 
-	@ApiModelProperty(value = "用户id")
+	@Schema(description = "用户id")
 	private Long userId;
 
 	@TableField("process_template_id")
 	private Long processTemplateId;
 
-	@ApiModelProperty(value = "审批类型id")
+	@Schema(description = "审批类型id")
 	private Long processTypeId;
 
 	private String createTimeBegin;
 	private String createTimeEnd;
 
-	@ApiModelProperty(value = "状态（0：默认 1：审批中 2：审批通过 -1：驳回）")
+	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：驳回）")
 	private Integer status;
 
 

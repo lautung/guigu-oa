@@ -1,73 +1,47 @@
+import { defineStore } from 'pinia'
 import { getToken, setToken, removeToken } from '@/utils/auth'
 import { login, logout, getInfo } from '@/api/user'
 
-const getDefaultState = () => ({
-  token: getToken(),
-  name: '',
-  avatar: '',
-  menus: []
-})
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    token: getToken() || '',
+    name: '',
+    avatar: '',
+    menus: []
+  }),
 
-const state = getDefaultState()
-
-const mutations = {
-  RESET_STATE: (state) => {
-    Object.assign(state, getDefaultState())
-  },
-  SET_TOKEN: (state, token) => {
-    state.token = token
-  },
-  SET_NAME: (state, name) => {
-    state.name = name
-  },
-  SET_AVATAR: (state, avatar) => {
-    state.avatar = avatar
-  },
-  SET_MENUS: (state, menus) => {
-    state.menus = menus
-  }
-}
-
-const actions = {
-  login({ commit }, userInfo) {
-    const { username, password } = userInfo
-    return login({ username: username.trim(), password }).then(response => {
+  actions: {
+    async login(userInfo) {
+      const { username, password } = userInfo
+      const response = await login({ username: username.trim(), password })
       const { data } = response
-      commit('SET_TOKEN', data.token)
+      this.token = data.token
       setToken(data.token)
-    })
-  },
+    },
 
-  getInfo({ commit }) {
-    return getInfo().then(response => {
+    async getInfo() {
+      const response = await getInfo()
       const { data } = response
       if (!data) {
-        return Promise.reject('验证失败，请重新登录')
+        throw new Error('验证失败，请重新登录')
       }
-      commit('SET_NAME', data.name)
-      commit('SET_AVATAR', data.avatar || '')
-      commit('SET_MENUS', data.routers || [])
+      this.name = data.name
+      this.avatar = data.avatar || ''
+      this.menus = data.routers || []
       return data
-    })
-  },
+    },
 
-  logout({ commit }) {
-    return logout().then(() => {
+    async logout() {
+      await logout()
+      this.resetToken()
+    },
+
+    resetToken() {
       removeToken()
-      commit('RESET_STATE')
-    })
-  },
-
-  resetToken({ commit }) {
-    removeToken()
-    commit('RESET_STATE')
-    return Promise.resolve()
+      this.token = ''
+      this.name = ''
+      this.avatar = ''
+      this.menus = []
+    }
   }
-}
-
-export default {
-  namespaced: true,
-  state,
-  mutations,
-  actions
-}
+})

@@ -1,23 +1,16 @@
-import Vue from 'vue'
-import ElementUI from 'element-ui'
-import 'element-ui/lib/theme-chalk/index.css'
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 import 'normalize.css/normalize.css'
-import formCreate from '@form-create/element-ui'
-import FcDesigner from '@form-create/designer'
-
-import App from './App'
-import store from './store'
+import App from './App.vue'
+import { setupStore } from './store'
 import router from './router'
-import '@/permission'
+import './permission'
 
-Vue.use(ElementUI, { size: 'small' })
-Vue.use(formCreate)
-Vue.use(FcDesigner)
-Vue.config.productionTip = false
+const app = createApp(App)
 
-new Vue({
-  el: '#app',
-  router,
-  store,
-  render: h => h(App)
-})
+setupStore(app)
+app.use(router)
+app.use(ElementPlus, { size: 'small' })
+
+app.mount('#app')

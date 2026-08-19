@@ -3,52 +3,52 @@ package com.atguigu.model.system;
 import com.atguigu.model.base.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-@ApiModel(description = "菜单")
+@Schema(description = "菜单")
 @TableName("sys_menu")
 public class SysMenu extends BaseEntity {
 	
 	private static final long serialVersionUID = 1L;
 
-	@ApiModelProperty(value = "所属上级")
+	@Schema(description = "所属上级")
 	@TableField("parent_id")
 	private Long parentId;
 
-	@ApiModelProperty(value = "名称")
+	@Schema(description = "名称")
 	@TableField("name")
 	private String name;
 
-	@ApiModelProperty(value = "类型(1:菜单,2:按钮)")
+	@Schema(description = "类型(1:菜单,2:按钮)")
 	@TableField("type")
 	private Integer type;
 
-	@ApiModelProperty(value = "路由地址")
+	@Schema(description = "路由地址")
 	@TableField("path")
 	private String path;
 
-	@ApiModelProperty(value = "组件路径")
+	@Schema(description = "组件路径")
 	@TableField("component")
 	private String component;
 
-	@ApiModelProperty(value = "权限标识")
+	@Schema(description = "权限标识")
 	@TableField("perms")
 	private String perms;
 
-	@ApiModelProperty(value = "图标")
+	@Schema(description = "图标")
 	@TableField("icon")
 	private String icon;
 
-	@ApiModelProperty(value = "排序")
+	@Schema(description = "排序")
 	@TableField("sort_value")
 	private Integer sortValue;
 
-	@ApiModelProperty(value = "状态(0:禁止,1:正常)")
+	@Schema(description = "状态(0:禁止,1:正常)")
 	@TableField("status")
 	private Integer status;
 

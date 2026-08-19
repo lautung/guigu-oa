@@ -3,32 +3,29 @@
     <div class="brand">云尚办公</div>
     <div class="user-area">
       <img :src="avatarSrc" class="avatar" alt="">
-      <span class="username">{{ name }}</span>
+      <span class="username">{{ userStore.name }}</span>
       <el-button type="text" class="logout-btn" @click="handleLogout">退出</el-button>
     </div>
   </header>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/store/modules/user'
 import { ROUTES } from '@/navigation/access-policy'
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const DEFAULT_AVATAR = 'https://static.dingtalk.com/media/lALOnahFD80CgM0CgA_640_640.png_450x10000q90.jpg'
 
-export default {
-  name: 'TopBar',
-  computed: {
-    ...mapGetters(['name', 'avatar']),
-    avatarSrc() {
-      return this.avatar || DEFAULT_AVATAR
-    }
-  },
-  methods: {
-    async handleLogout() {
-      await this.$store.dispatch('user/logout')
-      this.$router.push(`${ROUTES.LOGIN}?redirect=${encodeURIComponent(this.$route.fullPath)}`)
-    }
-  }
+const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
+
+async function handleLogout() {
+  await userStore.logout()
+  router.push(`${ROUTES.LOGIN}?redirect=${encodeURIComponent(route.fullPath)}`)
 }
 </script>
 

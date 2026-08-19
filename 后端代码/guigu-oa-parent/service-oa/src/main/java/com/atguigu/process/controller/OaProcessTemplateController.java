@@ -6,7 +6,7 @@ import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.parameters.P;
 import org.springframework.util.ResourceUtils;
@@ -35,7 +35,7 @@ public class OaProcessTemplateController {
     private OaProcessTemplateService processTemplateService;
 
     //分页查询审批模板
-    @ApiOperation("获取分页审批模板数据")
+    @Operation(summary = "获取分页审批模板数据")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit) {
@@ -47,7 +47,7 @@ public class OaProcessTemplateController {
     }
 
     //@PreAuthorize("hasAuthority('bnt.processTemplate.list')")
-    @ApiOperation(value = "获取")
+    @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
         ProcessTemplate processTemplate = processTemplateService.getById(id);
@@ -55,7 +55,7 @@ public class OaProcessTemplateController {
     }
 
     //@PreAuthorize("hasAuthority('bnt.processTemplate.templateSet')")
-    @ApiOperation(value = "新增")
+    @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@RequestBody ProcessTemplate processTemplate) {
         processTemplateService.save(processTemplate);
@@ -63,7 +63,7 @@ public class OaProcessTemplateController {
     }
 
     //@PreAuthorize("hasAuthority('bnt.processTemplate.templateSet')")
-    @ApiOperation(value = "修改")
+    @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@RequestBody ProcessTemplate processTemplate) {
         processTemplateService.updateById(processTemplate);
@@ -71,14 +71,14 @@ public class OaProcessTemplateController {
     }
 
     //@PreAuthorize("hasAuthority('bnt.processTemplate.remove')")
-    @ApiOperation(value = "删除")
+    @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         processTemplateService.removeById(id);
         return Result.ok();
     }
 
-    @ApiOperation(value = "上传流程定义")
+    @Operation(summary = "上传流程定义")
     @PostMapping("/uploadProcessDefinition")
     public Result uploadProcessDefinition(MultipartFile file) throws FileNotFoundException {
         //获取classes目录位置
@@ -108,7 +108,7 @@ public class OaProcessTemplateController {
     }
 
     //部署流程定义（发布）
-    @ApiOperation(value = "发布")
+    @Operation(summary = "发布")
     @GetMapping("/publish/{id}")
     public Result publish(@PathVariable Long id) {
         //修改模板发布状态 1 已经发布
