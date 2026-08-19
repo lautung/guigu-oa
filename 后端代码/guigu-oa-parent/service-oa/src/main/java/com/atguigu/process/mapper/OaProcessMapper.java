@@ -18,6 +18,6 @@ import org.apache.ibatis.annotations.Param;
  */
 public interface OaProcessMapper extends BaseMapper<Process> {
 
-    //审批管理列表
-    IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, @Param("vo") ProcessQueryVo processQueryVo);
+    //审批管理列表（勿命名为 selectPage，会与 BaseMapper 分页方法冲突导致 Parameter 'ew' not found）
+    IPage<ProcessVo> selectProcessPage(Page<ProcessVo> pageParam, @Param("vo") ProcessQueryVo processQueryVo);
 }

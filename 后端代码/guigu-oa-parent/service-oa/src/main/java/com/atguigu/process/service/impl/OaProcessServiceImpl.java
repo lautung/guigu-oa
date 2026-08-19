@@ -82,7 +82,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     //审批管理列表
     @Override
     public IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo) {
-        IPage<ProcessVo> pageModel = baseMapper.selectPage(pageParam,processQueryVo);
+        IPage<ProcessVo> pageModel = baseMapper.selectProcessPage(pageParam, processQueryVo);
         return pageModel;
     }
 
@@ -347,7 +347,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     public IPage<ProcessVo> findStarted(Page<ProcessVo> pageParam) {
         ProcessQueryVo processQueryVo = new ProcessQueryVo();
         processQueryVo.setUserId(LoginUserInfoHelper.getUserId());
-        IPage<ProcessVo> pageModel = baseMapper.selectPage(pageParam, processQueryVo);
+        IPage<ProcessVo> pageModel = selectPage(pageParam, processQueryVo);
         for (ProcessVo item : pageModel.getRecords()) {
             item.setTaskId("0");
         }
