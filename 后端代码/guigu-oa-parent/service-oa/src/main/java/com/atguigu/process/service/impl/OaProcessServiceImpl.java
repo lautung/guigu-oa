@@ -12,7 +12,6 @@ import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
-import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessQueryVo;
@@ -90,17 +89,16 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     @Transactional
-    public void startUp(ProcessFormVo processFormVo) {
-        SysUser sysUser = sysUserService.getById(LoginUserInfoHelper.getUserId());
+    public void startUp(SysUser user, ProcessFormVo processFormVo) {
         ProcessTemplate processTemplate = processTemplateService.getById(processFormVo.getProcessTemplateId());
 
         Process process = new Process();
         BeanUtils.copyProperties(processFormVo, process);
         process.setStatus(1);
         process.setProcessCode(System.currentTimeMillis() + "");
-        process.setUserId(LoginUserInfoHelper.getUserId());
+        process.setUserId(user.getId());
         process.setFormValues(processFormVo.getFormValues());
-        process.setTitle(ProcessStartSupport.title(sysUser.getName(), processTemplate.getName()));
+        process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
         baseMapper.insert(process);
 
         ensureDeployed(processTemplate);
@@ -115,12 +113,12 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         process.setDescription(ProcessStartSupport.waitingDescription(nameList));
         baseMapper.updateById(process);
 
-        processRecordService.record(process.getId(), 1, "发起申请");
+        processRecordService.record(process.getId(), 1, "发起申请", user);
     }
 
     @Override
-    public IPage<ProcessVo> findfindPending(Page<Process> pageParam) {
-        String username = LoginUserInfoHelper.getUsername();
+    public IPage<ProcessVo> findfindPending(SysUser user, Page<Process> pageParam) {
+        String username = user.getUsername();
         int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
         List<Task> taskList = ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults);
@@ -146,7 +144,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    public Map<String, Object> show(Long id) {
+    public Map<String, Object> show(SysUser user, Long id) {
         Process process = baseMapper.selectById(id);
         LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessRecord::getProcessId, id);
@@ -159,13 +157,13 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
                 assignees.add(task.getAssignee());
             }
         }
-        boolean isApprove = ProcessApprovalSupport.isCurrentApprover(assignees, LoginUserInfoHelper.getUsername());
+        boolean isApprove = ProcessApprovalSupport.isCurrentApprover(assignees, user.getUsername());
         return ProcessApprovalSupport.showPayload(process, processRecordList, processTemplate, isApprove);
     }
 
     @Override
     @Transactional
-    public void approve(ApprovalVo approvalVo) {
+    public void approve(SysUser user, ApprovalVo approvalVo) {
         if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
             ProcessEngineApproval.complete(taskService, approvalVo.getTaskId());
         } else {
@@ -175,7 +173,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         processRecordService.record(
                 approvalVo.getProcessId(),
                 approvalVo.getStatus(),
-                ProcessApprovalSupport.recordDescription(approvalVo.getStatus()));
+                ProcessApprovalSupport.recordDescription(approvalVo.getStatus()),
+                user);
 
         Process process = baseMapper.selectById(approvalVo.getProcessId());
         List<Task> nextTasks = ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId());
@@ -188,8 +187,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    public IPage<ProcessVo> findProcessed(Page<Process> pageParam) {
-        String username = LoginUserInfoHelper.getUsername();
+    public IPage<ProcessVo> findProcessed(SysUser user, Page<Process> pageParam) {
+        String username = user.getUsername();
         int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
         List<HistoricTaskInstance> historicTasks =
@@ -212,9 +211,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    public IPage<ProcessVo> findStarted(Page<ProcessVo> pageParam) {
+    public IPage<ProcessVo> findStarted(SysUser user, Page<ProcessVo> pageParam) {
         ProcessQueryVo processQueryVo = new ProcessQueryVo();
-        processQueryVo.setUserId(LoginUserInfoHelper.getUserId());
+        processQueryVo.setUserId(user.getId());
         IPage<ProcessVo> pageModel = selectPage(pageParam, processQueryVo);
         for (ProcessVo item : pageModel.getRecords()) {
             item.setTaskId("0");

@@ -1,6 +1,7 @@
 package com.atguigu.process.service;
 
 import com.atguigu.model.process.ProcessRecord;
+import com.atguigu.model.system.SysUser;
 import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
@@ -13,5 +14,5 @@ import com.baomidou.mybatisplus.spring.service.IService;
  */
 public interface OaProcessRecordService extends IService<ProcessRecord> {
 
-    void record(Long processId,Integer status,String description);
+    void record(Long processId, Integer status, String description, SysUser operator);
 }

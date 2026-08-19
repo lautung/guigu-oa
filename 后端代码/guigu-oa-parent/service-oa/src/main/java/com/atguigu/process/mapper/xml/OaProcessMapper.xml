@@ -17,7 +17,7 @@
                 and (a.process_code like CONCAT('%',#{vo.keyword},'%') or
                     a.title like CONCAT('%',#{vo.keyword},'%'))
             </if>
-            <if test="vo.userId != null and vo.userId != ''">
+            <if test="vo.userId != null">
                 and a.user_id = #{vo.userId}
             </if>
             <if test="vo.status != null and vo.status != ''">

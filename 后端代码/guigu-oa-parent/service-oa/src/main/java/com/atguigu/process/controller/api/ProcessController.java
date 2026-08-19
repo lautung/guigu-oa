@@ -5,19 +5,20 @@ import com.atguigu.common.result.Result;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
+import com.atguigu.model.system.SysUser;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.process.service.OaProcessTypeService;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
+import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,14 +50,14 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<Process> pageParam = new Page<>(page,limit);
-        IPage<ProcessVo> pageModel = processService.findfindPending(pageParam);
+        IPage<ProcessVo> pageModel = processService.findfindPending(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
 
     @Operation(summary = "启动流程")
     @PostMapping("/startUp")
     public Result startUp(@RequestBody ProcessFormVo processFormVo) {
-        processService.startUp(processFormVo);
+        processService.startUp(currentUser(), processFormVo);
         return Result.ok();
     }
 
@@ -77,7 +78,7 @@ public class ProcessController {
     //查看审批详情信息
     @GetMapping("show/{id}")
     public Result show(@PathVariable Long id) {
-        Map<String,Object> map = processService.show(id);
+        Map<String,Object> map = processService.show(currentUser(), id);
         return Result.ok(map);
     }
 
@@ -85,7 +86,7 @@ public class ProcessController {
     @Operation(summary = "审批")
     @PostMapping("approve")
     public Result approve(@RequestBody ApprovalVo approvalVo) {
-        processService.approve(approvalVo);
+        processService.approve(currentUser(), approvalVo);
         return Result.ok();
     }
 
@@ -97,7 +98,7 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<Process> pageParam = new Page<>(page,limit);
-        IPage<ProcessVo> pageModel = processService.findProcessed(pageParam);
+        IPage<ProcessVo> pageModel = processService.findProcessed(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
 
@@ -109,7 +110,7 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<ProcessVo> pageParam = new Page<>(page, limit);
-        IPage<ProcessVo> pageModel = processService.findStarted(pageParam);
+        IPage<ProcessVo> pageModel = processService.findStarted(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
 
@@ -117,5 +118,9 @@ public class ProcessController {
     public Result getCurrentUser() {
         Map<String,Object> map = sysUserService.getCurrentUser();
         return Result.ok(map);
+    }
+
+    private SysUser currentUser() {
+        return sysUserService.getById(LoginUserInfoHelper.getUserId());
     }
 }
