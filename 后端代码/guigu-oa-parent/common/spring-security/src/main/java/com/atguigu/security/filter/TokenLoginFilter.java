@@ -6,7 +6,7 @@ import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.vo.system.LoginVo;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,8 +17,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -36,7 +37,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         this.setAuthenticationManager(authenticationManager);
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
-                new AntPathRequestMatcher("/admin/system/index/login", "POST"));
+                PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
         this.redisTemplate = redisTemplate;
     }
 

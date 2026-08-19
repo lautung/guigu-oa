@@ -32,7 +32,7 @@ public class SysUserController {
     @Autowired
     private SysUserService service;
 
-    @ApiOperation(value = "更新状态")
+    @Operation(summary = "更新状态")
     @GetMapping("updateStatus/{id}/{status}")
     public Result updateStatus(@PathVariable Long id, @PathVariable Integer status) {
         service.updateStatus(id,status);
@@ -73,14 +73,14 @@ public class SysUserController {
         return Result.ok(pageModel);
     }
 
-    @ApiOperation(value = "获取用户")
+    @Operation(summary = "获取用户")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
         SysUser user = service.getById(id);
         return Result.ok(user);
     }
 
-    @ApiOperation(value = "保存用户")
+    @Operation(summary = "保存用户")
     @PostMapping("save")
     public Result save(@RequestBody SysUser user) {
         //密码进行加密，使用MD5
@@ -91,14 +91,14 @@ public class SysUserController {
         return Result.ok();
     }
 
-    @ApiOperation(value = "更新用户")
+    @Operation(summary = "更新用户")
     @PutMapping("update")
     public Result updateById(@RequestBody SysUser user) {
         service.updateById(user);
         return Result.ok();
     }
 
-    @ApiOperation(value = "删除用户")
+    @Operation(summary = "删除用户")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         service.removeById(id);

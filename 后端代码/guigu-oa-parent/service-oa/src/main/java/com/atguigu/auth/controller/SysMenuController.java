@@ -52,21 +52,21 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
-    @ApiOperation(value = "新增菜单")
+    @Operation(summary = "新增菜单")
     @PostMapping("save")
     public Result save(@RequestBody SysMenu sysMenu) {
         sysMenuService.save(sysMenu);
         return Result.ok();
     }
 
-    @ApiOperation(value = "修改菜单")
+    @Operation(summary = "修改菜单")
     @PutMapping("update")
     public Result updateById(@RequestBody SysMenu sysMenu) {
         sysMenuService.updateById(sysMenu);
         return Result.ok();
     }
 
-    @ApiOperation(value = "删除菜单")
+    @Operation(summary = "删除菜单")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         sysMenuService.removeMenuById(id);

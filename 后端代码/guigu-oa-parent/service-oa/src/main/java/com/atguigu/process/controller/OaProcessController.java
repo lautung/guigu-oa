@@ -32,7 +32,7 @@ public class OaProcessController {
     private OaProcessService processService;
 
     //审批管理列表
-    @ApiOperation(value = "获取分页列表")
+    @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit,
