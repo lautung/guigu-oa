@@ -31,7 +31,47 @@ describe('work/start-flow', () => {
         processTypeId: 1,
         name: '事假',
         rule: [{ field: 'days', title: '请假天数' }],
-        option: { submitBtn: true }
+        option: {
+          submitBtn: true,
+          form: { labelPosition: 'top' }
+        }
+      })
+    })
+
+    it('replays 种子 formProps / formOptions without dropping fields and enables submit on phone', () => {
+      const presented = presentApplyTemplate({
+        id: 1,
+        processTypeId: 1,
+        name: '请假申请',
+        status: 1,
+        formProps: '[{"type":"input","field":"reason","title":"请假原因","$required":true,"props":{"placeholder":"请输入请假原因"}},{"type":"input","field":"days","title":"请假天数","$required":true,"props":{"type":"number","placeholder":"请输入请假天数"}}]',
+        formOptions: '{"submitBtn":false,"form":{"labelPosition":"right","labelWidth":"125px"}}'
+      })
+
+      expect(presented.ok).toBe(true)
+      expect(presented.name).toBe('请假申请')
+      expect(presented.rule).toEqual([
+        {
+          type: 'input',
+          field: 'reason',
+          title: '请假原因',
+          $required: true,
+          props: { placeholder: '请输入请假原因' }
+        },
+        {
+          type: 'input',
+          field: 'days',
+          title: '请假天数',
+          $required: true,
+          props: { type: 'number', placeholder: '请输入请假天数' }
+        }
+      ])
+      expect(presented.option).toEqual({
+        submitBtn: true,
+        form: {
+          labelPosition: 'top',
+          labelWidth: '125px'
+        }
       })
     })
 

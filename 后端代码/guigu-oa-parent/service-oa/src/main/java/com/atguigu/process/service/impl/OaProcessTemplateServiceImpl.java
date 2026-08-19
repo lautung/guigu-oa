@@ -73,13 +73,8 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         processTemplate.setStatus(1);
         baseMapper.updateById(processTemplate);
 
-        //流程定义部署（引擎未接入时不阻断已发布状态）
         if (StringUtils.hasText(processTemplate.getProcessDefinitionPath())) {
-            try {
-                processService.deployByZip(processTemplate.getProcessDefinitionPath());
-            } catch (UnsupportedOperationException ignored) {
-                // Flowable 部署由后续办事主路径 ticket 承接；配置侧发布以模板状态为准
-            }
+            processService.deployByZip(processTemplate.getProcessDefinitionPath());
         }
     }
 

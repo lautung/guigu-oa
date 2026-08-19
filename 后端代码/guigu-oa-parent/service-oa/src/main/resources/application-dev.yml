@@ -39,3 +39,9 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+flowable:
+  database-schema-update: true
+  db-history-used: true
+  history-level: full
+  check-process-definitions: false

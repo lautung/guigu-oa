@@ -21,6 +21,7 @@ export default defineConfig({
     }
   },
   build: {
+    target: ['chrome85', 'firefox79', 'safari14.1'],
     outDir: 'dist',
     assetsDir: 'static'
   },

@@ -39,6 +39,15 @@ function parseJson(value, fallback) {
   }
 }
 
+function presentApplyOption(option = {}) {
+  return Object.assign({}, option, {
+    submitBtn: true,
+    form: Object.assign({}, option.form || {}, {
+      labelPosition: 'top'
+    })
+  })
+}
+
 export function presentApplyTemplate(record) {
   if (!record || record.status !== 1) {
     return {
@@ -53,7 +62,7 @@ export function presentApplyTemplate(record) {
     processTypeId: record.processTypeId,
     name: record.name,
     rule: parseJson(record.formProps, []),
-    option: parseJson(record.formOptions, {})
+    option: presentApplyOption(parseJson(record.formOptions, {}))
   }
 }
 

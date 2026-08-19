@@ -1,9 +1,10 @@
 <template>
   <div v-loading="loading" class="apply-page">
-    <el-button type="text" icon="el-icon-arrow-left" @click="goBack">返回</el-button>
+    <el-button type="text" @click="goBack">返回</el-button>
     <h2 class="page-title">{{ title }}</h2>
     <form-create
       v-if="rule.length"
+      v-model="formData"
       :rule="rule"
       :option="option"
       @submit="onSubmit"
@@ -13,6 +14,7 @@
 
 <script>
 import { getProcessTemplate, startUp } from '@/api/process'
+import { ROUTES } from '@/navigation/access-policy'
 import {
   START_SUCCESS_MESSAGE,
   buildStartPayload,
@@ -29,6 +31,7 @@ export default {
       template: null,
       rule: [],
       option: {},
+      formData: {},
       title: '发起审批'
     }
   },
@@ -37,7 +40,7 @@ export default {
   },
   methods: {
     goBack() {
-      this.$router.push('/work/start')
+      this.$router.push(ROUTES.START)
     },
     fetchTemplate() {
       this.loading = true
@@ -50,11 +53,7 @@ export default {
         this.template = presented
         this.title = presented.name || '发起审批'
         this.rule = presented.rule
-        this.option = Object.assign({}, presented.option, {
-          form: Object.assign({}, (presented.option && presented.option.form) || {}, {
-            labelPosition: 'top'
-          })
-        })
+        this.option = presented.option
       }).finally(() => {
         this.loading = false
       })
@@ -91,5 +90,16 @@ export default {
   margin: 0 0 16px;
   font-size: 20px;
   color: #303133;
+}
+
+@media (max-width: 768px) {
+  .apply-page {
+    padding: 12px;
+    border-radius: 0;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
 }
 </style>
