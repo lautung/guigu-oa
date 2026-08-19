@@ -175,6 +175,13 @@ export function zipUploadError(file = {}) {
   return null
 }
 
+export function saveValidationError(form = {}) {
+  if (!form.processDefinitionPath) {
+    return '请上传 Activiti 流程 zip'
+  }
+  return null
+}
+
 export function presentStartGroups(types = []) {
   return types
     .map(type => ({

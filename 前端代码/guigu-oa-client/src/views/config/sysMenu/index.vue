@@ -78,7 +78,7 @@
 
 <script>
 import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
-import { emptyForm, formForCreate, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
+import { emptyForm, formForCreate, menuWriteValidationError, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
 
 export default {
   name: 'SysMenuList',
@@ -117,6 +117,11 @@ export default {
       this.dialogVisible = true
     },
     save() {
+      const error = menuWriteValidationError(this.form)
+      if (error) {
+        this.$message.error(error)
+        return
+      }
       this.saving = true
       saveOrUpdate(this.form).then(response => {
         this.$message.success(response.message || '操作成功')

@@ -1,3 +1,5 @@
+import { isExcludedConfigMenu } from '@/config/sys-menu'
+
 export const MOBILE_BREAKPOINT = 768
 
 export const DESKTOP_CONFIG_HINT = '请在电脑浏览器使用'
@@ -26,19 +28,6 @@ export const WORK_BUILTIN_ITEMS = [
   { path: ROUTES.PROFILE, title: '基本信息' }
 ]
 
-const EXCLUDED_CONFIG_PATH_PATTERNS = [
-  /^\/wechat/i,
-  /^\/dashboard/i,
-  /onlineProcessSet/i
-]
-
-const EXCLUDED_CONFIG_COMPONENTS = [
-  'system/sysDept/list',
-  'system/sysPost/list',
-  'system/sysOperLog/list',
-  'system/sysLoginLog/list'
-]
-
 const HIDDEN_CONFIG_PATH_FRAGMENTS = [
   'assignAuth',
   'templateSet',
@@ -63,21 +52,6 @@ function resolveMenuPath(menu, parentPath = '') {
     return normalizePath(segment)
   }
   return joinPath(parentPath, segment)
-}
-
-function isExcludedConfigMenu(menu) {
-  const path = normalizePath(menu.path || '')
-  const component = menu.component || ''
-
-  if (EXCLUDED_CONFIG_PATH_PATTERNS.some(pattern => pattern.test(path))) {
-    return true
-  }
-
-  if (EXCLUDED_CONFIG_COMPONENTS.includes(component)) {
-    return true
-  }
-
-  return false
 }
 
 function isConfigRoutePath(path) {

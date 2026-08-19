@@ -9,6 +9,7 @@ import {
   presentStartGroups,
   publishRequest,
   removeRequest,
+  saveValidationError,
   uploadProcessDefinitionUrl,
   wizardPrimaryAction,
   WIZARD_STEPS,
@@ -287,6 +288,19 @@ describe('config/process-template', () => {
         type: 'application/x-zip-compressed',
         size: 2048 * 1024 + 1
       })).toBe('文件不能超过 2048kb')
+    })
+  })
+
+  describe('saveValidationError', () => {
+    it('requires an uploaded Activiti zip before 提交保存', () => {
+      expect(saveValidationError(emptyForm())).toBe('请上传 Activiti 流程 zip')
+    })
+
+    it('accepts a form with processDefinitionPath', () => {
+      expect(saveValidationError({
+        ...emptyForm(),
+        processDefinitionPath: 'processes/qingjia.zip'
+      })).toBeNull()
     })
   })
 

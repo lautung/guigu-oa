@@ -24,6 +24,24 @@ export function isExcludedConfigMenu(menu = {}) {
   return EXCLUDED_COMPONENTS.includes(component)
 }
 
+const WORK_MENU_PATH_PATTERNS = [
+  /^\/work/i,
+  /^work\//i
+]
+
+export function menuWriteValidationError(form = {}) {
+  if (isExcludedConfigMenu(form)) {
+    return '只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器'
+  }
+
+  const path = form.path || ''
+  if (path === 'work' || WORK_MENU_PATH_PATTERNS.some(pattern => pattern.test(path))) {
+    return '办事内置入口不在菜单管理中维护'
+  }
+
+  return null
+}
+
 function presentMenuNode(menu = {}) {
   return {
     id: menu.id,

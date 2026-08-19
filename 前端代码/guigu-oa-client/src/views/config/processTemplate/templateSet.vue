@@ -75,6 +75,7 @@ import {
   applyUploadResult,
   emptyForm,
   presentForm,
+  saveValidationError,
   TEMPLATE_ICONS,
   uploadProcessDefinitionUrl,
   wizardPrimaryAction,
@@ -202,6 +203,11 @@ export default {
       this.fileList = []
     },
     save() {
+      const error = saveValidationError(this.form)
+      if (error) {
+        this.$message.error(error)
+        return
+      }
       this.saving = true
       saveOrUpdate(this.form).then(response => {
         this.$message.success(response.message || '保存成功')

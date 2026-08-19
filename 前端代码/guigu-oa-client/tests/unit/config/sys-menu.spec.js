@@ -3,6 +3,7 @@ import {
   doAssignRequest,
   emptyForm,
   findNodesRequest,
+  menuWriteValidationError,
   mergeAssignMenuIds,
   presentConfigMenuTree,
   removeRequest,
@@ -116,6 +117,34 @@ describe('config/sys-menu', () => {
         url: '/admin/system/sysMenu/doAssign',
         data: { roleId: 3, menuIdList: [1, 11] }
       })
+    })
+  })
+
+  describe('menuWriteValidationError', () => {
+    it('rejects out-of-spec menus such as 公众号 or 部门', () => {
+      expect(menuWriteValidationError({
+        path: '/wechat',
+        component: 'Layout'
+      })).toBe('只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器')
+
+      expect(menuWriteValidationError({
+        path: 'sysDept',
+        component: 'system/sysDept/list'
+      })).toBe('只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器')
+    })
+
+    it('rejects 办事内置 routes', () => {
+      expect(menuWriteValidationError({
+        path: '/work/pending',
+        component: 'work/pending/index'
+      })).toBe('办事内置入口不在菜单管理中维护')
+    })
+
+    it('accepts a 配置类 menu', () => {
+      expect(menuWriteValidationError({
+        path: 'sysUser',
+        component: 'system/sysUser/list'
+      })).toBeNull()
     })
   })
 
