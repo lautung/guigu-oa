@@ -17,7 +17,7 @@ public interface Approval {
 
     void startUp(SysUser user, ProcessFormVo processFormVo);
 
-    IPage<ProcessVo> findfindPending(SysUser user, Page<Process> pageParam);
+    IPage<ProcessVo> findPending(SysUser user, Page<Process> pageParam);
 
     Map<String, Object> show(SysUser user, Long id);
 

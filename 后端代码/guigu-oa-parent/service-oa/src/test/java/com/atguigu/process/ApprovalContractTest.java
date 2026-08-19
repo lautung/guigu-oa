@@ -1,5 +1,6 @@
 package com.atguigu.process;
 
+import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.service.Approval;
@@ -9,8 +10,10 @@ import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.atguigu.model.process.Process;
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
+import org.flowable.engine.RuntimeService;
+import org.flowable.engine.repository.ProcessDefinition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.hamcrest.Matchers.not;
@@ -64,12 +68,19 @@ public class ApprovalContractTest {
     private RepositoryService repositoryService;
 
     @Autowired
+    private RuntimeService runtimeService;
+
+    @Autowired
+    private HistoryService historyService;
+
+    @Autowired
     private MockMvc mockMvc;
 
     @BeforeEach
     public void deployPublishedTemplateEngineDefinition() {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
+        clearEngineInstances();
         if (repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("approvalTwoStep")
                 .count() == 0) {
@@ -100,6 +111,8 @@ public class ApprovalContractTest {
         ProcessVo started = startedByAlice.get(0);
         assertEquals(审批中, started.getStatus());
         assertEquals(alice.getId(), started.getUserId());
+        assertEquals("小艾发起请假申请申请", started.getTitle());
+        assertEquals("等待张三审批", started.getDescription());
 
         List<ProcessVo> pendingForZhangsan = pending(zhangsan).getRecords();
         assertEquals(1, pendingForZhangsan.size());
@@ -139,6 +152,7 @@ public class ApprovalContractTest {
         assertTrue(pending(zhangsan).getRecords().isEmpty());
         assertEquals(1, pending(lisi).getRecords().size());
         assertEquals(审批中, started(alice).getRecords().get(0).getStatus());
+        assertEquals("等待李四审批", started(alice).getRecords().get(0).getDescription());
 
         assertEquals(List.of("发起申请", "已通过"), recordDescriptions(zhangsan, pending.getId()));
         assertFalse(canApprove(zhangsan, pending.getId()));
@@ -226,8 +240,80 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void 详情ShowsTitleStatusFormAnd流转记录() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo started = started(alice).getRecords().get(0);
+        Map<String, Object> detail = approval.show(zhangsan, started.getId());
+
+        Process process = (Process) detail.get("process");
+        assertEquals("小艾发起请假申请申请", process.getTitle());
+        assertEquals(审批中, process.getStatus());
+        assertTrue(process.getFormValues().contains("\"days\":1"));
+        assertEquals(List.of("发起申请"), recordDescriptions(zhangsan, started.getId()));
+        assertTrue(canApprove(zhangsan, started.getId()));
+        assertFalse(canApprove(alice, started.getId()));
+        assertFalse(detail.containsKey("taskId"));
+    }
+
+    @Test
+    public void publishedTemplateStartsWhenEngineDefinitionIsMissingThisRound() {
+        repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey("qingjia")
+                .list()
+                .forEach((ProcessDefinition definition) ->
+                        repositoryService.deleteDeployment(definition.getDeploymentId(), true));
+
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+        ProcessFormVo form = publishedLeaveForm();
+        form.setProcessTemplateId(2L);
+
+        approval.startUp(alice, form);
+
+        List<ProcessVo> startedByAlice = started(alice).getRecords();
+        assertEquals(1, startedByAlice.size());
+        assertEquals(审批中, startedByAlice.get(0).getStatus());
+        assertEquals("小艾发起请假申请申请", startedByAlice.get(0).getTitle());
+        List<ProcessVo> pendingForZhangsan = pending(zhangsan).getRecords();
+        assertEquals(1, pendingForZhangsan.size());
+        assertEquals(startedByAlice.get(0).getId(), pendingForZhangsan.get(0).getId());
+        assertTrue(pendingForZhangsan.get(0).getTaskId() != null && !pendingForZhangsan.get(0).getTaskId().isBlank());
+    }
+
+    @Test
+    public void 待处理已处理已发起KeepPagination() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        approval.startUp(alice, publishedLeaveForm());
+
+        IPage<ProcessVo> startedPage = approval.findStarted(alice, new Page<>(1, 1));
+        assertEquals(1, startedPage.getRecords().size());
+        assertEquals(2, startedPage.getTotal());
+        IPage<ProcessVo> startedPageTwo = approval.findStarted(alice, new Page<>(2, 1));
+        assertEquals(1, startedPageTwo.getRecords().size());
+        assertNotEquals(startedPage.getRecords().get(0).getId(), startedPageTwo.getRecords().get(0).getId());
+
+        IPage<ProcessVo> pendingPage = approval.findPending(zhangsan, new Page<Process>(1, 1));
+        assertEquals(1, pendingPage.getRecords().size());
+        assertEquals(2, pendingPage.getTotal());
+
+        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+
+        IPage<ProcessVo> processedPage = approval.findProcessed(zhangsan, new Page<Process>(1, 1));
+        assertEquals(1, processedPage.getRecords().size());
+        assertEquals(2, processedPage.getTotal());
+    }
+
+    @Test
     public void http发起待处理已发起StillWorkWithToken() throws Exception {
         String aliceToken = loginToken("alice");
+        String zhangsanToken = loginToken("zhangsan");
         mockMvc.perform(post("/admin/process/startUp")
                         .header("token", aliceToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -235,19 +321,56 @@ public class ApprovalContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
-        mockMvc.perform(get("/admin/process/findStarted/1/10")
+        String startedBody = mockMvc.perform(get("/admin/process/findStarted/1/10")
                         .header("token", aliceToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.records[0].status").value(审批中))
-                .andExpect(jsonPath("$.data.records[0].taskId").value(nullValue()));
+                .andExpect(jsonPath("$.data.records[0].taskId").value(nullValue()))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Object processId = JsonPath.read(startedBody, "$.data.records[0].id");
 
-        mockMvc.perform(get("/admin/process/findPending/1/10")
-                        .header("token", loginToken("zhangsan")))
+        String pendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", zhangsanToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.records[0].taskId").isNotEmpty())
-                .andExpect(jsonPath("$.data.records[0].taskId").value(not("0")));
+                .andExpect(jsonPath("$.data.records[0].taskId").value(not("0")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String taskId = JsonPath.read(pendingBody, "$.data.records[0].taskId");
+
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", zhangsanToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.isApprove").value(true))
+                .andExpect(jsonPath("$.data.process.title").value("小艾发起请假申请申请"))
+                .andExpect(jsonPath("$.data.taskId").doesNotExist());
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/process/findProcessed/1/10")
+                        .header("token", zhangsanToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(processId))
+                .andExpect(jsonPath("$.data.records[0].taskId").value(nullValue()));
+
+        mockMvc.perform(get("/admin/process/1/10")
+                        .header("token", loginToken("admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(processId))
+                .andExpect(jsonPath("$.data.records[0].title").value("小艾发起请假申请申请"));
     }
 
     private String loginToken(String username) throws Exception {
@@ -266,7 +389,7 @@ public class ApprovalContractTest {
     }
 
     private IPage<ProcessVo> pending(SysUser user) {
-        return approval.findfindPending(user, new Page<Process>(1, 10));
+        return approval.findPending(user, new Page<Process>(1, 10));
     }
 
     private IPage<ProcessVo> processed(SysUser user) {
@@ -318,6 +441,13 @@ public class ApprovalContractTest {
         user.setUsername(username);
         user.setName(name);
         return user;
+    }
+
+    private void clearEngineInstances() {
+        runtimeService.createProcessInstanceQuery().list()
+                .forEach(instance -> runtimeService.deleteProcessInstance(instance.getId(), "contract-reset"));
+        historyService.createHistoricProcessInstanceQuery().list()
+                .forEach(instance -> historyService.deleteHistoricProcessInstance(instance.getId()));
     }
 
     @TestConfiguration

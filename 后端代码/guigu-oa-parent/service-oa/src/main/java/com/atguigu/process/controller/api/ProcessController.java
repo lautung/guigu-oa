@@ -50,7 +50,7 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<Process> pageParam = new Page<>(page,limit);
-        IPage<ProcessVo> pageModel = processService.findfindPending(currentUser(), pageParam);
+        IPage<ProcessVo> pageModel = processService.findPending(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
 

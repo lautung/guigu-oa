@@ -71,17 +71,22 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
-DELETE FROM sys_user WHERE username IN ('alice', 'zhangsan');
+DELETE FROM sys_user WHERE username IN ('alice', 'zhangsan', 'lisi');
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
 VALUES (2, 'alice', '96e79218965eb72c92a549dd5a330112', '小艾', '13800000002', 1, 0);
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
 VALUES (3, 'zhangsan', '96e79218965eb72c92a549dd5a330112', '张三', '13800000003', 1, 0);
+INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
+VALUES (4, 'lisi', '96e79218965eb72c92a549dd5a330112', '李四', '13800000004', 1, 0);
 
 DELETE FROM oa_process_record;
 DELETE FROM oa_process;
-DELETE FROM oa_process_template WHERE id = 1;
+DELETE FROM oa_process_template WHERE id IN (1, 2);
 DELETE FROM oa_process_type WHERE id = 1;
 INSERT INTO oa_process_type (id, name, description, is_deleted) VALUES (1, '请假', '请假', 0);
 INSERT INTO oa_process_template (
   id, name, process_type_id, process_definition_key, status, is_deleted
 ) VALUES (1, '请假申请', 1, 'approvalTwoStep', 1, 0);
+INSERT INTO oa_process_template (
+  id, name, process_type_id, process_definition_key, process_definition_path, status, is_deleted
+) VALUES (2, '请假申请', 1, 'qingjia', 'processes/qingjia.zip', 1, 0);

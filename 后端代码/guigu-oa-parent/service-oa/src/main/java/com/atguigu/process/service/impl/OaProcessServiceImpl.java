@@ -117,7 +117,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    public IPage<ProcessVo> findfindPending(SysUser user, Page<Process> pageParam) {
+    public IPage<ProcessVo> findPending(SysUser user, Page<Process> pageParam) {
         String username = user.getUsername();
         int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
