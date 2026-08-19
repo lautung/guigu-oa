@@ -4,6 +4,7 @@ import {
   emptyForm,
   getRequest,
   listRequest,
+  presentDesignerState,
   presentForm,
   presentListPage,
   presentStartGroups,
@@ -186,6 +187,14 @@ describe('config/process-template', () => {
         '/dev-api/admin/process/processTemplate/uploadProcessDefinition'
       )
     })
+
+    it('builds the zip upload URL from Vite VITE_APP_BASE_API', () => {
+      vi.stubEnv('VITE_APP_BASE_API', '/custom-api')
+      expect(uploadProcessDefinitionUrl()).toBe(
+        '/custom-api/admin/process/processTemplate/uploadProcessDefinition'
+      )
+      vi.unstubAllEnvs()
+    })
   })
 
   describe('form', () => {
@@ -250,6 +259,57 @@ describe('config/process-template', () => {
       expect(form.processDefinitionPath).toBe('processes/qingjia.zip')
       expect(form.processDefinitionKey).toBe('qingjia')
     })
+
+    it('restores designer rule and option from stored 种子 formProps / formOptions without dropping fields', () => {
+      expect(presentDesignerState({
+        formProps: '[{"type":"input","field":"reason","title":"请假原因","$required":true,"props":{"placeholder":"请输入请假原因"}},{"type":"input","field":"days","title":"请假天数","$required":true,"props":{"type":"number","placeholder":"请输入请假天数"}}]',
+        formOptions: '{"submitBtn":false,"form":{"labelPosition":"right","labelWidth":"125px"}}'
+      })).toEqual({
+        rule: [
+          {
+            type: 'input',
+            field: 'reason',
+            title: '请假原因',
+            $required: true,
+            props: { placeholder: '请输入请假原因' }
+          },
+          {
+            type: 'input',
+            field: 'days',
+            title: '请假天数',
+            $required: true,
+            props: { type: 'number', placeholder: '请输入请假天数' }
+          }
+        ],
+        option: {
+          submitBtn: false,
+          form: { labelPosition: 'right', labelWidth: '125px' }
+        }
+      })
+    })
+
+    it('restores a blank designer when formProps / formOptions are missing or not JSON', () => {
+      expect(presentDesignerState(emptyForm())).toEqual({
+        rule: [],
+        option: {}
+      })
+      expect(presentDesignerState({
+        formProps: '{not-json',
+        formOptions: 'also-not-json'
+      })).toEqual({
+        rule: [],
+        option: {}
+      })
+    })
+
+    it('round-trips designer output through formProps / formOptions for 编辑回填', () => {
+      const rule = [{ type: 'input', field: 'reason', title: '请假原因' }]
+      const option = { submitBtn: false }
+      expect(presentDesignerState(applyFormDesign(emptyForm(), { rule, option }))).toEqual({
+        rule,
+        option
+      })
+    })
   })
 
   describe('wizard', () => {
@@ -292,8 +352,8 @@ describe('config/process-template', () => {
   })
 
   describe('saveValidationError', () => {
-    it('requires an uploaded Activiti zip before 提交保存', () => {
-      expect(saveValidationError(emptyForm())).toBe('请上传 Activiti 流程 zip')
+    it('requires an uploaded 流程 zip before 提交保存', () => {
+      expect(saveValidationError(emptyForm())).toBe('请上传流程 zip')
     })
 
     it('accepts a form with processDefinitionPath', () => {

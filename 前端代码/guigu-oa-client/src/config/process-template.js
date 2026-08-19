@@ -98,7 +98,7 @@ export function writeRequest(form) {
 }
 
 export function uploadProcessDefinitionUrl() {
-  const base = process.env.VUE_APP_BASE_API || '/dev-api'
+  const base = import.meta.env.VITE_APP_BASE_API || '/dev-api'
   return `${base}${PROCESS_TEMPLATE_API}/uploadProcessDefinition`
 }
 
@@ -132,11 +132,26 @@ export function presentForm(record = {}) {
   }
 }
 
+function parseJson(value, fallback) {
+  try {
+    return value ? JSON.parse(value) : fallback
+  } catch (error) {
+    return fallback
+  }
+}
+
 export function applyFormDesign(form, { rule = [], option = {} } = {}) {
   return {
     ...form,
     formProps: JSON.stringify(rule),
     formOptions: JSON.stringify(option)
+  }
+}
+
+export function presentDesignerState(form = {}) {
+  return {
+    rule: parseJson(form.formProps, []),
+    option: parseJson(form.formOptions, {})
   }
 }
 
@@ -177,7 +192,7 @@ export function zipUploadError(file = {}) {
 
 export function saveValidationError(form = {}) {
   if (!form.processDefinitionPath) {
-    return '请上传 Activiti 流程 zip'
+    return '请上传流程 zip'
   }
   return null
 }

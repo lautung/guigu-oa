@@ -45,7 +45,7 @@
     </div>
 
     <div v-show="stepIndex === 1" class="step-pane">
-      <fc-designer ref="designer" />
+      <fc-designer ref="designer" height="520px" />
     </div>
 
     <div v-show="stepIndex === 2" class="step-pane">
@@ -59,9 +59,10 @@
         :on-success="onUploadSuccess"
         :on-remove="onUploadRemove"
       >
-        <i class="el-icon-upload" />
-        <div class="el-upload__text">将 Activiti zip 文件拖到此处，或<em>点击上传</em></div>
-        <div slot="tip" class="el-upload__tip">只能上传 zip 压缩文件，且不超过 2048kb</div>
+        <div class="el-upload__text">将流程 zip 文件拖到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="el-upload__tip">只能上传 zip 压缩文件，且不超过 2048kb</div>
+        </template>
       </el-upload>
     </div>
   </div>
@@ -74,6 +75,7 @@ import {
   applyFormDesign,
   applyUploadResult,
   emptyForm,
+  presentDesignerState,
   presentForm,
   saveValidationError,
   TEMPLATE_ICONS,
@@ -83,14 +85,6 @@ import {
   zipUploadError
 } from '@/config/process-template'
 import { getToken } from '@/utils/auth'
-
-function parseJson(value, fallback) {
-  try {
-    return value ? JSON.parse(value) : fallback
-  } catch (error) {
-    return fallback
-  }
-}
 
 export default {
   name: 'ProcessTemplateSet',
@@ -140,8 +134,9 @@ export default {
       if (!this.$refs.designer) {
         return
       }
-      this.$refs.designer.setRule(parseJson(this.form.formProps, []))
-      this.$refs.designer.setOption(parseJson(this.form.formOptions, {}))
+      const design = presentDesignerState(this.form)
+      this.$refs.designer.setRule(design.rule)
+      this.$refs.designer.setOption(design.option)
     },
     captureDesigner() {
       if (!this.$refs.designer) {

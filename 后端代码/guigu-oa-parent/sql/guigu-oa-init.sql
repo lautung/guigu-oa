@@ -259,4 +259,53 @@ FROM `sys_menu` p
 WHERE p.path='/processMgr' AND p.parent_id=0 AND p.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM `sys_menu` c WHERE c.parent_id=p.id AND c.path='process' AND c.is_deleted=0);
 
+-- ----------------------------
+-- 种子数据：审批类型与审批模板（formProps / formOptions 为 form-create JSON，供设计器回填）
+-- ----------------------------
+INSERT INTO `oa_process_type` (`name`,`description`,`create_time`,`update_time`,`is_deleted`)
+SELECT '请假','员工请假',NOW(),NOW(),0
+WHERE NOT EXISTS (SELECT 1 FROM `oa_process_type` WHERE `name`='请假' AND `is_deleted`=0);
+
+INSERT INTO `oa_process_template` (
+  `name`,`icon_url`,`process_type_id`,`form_props`,`form_options`,`description`,
+  `process_definition_key`,`process_definition_path`,`status`,`create_time`,`update_time`,`is_deleted`
+)
+SELECT
+  '请假申请',
+  'https://gw.alicdn.com/tfs/TB1t695CFYqK1RjSZLeXXbXppXa-102-102.png',
+  t.id,
+  '[{"type":"input","field":"reason","title":"请假原因","$required":true,"props":{"placeholder":"请输入请假原因"}},{"type":"input","field":"days","title":"请假天数","$required":true,"props":{"type":"number","placeholder":"请输入请假天数"}}]',
+  '{"submitBtn":false,"form":{"labelPosition":"right","labelWidth":"125px"}}',
+  '员工请假',
+  'qingjia',
+  'processes/qingjia.zip',
+  1,
+  NOW(),
+  NOW(),
+  0
+FROM `oa_process_type` t
+WHERE t.name='请假' AND t.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `oa_process_template` p WHERE p.name='请假申请' AND p.is_deleted=0);
+
+INSERT INTO `oa_process_template` (
+  `name`,`icon_url`,`process_type_id`,`form_props`,`form_options`,`description`,
+  `process_definition_key`,`process_definition_path`,`status`,`create_time`,`update_time`,`is_deleted`
+)
+SELECT
+  '病假草稿',
+  'https://gw.alicdn.com/tfs/TB1t695CFYqK1RjSZLeXXbXppXa-102-102.png',
+  t.id,
+  '[{"type":"input","field":"reason","title":"请假原因","$required":true,"props":{"placeholder":"请输入请假原因"}},{"type":"input","field":"days","title":"请假天数","$required":true,"props":{"type":"number","placeholder":"请输入请假天数"}}]',
+  '{"submitBtn":false,"form":{"labelPosition":"right","labelWidth":"125px"}}',
+  '未发布的病假模板',
+  '',
+  '',
+  0,
+  NOW(),
+  NOW(),
+  0
+FROM `oa_process_type` t
+WHERE t.name='请假' AND t.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM `oa_process_template` p WHERE p.name='病假草稿' AND p.is_deleted=0);
+
 SET FOREIGN_KEY_CHECKS = 1;

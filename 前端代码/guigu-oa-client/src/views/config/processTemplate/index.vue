@@ -15,7 +15,7 @@
       />
       <el-table-column prop="name" label="审批名称" />
       <el-table-column label="图标" width="80" align="center">
-        <template slot-scope="scope">
+        <template #default="scope">
           <img v-if="scope.row.iconUrl" :src="scope.row.iconUrl" class="template-icon" alt="">
         </template>
       </el-table-column>
@@ -25,7 +25,7 @@
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column prop="updateTime" label="更新时间" />
       <el-table-column label="操作" width="260" align="center">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-button type="text" @click="show(scope.row)">查看</el-button>
           <el-button v-if="scope.row.canEdit" type="text" @click="openEdit(scope.row.id)">编辑</el-button>
           <el-button v-if="scope.row.canDelete" type="text" @click="remove(scope.row.id)">删除</el-button>
@@ -46,7 +46,7 @@
       />
     </div>
 
-    <el-dialog title="查看审批模板" :visible.sync="previewVisible" width="520px">
+    <el-dialog title="查看审批模板" v-model="previewVisible" width="520px">
       <h3>基本信息</h3>
       <el-divider />
       <el-form label-width="90px">
@@ -57,24 +57,16 @@
       <h3>表单信息</h3>
       <el-divider />
       <form-create v-if="previewVisible" :rule="previewRule" :option="previewOption" />
-      <span slot="footer" class="dialog-footer">
+      <template #footer>
         <el-button @click="previewVisible = false">关闭</el-button>
-      </span>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script>
 import { getPageList, publish, removeById } from '@/api/processTemplate'
-import { presentListPage } from '@/config/process-template'
-
-function parseJson(value, fallback) {
-  try {
-    return value ? JSON.parse(value) : fallback
-  } catch (error) {
-    return fallback
-  }
-}
+import { presentDesignerState, presentListPage } from '@/config/process-template'
 
 export default {
   name: 'ProcessTemplateList',
@@ -125,8 +117,9 @@ export default {
     },
     show(row) {
       this.preview = row
-      this.previewRule = parseJson(row.formProps, [])
-      this.previewOption = Object.assign({ submitBtn: false }, parseJson(row.formOptions, {}))
+      const design = presentDesignerState(row)
+      this.previewRule = design.rule
+      this.previewOption = Object.assign({ submitBtn: false }, design.option)
       this.previewVisible = true
     },
     publishTemplate(id) {
