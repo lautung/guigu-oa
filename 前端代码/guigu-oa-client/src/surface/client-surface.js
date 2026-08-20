@@ -186,6 +186,19 @@ export function resolveClientSurface({
   }
 }
 
+export function createViewportOccupancyHandler({ getSurfaceInput, goTo }) {
+  return function handleViewportWidth(viewportWidth) {
+    const input = getSurfaceInput()
+    const occupancy = resolveClientSurface({
+      ...input,
+      viewportWidth
+    }).occupancy
+    if (occupancy && occupancy.action === 'redirect' && occupancy.to !== input.path) {
+      goTo(occupancy.to)
+    }
+  }
+}
+
 export function loadClientSurfaceHost() {
   return import('./ClientSurfaceHost.vue')
 }

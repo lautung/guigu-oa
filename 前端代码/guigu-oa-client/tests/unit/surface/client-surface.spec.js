@@ -1,5 +1,5 @@
 import { constantRoutes } from '@/router'
-import { resolveClientSurface } from '@/surface/client-surface'
+import { createViewportOccupancyHandler, resolveClientSurface } from '@/surface/client-surface'
 
 const SAMPLE_CONFIG_MENUS = [
   {
@@ -192,6 +192,76 @@ describe('统一客户端表面', () => {
       action: 'redirect',
       to: '/work/pending'
     })
+  })
+
+  it('shrinking onto 配置 occupancy-lands on 待处理 via the same occupancy as entering, not the 配置 URL', () => {
+    const surfaceInput = {
+      path: '/system/sysUser',
+      hasToken: true,
+      menus: SAMPLE_CONFIG_MENUS,
+      configEntryAuthorized: true
+    }
+    const entering = resolveClientSurface({
+      ...surfaceInput,
+      viewportWidth: 375
+    }).occupancy
+    const goTo = vi.fn()
+    const handleViewportWidth = createViewportOccupancyHandler({
+      getSurfaceInput: () => surfaceInput,
+      goTo
+    })
+
+    handleViewportWidth(1200)
+    expect(goTo).not.toHaveBeenCalled()
+
+    handleViewportWidth(375)
+    expect(goTo).toHaveBeenCalledTimes(1)
+    expect(goTo).toHaveBeenCalledWith(entering.to)
+    expect(goTo).toHaveBeenCalledWith('/work/pending')
+    expect(goTo.mock.calls[0][0]).not.toBe('/system/sysUser')
+  })
+
+  it('shrinking onto a hidden 配置 page or 审批实例查询详情 occupancy-lands on 待处理', () => {
+    const goTo = vi.fn()
+
+    createViewportOccupancyHandler({
+      getSurfaceInput: () => ({
+        path: '/system/assignAuth',
+        hasToken: true,
+        menus: SAMPLE_CONFIG_MENUS,
+        configEntryAuthorized: true
+      }),
+      goTo
+    })(375)
+
+    createViewportOccupancyHandler({
+      getSurfaceInput: () => ({
+        path: '/processMgr/process/9',
+        hasToken: true,
+        menus: SAMPLE_CONFIG_MENUS,
+        configEntryAuthorized: true
+      }),
+      goTo
+    })(375)
+
+    expect(goTo).toHaveBeenCalledTimes(2)
+    expect(goTo).toHaveBeenNthCalledWith(1, '/work/pending')
+    expect(goTo).toHaveBeenNthCalledWith(2, '/work/pending')
+  })
+
+  it('shrinking onto 办事 does not leave the current page', () => {
+    const goTo = vi.fn()
+    createViewportOccupancyHandler({
+      getSurfaceInput: () => ({
+        path: '/work/pending',
+        hasToken: true,
+        menus: SAMPLE_CONFIG_MENUS,
+        configEntryAuthorized: true
+      }),
+      goTo
+    })(375)
+
+    expect(goTo).not.toHaveBeenCalled()
   })
 
   it('办事入口 and 配置入口 hang on the same surface host', () => {

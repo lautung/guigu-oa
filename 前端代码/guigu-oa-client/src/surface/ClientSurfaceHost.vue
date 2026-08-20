@@ -12,7 +12,8 @@
 
 <script>
 import { useUserStore } from '@/store/modules/user'
-import { resolveClientSurface } from './client-surface'
+import { isAuthorizedConfigPath } from '@/navigation/access-policy'
+import { createViewportOccupancyHandler, resolveClientSurface } from './client-surface'
 import TopBar from '@/layout/components/TopBar.vue'
 import AppSidebar from '@/layout/components/AppSidebar.vue'
 
@@ -22,17 +23,47 @@ export default {
   setup() {
     return { userStore: useUserStore() }
   },
+  data() {
+    return {
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1024
+    }
+  },
   computed: {
+    surfaceInput() {
+      const path = this.$route.path
+      const menus = this.userStore.menus || []
+      return {
+        path,
+        hasToken: true,
+        menus,
+        configEntryAuthorized: isAuthorizedConfigPath(path, menus)
+      }
+    },
     surface() {
       return resolveClientSurface({
-        path: this.$route.path,
-        hasToken: true,
-        menus: this.userStore.menus || []
+        ...this.surfaceInput,
+        viewportWidth: this.viewportWidth
       })
     },
     contentClass() {
       return this.surface.density ? `is-${this.surface.density}` : null
     }
+  },
+  created() {
+    this.handleViewportWidth = createViewportOccupancyHandler({
+      getSurfaceInput: () => this.surfaceInput,
+      goTo: to => this.$router.replace(to)
+    })
+  },
+  mounted() {
+    this.onViewportResize = () => {
+      this.viewportWidth = window.innerWidth
+      this.handleViewportWidth(this.viewportWidth)
+    }
+    window.addEventListener('resize', this.onViewportResize)
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.onViewportResize)
   }
 }
 </script>
