@@ -1,6 +1,7 @@
 package com.atguigu.process.service.impl;
 
 import com.atguigu.auth.service.SysUserService;
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
@@ -90,7 +91,10 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     @Override
     @Transactional
     public void startUp(SysUser user, ProcessFormVo processFormVo) {
-        ProcessTemplate processTemplate = processTemplateService.getById(processFormVo.getProcessTemplateId());
+        if (!processTemplateService.canInitiate(processFormVo.getProcessTemplateId())) {
+            throw new GuiguException(201, "未发布的审批模板不能发起");
+        }
+        ProcessTemplate processTemplate = processTemplateService.read(processFormVo.getProcessTemplateId());
 
         Process process = new Process();
         BeanUtils.copyProperties(processFormVo, process);
@@ -149,7 +153,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessRecord::getProcessId, id);
         List<ProcessRecord> processRecordList = processRecordService.list(wrapper);
-        ProcessTemplate processTemplate = processTemplateService.getById(process.getProcessTemplateId());
+        ProcessTemplate processTemplate = processTemplateService.read(process.getProcessTemplateId());
 
         List<String> assignees = new ArrayList<>();
         for (Task task : ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId())) {

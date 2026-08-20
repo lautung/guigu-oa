@@ -64,7 +64,7 @@ public class ProcessController {
     //获取审批模板数据
     @GetMapping("getProcessTemplate/{processTemplateId}")
     public Result getProcessTemplate(@PathVariable Long processTemplateId) {
-        ProcessTemplate processTemplate = processTemplateService.getById(processTemplateId);
+        ProcessTemplate processTemplate = processTemplateService.read(processTemplateId);
         return Result.ok(processTemplate);
     }
 

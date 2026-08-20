@@ -42,7 +42,7 @@ public class OaProcessTemplateController {
         Page<ProcessTemplate> pageParam = new Page<>(page,limit);
         //分页查询审批模板，把审批类型对应名称查询
         IPage<ProcessTemplate> pageModel =
-                processTemplateService.selectPageProcessTempate(pageParam);
+                processTemplateService.findPage(pageParam);
         return Result.ok(pageModel);
     }
 
@@ -50,7 +50,7 @@ public class OaProcessTemplateController {
     @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
-        ProcessTemplate processTemplate = processTemplateService.getById(id);
+        ProcessTemplate processTemplate = processTemplateService.read(id);
         return Result.ok(processTemplate);
     }
 
@@ -58,7 +58,7 @@ public class OaProcessTemplateController {
     @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@RequestBody ProcessTemplate processTemplate) {
-        processTemplateService.save(processTemplate);
+        processTemplateService.saveUnpublished(processTemplate);
         return Result.ok();
     }
 
@@ -66,7 +66,7 @@ public class OaProcessTemplateController {
     @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@RequestBody ProcessTemplate processTemplate) {
-        processTemplateService.updateById(processTemplate);
+        processTemplateService.saveUnpublished(processTemplate);
         return Result.ok();
     }
 
@@ -74,7 +74,7 @@ public class OaProcessTemplateController {
     @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
-        processTemplateService.removeById(id);
+        processTemplateService.removeUnpublished(id);
         return Result.ok();
     }
 

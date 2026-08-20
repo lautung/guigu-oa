@@ -81,12 +81,21 @@ VALUES (4, 'lisi', '96e79218965eb72c92a549dd5a330112', '李四', '13800000004', 
 
 DELETE FROM oa_process_record;
 DELETE FROM oa_process;
-DELETE FROM oa_process_template WHERE id IN (1, 2);
-DELETE FROM oa_process_type WHERE id = 1;
+DELETE FROM oa_process_template;
+DELETE FROM oa_process_type;
 INSERT INTO oa_process_type (id, name, description, is_deleted) VALUES (1, '请假', '请假', 0);
+INSERT INTO oa_process_type (id, name, description, is_deleted) VALUES (2, '加班', '加班', 0);
 INSERT INTO oa_process_template (
   id, name, process_type_id, process_definition_key, status, is_deleted
 ) VALUES (1, '请假申请', 1, 'approvalTwoStep', 1, 0);
 INSERT INTO oa_process_template (
   id, name, process_type_id, process_definition_key, process_definition_path, status, is_deleted
 ) VALUES (2, '请假申请', 1, 'qingjia', 'processes/qingjia.zip', 1, 0);
+INSERT INTO oa_process_template (
+  id, name, process_type_id, process_definition_key, status, is_deleted
+) VALUES (3, '未发布病假', 1, 'approvalTwoStep', 0, 0);
+INSERT INTO oa_process_template (
+  id, name, process_type_id, process_definition_key, status, is_deleted
+) VALUES (4, '未发布加班', 2, 'approvalTwoStep', 0, 0);
+ALTER TABLE oa_process_template ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE oa_process_type ALTER COLUMN id RESTART WITH 100;

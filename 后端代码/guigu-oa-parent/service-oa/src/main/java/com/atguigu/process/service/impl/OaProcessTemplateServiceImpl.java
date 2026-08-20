@@ -1,7 +1,9 @@
 package com.atguigu.process.service.impl;
 
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
+import com.atguigu.process.ApprovalTemplateSupport;
 import com.atguigu.process.ProcessCutoverSupport;
 import com.atguigu.process.mapper.OaProcessTemplateMapper;
 import com.atguigu.process.service.OaProcessService;
@@ -11,16 +13,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -39,39 +37,53 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
     @Autowired
     private OaProcessService processService;
 
-    //分页查询审批模板，把审批类型对应名称查询
     @Override
-    public IPage<ProcessTemplate> selectPageProcessTempate(Page<ProcessTemplate> pageParam) {
-        //1 调用mapper的方法实现分页查询
+    public IPage<ProcessTemplate> findPage(Page<ProcessTemplate> pageParam) {
         Page<ProcessTemplate> processTemplatePage = baseMapper.selectPage(pageParam, null);
-
-        //2 第一步分页查询返回分页数据，从分页数据获取列表list集合
-        List<ProcessTemplate> processTemplateList = processTemplatePage.getRecords();
-
-        //3 遍历list集合，得到每个对象的审批类型id
-        for(ProcessTemplate processTemplate : processTemplateList) {
-            //得到每个对象的审批类型id
+        for (ProcessTemplate processTemplate : processTemplatePage.getRecords()) {
             Long processTypeId = processTemplate.getProcessTypeId();
-            //4 根据审批类型id，查询获取对应名称
             LambdaQueryWrapper<ProcessType> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(ProcessType::getId,processTypeId);
+            wrapper.eq(ProcessType::getId, processTypeId);
             ProcessType processType = processTypeService.getOne(wrapper);
-            if(processType == null) {
+            if (processType == null) {
                 continue;
             }
-            //5 完成最终封装processTypeName
             processTemplate.setProcessTypeName(processType.getName());
         }
         return processTemplatePage;
     }
 
-    //修改模板发布状态 1 已经发布
-    //流程定义部署
+    @Override
+    public ProcessTemplate read(Long id) {
+        return baseMapper.selectById(id);
+    }
+
+    @Override
+    public void saveUnpublished(ProcessTemplate template) {
+        if (template.getId() != null) {
+            ProcessTemplate existing = baseMapper.selectById(template.getId());
+            if (existing != null && !ApprovalTemplateSupport.canWrite(existing.getStatus())) {
+                throw new GuiguException(201, "已发布的审批模板不能保存");
+            }
+        }
+        template.setStatus(ApprovalTemplateSupport.未发布);
+        if (template.getId() == null) {
+            save(template);
+        } else {
+            updateById(template);
+        }
+    }
+
     @Override
     public void publish(Long id) {
-        //修改模板发布状态 1 已经发布
         ProcessTemplate processTemplate = baseMapper.selectById(id);
-        processTemplate.setStatus(1);
+        if (processTemplate == null) {
+            throw new GuiguException(201, "审批模板不存在");
+        }
+        if (ApprovalTemplateSupport.canInitiate(processTemplate.getStatus())) {
+            throw new GuiguException(201, "已发布的审批模板不能再发布");
+        }
+        processTemplate.setStatus(ApprovalTemplateSupport.已发布);
         baseMapper.updateById(processTemplate);
 
         if (StringUtils.hasText(processTemplate.getProcessDefinitionPath())) {
@@ -80,9 +92,50 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
     }
 
     @Override
+    public void removeUnpublished(Long id) {
+        ProcessTemplate existing = baseMapper.selectById(id);
+        if (existing == null) {
+            return;
+        }
+        if (!ApprovalTemplateSupport.canWrite(existing.getStatus())) {
+            throw new GuiguException(201, "已发布的审批模板不能删除");
+        }
+        removeById(id);
+    }
+
+    @Override
+    public List<ProcessType> findStartable() {
+        List<ProcessType> groups = new ArrayList<>();
+        for (ProcessType processType : processTypeService.list()) {
+            LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(ProcessTemplate::getProcessTypeId, processType.getId());
+            wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
+            List<ProcessTemplate> published = list(wrapper);
+            if (published.isEmpty()) {
+                continue;
+            }
+            processType.setProcessTemplateList(published);
+            groups.add(processType);
+        }
+        return groups;
+    }
+
+    @Override
+    public boolean canInitiate(Long id) {
+        ProcessTemplate template = baseMapper.selectById(id);
+        return template != null && ApprovalTemplateSupport.canInitiate(template.getStatus());
+    }
+
+    @Override
+    public boolean canWrite(Long id) {
+        ProcessTemplate template = baseMapper.selectById(id);
+        return template != null && ApprovalTemplateSupport.canWrite(template.getStatus());
+    }
+
+    @Override
     public int redeployPublished() {
         LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ProcessTemplate::getStatus, 1);
+        wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
         List<ProcessTemplate> toRedeploy = ProcessCutoverSupport.publishedToRedeploy(list(wrapper));
         for (ProcessTemplate processTemplate : toRedeploy) {
             processService.deployByZip(processTemplate.getProcessDefinitionPath());
