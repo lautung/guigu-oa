@@ -1,5 +1,5 @@
 import { constantRoutes } from '@/router'
-import { filterConfigMenus } from '@/navigation/access-policy'
+import { configPermission } from '@/config-permission'
 
 function collectPaths(routes, prefix = '') {
   return routes.reduce((paths, route) => {
@@ -21,13 +21,14 @@ describe('unified client has no wechat entry', () => {
   })
 
   it('does not surface 公众号菜单 from sys_menu', () => {
-    const menus = filterConfigMenus([
+    const permission = configPermission([
       {
         path: '/wechat',
         meta: { title: '公众号菜单' },
         children: [{ path: 'menu', component: 'wechat/menu/list', meta: { title: '菜单列表' } }]
       }
     ])
-    expect(menus).toEqual([])
+    expect(permission.hasConfigPermission).toBe(false)
+    expect(permission.grantedConfigMenus).toEqual([])
   })
 })

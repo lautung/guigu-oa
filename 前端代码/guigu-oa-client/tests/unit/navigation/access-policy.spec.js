@@ -5,9 +5,7 @@ import {
   ROUTES,
   WORK_BUILTIN_ITEMS,
   buildSidebarTree,
-  filterConfigMenus,
   getDefaultPostLoginRoute,
-  hasConfigPermission,
   isMobileViewport,
   resolveAuthGuard,
   resolveNavigationGuard
@@ -54,53 +52,6 @@ describe('navigation/access-policy', () => {
     it('returns pending as the default post-login landing', () => {
       expect(getDefaultPostLoginRoute()).toBe(ROUTES.PENDING)
     })
-  })
-
-  describe('hasConfigPermission', () => {
-    it('returns false when menus are empty', () => {
-      expect(hasConfigPermission([])).toBe(false)
-    })
-
-    it('returns false when only excluded menus are present', () => {
-      expect(hasConfigPermission([
-        { path: '/wechat', children: [{ path: 'menu', component: 'wechat/menu/list', meta: { title: '菜单' } }] },
-        { path: '/dashboard', component: 'dashboard/index', meta: { title: 'Dashboard' } }
-      ])).toBe(false)
-    })
-
-    it('returns true when at least one config menu remains after filtering', () => {
-      expect(hasConfigPermission(SAMPLE_CONFIG_MENUS)).toBe(true)
-    })
-  })
-
-  describe('filterConfigMenus', () => {
-    it('removes wechat and dashboard entries', () => {
-      const filtered = filterConfigMenus(SAMPLE_CONFIG_MENUS)
-      const paths = filtered.map(item => item.path)
-
-      expect(paths).toContain('/system')
-      expect(paths).toContain('/processSet')
-      expect(paths).not.toContain('/wechat')
-      expect(paths).not.toContain('/dashboard')
-    })
-
-    it('removes Activiti online iframe designer entries', () => {
-      const filtered = filterConfigMenus([
-        {
-          path: '/processSet',
-          meta: { title: '审批设置' },
-          children: [
-            { path: 'processTemplate', meta: { title: '审批模板' } },
-            { path: 'onlineProcessSet', component: 'processSet/processTemplate/onlineProcessSet', meta: { title: '在线流程设置' } }
-          ]
-        }
-      ])
-
-      const childPaths = (filtered[0].children || []).map(item => item.path)
-      expect(childPaths).toContain('/processSet/processTemplate')
-      expect(childPaths).not.toContain('/processSet/onlineProcessSet')
-    })
-
   })
 
   describe('buildSidebarTree', () => {
@@ -184,7 +135,7 @@ describe('navigation/access-policy', () => {
       })
     })
 
-    it('redirects config routes when user lacks config permission', () => {
+    it('occupancy-lands on 待处理 when the user has no 配置权限', () => {
       expect(resolveNavigationGuard({
         path: '/system/sysUser',
         hasToken: true,
@@ -196,7 +147,7 @@ describe('navigation/access-policy', () => {
       })
     })
 
-    it('allows desktop config routes for authorized users', () => {
+    it('allows desktop occupancy of a granted 配置 page', () => {
       expect(resolveNavigationGuard({
         path: '/system/sysUser',
         hasToken: true,

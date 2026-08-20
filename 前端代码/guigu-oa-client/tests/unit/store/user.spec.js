@@ -38,7 +38,8 @@ describe('store/user', () => {
       data: {
         name: '管理员',
         avatar: 'https://example.com/avatar.png',
-        routers: [{ path: '/system/sysUser', name: '用户管理' }]
+        routers: [{ path: '/system/sysUser', name: '用户管理' }],
+        buttons: ['bnt.sysUser.add']
       }
     })
 
@@ -48,6 +49,7 @@ describe('store/user', () => {
     expect(store.name).toBe('管理员')
     expect(store.avatar).toBe('https://example.com/avatar.png')
     expect(store.menus).toEqual([{ path: '/system/sysUser', name: '用户管理' }])
+    expect(store.buttons).toBeUndefined()
   })
 
   it('resetToken and logout clear login state', async () => {
