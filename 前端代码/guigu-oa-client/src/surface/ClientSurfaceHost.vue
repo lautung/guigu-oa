@@ -12,7 +12,6 @@
 
 <script>
 import { useUserStore } from '@/store/modules/user'
-import { isAuthorizedConfigPath } from '@/navigation/access-policy'
 import { createViewportOccupancyHandler, resolveClientSurface } from './client-surface'
 import TopBar from '@/layout/components/TopBar.vue'
 import AppSidebar from '@/layout/components/AppSidebar.vue'
@@ -35,8 +34,7 @@ export default {
       return {
         path,
         hasToken: true,
-        menus,
-        configEntryAuthorized: isAuthorizedConfigPath(path, menus)
+        menus
       }
     },
     surface() {

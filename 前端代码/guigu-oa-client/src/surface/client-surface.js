@@ -1,3 +1,4 @@
+import { configPermission } from '@/config-permission'
 import {
   getDefaultPostLoginRoute,
   isMobileViewport,
@@ -120,12 +121,12 @@ function findMenuEntry(path, menus = []) {
 
 const WORK_LIST_ENTRY_PATHS = [ROUTES.PENDING, ROUTES.PROCESSED, ROUTES.STARTED]
 
-function occupancyFor({ menuGroup, viewportWidth, hasToken, configEntryAuthorized }) {
+function occupancyFor({ menuGroup, viewportWidth, hasToken, path, menus }) {
   if (!hasToken || menuGroup !== MENU_GROUPS.CONFIG) {
     return { action: 'allow' }
   }
 
-  if (isMobileViewport(viewportWidth) || !configEntryAuthorized) {
+  if (isMobileViewport(viewportWidth) || !configPermission(menus).canOccupy(path)) {
     return {
       action: 'redirect',
       to: getDefaultPostLoginRoute()
@@ -147,8 +148,7 @@ export function resolveClientSurface({
   path,
   viewportWidth,
   hasToken,
-  menus = [],
-  configEntryAuthorized
+  menus = []
 } = {}) {
   if (normalizePath(path) === ROUTES.LOGIN) {
     return {
@@ -179,7 +179,8 @@ export function resolveClientSurface({
       menuGroup: owner.group,
       viewportWidth,
       hasToken,
-      configEntryAuthorized
+      path,
+      menus
     }),
     hasWorkListPerspective: WORK_LIST_ENTRY_PATHS.includes(owner.path),
     returnPath: owner.path

@@ -35,8 +35,7 @@ describe('统一客户端表面', () => {
       path: '/login',
       viewportWidth: 1200,
       hasToken: false,
-      menus: [],
-      configEntryAuthorized: false
+      menus: []
     })
 
     expect(surface.showSurface).toBe(false)
@@ -50,8 +49,7 @@ describe('统一客户端表面', () => {
       path: '/work/pending',
       viewportWidth: 375,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: false
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(surface.showSurface).toBe(true)
@@ -60,19 +58,36 @@ describe('统一客户端表面', () => {
     expect(surface.occupancy).toEqual({ action: 'allow' })
   })
 
-  it('a 配置 entry belongs to the 配置 菜单组, uses 配置 density, and allows occupancy when authorized on desktop', () => {
+  it('a 配置 entry belongs to the 配置 菜单组, uses 配置 density, and allows occupancy on desktop', () => {
     const surface = resolveClientSurface({
       path: '/system/sysUser',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(surface.showSurface).toBe(true)
     expect(surface.menuGroup).toBe('config')
     expect(surface.density).toBe('wide')
     expect(surface.occupancy).toEqual({ action: 'allow' })
+  })
+
+  it('occupancy-lands on 待处理 when 角色管理 was not granted', () => {
+    expect(resolveClientSurface({
+      path: '/system/sysRole',
+      viewportWidth: 1200,
+      hasToken: true,
+      menus: [{
+        path: '/system',
+        meta: { title: '组织与权限' },
+        children: [
+          { path: 'sysUser', meta: { title: '用户管理' } }
+        ]
+      }]
+    }).occupancy).toEqual({
+      action: 'redirect',
+      to: '/work/pending'
+    })
   })
 
   it('assigns 菜单组 from the 菜单 tree entry rather than an old path prefix', () => {
@@ -88,8 +103,7 @@ describe('统一客户端表面', () => {
       path: '/office/users',
       viewportWidth: 1200,
       hasToken: true,
-      menus,
-      configEntryAuthorized: true
+      menus
     }).menuGroup).toBe('config')
   })
 
@@ -98,16 +112,14 @@ describe('统一客户端表面', () => {
       path: '/system/assignAuth',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     }).menuGroup).toBe('config')
 
     expect(resolveClientSurface({
       path: '/processSet/templateSet',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     }).menuGroup).toBe('config')
   })
 
@@ -116,8 +128,7 @@ describe('统一客户端表面', () => {
       path: '/processMgr/process/9',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(surface.menuGroup).toBe('config')
@@ -131,15 +142,13 @@ describe('统一客户端表面', () => {
       path: '/work/pending/9/task-1',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
     const fromConfig = resolveClientSurface({
       path: '/processMgr/process/9',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(fromWork.menuGroup).toBe('work')
@@ -153,8 +162,7 @@ describe('统一客户端表面', () => {
       path: '/system/sysUser',
       viewportWidth: 375,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(surface.occupancy).toEqual({
@@ -163,13 +171,12 @@ describe('统一客户端表面', () => {
     })
   })
 
-  it('a logged-in user entering an unauthorized 配置 entry occupancy-lands on 待处理', () => {
+  it('a logged-in user entering an ungranted 配置 entry occupancy-lands on 待处理', () => {
     const surface = resolveClientSurface({
       path: '/system/sysUser',
       viewportWidth: 1200,
       hasToken: true,
-      menus: [],
-      configEntryAuthorized: false
+      menus: []
     })
 
     expect(surface.occupancy).toEqual({
@@ -183,8 +190,7 @@ describe('统一客户端表面', () => {
       path: '/processSet/processType',
       viewportWidth: 768,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     })
 
     expect(surface.occupancy).toEqual({
@@ -197,8 +203,7 @@ describe('统一客户端表面', () => {
     const surfaceInput = {
       path: '/system/sysUser',
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS,
-      configEntryAuthorized: true
+      menus: SAMPLE_CONFIG_MENUS
     }
     const entering = resolveClientSurface({
       ...surfaceInput,
@@ -227,8 +232,7 @@ describe('统一客户端表面', () => {
       getSurfaceInput: () => ({
         path: '/system/assignAuth',
         hasToken: true,
-        menus: SAMPLE_CONFIG_MENUS,
-        configEntryAuthorized: true
+        menus: SAMPLE_CONFIG_MENUS
       }),
       goTo
     })(375)
@@ -237,8 +241,7 @@ describe('统一客户端表面', () => {
       getSurfaceInput: () => ({
         path: '/processMgr/process/9',
         hasToken: true,
-        menus: SAMPLE_CONFIG_MENUS,
-        configEntryAuthorized: true
+        menus: SAMPLE_CONFIG_MENUS
       }),
       goTo
     })(375)
@@ -254,8 +257,7 @@ describe('统一客户端表面', () => {
       getSurfaceInput: () => ({
         path: '/work/pending',
         hasToken: true,
-        menus: SAMPLE_CONFIG_MENUS,
-        configEntryAuthorized: true
+        menus: SAMPLE_CONFIG_MENUS
       }),
       goTo
     })(375)

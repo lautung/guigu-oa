@@ -1,3 +1,4 @@
+import { configPermission } from '@/config-permission'
 import { isExcludedConfigMenu } from '@/config/sys-menu'
 import { resolveClientSurface } from '@/surface/client-surface'
 import {
@@ -178,6 +179,10 @@ export function buildWorkSidebarGroup() {
 }
 
 export function buildConfigSidebarGroup(menus = [], viewportWidth) {
+  return configSidebarGroup(configPermission(menus).grantedConfigMenus, viewportWidth)
+}
+
+function configSidebarGroup(grantedConfigMenus, viewportWidth) {
   const mobile = isMobileViewport(viewportWidth)
 
   return {
@@ -185,15 +190,16 @@ export function buildConfigSidebarGroup(menus = [], viewportWidth) {
     title: '配置',
     collapsed: mobile,
     hint: mobile ? DESKTOP_CONFIG_HINT : null,
-    items: mapMenuToSidebarItems(filterConfigMenus(menus))
+    items: mapMenuToSidebarItems(grantedConfigMenus)
   }
 }
 
 export function buildSidebarTree({ menus = [], viewportWidth = MOBILE_BREAKPOINT + 1 }) {
   const tree = [buildWorkSidebarGroup()]
+  const permission = configPermission(menus)
 
-  if (hasConfigPermission(menus)) {
-    tree.push(buildConfigSidebarGroup(menus, viewportWidth))
+  if (permission.hasConfigPermission) {
+    tree.push(configSidebarGroup(permission.grantedConfigMenus, viewportWidth))
   }
 
   return tree
@@ -240,8 +246,7 @@ export function resolveNavigationGuard({
     path,
     viewportWidth,
     hasToken,
-    menus,
-    configEntryAuthorized: isAuthorizedConfigPath(path, menus)
+    menus
   }).occupancy
 
   if (occupancy && occupancy.action === 'redirect') {

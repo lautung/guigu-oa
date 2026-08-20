@@ -76,6 +76,53 @@ describe('配置权限驱动的侧栏与路由', () => {
     expect(tree.some(group => group.key === 'config')).toBe(false)
   })
 
+  it('hides the 配置 group when only 部门管理 is granted', () => {
+    const tree = buildSidebarTree({
+      menus: [{
+        path: '/system',
+        component: 'Layout',
+        meta: { title: '组织与权限' },
+        children: [
+          { path: 'sysDept', component: 'system/sysDept/list', meta: { title: '部门管理' } }
+        ]
+      }],
+      viewportWidth: 1200
+    })
+    expect(tree.some(group => group.key === 'config')).toBe(false)
+  })
+
+  it('hides the 配置 group when only 办事 menus are present', () => {
+    const tree = buildSidebarTree({
+      menus: [{ path: '/work/pending', meta: { title: '待处理' } }],
+      viewportWidth: 1200
+    })
+    expect(tree.some(group => group.key === 'config')).toBe(false)
+    expect(tree[0].items.map(item => item.title)).toEqual(
+      WORK_BUILTIN_ITEMS.map(item => item.title)
+    )
+  })
+
+  it('does not list buttons in the 配置 group', () => {
+    const tree = buildSidebarTree({
+      menus: [{
+        path: '/system',
+        component: 'Layout',
+        meta: { title: '组织与权限' },
+        children: [{
+          path: 'sysUser',
+          component: 'system/sysUser/list',
+          meta: { title: '用户管理' },
+          children: [
+            { path: 'btn', perms: 'bnt.sysUser.add', type: 2, meta: { title: '添加' } }
+          ]
+        }]
+      }],
+      viewportWidth: 1200
+    })
+    const titles = flattenTitles(tree.find(group => group.key === 'config').items)
+    expect(titles).toEqual(['组织与权限', '用户管理'])
+  })
+
   it('drops 部门 / 岗位 / 日志 / Dashboard from the 配置 group', () => {
     const tree = buildSidebarTree({ menus: MIXED_WITH_EXCLUDED, viewportWidth: 1200 })
     const titles = flattenTitles(tree.find(group => group.key === 'config').items)
@@ -160,6 +207,56 @@ describe('配置权限驱动的侧栏与路由', () => {
           { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
         ]
       }]
+    })).toEqual({
+      action: 'redirect',
+      to: ROUTES.PENDING
+    })
+  })
+
+  it('occupancy-lands on 待处理 for 菜单授权 when only a hidden node is present', () => {
+    expect(resolveNavigationGuard({
+      path: '/system/assignAuth',
+      hasToken: true,
+      viewportWidth: 1200,
+      menus: [{
+        path: '/system',
+        meta: { title: '组织与权限' },
+        children: [
+          { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
+        ]
+      }]
+    })).toEqual({
+      action: 'redirect',
+      to: ROUTES.PENDING
+    })
+  })
+
+  it('ignores button nodes when occupying 配置 pages', () => {
+    const menus = [{
+      path: '/system',
+      meta: { title: '组织与权限' },
+      children: [{
+        path: 'sysUser',
+        component: 'system/sysUser/list',
+        meta: { title: '用户管理' },
+        children: [
+          { path: 'btn', perms: 'bnt.sysUser.add', type: 2, meta: { title: '添加' } }
+        ]
+      }]
+    }]
+
+    expect(resolveNavigationGuard({
+      path: '/system/sysUser',
+      hasToken: true,
+      viewportWidth: 1200,
+      menus
+    })).toEqual({ action: 'allow' })
+
+    expect(resolveNavigationGuard({
+      path: '/system/sysRole',
+      hasToken: true,
+      viewportWidth: 1200,
+      menus
     })).toEqual({
       action: 'redirect',
       to: ROUTES.PENDING
