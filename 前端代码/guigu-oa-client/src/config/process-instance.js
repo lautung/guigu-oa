@@ -1,4 +1,4 @@
-import { statusLabel } from '@/work/pending-flow'
+import { statusLabel } from '@/work/work-list'
 
 function presentListItem(record = {}) {
   return {

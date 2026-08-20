@@ -3,6 +3,7 @@ import {
   afterPendingAction,
   loadWorkList,
   presentWorkList,
+  statusLabel,
   workListPerspective,
   workListPerspectiveFromRoute,
   workListRequest
@@ -17,6 +18,14 @@ const FORM_VALUES = JSON.stringify({
 })
 
 describe('work/work-list', () => {
+  describe('statusLabel', () => {
+    it('maps the three 审批 statuses to 审批中 / 审批通过 / 审批拒绝', () => {
+      expect(statusLabel(1)).toBe('审批中')
+      expect(statusLabel(2)).toBe('审批通过')
+      expect(statusLabel(-1)).toBe('审批拒绝')
+    })
+  })
+
   describe('workListRequest', () => {
     it('loads 待处理 with GET /admin/process/findPending/{page}/{limit}', () => {
       expect(workListRequest(WORK_LIST_KINDS.PENDING, 1, 10)).toEqual({

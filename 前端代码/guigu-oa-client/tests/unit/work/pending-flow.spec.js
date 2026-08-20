@@ -2,10 +2,9 @@ import { ROUTES } from '@/navigation/access-policy'
 import {
   buildApprovalPayload,
   postApprovalRoute,
-  presentDetail,
-  statusLabel
+  presentDetail
 } from '@/work/pending-flow'
-import { WORK_LIST_KINDS, afterPendingAction, workListPerspective } from '@/work/work-list'
+import { WORK_LIST_KINDS, afterPendingAction, workListPerspective, workListPerspectiveFromRoute } from '@/work/work-list'
 
 const FORM_VALUES = JSON.stringify({
   formShowData: {
@@ -16,14 +15,6 @@ const FORM_VALUES = JSON.stringify({
 })
 
 describe('work/pending-flow', () => {
-  describe('statusLabel', () => {
-    it('maps the three process statuses to 审批中 / 审批通过 / 审批拒绝', () => {
-      expect(statusLabel(1)).toBe('审批中')
-      expect(statusLabel(2)).toBe('审批通过')
-      expect(statusLabel(-1)).toBe('审批拒绝')
-    })
-  })
-
   describe('presentDetail', () => {
     it('presents title, time, status, all form fields, and vertical flow records', () => {
       const detail = presentDetail({
@@ -178,7 +169,7 @@ describe('work/pending-flow', () => {
       expect(startedDetail.records).toHaveLength(2)
     })
 
-    it('forces read-only detail when opened from processed or started routes', () => {
+    it('forces read-only detail when opened from 已处理、已发起, or 审批实例 routes', () => {
       const payload = {
         process: {
           id: 12,
@@ -191,7 +182,12 @@ describe('work/pending-flow', () => {
         isApprove: true
       }
 
-      expect(presentDetail(payload, { readOnly: true }).canApprove).toBe(false)
+      expect(presentDetail(payload, workListPerspective(WORK_LIST_KINDS.PROCESSED)).canApprove).toBe(false)
+      expect(presentDetail(payload, workListPerspective(WORK_LIST_KINDS.STARTED)).canApprove).toBe(false)
+      expect(presentDetail(
+        payload,
+        workListPerspectiveFromRoute({ name: 'ProcessMgrDetail', meta: {} })
+      ).canApprove).toBe(false)
     })
 
     it('keeps form and flow records read-only when the old engine instance is gone', () => {
