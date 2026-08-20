@@ -42,8 +42,8 @@
 </template>
 
 <script>
-import { findPending } from '@/api/process'
-import { presentListPage } from '@/work/pending-flow'
+import request from '@/utils/request'
+import { WORK_LIST_KINDS, loadWorkList } from '@/work/work-list'
 
 export default {
   name: 'PendingList',
@@ -62,8 +62,7 @@ export default {
   methods: {
     fetchList() {
       this.loading = true
-      findPending(this.pageNo, this.pageSize).then(response => {
-        const page = presentListPage(response.data || {})
+      loadWorkList(WORK_LIST_KINDS.PENDING, this.pageNo, this.pageSize, request).then(page => {
         this.total = page.total
         this.list = page.records
       }).finally(() => {

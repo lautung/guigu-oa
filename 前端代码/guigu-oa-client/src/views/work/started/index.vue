@@ -42,8 +42,8 @@
 </template>
 
 <script>
-import { findStarted } from '@/api/process'
-import { presentStartedListPage } from '@/work/pending-flow'
+import request from '@/utils/request'
+import { WORK_LIST_KINDS, loadWorkList } from '@/work/work-list'
 
 export default {
   name: 'StartedList',
@@ -62,8 +62,7 @@ export default {
   methods: {
     fetchList() {
       this.loading = true
-      findStarted(this.pageNo, this.pageSize).then(response => {
-        const page = presentStartedListPage(response.data || {})
+      loadWorkList(WORK_LIST_KINDS.STARTED, this.pageNo, this.pageSize, request).then(page => {
         this.total = page.total
         this.list = page.records
       }).finally(() => {

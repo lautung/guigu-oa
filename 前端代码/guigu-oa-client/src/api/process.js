@@ -4,12 +4,10 @@ import {
   startUpRequest
 } from '@/work/start-flow'
 import { getCurrentUserRequest } from '@/work/profile'
+import { WORK_LIST_KINDS, workListRequest } from '@/work/work-list'
 
 export function findPending(page, limit) {
-  return request({
-    url: `/admin/process/findPending/${page}/${limit}`,
-    method: 'get'
-  })
+  return request(workListRequest(WORK_LIST_KINDS.PENDING, page, limit))
 }
 
 export function show(id) {
@@ -28,17 +26,11 @@ export function approve(approvalVo) {
 }
 
 export function findProcessed(page, limit) {
-  return request({
-    url: `/admin/process/findProcessed/${page}/${limit}`,
-    method: 'get'
-  })
+  return request(workListRequest(WORK_LIST_KINDS.PROCESSED, page, limit))
 }
 
 export function findStarted(page, limit) {
-  return request({
-    url: `/admin/process/findStarted/${page}/${limit}`,
-    method: 'get'
-  })
+  return request(workListRequest(WORK_LIST_KINDS.STARTED, page, limit))
 }
 
 export function findProcessType() {
