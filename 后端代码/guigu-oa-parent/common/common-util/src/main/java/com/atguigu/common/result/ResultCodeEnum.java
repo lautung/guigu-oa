@@ -7,7 +7,8 @@ public enum ResultCodeEnum {
 
     SUCCESS(200,"成功"),
     FAIL(201, "失败"),
-    LOGIN_ERROR(208,"认证失败")
+    LOGIN_ERROR(208,"认证失败"),
+    ACCOUNT_DISABLED(209, "账号已停用")
     ;
 
     private Integer code;

@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS sys_menu (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
-DELETE FROM sys_user WHERE username = 'admin';
+DELETE FROM sys_user WHERE username IN ('admin', 'disabled_user');
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
 VALUES (1, 'admin', '96e79218965eb72c92a549dd5a330112', '管理员', '13800000000', 1, 0);
+INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
+VALUES (99, 'disabled_user', '96e79218965eb72c92a549dd5a330112', '已停用', '13900000099', 0, 0);

@@ -11,34 +11,27 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
 
-    private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public TokenLoginFilter(AuthenticationManager authenticationManager,
-                            RedisTemplate<String, String> redisTemplate) {
+    public TokenLoginFilter(AuthenticationManager authenticationManager) {
         this.setAuthenticationManager(authenticationManager);
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
-        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -62,16 +55,12 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                             Authentication auth)
             throws IOException, ServletException {
         CustomUser customUser = (CustomUser) auth.getPrincipal();
+        if (customUser.getSysUser().getStatus() == null || customUser.getSysUser().getStatus() == 0) {
+            ResponseUtil.out(response, Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
+            return;
+        }
         String token = JwtHelper.createToken(customUser.getSysUser().getId(),
                 customUser.getSysUser().getUsername());
-
-        Collection<? extends GrantedAuthority> authorities = customUser.getAuthorities();
-        String authJson = objectMapper.writeValueAsString(
-                authorities.stream()
-                        .map(a -> Map.of("authority", a.getAuthority()))
-                        .collect(Collectors.toList())
-        );
-        redisTemplate.opsForValue().set(customUser.getUsername(), authJson);
 
         Map<String, Object> map = new HashMap<>();
         map.put("token", token);

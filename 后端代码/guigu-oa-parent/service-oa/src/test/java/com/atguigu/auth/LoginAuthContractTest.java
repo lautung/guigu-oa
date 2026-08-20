@@ -40,7 +40,52 @@ public class LoginAuthContractTest {
                         .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.token").isNotEmpty());
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.routers").doesNotExist())
+                .andExpect(jsonPath("$.data.buttons").doesNotExist());
+    }
+
+    @Test
+    public void disabledUserCannotEnter() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"disabled_user\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(209))
+                .andExpect(jsonPath("$.message").value("账号已停用"));
+    }
+
+    @Test
+    public void wrongPasswordCannotEnter() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"wrong-password\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"))
+                .andExpect(jsonPath("$.data.token").doesNotExist());
+    }
+
+    @Test
+    public void unknownUsernameCannotEnterTheSameWay() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"no-such-user\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"))
+                .andExpect(jsonPath("$.data.token").doesNotExist());
+    }
+
+    @Test
+    public void disabledUserWithWrongPasswordCannotEnterTheSameWay() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"disabled_user\",\"password\":\"wrong-password\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"))
+                .andExpect(jsonPath("$.data.token").doesNotExist());
     }
 
     @Test

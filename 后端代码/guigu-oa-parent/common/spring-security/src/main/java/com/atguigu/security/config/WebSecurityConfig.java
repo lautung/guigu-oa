@@ -51,7 +51,7 @@ public class WebSecurityConfig {
                 )
                 .addFilterBefore(new TokenAuthenticationFilter(redisTemplate),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilter(new TokenLoginFilter(authenticationManager(), redisTemplate))
+                .addFilter(new TokenLoginFilter(authenticationManager()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
