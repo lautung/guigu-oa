@@ -13,8 +13,10 @@
 </template>
 
 <script>
-import { getProcessTemplate, startUp } from '@/api/process'
+import { startUp } from '@/api/process'
+import { read } from '@/config/process-template'
 import { ROUTES } from '@/navigation/access-policy'
+import request from '@/utils/request'
 import {
   START_SUCCESS_MESSAGE,
   buildStartPayload,
@@ -44,8 +46,8 @@ export default {
     },
     fetchTemplate() {
       this.loading = true
-      getProcessTemplate(this.$route.params.processTemplateId).then(response => {
-        const presented = presentApplyTemplate(response.data || {})
+      read(this.$route.params.processTemplateId, request).then(template => {
+        const presented = presentApplyTemplate(template)
         if (!presented.ok) {
           this.$router.replace(presented.redirectTo)
           return

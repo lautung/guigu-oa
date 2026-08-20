@@ -1,3 +1,4 @@
+import { canInitiate } from '@/config/process-template'
 import { ROUTES } from '@/navigation/access-policy'
 
 export const START_SUCCESS_MESSAGE = '发起成功'
@@ -34,7 +35,7 @@ function presentApplyOption(option = {}) {
 }
 
 export function presentApplyTemplate(record) {
-  if (!record || record.status !== 1) {
+  if (!canInitiate(record)) {
     return {
       ok: false,
       redirectTo: ROUTES.START

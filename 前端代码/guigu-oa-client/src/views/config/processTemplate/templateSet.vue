@@ -69,18 +69,20 @@
 </template>
 
 <script>
-import { getById, saveOrUpdate, uploadProcessDefinitionUrl } from '@/api/processTemplate'
 import { findAll as findAllProcessTypes } from '@/api/processType'
 import {
   applyFormDesign,
   applyUploadResult,
   emptyForm,
   presentDesignerState,
-  presentForm,
+  read,
+  saveUnpublished,
   saveValidationError,
   TEMPLATE_ICONS,
+  uploadProcessDefinitionUrl,
   zipUploadError
 } from '@/config/process-template'
+import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
 const WIZARD_STEPS = ['基本设置', '表单设置', '流程设置']
@@ -121,8 +123,8 @@ export default {
       })
     },
     fetchById(id) {
-      getById(id).then(response => {
-        this.form = presentForm(response.data || {})
+      read(id, request).then(form => {
+        this.form = form
         this.fileList = this.form.processDefinitionPath
           ? [{ name: this.form.processDefinitionPath, url: this.form.processDefinitionPath }]
           : []
@@ -203,7 +205,7 @@ export default {
         return
       }
       this.saving = true
-      saveOrUpdate(this.form).then(response => {
+      saveUnpublished(this.form, request).then(response => {
         this.$message.success(response.message || '保存成功')
         this.back()
       }).finally(() => {

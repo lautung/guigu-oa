@@ -1,9 +1,15 @@
-function isDraft(status) {
-  return status !== 1
+const PROCESS_TEMPLATE_API = '/admin/process/processTemplate'
+
+export function canInitiate(record) {
+  return !!record && record.status === 1
+}
+
+export function canWrite(record) {
+  return !!record && !canInitiate(record)
 }
 
 function presentListItem(record = {}) {
-  const draft = isDraft(record.status)
+  const writable = canWrite(record)
 
   return {
     id: record.id,
@@ -12,18 +18,18 @@ function presentListItem(record = {}) {
     processTypeName: record.processTypeName,
     description: record.description,
     status: record.status,
-    statusLabel: draft ? '未发布' : '已发布',
+    statusLabel: canInitiate(record) ? '已发布' : '未发布',
     formProps: record.formProps || '',
     formOptions: record.formOptions || '',
     createTime: record.createTime,
     updateTime: record.updateTime,
-    canEdit: draft,
-    canDelete: draft,
-    canPublish: draft
+    canEdit: writable,
+    canDelete: writable,
+    canPublish: writable
   }
 }
 
-export function presentListPage(page = {}) {
+function presentListPage(page = {}) {
   return {
     records: (page.records || []).map(presentListItem),
     total: page.total || 0,
@@ -46,7 +52,7 @@ export function emptyForm() {
   }
 }
 
-export function presentForm(record = {}) {
+function presentForm(record = {}) {
   return {
     id: record.id || '',
     name: record.name || '',
@@ -114,13 +120,16 @@ export function zipUploadError(file = {}) {
 }
 
 export function saveValidationError(form = {}) {
+  if (form.id && canInitiate(form)) {
+    return '已发布的审批模板不能保存'
+  }
   if (!form.processDefinitionPath) {
     return '请上传流程 zip'
   }
   return null
 }
 
-export function presentStartGroups(types = []) {
+function presentStartGroups(types = []) {
   return types
     .map(type => ({
       id: type.id,
@@ -132,6 +141,94 @@ export function presentStartGroups(types = []) {
       }))
     }))
     .filter(group => group.templates.length > 0)
+}
+
+function unpublishedPayload(form) {
+  const data = {
+    name: form.name,
+    iconUrl: form.iconUrl,
+    processTypeId: form.processTypeId,
+    formProps: form.formProps,
+    formOptions: form.formOptions,
+    processDefinitionKey: form.processDefinitionKey,
+    processDefinitionPath: form.processDefinitionPath,
+    description: form.description,
+    status: 0
+  }
+
+  if (form.id) {
+    data.id = form.id
+  }
+
+  return data
+}
+
+export async function findPage(page, limit, request) {
+  const response = await request({
+    method: 'get',
+    url: `${PROCESS_TEMPLATE_API}/${page}/${limit}`
+  })
+  return presentListPage((response && response.data) || {})
+}
+
+export async function read(id, request) {
+  const response = await request({
+    method: 'get',
+    url: `${PROCESS_TEMPLATE_API}/get/${id}`
+  })
+  return presentForm((response && response.data) || {})
+}
+
+export async function saveUnpublished(form, request) {
+  if (form.id && canInitiate(form)) {
+    return Promise.reject(new Error('已发布的审批模板不能保存'))
+  }
+  const data = unpublishedPayload(form)
+  if (form.id) {
+    return request({
+      method: 'put',
+      url: `${PROCESS_TEMPLATE_API}/update`,
+      data
+    })
+  }
+  return request({
+    method: 'post',
+    url: `${PROCESS_TEMPLATE_API}/save`,
+    data
+  })
+}
+
+export async function publish(template, request) {
+  if (!canWrite(template)) {
+    return Promise.reject(new Error('已发布的审批模板不能再发布'))
+  }
+  return request({
+    method: 'get',
+    url: `${PROCESS_TEMPLATE_API}/publish/${template.id}`
+  })
+}
+
+export async function removeUnpublished(template, request) {
+  if (!canWrite(template)) {
+    return Promise.reject(new Error('已发布的审批模板不能删除'))
+  }
+  return request({
+    method: 'delete',
+    url: `${PROCESS_TEMPLATE_API}/remove/${template.id}`
+  })
+}
+
+export async function findStartable(request) {
+  const response = await request({
+    method: 'get',
+    url: '/admin/process/findStartable'
+  })
+  return presentStartGroups((response && response.data) || [])
+}
+
+export function uploadProcessDefinitionUrl() {
+  const base = import.meta.env.VITE_APP_BASE_API || '/dev-api'
+  return `${base}${PROCESS_TEMPLATE_API}/uploadProcessDefinition`
 }
 
 export const TEMPLATE_ICONS = [

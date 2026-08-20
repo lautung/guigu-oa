@@ -25,8 +25,8 @@
 </template>
 
 <script>
-import { findStartable } from '@/api/processTemplate'
-import { presentStartGroups } from '@/config/process-template'
+import { findStartable } from '@/config/process-template'
+import request from '@/utils/request'
 import { applyPath } from '@/work/start-flow'
 
 export default {
@@ -43,8 +43,8 @@ export default {
   methods: {
     fetchGroups() {
       this.loading = true
-      findStartable().then(response => {
-        this.groups = presentStartGroups(response.data || [])
+      findStartable(request).then(groups => {
+        this.groups = groups
       }).finally(() => {
         this.loading = false
       })

@@ -16,13 +16,6 @@ export function approve(approvalVo) {
   })
 }
 
-export function getProcessTemplate(id) {
-  return request({
-    method: 'get',
-    url: `/admin/process/getProcessTemplate/${id}`
-  })
-}
-
 export function startUp(data) {
   return request({
     method: 'post',

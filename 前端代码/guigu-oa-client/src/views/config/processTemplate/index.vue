@@ -28,8 +28,8 @@
         <template #default="scope">
           <el-button type="text" @click="show(scope.row)">查看</el-button>
           <el-button v-if="scope.row.canEdit" type="text" @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button v-if="scope.row.canDelete" type="text" @click="remove(scope.row.id)">删除</el-button>
-          <el-button v-if="scope.row.canPublish" type="text" @click="publishTemplate(scope.row.id)">发布</el-button>
+          <el-button v-if="scope.row.canDelete" type="text" @click="remove(scope.row)">删除</el-button>
+          <el-button v-if="scope.row.canPublish" type="text" @click="publishTemplate(scope.row)">发布</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -65,8 +65,13 @@
 </template>
 
 <script>
-import { getPageList, publish, removeById } from '@/api/processTemplate'
-import { presentDesignerState, presentListPage } from '@/config/process-template'
+import request from '@/utils/request'
+import {
+  findPage,
+  presentDesignerState,
+  publish,
+  removeUnpublished
+} from '@/config/process-template'
 
 export default {
   name: 'ProcessTemplateList',
@@ -92,8 +97,7 @@ export default {
     },
     fetchList() {
       this.loading = true
-      getPageList(this.page, this.limit).then(response => {
-        const page = presentListPage(response.data || {})
+      findPage(this.page, this.limit, request).then(page => {
         this.list = page.records
         this.total = page.total
       }).finally(() => {
@@ -122,18 +126,18 @@ export default {
       this.previewOption = Object.assign({ submitBtn: false }, design.option)
       this.previewVisible = true
     },
-    publishTemplate(id) {
-      publish(id).then(response => {
+    publishTemplate(template) {
+      publish(template, request).then(response => {
         this.$message.success(response.message || '发布成功')
         this.fetchList()
       })
     },
-    remove(id) {
+    remove(template) {
       this.$confirm('此操作将永久删除该审批模板, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => removeById(id)).then(response => {
+      }).then(() => removeUnpublished(template, request)).then(response => {
         this.$message.success(response.message || '删除成功')
         this.fetchList()
       }).catch(() => {})
