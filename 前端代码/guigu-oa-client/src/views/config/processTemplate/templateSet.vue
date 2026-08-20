@@ -69,7 +69,7 @@
 </template>
 
 <script>
-import { getById, saveOrUpdate } from '@/api/processTemplate'
+import { getById, saveOrUpdate, uploadProcessDefinitionUrl } from '@/api/processTemplate'
 import { findAll as findAllProcessTypes } from '@/api/processType'
 import {
   applyFormDesign,
@@ -79,12 +79,11 @@ import {
   presentForm,
   saveValidationError,
   TEMPLATE_ICONS,
-  uploadProcessDefinitionUrl,
-  wizardPrimaryAction,
-  WIZARD_STEPS,
   zipUploadError
 } from '@/config/process-template'
 import { getToken } from '@/utils/auth'
+
+const WIZARD_STEPS = ['基本设置', '表单设置', '流程设置']
 
 export default {
   name: 'ProcessTemplateSet',
@@ -102,7 +101,7 @@ export default {
   },
   computed: {
     primaryAction() {
-      return wizardPrimaryAction(this.stepIndex)
+      return this.stepIndex >= this.wizardSteps.length - 1 ? '提交保存' : '下一步'
     },
     uploadHeaders() {
       return { token: getToken() }

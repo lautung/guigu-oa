@@ -31,84 +31,6 @@ export function presentListPage(page = {}) {
   }
 }
 
-const PROCESS_TEMPLATE_API = '/admin/process/processTemplate'
-
-function templatePayload(form, { includeId = false } = {}) {
-  const data = {
-    name: form.name,
-    iconUrl: form.iconUrl,
-    processTypeId: form.processTypeId,
-    formProps: form.formProps,
-    formOptions: form.formOptions,
-    processDefinitionKey: form.processDefinitionKey,
-    processDefinitionPath: form.processDefinitionPath,
-    description: form.description,
-    status: includeId ? form.status : 0
-  }
-
-  if (includeId) {
-    data.id = form.id
-  }
-
-  return data
-}
-
-export function findStartableRequest() {
-  return {
-    method: 'get',
-    url: '/admin/process/findStartable'
-  }
-}
-
-export function listRequest(page, limit) {
-  return {
-    method: 'get',
-    url: `${PROCESS_TEMPLATE_API}/${page}/${limit}`
-  }
-}
-
-export function getRequest(id) {
-  return {
-    method: 'get',
-    url: `${PROCESS_TEMPLATE_API}/get/${id}`
-  }
-}
-
-export function removeRequest(id) {
-  return {
-    method: 'delete',
-    url: `${PROCESS_TEMPLATE_API}/remove/${id}`
-  }
-}
-
-export function publishRequest(id) {
-  return {
-    method: 'get',
-    url: `${PROCESS_TEMPLATE_API}/publish/${id}`
-  }
-}
-
-export function writeRequest(form) {
-  if (form.id) {
-    return {
-      method: 'put',
-      url: `${PROCESS_TEMPLATE_API}/update`,
-      data: templatePayload(form, { includeId: true })
-    }
-  }
-
-  return {
-    method: 'post',
-    url: `${PROCESS_TEMPLATE_API}/save`,
-    data: templatePayload(form)
-  }
-}
-
-export function uploadProcessDefinitionUrl() {
-  const base = import.meta.env.VITE_APP_BASE_API || '/dev-api'
-  return `${base}${PROCESS_TEMPLATE_API}/uploadProcessDefinition`
-}
-
 export function emptyForm() {
   return {
     id: '',
@@ -168,12 +90,6 @@ export function applyUploadResult(form, data = {}) {
     processDefinitionPath: data.processDefinitionPath || '',
     processDefinitionKey: data.processDefinitionKey || ''
   }
-}
-
-export const WIZARD_STEPS = ['基本设置', '表单设置', '流程设置']
-
-export function wizardPrimaryAction(stepIndex) {
-  return stepIndex >= WIZARD_STEPS.length - 1 ? '提交保存' : '下一步'
 }
 
 const ZIP_MIME_TYPES = [

@@ -3,10 +3,8 @@ import {
   START_SUCCESS_MESSAGE,
   applyPath,
   buildStartPayload,
-  getProcessTemplateRequest,
   presentApplyTemplate,
-  postStartSuccessRoute,
-  startUpRequest
+  postStartSuccessRoute
 } from '@/work/start-flow'
 
 describe('work/start-flow', () => {
@@ -106,28 +104,6 @@ describe('work/start-flow', () => {
           formData: { days: 3 },
           formShowData: { 请假天数: 3 }
         })
-      })
-    })
-  })
-
-  describe('start APIs', () => {
-    it('loads a template with GET /admin/process/getProcessTemplate/{id}', () => {
-      expect(getProcessTemplateRequest(11)).toEqual({
-        method: 'get',
-        url: '/admin/process/getProcessTemplate/11'
-      })
-    })
-
-    it('starts an 审批 with POST /admin/process/startUp', () => {
-      const data = {
-        processTemplateId: 11,
-        processTypeId: 1,
-        formValues: '{"formData":{},"formShowData":{}}'
-      }
-      expect(startUpRequest(data)).toEqual({
-        method: 'post',
-        url: '/admin/process/startUp',
-        data
       })
     })
   })

@@ -6,21 +6,6 @@ export function applyPath(templateId) {
   return `${ROUTES.START}/${templateId}`
 }
 
-export function getProcessTemplateRequest(id) {
-  return {
-    method: 'get',
-    url: `/admin/process/getProcessTemplate/${id}`
-  }
-}
-
-export function startUpRequest(data) {
-  return {
-    method: 'post',
-    url: '/admin/process/startUp',
-    data
-  }
-}
-
 export function postStartSuccessRoute() {
   return ROUTES.STARTED
 }

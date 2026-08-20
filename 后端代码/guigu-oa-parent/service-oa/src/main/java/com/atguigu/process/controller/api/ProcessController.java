@@ -8,7 +8,6 @@ import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
-import com.atguigu.process.service.OaProcessTypeService;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
@@ -29,9 +28,6 @@ import java.util.Map;
 @RequestMapping(value="/admin/process")
 @CrossOrigin //跨域
 public class ProcessController {
-
-    @Autowired
-    private OaProcessTypeService processTypeService;
 
     @Autowired
     private OaProcessTemplateService processTemplateService;
@@ -71,12 +67,6 @@ public class ProcessController {
     @GetMapping("findStartable")
     public Result findStartable() {
         List<ProcessType> list = processTemplateService.findStartable();
-        return Result.ok(list);
-    }
-
-    @GetMapping("findProcessType")
-    public Result findProcessType() {
-        List<ProcessType> list = processTypeService.findProcessType();
         return Result.ok(list);
     }
 

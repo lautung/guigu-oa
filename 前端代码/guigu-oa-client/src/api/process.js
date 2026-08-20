@@ -1,8 +1,4 @@
 import request from '@/utils/request'
-import {
-  getProcessTemplateRequest,
-  startUpRequest
-} from '@/work/start-flow'
 import { getCurrentUserRequest } from '@/work/profile'
 
 export function show(id) {
@@ -21,11 +17,18 @@ export function approve(approvalVo) {
 }
 
 export function getProcessTemplate(id) {
-  return request(getProcessTemplateRequest(id))
+  return request({
+    method: 'get',
+    url: `/admin/process/getProcessTemplate/${id}`
+  })
 }
 
 export function startUp(data) {
-  return request(startUpRequest(data))
+  return request({
+    method: 'post',
+    url: '/admin/process/startUp',
+    data
+  })
 }
 
 export function getCurrentUser() {
