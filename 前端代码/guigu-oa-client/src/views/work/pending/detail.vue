@@ -53,6 +53,7 @@ import {
   postApprovalRoute,
   presentDetail
 } from '@/work/pending-flow'
+import { resolveClientSurface } from '@/surface/client-surface'
 import { workListPerspectiveFromRoute } from '@/work/work-list'
 
 export default {
@@ -105,8 +106,11 @@ export default {
         this.$router.push(returnPath)
         return
       }
-      if (this.$route.name === 'ProcessMgrDetail') {
-        this.$router.push({ name: 'ProcessMgr' })
+      const surface = resolveClientSurface({
+        path: this.$route.path
+      })
+      if (surface.returnPath) {
+        this.$router.push(surface.returnPath)
         return
       }
       this.$router.push({ name: 'Pending' })

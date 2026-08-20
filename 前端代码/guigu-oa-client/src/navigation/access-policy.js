@@ -1,32 +1,24 @@
 import { isExcludedConfigMenu } from '@/config/sys-menu'
+import { resolveClientSurface } from '@/surface/client-surface'
+import {
+  AUTH_WHITELIST,
+  DESKTOP_CONFIG_HINT,
+  MOBILE_BREAKPOINT,
+  ROUTES,
+  WORK_BUILTIN_ITEMS,
+  getDefaultPostLoginRoute,
+  isMobileViewport
+} from './constants'
 
-export const MOBILE_BREAKPOINT = 768
-
-export const DESKTOP_CONFIG_HINT = '请在电脑浏览器使用'
-
-export const ROUTES = {
-  LOGIN: '/login',
-  MOBILE_CONFIG_BLOCK: '/mobile-config-block',
-  START: '/work/start',
-  PENDING: '/work/pending',
-  PROCESSED: '/work/processed',
-  STARTED: '/work/started',
-  PROFILE: '/work/profile'
+export {
+  AUTH_WHITELIST,
+  DESKTOP_CONFIG_HINT,
+  MOBILE_BREAKPOINT,
+  ROUTES,
+  WORK_BUILTIN_ITEMS,
+  getDefaultPostLoginRoute,
+  isMobileViewport
 }
-
-export const AUTH_WHITELIST = [ROUTES.LOGIN, ROUTES.MOBILE_CONFIG_BLOCK]
-
-export const WORK_ROUTE_PREFIX = '/work'
-
-export const CONFIG_ROUTE_PREFIXES = ['/system', '/processSet', '/processMgr']
-
-export const WORK_BUILTIN_ITEMS = [
-  { path: ROUTES.START, title: '发起审批' },
-  { path: ROUTES.PENDING, title: '待处理' },
-  { path: ROUTES.PROCESSED, title: '已处理' },
-  { path: ROUTES.STARTED, title: '已发起' },
-  { path: ROUTES.PROFILE, title: '基本信息' }
-]
 
 const HIDDEN_CONFIG_PATH_FRAGMENTS = [
   'assignAuth',
@@ -59,6 +51,8 @@ function resolveMenuPath(menu, parentPath = '') {
   return joinPath(parentPath, segment)
 }
 
+const CONFIG_ROUTE_PREFIXES = ['/system', '/processSet', '/processMgr']
+
 function isConfigRoutePath(path) {
   const normalized = normalizePath(path)
   if (CONFIG_ROUTE_PREFIXES.some(prefix => normalized.startsWith(prefix))) {
@@ -67,34 +61,8 @@ function isConfigRoutePath(path) {
   return HIDDEN_CONFIG_PATH_FRAGMENTS.some(fragment => normalized.includes(fragment))
 }
 
-export function getDefaultPostLoginRoute() {
-  return ROUTES.PENDING
-}
-
 export function buildLoginRedirectPath(intendedPath) {
   return intendedPath || getDefaultPostLoginRoute()
-}
-
-export function classifyRoute(path) {
-  const normalized = normalizePath(path)
-
-  if (normalized === ROUTES.LOGIN || normalized === ROUTES.MOBILE_CONFIG_BLOCK) {
-    return 'public'
-  }
-
-  if (normalized.startsWith(WORK_ROUTE_PREFIX)) {
-    return 'work'
-  }
-
-  if (isConfigRoutePath(normalized)) {
-    return 'config'
-  }
-
-  return 'unknown'
-}
-
-export function isMobileViewport(viewportWidth) {
-  return viewportWidth <= MOBILE_BREAKPOINT
 }
 
 export function filterConfigMenus(menus = [], parentPath = '') {
@@ -231,22 +199,6 @@ export function buildSidebarTree({ menus = [], viewportWidth = MOBILE_BREAKPOINT
   return tree
 }
 
-export function resolveViewportPolicy({ path, viewportWidth }) {
-  if (classifyRoute(path) !== 'config') {
-    return { action: 'allow' }
-  }
-
-  if (isMobileViewport(viewportWidth)) {
-    return {
-      action: 'block',
-      message: DESKTOP_CONFIG_HINT,
-      redirectTo: ROUTES.MOBILE_CONFIG_BLOCK
-    }
-  }
-
-  return { action: 'allow' }
-}
-
 export function resolveAuthGuard({ path, fullPath, hasToken }) {
   const targetPath = fullPath || path
 
@@ -288,20 +240,16 @@ export function resolveNavigationGuard({
     return { action: 'allow' }
   }
 
-  const viewportDecision = resolveViewportPolicy({ path, viewportWidth })
+  const occupancy = resolveClientSurface({
+    path,
+    viewportWidth,
+    hasToken,
+    menus,
+    configEntryAuthorized: isAuthorizedConfigPath(path, menus)
+  }).occupancy
 
-  if (viewportDecision.action === 'block') {
-    return {
-      action: 'redirect',
-      to: viewportDecision.redirectTo
-    }
-  }
-
-  if (classifyRoute(path) === 'config' && !isAuthorizedConfigPath(path, menus)) {
-    return {
-      action: 'redirect',
-      to: getDefaultPostLoginRoute()
-    }
+  if (occupancy && occupancy.action === 'redirect') {
+    return occupancy
   }
 
   return { action: 'allow' }
