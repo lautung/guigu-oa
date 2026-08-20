@@ -117,11 +117,6 @@ export const constantRoutes = [
     hidden: true
   },
   {
-    path: ROUTES.MOBILE_CONFIG_BLOCK,
-    component: () => import('@/views/mobile-config-block/index.vue'),
-    hidden: true
-  },
-  {
     path: '/',
     redirect: getDefaultPostLoginRoute()
   },

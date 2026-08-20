@@ -236,10 +236,6 @@ export function resolveNavigationGuard({
     return authDecision
   }
 
-  if (path === ROUTES.MOBILE_CONFIG_BLOCK) {
-    return { action: 'allow' }
-  }
-
   const occupancy = resolveClientSurface({
     path,
     viewportWidth,

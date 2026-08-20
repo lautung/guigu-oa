@@ -148,7 +148,7 @@ describe('统一客户端表面', () => {
     expect(fromConfig.density).toBe('wide')
   })
 
-  it('a logged-in user entering a 配置 entry on mobile occupancy-lands on 待处理, not an intercept page', () => {
+  it('a logged-in user entering a 配置 entry on mobile occupancy-lands on 待处理', () => {
     const surface = resolveClientSurface({
       path: '/system/sysUser',
       viewportWidth: 375,
@@ -161,7 +161,6 @@ describe('统一客户端表面', () => {
       action: 'redirect',
       to: '/work/pending'
     })
-    expect(surface.occupancy.to).not.toBe('/mobile-config-block')
   })
 
   it('a logged-in user entering an unauthorized 配置 entry occupancy-lands on 待处理', () => {

@@ -166,13 +166,13 @@ describe('navigation/access-policy', () => {
       })
     })
 
-    it('only whitelists login and mobile config block routes', () => {
-      expect(AUTH_WHITELIST).toEqual([ROUTES.LOGIN, ROUTES.MOBILE_CONFIG_BLOCK])
+    it('only whitelists the login page', () => {
+      expect(AUTH_WHITELIST).toEqual([ROUTES.LOGIN])
     })
   })
 
   describe('resolveNavigationGuard', () => {
-    it('redirects mobile config navigation to 待处理 instead of the intercept page', () => {
+    it('redirects mobile 配置 navigation to 待处理', () => {
       expect(resolveNavigationGuard({
         path: '/system/sysUser',
         hasToken: true,

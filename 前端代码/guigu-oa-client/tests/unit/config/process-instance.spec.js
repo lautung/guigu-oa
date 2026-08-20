@@ -83,7 +83,7 @@ describe('config/process-instance', () => {
   })
 
   describe('instanceDetailPath', () => {
-    it('opens a read-only instance detail under the 配置壳', () => {
+    it('opens a read-only instance detail under 配置', () => {
       expect(instanceDetailPath(12)).toBe('/processMgr/process/12')
     })
   })
