@@ -159,6 +159,81 @@ public class ApprovalTemplateContractTest {
     }
 
     @Test
+    public void publishMakes未发布已发布AndStartable() {
+        ProcessTemplate saved = save病假申请();
+        approvalTemplate.publish(saved.getId());
+
+        SysUser alice = user(2L, "alice", "小艾");
+        ProcessFormVo form = publishedLeaveForm();
+        form.setProcessTemplateId(saved.getId());
+        approval.startUp(alice, form);
+
+        assertEquals(1, approval.findStarted(alice, new Page<>(1, 10)).getRecords().size());
+        assertEquals(审批中, approval.findStarted(alice, new Page<>(1, 10)).getRecords().get(0).getStatus());
+        assertTrue(approvalTemplate.canInitiate(saved.getId()));
+        assertFalse(approvalTemplate.canWrite(saved.getId()));
+    }
+
+    @Test
+    public void publishFailsWhen流程zipDoesNotMakeStartableKeeps未发布() {
+        clearEngineDefinitions("qingjia");
+        ProcessTemplate template = 病假申请();
+        template.setProcessDefinitionKey("cannotStartFromQingjia");
+        template.setProcessDefinitionPath("processes/qingjia.zip");
+        approvalTemplate.saveUnpublished(template);
+
+        assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
+
+        assertFalse(approvalTemplate.canInitiate(template.getId()));
+        assertTrue(approvalTemplate.canWrite(template.getId()));
+        SysUser alice = user(2L, "alice", "小艾");
+        ProcessFormVo unpublishedForm = publishedLeaveForm();
+        unpublishedForm.setProcessTemplateId(template.getId());
+        assertThrows(RuntimeException.class, () -> approval.startUp(alice, unpublishedForm));
+        ProcessFormVo alreadyPublishedQingjia = publishedLeaveForm();
+        alreadyPublishedQingjia.setProcessTemplateId(2L);
+        assertThrows(RuntimeException.class, () -> approval.startUp(alice, alreadyPublishedQingjia));
+        assertTrue(approval.findStarted(alice, new Page<>(1, 10)).getRecords().isEmpty());
+    }
+
+    @Test
+    public void publishFailsWhen流程zipMissingKeeps未发布() {
+        ProcessTemplate template = 病假申请();
+        template.setProcessDefinitionPath("processes/missing-no-such.zip");
+        approvalTemplate.saveUnpublished(template);
+
+        assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
+
+        assertFalse(approvalTemplate.canInitiate(template.getId()));
+        assertTrue(approvalTemplate.canWrite(template.getId()));
+        assertEquals("病假申请", approvalTemplate.read(template.getId()).getName());
+    }
+
+    @Test
+    public void publishFailsWhen流程zipPathEmptyKeeps未发布() {
+        ProcessTemplate template = 病假申请();
+        template.setProcessDefinitionPath(null);
+        approvalTemplate.saveUnpublished(template);
+
+        assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
+
+        assertFalse(approvalTemplate.canInitiate(template.getId()));
+        assertTrue(approvalTemplate.canWrite(template.getId()));
+    }
+
+    @Test
+    public void publishFailsWhen流程zipHasNoKeyKeeps未发布() {
+        ProcessTemplate template = 病假申请();
+        template.setProcessDefinitionKey(null);
+        approvalTemplate.saveUnpublished(template);
+
+        assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
+
+        assertFalse(approvalTemplate.canInitiate(template.getId()));
+        assertTrue(approvalTemplate.canWrite(template.getId()));
+    }
+
+    @Test
     public void 已发布CannotSaveDeleteOrRepublishButCanBeRead() {
         assertEquals("请假申请", approvalTemplate.read(1L).getName());
         assertTrue(approvalTemplate.canInitiate(1L));
@@ -215,8 +290,8 @@ public class ApprovalTemplateContractTest {
         ProcessTemplate template = new ProcessTemplate();
         template.setName("病假申请");
         template.setProcessTypeId(1L);
-        template.setProcessDefinitionKey("approvalTwoStep");
-        template.setProcessDefinitionPath("processes/qingjia.zip");
+        template.setProcessDefinitionKey("bingjia");
+        template.setProcessDefinitionPath("processes/bingjia.zip");
         template.setDescription("员工病假");
         return template;
     }
@@ -242,6 +317,13 @@ public class ApprovalTemplateContractTest {
                 .forEach(instance -> runtimeService.deleteProcessInstance(instance.getId(), "contract-reset"));
         historyService.createHistoricProcessInstanceQuery().list()
                 .forEach(instance -> historyService.deleteHistoricProcessInstance(instance.getId()));
+    }
+
+    private void clearEngineDefinitions(String processDefinitionKey) {
+        repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey(processDefinitionKey)
+                .list()
+                .forEach(definition -> repositoryService.deleteDeployment(definition.getDeploymentId(), true));
     }
 
     @TestConfiguration

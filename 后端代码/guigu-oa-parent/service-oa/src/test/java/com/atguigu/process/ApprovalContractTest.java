@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -259,7 +260,7 @@ public class ApprovalContractTest {
     }
 
     @Test
-    public void publishedTemplateStartsWhenEngineDefinitionIsMissingThisRound() {
+    public void 已发布审批模板DoesNotStartWhen流程zipNotInEngine() {
         repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("qingjia")
                 .list()
@@ -267,20 +268,11 @@ public class ApprovalContractTest {
                         repositoryService.deleteDeployment(definition.getDeploymentId(), true));
 
         SysUser alice = user(2L, "alice", "小艾");
-        SysUser zhangsan = user(3L, "zhangsan", "张三");
         ProcessFormVo form = publishedLeaveForm();
         form.setProcessTemplateId(2L);
 
-        approval.startUp(alice, form);
-
-        List<ProcessVo> startedByAlice = started(alice).getRecords();
-        assertEquals(1, startedByAlice.size());
-        assertEquals(审批中, startedByAlice.get(0).getStatus());
-        assertEquals("小艾发起请假申请申请", startedByAlice.get(0).getTitle());
-        List<ProcessVo> pendingForZhangsan = pending(zhangsan).getRecords();
-        assertEquals(1, pendingForZhangsan.size());
-        assertEquals(startedByAlice.get(0).getId(), pendingForZhangsan.get(0).getId());
-        assertTrue(pendingForZhangsan.get(0).getTaskId() != null && !pendingForZhangsan.get(0).getTaskId().isBlank());
+        assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
+        assertTrue(started(alice).getRecords().isEmpty());
     }
 
     @Test

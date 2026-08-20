@@ -25,6 +25,7 @@ import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -74,15 +75,28 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public void deployByZip(String deployPath) {
+        deployByZip(deployPath, null);
+    }
+
+    @Override
+    public void deployByZip(String deployPath, String processDefinitionKey) {
         InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(deployPath);
         if (inputStream == null) {
             throw new IllegalArgumentException("流程 zip 不存在: " + deployPath);
         }
         try (ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {
-            repositoryService.createDeployment()
+            Deployment deployment = repositoryService.createDeployment()
                     .addZipInputStream(zipInputStream)
                     .name(deployPath)
                     .deploy();
+            if (StringUtils.hasText(processDefinitionKey)
+                    && repositoryService.createProcessDefinitionQuery()
+                    .deploymentId(deployment.getId())
+                    .processDefinitionKey(processDefinitionKey)
+                    .count() == 0) {
+                repositoryService.deleteDeployment(deployment.getId());
+                throw new GuiguException(201, "流程 zip 无法让发起成立");
+            }
         } catch (IOException e) {
             throw new IllegalStateException("部署流程 zip 失败: " + deployPath, e);
         }
@@ -104,8 +118,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         process.setFormValues(processFormVo.getFormValues());
         process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
         baseMapper.insert(process);
-
-        ensureDeployed(processTemplate);
 
         ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
                 processTemplate.getProcessDefinitionKey(),
@@ -219,19 +231,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         ProcessQueryVo processQueryVo = new ProcessQueryVo();
         processQueryVo.setUserId(user.getId());
         return selectPage(pageParam, processQueryVo);
-    }
-
-    private void ensureDeployed(ProcessTemplate processTemplate) {
-        String key = processTemplate.getProcessDefinitionKey();
-        if (!StringUtils.hasText(key)) {
-            return;
-        }
-        long count = repositoryService.createProcessDefinitionQuery()
-                .processDefinitionKey(key)
-                .count();
-        if (count == 0 && StringUtils.hasText(processTemplate.getProcessDefinitionPath())) {
-            deployByZip(processTemplate.getProcessDefinitionPath());
-        }
     }
 
     private List<String> approverNames(List<Task> taskList) {

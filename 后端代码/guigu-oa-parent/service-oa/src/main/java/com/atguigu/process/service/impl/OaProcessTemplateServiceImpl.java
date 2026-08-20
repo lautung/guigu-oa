@@ -83,12 +83,15 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         if (ApprovalTemplateSupport.canInitiate(processTemplate.getStatus())) {
             throw new GuiguException(201, "已发布的审批模板不能再发布");
         }
+        if (!StringUtils.hasText(processTemplate.getProcessDefinitionPath())
+                || !StringUtils.hasText(processTemplate.getProcessDefinitionKey())) {
+            throw new GuiguException(201, "流程 zip 无法让发起成立");
+        }
+        processService.deployByZip(
+                processTemplate.getProcessDefinitionPath(),
+                processTemplate.getProcessDefinitionKey());
         processTemplate.setStatus(ApprovalTemplateSupport.已发布);
         baseMapper.updateById(processTemplate);
-
-        if (StringUtils.hasText(processTemplate.getProcessDefinitionPath())) {
-            processService.deployByZip(processTemplate.getProcessDefinitionPath());
-        }
     }
 
     @Override
