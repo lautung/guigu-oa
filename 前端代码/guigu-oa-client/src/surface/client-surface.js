@@ -10,6 +10,17 @@ export const MENU_GROUPS = {
   CONFIG: 'config'
 }
 
+export const DENSITIES = {
+  CONSTRAINED: 'constrained',
+  WIDE: 'wide'
+}
+
+function densityForMenuGroup(menuGroup) {
+  if (menuGroup === MENU_GROUPS.WORK) return DENSITIES.CONSTRAINED
+  if (menuGroup === MENU_GROUPS.CONFIG) return DENSITIES.WIDE
+  return null
+}
+
 const KNOWN_CONFIG_ENTRIES = [
   { path: '/system/sysUser', title: '用户管理' },
   { path: '/system/sysRole', title: '角色管理' },
@@ -163,7 +174,7 @@ export function resolveClientSurface({
   return {
     showSurface: !!hasToken,
     menuGroup: owner.group,
-    density: owner.group,
+    density: densityForMenuGroup(owner.group),
     occupancy: occupancyFor({
       menuGroup: owner.group,
       viewportWidth,
@@ -173,4 +184,8 @@ export function resolveClientSurface({
     hasWorkListPerspective: WORK_LIST_ENTRY_PATHS.includes(owner.path),
     returnPath: owner.path
   }
+}
+
+export function loadClientSurfaceHost() {
+  return import('./ClientSurfaceHost.vue')
 }

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/access-policy'
+import { loadClientSurfaceHost } from '@/surface/client-surface'
 import { WORK_LIST_KINDS } from '@/work/work-list'
 
 const workChildren = [
@@ -126,25 +127,25 @@ export const constantRoutes = [
   },
   {
     path: '/work',
-    component: () => import('@/layout/WorkLayout.vue'),
+    component: loadClientSurfaceHost,
     redirect: getDefaultPostLoginRoute(),
     children: workChildren
   },
   {
     path: '/system',
-    component: () => import('@/layout/ConfigLayout.vue'),
+    component: loadClientSurfaceHost,
     redirect: '/system/sysUser',
     children: configChildren
   },
   {
     path: '/processSet',
-    component: () => import('@/layout/ConfigLayout.vue'),
+    component: loadClientSurfaceHost,
     redirect: '/processSet/processType',
     children: processSetChildren
   },
   {
     path: '/processMgr',
-    component: () => import('@/layout/ConfigLayout.vue'),
+    component: loadClientSurfaceHost,
     redirect: '/processMgr/process',
     children: [
       {

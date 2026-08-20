@@ -1,3 +1,4 @@
+import { constantRoutes } from '@/router'
 import { resolveClientSurface } from '@/surface/client-surface'
 
 const SAMPLE_CONFIG_MENUS = [
@@ -55,7 +56,7 @@ describe('统一客户端表面', () => {
 
     expect(surface.showSurface).toBe(true)
     expect(surface.menuGroup).toBe('work')
-    expect(surface.density).toBe('work')
+    expect(surface.density).toBe('constrained')
     expect(surface.occupancy).toEqual({ action: 'allow' })
   })
 
@@ -70,7 +71,7 @@ describe('统一客户端表面', () => {
 
     expect(surface.showSurface).toBe(true)
     expect(surface.menuGroup).toBe('config')
-    expect(surface.density).toBe('config')
+    expect(surface.density).toBe('wide')
     expect(surface.occupancy).toEqual({ action: 'allow' })
   })
 
@@ -120,8 +121,31 @@ describe('统一客户端表面', () => {
     })
 
     expect(surface.menuGroup).toBe('config')
+    expect(surface.density).toBe('wide')
     expect(surface.hasWorkListPerspective).toBe(false)
     expect(surface.returnPath).toBe('/processMgr/process')
+  })
+
+  it('the same 审批详情 uses 办事 density from 待处理 and 配置 density from 审批实例查询', () => {
+    const fromWork = resolveClientSurface({
+      path: '/work/pending/9/task-1',
+      viewportWidth: 1200,
+      hasToken: true,
+      menus: SAMPLE_CONFIG_MENUS,
+      configEntryAuthorized: true
+    })
+    const fromConfig = resolveClientSurface({
+      path: '/processMgr/process/9',
+      viewportWidth: 1200,
+      hasToken: true,
+      menus: SAMPLE_CONFIG_MENUS,
+      configEntryAuthorized: true
+    })
+
+    expect(fromWork.menuGroup).toBe('work')
+    expect(fromWork.density).toBe('constrained')
+    expect(fromConfig.menuGroup).toBe('config')
+    expect(fromConfig.density).toBe('wide')
   })
 
   it('a logged-in user entering a 配置 entry on mobile occupancy-lands on 待处理, not an intercept page', () => {
@@ -167,6 +191,14 @@ describe('统一客户端表面', () => {
     expect(surface.occupancy).toEqual({
       action: 'redirect',
       to: '/work/pending'
+    })
+  })
+
+  it('办事入口 and 配置入口 hang on the same surface host', () => {
+    const hosted = constantRoutes.filter(route => route.children && route.children.length)
+    expect(hosted.length).toBeGreaterThan(1)
+    hosted.forEach(route => {
+      expect(route.component).toBe(hosted[0].component)
     })
   })
 })
