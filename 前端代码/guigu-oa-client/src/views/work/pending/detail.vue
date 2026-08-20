@@ -5,31 +5,37 @@
         <el-button type="text" icon="el-icon-arrow-left" @click="goBack">返回</el-button>
         <h2>{{ detail.title }}</h2>
         <p class="time">{{ detail.createTime }}</p>
+        <p v-if="detail.progressLabel" class="progress">{{ detail.progressLabel }}</p>
         <el-tag :type="detail.statusTagType">{{ detail.statusLabel }}</el-tag>
       </div>
 
-      <section class="form-section">
-        <h3>表单信息</h3>
-        <div v-if="detail.formFields.length === 0" class="empty-hint">暂无表单字段</div>
-        <div v-for="field in detail.formFields" :key="field.key" class="form-field">
-          <h4>{{ field.key }}</h4>
-          <p v-html="field.value" />
-        </div>
-      </section>
-
-      <section class="record-section">
-        <h3>审批流转记录</h3>
-        <el-timeline v-if="detail.records.length">
-          <el-timeline-item
-            v-for="(record, index) in detail.records"
-            :key="`${record.createTime}-${index}`"
-            :timestamp="record.createTime"
-            placement="top"
-          >
-            {{ record.operateUser }} {{ record.description }}
-          </el-timeline-item>
-        </el-timeline>
-        <div v-else class="empty-hint">暂无流转记录</div>
+      <section
+        v-for="section in detailSections"
+        :key="section"
+        :class="section === 'records' ? 'record-section' : 'form-section'"
+      >
+        <template v-if="section === 'records'">
+          <h3>审批流转记录</h3>
+          <el-timeline v-if="detail.records.length">
+            <el-timeline-item
+              v-for="(record, index) in detail.records"
+              :key="`${record.createTime}-${index}`"
+              :timestamp="record.createTime"
+              placement="top"
+            >
+              {{ record.operateUser }} {{ record.description }}
+            </el-timeline-item>
+          </el-timeline>
+          <div v-else class="empty-hint">暂无流转记录</div>
+        </template>
+        <template v-else>
+          <h3>表单信息</h3>
+          <div v-if="detail.formFields.length === 0" class="empty-hint">暂无表单字段</div>
+          <div v-for="field in detail.formFields" :key="field.key" class="form-field">
+            <h4>{{ field.key }}</h4>
+            <p v-html="field.value" />
+          </div>
+        </template>
       </section>
     </div>
 
@@ -61,6 +67,13 @@ export default {
   created() {
     this.fetchDetail()
   },
+  computed: {
+    detailSections() {
+      if (!this.detail) return []
+      if (this.detail.recordsFirst) return ['records', 'form']
+      return ['form', 'records']
+    }
+  },
   methods: {
     fetchDetail() {
       this.loading = true
@@ -90,10 +103,6 @@ export default {
       const returnPath = this.detail && this.detail.perspective && this.detail.perspective.returnPath
       if (returnPath) {
         this.$router.push(returnPath)
-        return
-      }
-      if (this.$route.name === 'StartedDetail') {
-        this.$router.push({ name: 'WorkStarted' })
         return
       }
       if (this.$route.name === 'ProcessMgrDetail') {
@@ -129,6 +138,12 @@ export default {
     margin: 0 0 8px;
     font-size: 13px;
     color: #909399;
+  }
+
+  .progress {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #606266;
   }
 }
 

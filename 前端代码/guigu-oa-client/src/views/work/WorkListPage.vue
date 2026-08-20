@@ -20,6 +20,7 @@
           <span v-if="item.processTypeName">审批类型：{{ item.processTypeName }}</span>
         </div>
         <p v-if="item.relationLabel" class="item-relation">{{ item.relationLabel }}</p>
+        <p v-if="item.progressLabel" class="item-progress">{{ item.progressLabel }}</p>
         <div v-if="item.summaryFields.length" class="item-fields">
           <p v-for="field in item.summaryFields" :key="field.key">
             {{ field.key }}：<span v-html="field.value" />
@@ -153,7 +154,8 @@ export default {
   color: #909399;
 }
 
-.item-relation {
+.item-relation,
+.item-progress {
   margin: 4px 0;
   font-size: 13px;
   color: #606266;

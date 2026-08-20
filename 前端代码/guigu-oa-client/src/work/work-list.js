@@ -20,6 +20,7 @@ const LIST_PAGES = {
     emptyDescription: '暂无待处理审批',
     returnPath: ROUTES.PENDING,
     readOnly: false,
+    emphasis: '审批动作',
     relationLabel: '等待我处理',
     detailPath: (record) => `${ROUTES.PENDING}/${record.id}/${record.taskId}`
   },
@@ -28,6 +29,7 @@ const LIST_PAGES = {
     emptyDescription: '暂无已处理审批',
     returnPath: ROUTES.PROCESSED,
     readOnly: true,
+    emphasis: '回看',
     relationLabel: '我已处理',
     detailPath: (record) => `${ROUTES.PROCESSED}/${record.id}`
   },
@@ -36,6 +38,8 @@ const LIST_PAGES = {
     emptyDescription: '暂无已发起审批',
     returnPath: ROUTES.STARTED,
     readOnly: true,
+    emphasis: '整体进度',
+    relationLabel: '我发起的审批',
     detailPath: (record) => `${ROUTES.STARTED}/${record.id}`
   }
 }
@@ -100,6 +104,7 @@ function presentWorkListItem(kind, record = {}) {
     detailPath: page.detailPath(record),
     kind,
     relationLabel: page.relationLabel,
+    progressLabel: kind === WORK_LIST_KINDS.STARTED ? (record.description || '') : '',
     rowKey: record.taskId ? `${record.id}-${record.taskId}` : String(record.id)
   }
 }
@@ -127,7 +132,8 @@ export function workListPerspective(kind) {
     kind,
     title: definition.title,
     returnPath: definition.returnPath,
-    readOnly: definition.readOnly
+    readOnly: definition.readOnly,
+    emphasis: definition.emphasis
   }
 }
 
@@ -138,8 +144,21 @@ export function workListPerspectiveFromRoute(route = {}) {
       kind: null,
       title: '',
       returnPath: '',
-      readOnly: true
+      readOnly: true,
+      emphasis: ''
     }
   }
   return workListPerspective(kind)
+}
+
+export function afterPendingAction({ isInitiator = false } = {}) {
+  const remainingKinds = [WORK_LIST_KINDS.PROCESSED]
+  if (isInitiator) {
+    remainingKinds.push(WORK_LIST_KINDS.STARTED)
+  }
+  return {
+    leaveKind: WORK_LIST_KINDS.PENDING,
+    enterKind: WORK_LIST_KINDS.PROCESSED,
+    remainingKinds
+  }
 }

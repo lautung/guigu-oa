@@ -5,7 +5,7 @@ import {
   presentDetail,
   statusLabel
 } from '@/work/pending-flow'
-import { WORK_LIST_KINDS, workListPerspective } from '@/work/work-list'
+import { WORK_LIST_KINDS, afterPendingAction, workListPerspective } from '@/work/work-list'
 
 const FORM_VALUES = JSON.stringify({
   formShowData: {
@@ -80,22 +80,102 @@ describe('work/pending-flow', () => {
 
       const pendingDetail = presentDetail(payload, workListPerspective(WORK_LIST_KINDS.PENDING))
       expect(pendingDetail.canApprove).toBe(true)
+      expect(pendingDetail.progressLabel).toBe('')
+      expect(pendingDetail.recordsFirst).toBe(false)
       expect(pendingDetail.perspective).toEqual({
         kind: WORK_LIST_KINDS.PENDING,
         title: '待处理',
         returnPath: '/work/pending',
-        readOnly: false
+        readOnly: false,
+        emphasis: '审批动作'
       })
 
       const processedDetail = presentDetail(payload, workListPerspective(WORK_LIST_KINDS.PROCESSED))
       expect(processedDetail.canApprove).toBe(false)
+      expect(processedDetail.progressLabel).toBe('')
+      expect(processedDetail.recordsFirst).toBe(false)
       expect(processedDetail.title).toBe('张三提交的请假申请')
       expect(processedDetail.perspective).toEqual({
         kind: WORK_LIST_KINDS.PROCESSED,
         title: '已处理',
         returnPath: '/work/processed',
-        readOnly: true
+        readOnly: true,
+        emphasis: '回看'
       })
+    })
+
+    it('keeps 已发起详情 as the same 审批 with a started 视角, progress, and 处理记录', () => {
+      const payload = {
+        process: {
+          id: 12,
+          title: '我提交的请假申请',
+          createTime: '2026-08-18 10:00:00',
+          status: 1,
+          description: '等待李四审批',
+          formValues: FORM_VALUES
+        },
+        processRecordList: [
+          {
+            operateUser: '张三',
+            description: '发起申请',
+            createTime: '2026-08-18 10:00:00'
+          }
+        ],
+        isApprove: true
+      }
+
+      const startedDetail = presentDetail(payload, workListPerspective(WORK_LIST_KINDS.STARTED))
+      expect(startedDetail.title).toBe('我提交的请假申请')
+      expect(startedDetail.canApprove).toBe(false)
+      expect(startedDetail.progressLabel).toBe('等待李四审批')
+      expect(startedDetail.recordsFirst).toBe(true)
+      expect(startedDetail.records).toEqual([
+        { operateUser: '张三', description: '发起申请', createTime: '2026-08-18 10:00:00' }
+      ])
+      expect(startedDetail.perspective).toEqual({
+        kind: WORK_LIST_KINDS.STARTED,
+        title: '已发起',
+        returnPath: '/work/started',
+        readOnly: true,
+        emphasis: '整体进度'
+      })
+    })
+
+    it('after 待处理 approve or reject, sends the user to 已处理 while the same 审批 stays viewable from 已发起', () => {
+      const moved = afterPendingAction({ isInitiator: true })
+      expect(moved.leaveKind).toBe(WORK_LIST_KINDS.PENDING)
+      expect(moved.enterKind).toBe(WORK_LIST_KINDS.PROCESSED)
+      expect(moved.remainingKinds).toEqual([WORK_LIST_KINDS.PROCESSED, WORK_LIST_KINDS.STARTED])
+      expect(postApprovalRoute()).toBe(workListPerspective(moved.enterKind).returnPath)
+
+      const startedDetail = presentDetail({
+        process: {
+          id: 12,
+          title: '我提交的请假申请',
+          createTime: '2026-08-18 10:00:00',
+          status: 2,
+          description: '审批完成（通过）',
+          formValues: FORM_VALUES
+        },
+        processRecordList: [
+          {
+            operateUser: '张三',
+            description: '发起申请',
+            createTime: '2026-08-18 10:00:00'
+          },
+          {
+            operateUser: '张三',
+            description: '已通过',
+            createTime: '2026-08-18 11:00:00'
+          }
+        ],
+        isApprove: false
+      }, workListPerspective(WORK_LIST_KINDS.STARTED))
+
+      expect(startedDetail.canApprove).toBe(false)
+      expect(startedDetail.progressLabel).toBe('审批完成（通过）')
+      expect(startedDetail.perspective.returnPath).toBe('/work/started')
+      expect(startedDetail.records).toHaveLength(2)
     })
 
     it('forces read-only detail when opened from processed or started routes', () => {

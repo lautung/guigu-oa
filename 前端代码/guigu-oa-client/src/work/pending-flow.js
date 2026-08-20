@@ -1,10 +1,12 @@
 import { ROUTES } from '@/navigation/access-policy'
 import {
   WORK_LIST_KINDS,
+  afterPendingAction,
   parseFormValues,
   presentWorkList,
   statusLabel,
-  statusTagType
+  statusTagType,
+  workListPerspective
 } from '@/work/work-list'
 
 export {
@@ -67,6 +69,7 @@ export function presentDetail(payload = {}, perspective = {}) {
   const formValues = parseFormValues(process.formValues)
   const formShowData = formValues.formShowData || {}
   const readOnly = !!perspective.readOnly
+  const emphasizeProgress = perspective.emphasis === '整体进度'
 
   return {
     id: process.id,
@@ -75,6 +78,8 @@ export function presentDetail(payload = {}, perspective = {}) {
     status: process.status,
     statusLabel: statusLabel(process.status),
     statusTagType: statusTagType(process.status),
+    progressLabel: emphasizeProgress ? (process.description || '') : '',
+    recordsFirst: emphasizeProgress,
     formFields: fieldsFromShowData(formShowData),
     records: (payload.processRecordList || []).map(record => ({
       operateUser: record.operateUser,
@@ -97,5 +102,5 @@ export function buildApprovalPayload({ processId, taskId, status }) {
 }
 
 export function postApprovalRoute() {
-  return ROUTES.PROCESSED
+  return workListPerspective(afterPendingAction().enterKind).returnPath
 }

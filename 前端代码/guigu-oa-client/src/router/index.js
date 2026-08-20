@@ -42,14 +42,14 @@ const workChildren = [
   {
     path: 'started',
     name: 'WorkStarted',
-    component: () => import('@/views/work/started/index.vue'),
-    meta: { title: '已发起' }
+    component: () => import('@/views/work/WorkListPage.vue'),
+    meta: { title: '已发起', workListKind: WORK_LIST_KINDS.STARTED }
   },
   {
     path: 'started/:id',
     name: 'StartedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
-    meta: { title: '审批详情' }
+    meta: { title: '审批详情', workListKind: WORK_LIST_KINDS.STARTED }
   },
   {
     path: 'profile',
