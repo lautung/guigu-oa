@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import { findProcessType } from '@/api/process'
+import { findStartable } from '@/api/processTemplate'
 import { presentStartGroups } from '@/config/process-template'
 import { applyPath } from '@/work/start-flow'
 
@@ -43,7 +43,7 @@ export default {
   methods: {
     fetchGroups() {
       this.loading = true
-      findProcessType().then(response => {
+      findStartable().then(response => {
         this.groups = presentStartGroups(response.data || [])
       }).finally(() => {
         this.loading = false

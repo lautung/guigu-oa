@@ -1,11 +1,16 @@
 import request from '@/utils/request'
 import {
+  findStartableRequest,
   getRequest,
   listRequest,
   publishRequest,
   removeRequest,
   writeRequest
 } from '@/config/process-template'
+
+export function findStartable() {
+  return request(findStartableRequest())
+}
 
 export function getPageList(page, limit) {
   return request(listRequest(page, limit))

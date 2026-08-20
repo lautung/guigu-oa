@@ -53,6 +53,13 @@ function templatePayload(form, { includeId = false } = {}) {
   return data
 }
 
+export function findStartableRequest() {
+  return {
+    method: 'get',
+    url: '/admin/process/findStartable'
+  }
+}
+
 export function listRequest(page, limit) {
   return {
     method: 'get',
@@ -202,13 +209,11 @@ export function presentStartGroups(types = []) {
     .map(type => ({
       id: type.id,
       name: type.name,
-      templates: (type.processTemplateList || [])
-        .filter(template => template.status === 1)
-        .map(template => ({
-          id: template.id,
-          name: template.name,
-          iconUrl: template.iconUrl
-        }))
+      templates: (type.processTemplateList || []).map(template => ({
+        id: template.id,
+        name: template.name,
+        iconUrl: template.iconUrl
+      }))
     }))
     .filter(group => group.templates.length > 0)
 }

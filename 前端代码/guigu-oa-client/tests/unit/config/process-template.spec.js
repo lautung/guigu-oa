@@ -365,21 +365,14 @@ describe('config/process-template', () => {
   })
 
   describe('presentStartGroups', () => {
-    it('shows only 已发布 templates grouped by 审批类型 for 发起审批', () => {
+    it('presents 可发起清单 groups from 审批模板', () => {
       expect(presentStartGroups([
         {
           id: 1,
           name: '请假',
           processTemplateList: [
-            { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png', status: 1 },
-            { id: 12, name: '病假草稿', iconUrl: 'https://example.com/draft.png', status: 0 }
-          ]
-        },
-        {
-          id: 2,
-          name: '加班',
-          processTemplateList: [
-            { id: 21, name: '加班草稿', iconUrl: 'https://example.com/ot.png', status: 0 }
+            { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png' },
+            { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png' }
           ]
         }
       ])).toEqual([
@@ -387,7 +380,8 @@ describe('config/process-template', () => {
           id: 1,
           name: '请假',
           templates: [
-            { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png' }
+            { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png' },
+            { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png' }
           ]
         }
       ])

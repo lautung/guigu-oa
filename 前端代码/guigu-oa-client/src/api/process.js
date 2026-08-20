@@ -20,13 +20,6 @@ export function approve(approvalVo) {
   })
 }
 
-export function findProcessType() {
-  return request({
-    url: '/admin/process/findProcessType',
-    method: 'get'
-  })
-}
-
 export function getProcessTemplate(id) {
   return request(getProcessTemplateRequest(id))
 }

@@ -117,6 +117,8 @@ public class ApprovalTemplateContractTest {
 
     @Test
     public void findStartableOnly已发布GroupedBy审批类型() {
+        ProcessTemplate unpublished = save病假申请();
+
         List<ProcessType> groups = approvalTemplate.findStartable();
 
         assertTrue(groups.stream().noneMatch(group -> "加班".equals(group.getName())));
@@ -129,6 +131,22 @@ public class ApprovalTemplateContractTest {
         assertTrue(ids.contains(2L));
         assertFalse(ids.contains(3L));
         assertFalse(ids.contains(4L));
+        assertFalse(ids.contains(unpublished.getId()));
+
+        approvalTemplate.publish(unpublished.getId());
+
+        List<ProcessType> afterPublish = approvalTemplate.findStartable();
+        assertTrue(afterPublish.stream().noneMatch(group -> "加班".equals(group.getName())));
+        ProcessType leaveAfter = afterPublish.stream()
+                .filter(group -> "请假".equals(group.getName()))
+                .findFirst()
+                .orElseThrow();
+        List<Long> idsAfter = leaveAfter.getProcessTemplateList().stream()
+                .map(ProcessTemplate::getId)
+                .toList();
+        assertTrue(idsAfter.contains(unpublished.getId()));
+        assertFalse(idsAfter.contains(3L));
+        assertFalse(idsAfter.contains(4L));
     }
 
     @Test

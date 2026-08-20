@@ -18,7 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -108,16 +111,21 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     @Override
     public List<ProcessType> findStartable() {
+        LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
+        Map<Long, List<ProcessTemplate>> publishedByType = list(wrapper).stream()
+                .filter(template -> template.getProcessTypeId() != null)
+                .collect(Collectors.groupingBy(
+                        ProcessTemplate::getProcessTypeId,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
         List<ProcessType> groups = new ArrayList<>();
-        for (ProcessType processType : processTypeService.list()) {
-            LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(ProcessTemplate::getProcessTypeId, processType.getId());
-            wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
-            List<ProcessTemplate> published = list(wrapper);
-            if (published.isEmpty()) {
+        for (Map.Entry<Long, List<ProcessTemplate>> entry : publishedByType.entrySet()) {
+            ProcessType processType = processTypeService.getById(entry.getKey());
+            if (processType == null) {
                 continue;
             }
-            processType.setProcessTemplateList(published);
+            processType.setProcessTemplateList(entry.getValue());
             groups.add(processType);
         }
         return groups;

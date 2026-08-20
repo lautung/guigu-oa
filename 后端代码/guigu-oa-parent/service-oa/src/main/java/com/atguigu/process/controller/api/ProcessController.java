@@ -68,7 +68,12 @@ public class ProcessController {
         return Result.ok(processTemplate);
     }
 
-    //查询所有审批分类和每个分类所有审批模板
+    @GetMapping("findStartable")
+    public Result findStartable() {
+        List<ProcessType> list = processTemplateService.findStartable();
+        return Result.ok(list);
+    }
+
     @GetMapping("findProcessType")
     public Result findProcessType() {
         List<ProcessType> list = processTypeService.findProcessType();
