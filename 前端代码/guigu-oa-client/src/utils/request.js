@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
-import { ROUTES } from '@/navigation/access-policy'
+import { ROUTES } from '@/navigation/constants'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API || '/dev-api',

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/access-policy'
+import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
 import { loadClientSurfaceHost } from '@/surface/client-surface'
 import { WORK_LIST_KINDS } from '@/work/work-list'
 

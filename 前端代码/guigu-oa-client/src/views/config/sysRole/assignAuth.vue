@@ -2,7 +2,7 @@
   <div class="config-page">
     <div class="page-header">
       <h2 class="page-title">菜单授权</h2>
-      <span class="role-name">授权角色：{{ roleName }}</span>
+      <span class="role-name">角色：{{ roleName }}</span>
     </div>
 
     <el-tree
@@ -23,7 +23,7 @@
 
 <script>
 import { doAssign, getByIdForAssign } from '@/api/sysMenu'
-import { collectCheckedIds, mergeAssignMenuIds, presentConfigMenuTree } from '@/config/sys-menu'
+import { collectCheckedIds, mergeAssignMenuIds, presentAssignableConfigMenus } from '@/config/sys-menu'
 import { useUserStore } from '@/store/modules/user'
 
 export default {
@@ -51,7 +51,7 @@ export default {
     fetchTree() {
       getByIdForAssign(this.$route.query.id).then(response => {
         this.fullTree = response.data || []
-        this.menuTree = presentConfigMenuTree(this.fullTree)
+        this.menuTree = presentAssignableConfigMenus(this.fullTree)
         this.$nextTick(() => {
           this.$refs.tree.setCheckedKeys(collectCheckedIds(this.menuTree))
         })
@@ -63,7 +63,7 @@ export default {
       const menuIdList = mergeAssignMenuIds(checkedIds, this.fullTree)
       this.saving = true
       doAssign(this.$route.query.id, menuIdList).then(response => {
-        this.$message.success(response.message || '分配权限成功')
+        this.$message.success(response.message || '保存成功')
         return useUserStore().getInfo().catch(() => {})
       }).then(() => {
         this.$router.push('/system/sysRole')

@@ -47,7 +47,7 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
-import { buildLoginRedirectPath } from '@/navigation/access-policy'
+import { buildLoginRedirectPath } from '@/navigation'
 
 const route = useRoute()
 const router = useRouter()

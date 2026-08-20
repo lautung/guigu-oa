@@ -134,6 +134,12 @@ describe('配置权限', () => {
     expect(permission.canOccupy('/system/sysRole')).toBe(false)
   })
 
+  it('cannot occupy 菜单授权 when only 用户管理 is granted', () => {
+    const permission = configPermission(ONLY_USER_MENUS)
+
+    expect(permission.canOccupy('/system/assignAuth')).toBe(false)
+  })
+
   it('can occupy hidden 菜单授权 when 角色管理 is granted', () => {
     const permission = configPermission([
       {

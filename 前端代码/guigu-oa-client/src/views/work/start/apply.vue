@@ -15,7 +15,7 @@
 <script>
 import { startUp } from '@/api/process'
 import { read } from '@/config/process-template'
-import { ROUTES } from '@/navigation/access-policy'
+import { ROUTES } from '@/navigation/constants'
 import request from '@/utils/request'
 import {
   START_SUCCESS_MESSAGE,

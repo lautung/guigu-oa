@@ -1,9 +1,32 @@
-import { isExcludedConfigMenu } from '@/config/sys-menu'
-
 /**
  * 配置权限：有没有、授了哪些配置类菜单、这页能不能占用。
  * 输入是 info 给来的菜单树。不认用户 id，不认按钮。
+ * 菜单管理可以问什么算配置类菜单；勾选和增删改仍是配置页的动作。
  */
+
+const EXCLUDED_PATH_PATTERNS = [
+  /wechat/i,
+  /dashboard/i,
+  /onlineProcessSet/i
+]
+
+const EXCLUDED_COMPONENTS = [
+  'system/sysDept/list',
+  'system/sysPost/list',
+  'system/sysOperLog/list',
+  'system/sysLoginLog/list'
+]
+
+function isExcludedConfigMenu(menu = {}) {
+  const path = menu.path || ''
+  const component = menu.component || ''
+
+  if (EXCLUDED_PATH_PATTERNS.some(pattern => pattern.test(path) || pattern.test(component))) {
+    return true
+  }
+
+  return EXCLUDED_COMPONENTS.includes(component)
+}
 
 function normalizePath(path) {
   if (!path) return ''
@@ -29,20 +52,24 @@ function titleOf(menu) {
   return (menu.meta && menu.meta.title) || menu.title || menu.name || ''
 }
 
-function isWorkMenu(menu) {
+export function isWorkMenu(menu = {}) {
   const path = menu.path || ''
   return path === 'work' || /^\/work/i.test(path) || /^work\//i.test(path)
 }
 
-function isButtonMenu(menu) {
+function isButtonMenu(menu = {}) {
   return menu.type === 2
+}
+
+export function isConfigClassMenu(menu = {}) {
+  return !isButtonMenu(menu) && !isWorkMenu(menu) && !isExcludedConfigMenu(menu)
 }
 
 function grantedConfigMenusFrom(menus = [], parentPath = '') {
   const granted = []
 
   menus.forEach(menu => {
-    if (menu.hidden || isButtonMenu(menu) || isExcludedConfigMenu(menu) || isWorkMenu(menu)) {
+    if (menu.hidden || !isConfigClassMenu(menu)) {
       return
     }
 

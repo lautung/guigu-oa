@@ -5,6 +5,7 @@ import {
   findNodesRequest,
   menuWriteValidationError,
   mergeAssignMenuIds,
+  presentAssignableConfigMenus,
   presentConfigMenuTree,
   removeRequest,
   toAssignRequest,
@@ -37,7 +38,22 @@ const FULL_TREE = [
         status: 1,
         parentId: 1,
         select: true,
-        children: []
+        children: [
+          {
+            id: 111,
+            name: '添加',
+            path: 'btn',
+            component: '',
+            type: 2,
+            icon: '',
+            perms: 'bnt.sysUser.add',
+            sortValue: 1,
+            status: 1,
+            parentId: 11,
+            select: true,
+            children: []
+          }
+        ]
       }
     ]
   },
@@ -149,15 +165,27 @@ describe('config/sys-menu', () => {
       expect(tree.map(node => node.name)).toEqual(['组织与权限'])
       expect(tree[0].children.map(node => node.name)).toEqual(['用户管理'])
     })
+
+    it('keeps button records in 菜单管理 tree', () => {
+      expect(presentConfigMenuTree(FULL_TREE)[0].children[0].children.map(node => node.name)).toEqual(['添加'])
+    })
   })
 
   describe('菜单授权', () => {
-    it('collects selected leaf ids for the tree checkbox', () => {
-      expect(collectCheckedIds(presentConfigMenuTree(FULL_TREE))).toEqual([11])
+    it('lets the 角色 menu tree show 配置类菜单, not buttons', () => {
+      const tree = presentAssignableConfigMenus(FULL_TREE)
+
+      expect(tree.map(node => node.name)).toEqual(['组织与权限'])
+      expect(tree[0].children.map(node => node.name)).toEqual(['用户管理'])
+      expect(tree[0].children[0].children).toEqual([])
     })
 
-    it('keeps previously granted out-of-spec menus when saving 配置类 checks', () => {
-      expect(mergeAssignMenuIds([11], FULL_TREE)).toEqual([11, 9, 91, 7])
+    it('collects selected 配置类菜单 ids, not button ids', () => {
+      expect(collectCheckedIds(presentAssignableConfigMenus(FULL_TREE))).toEqual([11])
+    })
+
+    it('keeps previously granted out-of-spec menus and buttons when saving 配置类 checks', () => {
+      expect(mergeAssignMenuIds([11], FULL_TREE)).toEqual([11, 111, 9, 91, 7])
     })
 
     it('loads 菜单授权 with GET /admin/system/sysMenu/toAssign/{roleId}', () => {
@@ -194,6 +222,14 @@ describe('config/sys-menu', () => {
         path: '/work/pending',
         component: 'work/pending/index'
       })).toBe('办事内置入口不在菜单管理中维护')
+    })
+
+    it('accepts a leftover 按钮 record', () => {
+      expect(menuWriteValidationError({
+        type: 2,
+        path: 'btn',
+        perms: 'bnt.sysUser.add'
+      })).toBeNull()
     })
 
     it('accepts a 配置类 menu', () => {

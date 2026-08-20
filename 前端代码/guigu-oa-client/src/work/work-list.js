@@ -1,4 +1,4 @@
-import { ROUTES } from '@/navigation/access-policy'
+import { ROUTES } from '@/navigation/constants'
 
 export const WORK_LIST_KINDS = {
   PENDING: 'pending',

@@ -3,7 +3,7 @@ import { getToken } from '@/utils/auth'
 import { ElMessage } from 'element-plus'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
-import { resolveNavigationGuard } from '@/navigation/access-policy'
+import { resolveNavigationGuard } from '@/navigation'
 import { useUserStore } from '@/store/modules/user'
 
 NProgress.configure({ showSpinner: false })

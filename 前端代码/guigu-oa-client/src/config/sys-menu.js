@@ -1,42 +1,14 @@
-const EXCLUDED_PATH_PATTERNS = [
-  /wechat/i,
-  /dashboard/i,
-  /onlineProcessSet/i
-]
-
-const EXCLUDED_COMPONENTS = [
-  'system/sysDept/list',
-  'system/sysPost/list',
-  'system/sysOperLog/list',
-  'system/sysLoginLog/list'
-]
+import { isConfigClassMenu, isWorkMenu } from '@/config-permission'
 
 const SYS_MENU_API = '/admin/system/sysMenu'
 
-export function isExcludedConfigMenu(menu = {}) {
-  const path = menu.path || ''
-  const component = menu.component || ''
-
-  if (EXCLUDED_PATH_PATTERNS.some(pattern => pattern.test(path) || pattern.test(component))) {
-    return true
-  }
-
-  return EXCLUDED_COMPONENTS.includes(component)
-}
-
-const WORK_MENU_PATH_PATTERNS = [
-  /^\/work/i,
-  /^work\//i
-]
-
 export function menuWriteValidationError(form = {}) {
-  if (isExcludedConfigMenu(form)) {
-    return '只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器'
+  if (isWorkMenu(form)) {
+    return '办事内置入口不在菜单管理中维护'
   }
 
-  const path = form.path || ''
-  if (path === 'work' || WORK_MENU_PATH_PATTERNS.some(pattern => pattern.test(path))) {
-    return '办事内置入口不在菜单管理中维护'
+  if (!isConfigClassMenu(form) && form.type !== 2) {
+    return '只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器'
   }
 
   return null
@@ -59,14 +31,22 @@ function presentMenuNode(menu = {}) {
   }
 }
 
-export function presentConfigMenuTree(nodes = []) {
+function presentMenuTree(nodes, keepNode) {
   return (nodes || [])
-    .filter(node => !isExcludedConfigMenu(node))
+    .filter(keepNode)
     .map(node => {
       const presented = presentMenuNode(node)
-      presented.children = presentConfigMenuTree(node.children || [])
+      presented.children = presentMenuTree(node.children || [], keepNode)
       return presented
     })
+}
+
+export function presentConfigMenuTree(nodes = []) {
+  return presentMenuTree(nodes, node => isConfigClassMenu(node) || node.type === 2)
+}
+
+export function presentAssignableConfigMenus(nodes = []) {
+  return presentMenuTree(nodes, isConfigClassMenu)
 }
 
 export function collectCheckedIds(nodes = []) {
@@ -91,7 +71,7 @@ export function preservedOutOfSpecMenuIds(nodes = []) {
 
   function walk(list) {
     (list || []).forEach(node => {
-      if (isExcludedConfigMenu(node)) {
+      if (!isConfigClassMenu(node)) {
         collectSelectedIds(node, ids)
       } else {
         walk(node.children || [])

@@ -1,5 +1,5 @@
 import { canInitiate } from '@/config/process-template'
-import { ROUTES } from '@/navigation/access-policy'
+import { ROUTES } from '@/navigation/constants'
 
 export const START_SUCCESS_MESSAGE = '发起成功'
 

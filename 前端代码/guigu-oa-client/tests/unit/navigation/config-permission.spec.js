@@ -3,7 +3,7 @@ import {
   WORK_BUILTIN_ITEMS,
   buildSidebarTree,
   resolveNavigationGuard
-} from '@/navigation/access-policy'
+} from '@/navigation'
 
 const ONLY_USER_MENUS = [
   {
@@ -207,6 +207,18 @@ describe('配置权限驱动的侧栏与路由', () => {
           { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
         ]
       }]
+    })).toEqual({
+      action: 'redirect',
+      to: ROUTES.PENDING
+    })
+  })
+
+  it('occupancy-lands on 待处理 for 菜单授权 when only 用户管理 is granted', () => {
+    expect(resolveNavigationGuard({
+      path: '/system/assignAuth',
+      hasToken: true,
+      viewportWidth: 1200,
+      menus: ONLY_USER_MENUS
     })).toEqual({
       action: 'redirect',
       to: ROUTES.PENDING

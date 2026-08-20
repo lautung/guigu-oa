@@ -9,7 +9,7 @@ import {
   isMobileViewport,
   resolveAuthGuard,
   resolveNavigationGuard
-} from '@/navigation/access-policy'
+} from '@/navigation'
 
 const SAMPLE_CONFIG_MENUS = [
   {
@@ -47,7 +47,7 @@ const SAMPLE_CONFIG_MENUS = [
   }
 ]
 
-describe('navigation/access-policy', () => {
+describe('侧栏与占用', () => {
   describe('getDefaultPostLoginRoute', () => {
     it('returns pending as the default post-login landing', () => {
       expect(getDefaultPostLoginRoute()).toBe(ROUTES.PENDING)
