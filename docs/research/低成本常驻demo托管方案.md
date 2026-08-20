@@ -4,6 +4,7 @@
 > 抓取时间：2026-08-20（各家定价随时改；本文每个数字都附官方页链接，过期请按链接复核）
 > 来源：各平台官方定价页与官方文档；Spring Boot 官方参考文档；GitHub Actions 官方文档；本仓库源码与 jar 内 Flowable 8.0.0 建表脚本。
 > 说明：只报官方页面上的数字与官方文档写明的行为。凡是官方没写、只能自己测的（冷启动秒数、境内延迟），本文一律标成「无一手数据」并给测法，不引用二手博客的转述。
+> 补记（2026-08-21）：issue 69 追加了「附件直传需要 S3 兼容对象存储」这条约束，对象存储与预签名直传的可行性单独写在 **§9**。
 
 ---
 
@@ -236,6 +237,132 @@
 
 ---
 
+## 9. 对象存储与预签名直传（附件直传模块）
+
+> 补充抓取时间：2026-08-21。触发原因：issue 69 追加约束——附件直传是本项目的原创模块（后端发 presigned PUT、前端直传、回调登记元数据、下载走临时凭证访问**私有桶**；不做分片续传与秒传），所以 demo 环境多一件必需品：**一个兼容 S3 API 的对象存储**。
+
+### 9.1 结论
+
+1. **三个方案都挂同一个 Cloudflare R2 免费桶，成本增量都是 $0，排序不变（A > C > B）。** R2 是唯一一个同时满足「免费额度不设到期日 + 零出网费 + `PutBucketCors` 与 presigned PUT 都在官方文档里写明可用」的候选。
+2. **方案 A 里「顺手用 Oracle 自家 Object Storage」这个看起来最自然的选择，要降级为备选。** 两个原因：Always Free 只给 **50,000 次 API 请求/月**（全租户合计）；更要命的是**它是否支持 `PutBucketCors` 我没能从官方文档确认**——官方 "Amazon S3 Compatibility API Support" 页在两个镜像上都只渲染出小节标题、渲染不出 API 清单。而 OCI 官方给出的「浏览器直传」范式是 **presigned POST policy + HTML form**（表单 POST 不受 CORS 约束），这个设计取向本身就暗示它绕开了 CORS。我们的规格是 presigned PUT（fetch/XHR 发的），没有 CORS 就是死路。见 §9.5 第 1 条。
+3. **自托管 MinIO 不是省事的选择，是「想在简历上多一条」的选择。** 现金增量 $0（方案 A）或 **+$7/月起**（方案 B，因为 Render 免费档挂不了持久盘），但要多趟两个坑：反代必须原样透传 `Host` 头，以及网上教程还在教的 `MINIO_SERVER_URL` **官方已于 2024-05-10 起标记 deprecated**。
+4. **Storj 直接出局**：已无免费档，试用 30 天后**每月最低消费 $5**（不是用量抵扣，是账单下限）。**腾讯云 COS / 阿里云 OSS 也不适合长期 demo**：都是限期试用包（COS 6 个月、OSS 3 个月），且 COS 的免费包**明确不抵扣请求与流量**。
+
+### 9.2 形态与成本：三类比较
+
+**第一类：外挂的独立 S3 兼容服务**
+
+| 服务 | 免费额度 | 免费额度有时限吗 | 出网 | 请求计费 | `PutBucketCors` |
+|------|---------|----------------|------|---------|----------------|
+| **Cloudflare R2** | 10 GB-month 存储、**100 万** Class A、**1000 万** Class B / 月 | **无**，按月重置 | **免费**（含 S3 API、Workers API、`r2.dev` 域） | Class A $4.50/百万、Class B $0.36/百万；`DeleteObject`/`DeleteBucket`/`AbortMultipartUpload` 免费 | **支持**（属 Class A） |
+| **Tigris**（Fly.io 自带） | 5 GB 标准存储、**1 万** Class A、**10 万** Class B / 月 | 未写到期日 | **免费**（含跨区与出公网） | Class A $0.005/千、Class B $0.0005/千 | **支持**（在官方 Class A 清单里） |
+| **Backblaze B2** | **前 10 GB 存储永久免费**；出网免费额度 = 当月平均存储量的 **3 倍** | 存储那条写的是 always free | 超过 3× 后 $0.01/GB | Class A/B/C **免费**；Class D $0.004/万次，每天前 2,500 次免费 | **支持**，但有坑，见 §9.3 |
+| **Storj** | ~~无~~ 只有 30 天试用 | 30 天 | $7/TB | 无 API 费 | — |
+| **腾讯云 COS** | 个人 50 GB 标准存储包 | **6 个月（180 天）** | **不抵扣** | **不抵扣** | 未查 |
+| **阿里云 OSS**（国内站） | 20 GB 标准存储 + 2 GB 下行 + 20 万请求 | **3 个月** | 额度内 | 额度内 | 未查 |
+
+R2 的免费额度比 Tigris 大一个数量级（10 GB vs 5 GB、100 万 vs 1 万 Class A），且**都不写到期日**——这是它成为三个方案统一选择的理由。一个 demo 的量级（几十个附件、面试官点几十次）离两家的免费线都很远，但 Tigris 那 1 万次/月 Class A 如果被自动化重置脚本反复清桶重传，是有可能摸到的。
+
+**第二类：平台自带的**
+
+| 平台 | 自带对象存储 | 额度 / 价格 |
+|------|------------|-----------|
+| **Fly.io** | **有，Tigris**。`fly storage create` 一条命令建桶并把 `AWS_ENDPOINT_URL_S3` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` 直接写成 app secrets；endpoint 是 `https://fly.storage.tigris.dev`。桶默认私有，`fly storage update <b> --private` 可显式设回私有 | 见上表 |
+| **Render** | **没有托管对象存储产品**。官方文档给的路子是「自己部署一个 MinIO」：一键模板会建一个 **Starter Web Service + 10 GB SSD Disk** | Starter 档 + 盘，**不在免费档内** |
+| **Oracle** | **有，Object Storage**，S3 兼容端点 `https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`（也支持 virtual-hosted 风格 `vhcompat...`） | Always Free：**20 GB**（Standard/IA/Archive 合计）+ **50,000 次 API 请求/月**。付费账户或试用期内则是 Standard/IA/Archive 各 10 GB |
+
+Fly 的 `fly storage create` 是所有候选里上手最快的一条（一条命令，密钥自动注入），代价是 5 GB / 1 万 Class A 的额度最小。注意密钥**只在创建时打印一次**，`flyctl` 事后取不回来，`fly secrets list` 只显示哈希。
+
+**第三类：和应用挤在同一台机器上跑 MinIO**
+
+对方案 A 那台 Oracle A1（2 OCPU / 12 GB）来说：
+
+- **内存**：多一个容器。MinIO 官方发布的硬件建议是面向生产集群的，对「单节点 demo」没有参考价值，**我没有找到官方给出的单节点最小内存数字，本文不编**。实际占用请按 §3 同样的办法自测：`docker stats` 看 RSS，或 `docker run --memory=...` 逐档压。结构上的判断是：JVM 才是这台机器的内存大头，MinIO 是第二梯队，12 GB 里再切一块给它不至于挤爆，但把「MySQL 也自己跑」和「MinIO 也自己跑」叠在一起时，务必先按 §7 方案 A 的变体把 MySQL 挪到 Always Free 的 MySQL HeatWave 上。
+- **数据放哪**：Always Free 的块存储总额度是 200 GB（见 §来源 13），boot volume 默认 50 GB，剩下的可以切一块独立 Block Volume 挂给 MinIO 的 `/data`。**不要把 MinIO 的数据卷和 MySQL 的数据卷放在同一个 50 GB boot volume 上**——重置演示数据时 `docker compose down -v` 会一起端掉。
+- **对资源余量的影响**：现金 $0，但把「§7 方案 A 的主要缺点」又加重了一条——闲置回收的判据里有内存 <20%，多跑一个常驻容器反而略微有利于避开回收；真正的代价是运维面变大（多一个要配 TLS、要配 CORS、要备份的组件）。
+
+对方案 B（Render）来说，自托管 MinIO 直接把 $0 打破：Render 免费档**挂不了持久盘**（见 §5），官方 MinIO 模板用的是 Starter Web Service + 10 GB Disk，所以至少 **+$7/月起**。**方案 B 只能外挂 R2。**
+
+### 9.3 预签名 PUT 与私有桶临时凭证，逐条核对
+
+#### CORS：能不能配、配在哪
+
+presigned PUT 是浏览器从 demo 前端域名直接发到存储域名的跨域请求，先走 OPTIONS 预检。
+
+| 服务 | 能配 CORS 吗 | 配置入口 | 要注意的 |
+|------|------------|---------|---------|
+| **R2** | 能 | Dashboard → 桶 → Settings → CORS Policy（JSON）；或 `npx wrangler r2 bucket cors set <BUCKET> --file cors.json`；或 S3 API `PutBucketCors` | 官方文档专门有一节讲「presigned URL + CORS」：`AllowedMethods` 要含 `PUT`，`AllowedHeaders` 要含前端实际会发的头（**如 `Content-Type`**），`ExposeHeaders` 加 `ETag` 才能在 JS 里读到。规则传播**最长可能要 30 秒** |
+| **Tigris** | 能（`PutBucketCors` 在官方计费清单里） | S3 API / 控制台 | 官方定价页把 `PutBucketCors` 列为 Class A，即可用；本次未找到专门的 CORS 文档页 |
+| **B2** | 能，**但和 R2 有实质差异**，见下 | Native API `b2_create_bucket` / `b2_update_bucket` 的 `corsRules`；或 S3 API 的 `PutBucketCors` | 见下 |
+| **MinIO** | 能 | 全局：`MINIO_API_CORS_ALLOW_ORIGIN`（逗号分隔，**默认 `*`**）；每桶：`mc cors set ALIAS/BUCKET cors-config.xml`，或 S3 API 的 `PutBucketCors`/`GetBucketCors`/`DeleteBucketCors`，每桶最多 100 条，**桶级配置覆盖全局** | 默认 `*` 时 MinIO 会回显请求方 Origin 并带 `Access-Control-Allow-Credentials: true`；生产要把 `MINIO_API_CORS_ALLOW_CREDENTIALS_WITH_WILDCARD` 设 `off` |
+| **Oracle** | **未确认**，见 §9.5 | — | — |
+
+**R2 与 B2 的 CORS 差异（这是本节的重点）**：
+
+1. **默认行为**：B2 官方明说「默认情况下 B2 服务器会**拒绝**预检请求」，必须显式加规则才放行。R2 是没配就没有 CORS 响应头。两家都要显式配，但 B2 的措辞更明确是「拒绝」。
+2. **两套规则互不相通**：B2 的 Native API CORS 规则和通过 S3 `PutBucketCors` 设的规则是**两个命名空间**——S3 的 `GetBucketCors` **看不到** Native 规则，也**不能**通过 S3 API 去改 Native 规则；反过来通过 Native API 查看 S3 规则时，`MaxAgeSeconds` 传 `null` 会被显示成 `5`，规则名会被自动生成。R2 没有这层双轨。
+3. **B2 的 S3 侧 `allowedOperations` 只映射四个动作**：`S3 Delete Object`、`S3 Get Object`、`S3 Head Object`、`S3 Put Object`。**没有 `UploadPart`**（分片只在 Native API 侧有 `b2_upload_part`）。本项目明确不做分片续传，所以现在不受影响；但如果哪天要加分片直传，B2 的浏览器端就得退回 Native API 那套（`b2_get_upload_part_url` + `X-Bz-*` 头），直传代码要重写。**这条是选 B2 的隐性技术债。**
+4. **B2 私有桶的浏览器下载**：B2 官方写明，浏览器做 CORS 请求时会剥掉 `Authorization` 头，所以私有桶下载**必须把授权令牌放进 URL 的 query 参数**（且拼写必须是 `Authorization=`，大小写敏感），并且**私有桶上不能用 `b2_download_file_by_id`**。这些是 Native 下载路径的约束；走 S3 兼容 API 的 presigned GET 天然就是 query 参数签名，不受这条影响——**但前提是你确实走 S3 兼容 API，不要混用两套。**
+
+#### 公网可达与自定义域名：MinIO 直传最常见的坑
+
+自托管 MinIO 时，presigned URL 里的 endpoint 就是**后端生成签名时用的那个 endpoint**，签名本身覆盖 `Host`。所以如果后端在 compose 内网里用 `http://minio:9000` 生成签名，浏览器拿到的就是一个指向 `minio:9000` 的 URL——浏览器解析不了，或者你手改成公网域名后签名立刻对不上（`SignatureDoesNotMatch`）。
+
+**正确做法**（在方案 A 那台机器上）：
+
+1. 让 MinIO 有一个**公网可达的域名**：Caddy 上给它一个子域（如 `s3.demo.example.com`）反代到 `minio:9000`，TLS 由 Caddy 自动签。
+2. **后端用这个公网域名作为 S3 client 的 endpoint 去生成预签名 URL**，而不是内网服务名。若后端还要走内网做服务端操作（列桶、删对象），可以配两个 client：内网 client 干服务端活、公网 endpoint 的 client 专门用来签 URL。
+3. **反代必须原样透传 `Host` 头**。SigV4 把 `host` 算进签名，代理若把 Host 改写成上游地址，签名校验必挂。MinIO 项目自己的 issue 里，维护者给的结论就是 nginx 少了 `proxy_set_header Host $http_host;`，并说明这一条已写进他们的反代文档。Caddy 的 `reverse_proxy` 默认保留原 Host，所以这条在 Caddy 上通常自动成立——但如果你手写了 `header_up Host {upstream_hostport}` 就会踩雷。
+4. **不要照抄网上教程去设 `MINIO_SERVER_URL`。** MinIO 官方文档已把它标为 **deprecated since `RELEASE.2024-05-10T01-41-38Z`**，且明确它是给 Console 连服务端用的、不参与预签名 URL 的主机名决定。2024 年之前的教程（包括大量中文博客）都还在教「设 `MINIO_SERVER_URL` 修复预签名」，在新版本上是无效动作。真正起作用的是上面第 2、3 条。
+
+用托管服务（R2 / Tigris / B2 / OCI）就没有这一整段问题：endpoint 本来就是公网域名。R2 额外提供自定义域名，且**绑了自定义域名的桶会自动对跨域请求返回 CORS 响应头**；注意改了 CORS 策略后已缓存的资源不会立刻反映，要 Purge Cache。
+
+#### 签名版本与 SDK 兼容
+
+| 服务 | SigV4 presigned PUT/GET | 已知不兼容点 |
+|------|------------------------|-------------|
+| R2 | 支持（官方文档专门有 presigned URL + CORS 一节） | **过期的预签名 URL 返回 403 `ExpiredRequest`，且响应上不带 CORS 头**，所以浏览器 JS 读不到错误体。要么在过期前刷新 URL，要么让过期错误从你自己的后端走 |
+| Tigris | 官方文档未单列 presigned 章节；`PutObject`/`GetObject`/`PutBucketCors` 均在计费清单内 | 本次未找到官方明说的不兼容点 |
+| B2 | 支持（S3 兼容 API） | 见上文四条差异；尤其是 S3 侧 `allowedOperations` 不含分片 |
+| **Oracle** | **明确不支持 SigV2，必须用 SigV4**。官方 Java 示例还要求 `disableChunkedEncoding()` + `enablePathStyleAccess()`；SDK 若不能设 region 标识，只能填 `us-east-1` 或留空，且那样**只能访问 home region** | 新版 AWS SDK 默认不再发 `Content-MD5` 改发 `x-amz-checksum-*`，OCI 的 `DeleteObjects` 已接受 `x-amz-checksum-sha256`/`crc32c`；需要旧行为要挂 `LegacyMd5Plugin` |
+| MinIO | 支持 | 坑不在签名算法，在 Host 头（见上） |
+
+关于「presigned PUT 带 `Content-Type`」这个经典问题：本次没有在任何一家的官方文档里看到「不支持带 `Content-Type` 的 presigned PUT」的说法。相反，R2 官方 CORS 示例里的 `AllowedHeaders` 就是 `["Content-Type"]`，说明这是被预期的用法。真正的注意事项是**签名时和上传时的 `Content-Type` 必须完全一致**——后端签的时候带了，前端 `fetch` 就必须发一模一样的值（浏览器给 `FormData`/`Blob` 自动补的 `Content-Type` 是最常见的不一致来源）。这条属于 SigV4 的固有语义，不是某家的兼容缺陷。
+
+#### 免费档的隐藏限制
+
+- **R2 的「零出网费」现在仍然成立**：定价页正文与脚注都写明，从 R2 出网（含 Workers API、S3 API、`r2.dev` 域）**不产生数据传输费**。注意脚注的限定语——如果你在 R2 桶前面串了其他计费服务，那些服务会另外计费。另外 R2 **按计费单位向上取整**（1.1 GB-month 按 2 GB-month 计，100 万零 1 次操作按 200 万次计），对 demo 这种小量级来说，意味着账单基本恒等于 0 或恒等于最小单位。**未授权请求（401）不计费。**
+- **B2 的出网免费是有上限的**：免费额度 = 当月平均存储量的 **3 倍**，超出 $0.01/GB（除非走 Cloudflare/Fastly 等合作 CDN）。demo 里存 200 MB 附件就只有 600 MB/月的免费出网——听起来够，但如果你把 demo 的静态资源也塞进去就未必。
+- **Oracle 的 50,000 次 API 请求/月是全租户合计**，且 Always Free 状态下存储是 20 GB 合计（不是每层 10 GB——那是付费账户或试用期内的规则）。试用期结束时若超过 20 GB，**所有对象会被删除**。
+- **腾讯云 COS**：6 个月后按量计费，且免费包**从一开始就不抵扣请求费与流量费**，只抵扣标准存储容量。
+- **阿里云 OSS**：3 个月，20 GB + 2 GB 下行 + 20 万请求；部分地域另有 5 GB/月 的叠加额度。
+- **Storj**：$5/月账单下限，且 Standard 档有 50 KB 最小计费对象体积和 30 天最短存储期——一个反复重置的 demo 会持续吃早删费。
+
+### 9.4 三个方案各自补上对象存储
+
+| | 对象存储落法 | 成本增量 | 上手工作量 | 最主要的坑 |
+|---|---|---|---|---|
+| **A** Oracle A1 单机 | **外挂 R2 私有桶**（首选）。备选：同租户 Oracle Object Storage Always Free；进阶：compose 里加 MinIO | **$0** | +1 小时（建桶、拿 S3 密钥、配 CORS、后端加一个 S3 client） | 选 Oracle 自家桶的话，**先验证 `PutBucketCors` 能不能调通再动手写代码**；选 MinIO 的话，是 §9.3 那三条（公网域名、Host 透传、别碰 `MINIO_SERVER_URL`） |
+| **B** Render + Aiven + Upstash | **只能外挂 R2**（自托管 MinIO 会把 $0 打破成 +$7/月起） | **$0** | +1 小时 | 前端在 Render Static Site、桶在 `*.r2.cloudflarestorage.com`，**必然跨域**，CORS 的 `AllowedOrigins` 必须写死那个 `*.onrender.com` 域名；Render 免费档挂不了盘这条把自托管路彻底堵死 |
+| **C** Fly.io | **Tigris**（`fly storage create` 一条命令，密钥自动注入 secrets）；额度不够就换 R2 | **$0**（5 GB 免费档内） | +15 分钟，三个方案里最省事 | 密钥只打印一次，`flyctl` 事后取不回；`fly storage create` 默认建私有桶，但要显式确认（本项目下载走临时凭证，桶必须私有）；Tigris 的 1 万次/月 Class A 比 R2 小两个数量级，自动化重置脚本要注意 |
+
+**要不要重排？不用。** 对象存储这一维没有改变 A > C > B 的排序，因为三家都能挂同一个 R2 免费桶，现金增量都是 $0。它改变的是**方案内部的默认选择**：
+
+- 方案 A 的默认从「用 Oracle 自家的，反正同一个租户」改成「外挂 R2」，直到 §9.5 第 1 条被证伪。
+- 方案 C 因为 `fly storage create` 的存在，在「上手工作量」这一项上从原来的第二名升到第一名——它是唯一一个对象存储配置**不需要跨平台来回复制密钥**的方案。
+- 方案 B 的「$0」标签变得更脆：它现在依赖两家外部免费档（Aiven + Upstash）再加第三家（R2），任何一家收紧政策都会破功。
+
+### 9.5 这一节里没查到确切答案的
+
+1. **Oracle Object Storage 的 S3 兼容端点到底支不支持 `PutBucketCors`**——最要紧的一条。官方 "Amazon S3 Compatibility API Support" 页（`docs.oracle.com` 与 `docs.cloud.oracle.com` 两个镜像都试了）渲染出来只有 "Bucket APIs / Object APIs / Multipart Upload APIs / Tagging APIs" 四个小节标题，**清单本身抓不到**（应该是 JS 折叠元素）。本文因此**不断言** OCI 支不支持。验证成本很低：拿一对 Customer Secret Key，`aws --endpoint-url https://<ns>.compat.objectstorage.<region>.oraclecloud.com s3api put-bucket-cors ...` 跑一次即可。在这条被证实之前，方案 A 一律按「外挂 R2」来规划。
+2. **R2 免费档是否需要先在 Cloudflare 账号上绑支付方式**：定价页没写开通前置条件，本次未确认。
+3. **各家的桶数量上限**：R2、Tigris 的官方页面上都没找到免费档的桶数上限。
+4. **MinIO 单节点的最小/实际内存占用**：官方只发布面向生产集群的硬件建议，没有单节点 demo 场景的数字，本文拒绝编造，只给自测方法。
+5. **MinIO 社区版（AGPLv3）是否与 AIStor 文档描述的每桶 CORS 行为完全一致**：`MINIO_API_CORS_ALLOW_ORIGIN` 这个全局开关在社区版文档里确认存在；`mc cors set` 的每桶配置是从 AIStor 文档读到的，社区版是否同样支持未逐一核实。保守做法是先用全局环境变量。
+6. **腾讯云 COS / 阿里云 OSS 的 CORS 与预签名细节**：因为两家都是限期试用、不适合长期 demo，本次没有继续往下查。
+
+---
+
 ## 来源索引
 
 1. Render 定价（免费/Starter 规格、Postgres、Key Value、带宽、构建分钟）：<https://render.com/pricing>
@@ -264,3 +391,21 @@
 24. Spring Boot AOT cache 与 CDS（Java 25+ 用 AOT cache，Java 21 用 CDS；须配合 `-Djarmode=tools extract`）：<https://docs.spring.io/spring-boot/reference/packaging/aot-cache.html>
 25. GitHub Actions `schedule`（最短 5 分钟、高峰延迟或丢弃、仅默认分支、公共仓库 60 天无活动自动停用）：<https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows>
 26. 本仓库：`service-oa/target/service-oa.jar`（60 MB）、`application-dev.yml`、`sql/guigu-oa-init.sql`、`前端代码/guigu-oa-client/vite.config.js`、`src/utils/request.js`、`AGENTS.md`；Flowable 8.0.0 建表脚本 32 张表为本地解包统计
+
+**§9 对象存储部分补充的来源（2026-08-21 抓取）**
+
+27. Cloudflare R2 定价（免费档 10 GB-month / 100 万 Class A / 1000 万 Class B、零出网费及其脚注、Class A/B/免费操作清单含 `PutBucketCors`、向上取整、401 不计费）：<https://developers.cloudflare.com/r2/pricing/>
+28. Cloudflare R2 CORS 配置（presigned URL 与 CORS 的关系、过期 URL 的 403 无 CORS 头、Dashboard 与 `wrangler r2 bucket cors set`、自定义域名自动带 CORS 头、30 秒传播）：<https://developers.cloudflare.com/r2/buckets/cors/>
+29. Tigris 定价（免费档 5 GB / 1 万 Class A / 10 万 Class B、零出网、Class A 清单含 `PutBucketCors`）：<https://www.tigrisdata.com/pricing/>
+30. Fly.io Tigris 集成（`fly storage create` 自动注入 secrets、`fly.storage.tigris.dev` endpoint、公私有桶切换、密钥只打印一次）：<https://fly.io/docs/tigris/>
+31. Backblaze B2 定价（前 10 GB 存储永久免费、出网免费额度为平均存储 3 倍、Class A/B/C 免费与 Class D 计费）：<https://www.backblaze.com/cloud-storage/pricing>
+32. Backblaze B2 CORS 规则（默认拒绝预检、Native 与 S3 两套规则互不可见、S3 侧 `allowedOperations` 只有 Delete/Get/Head/Put Object、私有桶下载必须把授权放 query 参数、支持 `PutBucketCors`/`GetBucketCors`/`DeleteBucketCors`）：<https://www.backblaze.com/docs/cloud-storage-cross-origin-resource-sharing-rules>
+33. Storj 定价（无免费档、30 天试用、$5/月账单下限、50 KB 最小对象、30 天最短存储）：<https://www.storj.io/pricing>
+34. Oracle Always Free 资源中的 Object Storage（Always Free 状态 20 GB 合计 + 50,000 请求/月；付费或试用期内为各 10 GB；试用到期超额会删对象；200 GB 块存储）：<https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm>
+35. Oracle Object Storage 的 S3 兼容 API（endpoint 形式、Customer Secret Key、不支持 SigV2、Java 示例的 `disableChunkedEncoding()` + `enablePathStyleAccess()`、region 只能填 `us-east-1` 时仅限 home region）：<https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi.htm>；支持清单页（**Bucket APIs 清单未渲染出来**）：<https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi_topic-Amazon_S3_Compatibility_API_Support.htm>
+36. Oracle 的浏览器直传范式为 presigned POST policy + HTML form：<https://docs.oracle.com/en-us/iaas/Content/Object/s3-post-upload.htm>
+37. Render 部署 MinIO（官方文档给的对象存储路子：Starter Web Service + 10 GB SSD Disk）：<https://render.com/docs/deploy-minio>
+38. MinIO CORS 配置（全局 `MINIO_API_CORS_ALLOW_ORIGIN` 默认 `*`、每桶 `mc cors set` 与 `PutBucketCors`、每桶 100 条、桶级覆盖全局、`MINIO_API_CORS_ALLOW_CREDENTIALS_WITH_WILDCARD`）：<https://docs.min.io/aistor/administration/cors-configuration/>
+39. MinIO `MINIO_SERVER_URL` 已弃用（deprecated since `RELEASE.2024-05-10T01-41-38Z`，用途是 Console 连服务端）：<https://minio.community/community/minio-object-store/reference/minio-server/settings/deprecated.html>；弃用理由与「不再用于生成预签名 URL 的主机名」的说明见项目 issue：<https://github.com/minio/minio/issues/19462>；反代必须 `proxy_set_header Host $http_host;` 的维护者结论：<https://github.com/minio/minio/issues/7857>
+40. 腾讯云 COS 免费额度（个人 50 GB 标准存储包 / 6 个月，明确不抵扣请求与流量）：<https://cloud.tencent.com/document/product/436/6240>
+41. 阿里云 OSS 新用户免费试用（国内站 20 GB 存储 + 2 GB 下行 + 20 万请求 / 3 个月，部分地域另有 5 GB/月 叠加）：<https://help.aliyun.com/zh/oss/free-quota-for-new-users>
