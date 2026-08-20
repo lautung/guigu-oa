@@ -3,6 +3,7 @@ import {
   loadWorkList,
   presentWorkList,
   workListPerspective,
+  workListPerspectiveFromRoute,
   workListRequest
 } from '@/work/work-list'
 
@@ -76,7 +77,9 @@ describe('work/work-list', () => {
             { key: '请假原因', value: '家中有事' }
           ],
           detailPath: '/work/pending/12/task-9',
-          kind: WORK_LIST_KINDS.PENDING
+          kind: WORK_LIST_KINDS.PENDING,
+          relationLabel: '等待我处理',
+          rowKey: '12-task-9'
         }]
       })
     })
@@ -103,6 +106,7 @@ describe('work/work-list', () => {
         title: '张三提交的请假申请',
         name: '张三',
         processTypeName: '请假',
+        createTime: '2026-08-18 10:00:00',
         statusLabel: '审批通过',
         statusTagType: 'success',
         summaryFields: [
@@ -110,8 +114,47 @@ describe('work/work-list', () => {
           { key: '请假原因', value: '家中有事' }
         ],
         detailPath: '/work/processed/12',
-        kind: WORK_LIST_KINDS.PROCESSED
+        kind: WORK_LIST_KINDS.PROCESSED,
+        relationLabel: '我已处理',
+        rowKey: '12'
       })
+    })
+
+    it('keeps the same 审批 skeleton for 待处理 and 已处理 and only adds relationship extras', () => {
+      const record = {
+        id: 12,
+        title: '张三提交的请假申请',
+        name: '张三',
+        processTypeName: '请假',
+        createTime: '2026-08-18 10:00:00',
+        status: 1,
+        formValues: FORM_VALUES
+      }
+
+      const pending = presentWorkList(WORK_LIST_KINDS.PENDING, {
+        records: [{ ...record, taskId: 'task-9' }]
+      }).records[0]
+      const processed = presentWorkList(WORK_LIST_KINDS.PROCESSED, {
+        records: [{ ...record, status: 2 }]
+      }).records[0]
+
+      expect(pending).toMatchObject({
+        title: '张三提交的请假申请',
+        name: '张三',
+        processTypeName: '请假',
+        createTime: '2026-08-18 10:00:00',
+        statusLabel: '审批中',
+        relationLabel: '等待我处理'
+      })
+      expect(processed).toMatchObject({
+        title: '张三提交的请假申请',
+        name: '张三',
+        processTypeName: '请假',
+        createTime: '2026-08-18 10:00:00',
+        statusLabel: '审批通过',
+        relationLabel: '我已处理'
+      })
+      expect(processed).not.toHaveProperty('processedTime')
     })
 
     it('presents a 已发起 page with the same 审批 skeleton and a started detail path', () => {
@@ -242,6 +285,35 @@ describe('work/work-list', () => {
         kind: WORK_LIST_KINDS.STARTED,
         title: '已发起',
         returnPath: '/work/started',
+        readOnly: true
+      })
+    })
+
+    it('reads the current 视角 from the route workListKind', () => {
+      expect(workListPerspectiveFromRoute({
+        meta: { workListKind: WORK_LIST_KINDS.PENDING }
+      })).toEqual({
+        kind: WORK_LIST_KINDS.PENDING,
+        title: '待处理',
+        returnPath: '/work/pending',
+        readOnly: false
+      })
+
+      expect(workListPerspectiveFromRoute({
+        meta: { workListKind: WORK_LIST_KINDS.PROCESSED }
+      })).toEqual({
+        kind: WORK_LIST_KINDS.PROCESSED,
+        title: '已处理',
+        returnPath: '/work/processed',
+        readOnly: true
+      })
+    })
+
+    it('treats a route without 办事列表种类 as a read-only 视角 with no return path', () => {
+      expect(workListPerspectiveFromRoute({ name: 'ProcessMgrDetail', meta: {} })).toEqual({
+        kind: null,
+        title: '',
+        returnPath: '',
         readOnly: true
       })
     })

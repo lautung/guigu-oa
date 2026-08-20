@@ -62,10 +62,11 @@ function fieldsFromShowData(formShowData = {}) {
   return Object.keys(formShowData).map(key => ({ key, value: formShowData[key] }))
 }
 
-export function presentDetail(payload = {}, { readOnly = false } = {}) {
+export function presentDetail(payload = {}, perspective = {}) {
   const process = payload.process || {}
   const formValues = parseFormValues(process.formValues)
   const formShowData = formValues.formShowData || {}
+  const readOnly = !!perspective.readOnly
 
   return {
     id: process.id,
@@ -80,7 +81,8 @@ export function presentDetail(payload = {}, { readOnly = false } = {}) {
       description: record.description,
       createTime: record.createTime
     })),
-    canApprove: !readOnly && !!payload.isApprove
+    canApprove: !readOnly && !!payload.isApprove,
+    perspective
   }
 }
 

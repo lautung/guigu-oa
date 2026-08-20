@@ -1,20 +1,25 @@
 <template>
-  <div class="process-list-page">
-    <h2 class="page-title">已处理</h2>
+  <div class="work-list-page">
+    <h2 class="page-title">{{ pageMeta.title }}</h2>
 
     <div v-loading="loading && list.length === 0" class="list-container">
-      <el-empty v-if="!loading && list.length === 0" description="暂无已处理审批" />
+      <el-empty v-if="!loading && list.length === 0" :description="pageMeta.emptyDescription" />
 
       <div
         v-for="item in list"
-        :key="item.id"
-        class="process-item"
+        :key="item.rowKey"
+        class="work-list-item"
         @click="openDetail(item)"
       >
         <div class="item-header">
           <h3>{{ item.title }}</h3>
           <span class="time">{{ item.createTime }}</span>
         </div>
+        <div class="item-meta">
+          <span v-if="item.name">发起人：{{ item.name }}</span>
+          <span v-if="item.processTypeName">审批类型：{{ item.processTypeName }}</span>
+        </div>
+        <p v-if="item.relationLabel" class="item-relation">{{ item.relationLabel }}</p>
         <div v-if="item.summaryFields.length" class="item-fields">
           <p v-for="field in item.summaryFields" :key="field.key">
             {{ field.key }}：<span v-html="field.value" />
@@ -43,10 +48,10 @@
 
 <script>
 import request from '@/utils/request'
-import { WORK_LIST_KINDS, loadWorkList } from '@/work/work-list'
+import { loadWorkList, presentWorkList } from '@/work/work-list'
 
 export default {
-  name: 'ProcessedList',
+  name: 'WorkListPage',
   data() {
     return {
       list: [],
@@ -56,13 +61,29 @@ export default {
       total: 0
     }
   },
+  computed: {
+    kind() {
+      return this.$route.meta.workListKind
+    },
+    pageMeta() {
+      return presentWorkList(this.kind)
+    }
+  },
+  watch: {
+    kind() {
+      this.pageNo = 1
+      this.list = []
+      this.total = 0
+      this.fetchList()
+    }
+  },
   created() {
     this.fetchList()
   },
   methods: {
     fetchList() {
       this.loading = true
-      loadWorkList(WORK_LIST_KINDS.PROCESSED, this.pageNo, this.pageSize, request).then(page => {
+      loadWorkList(this.kind, this.pageNo, this.pageSize, request).then(page => {
         this.total = page.total
         this.list = page.records
       }).finally(() => {
@@ -81,7 +102,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.process-list-page {
+.work-list-page {
   .page-title {
     margin: 0 0 16px;
     font-size: 20px;
@@ -89,7 +110,7 @@ export default {
   }
 }
 
-.process-item {
+.work-list-item {
   background: #fff;
   border-radius: 8px;
   padding: 16px;
@@ -121,6 +142,21 @@ export default {
     color: #909399;
     white-space: nowrap;
   }
+}
+
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #909399;
+}
+
+.item-relation {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #606266;
 }
 
 .item-fields {

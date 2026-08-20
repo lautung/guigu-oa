@@ -44,10 +44,10 @@
 import { show, approve } from '@/api/process'
 import {
   buildApprovalPayload,
-  isReadOnlyDetailRoute,
   postApprovalRoute,
   presentDetail
 } from '@/work/pending-flow'
+import { workListPerspectiveFromRoute } from '@/work/work-list'
 
 export default {
   name: 'PendingDetail',
@@ -65,9 +65,10 @@ export default {
     fetchDetail() {
       this.loading = true
       show(this.$route.params.id).then(response => {
-        this.detail = presentDetail(response.data || {}, {
-          readOnly: isReadOnlyDetailRoute(this.$route.name)
-        })
+        this.detail = presentDetail(
+          response.data || {},
+          workListPerspectiveFromRoute(this.$route)
+        )
       }).finally(() => {
         this.loading = false
       })
@@ -86,16 +87,16 @@ export default {
       })
     },
     goBack() {
-      const routeName = this.$route.name
-      if (routeName === 'ProcessedDetail') {
-        this.$router.push({ name: 'WorkProcessed' })
+      const returnPath = this.detail && this.detail.perspective && this.detail.perspective.returnPath
+      if (returnPath) {
+        this.$router.push(returnPath)
         return
       }
-      if (routeName === 'StartedDetail') {
+      if (this.$route.name === 'StartedDetail') {
         this.$router.push({ name: 'WorkStarted' })
         return
       }
-      if (routeName === 'ProcessMgrDetail') {
+      if (this.$route.name === 'ProcessMgrDetail') {
         this.$router.push({ name: 'ProcessMgr' })
         return
       }

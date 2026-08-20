@@ -20,6 +20,7 @@ const LIST_PAGES = {
     emptyDescription: '暂无待处理审批',
     returnPath: ROUTES.PENDING,
     readOnly: false,
+    relationLabel: '等待我处理',
     detailPath: (record) => `${ROUTES.PENDING}/${record.id}/${record.taskId}`
   },
   [WORK_LIST_KINDS.PROCESSED]: {
@@ -27,6 +28,7 @@ const LIST_PAGES = {
     emptyDescription: '暂无已处理审批',
     returnPath: ROUTES.PROCESSED,
     readOnly: true,
+    relationLabel: '我已处理',
     detailPath: (record) => `${ROUTES.PROCESSED}/${record.id}`
   },
   [WORK_LIST_KINDS.STARTED]: {
@@ -96,7 +98,9 @@ function presentWorkListItem(kind, record = {}) {
     statusTagType: statusTagType(record.status),
     summaryFields: summaryFields(formShowData),
     detailPath: page.detailPath(record),
-    kind
+    kind,
+    relationLabel: page.relationLabel,
+    rowKey: record.taskId ? `${record.id}-${record.taskId}` : String(record.id)
   }
 }
 
@@ -125,4 +129,17 @@ export function workListPerspective(kind) {
     returnPath: definition.returnPath,
     readOnly: definition.readOnly
   }
+}
+
+export function workListPerspectiveFromRoute(route = {}) {
+  const kind = route.meta && route.meta.workListKind
+  if (!kind || !LIST_PAGES[kind]) {
+    return {
+      kind: null,
+      title: '',
+      returnPath: '',
+      readOnly: true
+    }
+  }
+  return workListPerspective(kind)
 }

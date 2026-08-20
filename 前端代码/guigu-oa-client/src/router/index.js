@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/access-policy'
+import { WORK_LIST_KINDS } from '@/work/work-list'
 
 const workChildren = [
   {
@@ -17,26 +18,26 @@ const workChildren = [
   {
     path: 'pending',
     name: 'Pending',
-    component: () => import('@/views/work/pending/index.vue'),
-    meta: { title: '待处理' }
+    component: () => import('@/views/work/WorkListPage.vue'),
+    meta: { title: '待处理', workListKind: WORK_LIST_KINDS.PENDING }
   },
   {
     path: 'pending/:id/:taskId',
     name: 'PendingDetail',
     component: () => import('@/views/work/pending/detail.vue'),
-    meta: { title: '审批详情' }
+    meta: { title: '审批详情', workListKind: WORK_LIST_KINDS.PENDING }
   },
   {
     path: 'processed',
     name: 'WorkProcessed',
-    component: () => import('@/views/work/processed/index.vue'),
-    meta: { title: '已处理' }
+    component: () => import('@/views/work/WorkListPage.vue'),
+    meta: { title: '已处理', workListKind: WORK_LIST_KINDS.PROCESSED }
   },
   {
     path: 'processed/:id',
     name: 'ProcessedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
-    meta: { title: '审批详情' }
+    meta: { title: '审批详情', workListKind: WORK_LIST_KINDS.PROCESSED }
   },
   {
     path: 'started',
