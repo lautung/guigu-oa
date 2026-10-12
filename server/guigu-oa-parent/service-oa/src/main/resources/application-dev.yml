@@ -34,6 +34,10 @@ spring:
         max-idle: 5
         min-idle: 0
 
+guigu:
+  jwt:
+    secret: ${JWT_SECRET:local-development-jwt-secret-not-for-production-00000000000000000000000000000000}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

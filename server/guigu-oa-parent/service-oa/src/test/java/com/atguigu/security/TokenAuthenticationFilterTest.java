@@ -78,6 +78,15 @@ public class TokenAuthenticationFilterTest {
         assertEquals(1, chain.calls);
     }
 
+    @Test
+    public void refreshEndpointSkipsAccessTokenCheck() throws Exception {
+        RecordingFilterChain chain = new RecordingFilterChain();
+        MockHttpServletResponse response = filter("/admin/system/index/refresh", null, chain);
+
+        assertEquals("", response.getContentAsString());
+        assertEquals(1, chain.calls);
+    }
+
     private MockHttpServletResponse filter(String uri, String token, FilterChain chain) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
         request.setRequestURI(uri);
@@ -85,7 +94,7 @@ public class TokenAuthenticationFilterTest {
             request.addHeader("token", token);
         }
         MockHttpServletResponse response = new MockHttpServletResponse();
-        new TokenAuthenticationFilter(null).doFilter(request, response, chain);
+        new TokenAuthenticationFilter(null, null, null).doFilter(request, response, chain);
         return response;
     }
 

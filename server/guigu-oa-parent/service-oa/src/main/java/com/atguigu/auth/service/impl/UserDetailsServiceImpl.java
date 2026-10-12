@@ -6,13 +6,14 @@ import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.custom.UserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class UserDetailsServiceImpl implements UserDetailsService {
+public class UserDetailsServiceImpl implements UserDetailsService, UserDetailsPasswordService {
 
     @Autowired
     private SysUserService sysUserService;
@@ -24,5 +25,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("用户名不存在！");
         }
         return new CustomUser(sysUser, List.of());
+    }
+
+    @Override
+    public UserDetails updatePassword(UserDetails user, String newPassword) {
+        CustomUser customUser = (CustomUser) user;
+        SysUser sysUser = customUser.getSysUser();
+        sysUser.setPassword(newPassword);
+        sysUserService.updateById(sysUser);
+        return new CustomUser(sysUser, customUser.getAuthorities());
     }
 }

@@ -26,3 +26,7 @@ flowable:
   history-level: full
   check-process-definitions: false
   async-executor-activate: false
+
+guigu:
+  jwt:
+    secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000

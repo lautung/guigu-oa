@@ -3,7 +3,6 @@ package com.atguigu.auth.controller;
 
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.result.Result;
-import com.atguigu.common.utils.MD5;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.vo.system.AssginRoleVo;
 import com.atguigu.vo.system.SysUserQueryVo;
@@ -13,6 +12,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +31,9 @@ public class SysUserController {
 
     @Autowired
     private SysUserService service;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Operation(summary = "更新状态")
     @GetMapping("updateStatus/{id}/{status}")
@@ -83,9 +86,9 @@ public class SysUserController {
     @Operation(summary = "保存用户")
     @PostMapping("save")
     public Result save(@RequestBody SysUser user) {
-        //密码进行加密，使用MD5
-        String passwordMD5 = MD5.encrypt(user.getPassword());
-        user.setPassword(passwordMD5);
+        if (StringUtils.hasText(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
 
         service.save(user);
         return Result.ok();
@@ -94,6 +97,13 @@ public class SysUserController {
     @Operation(summary = "更新用户")
     @PutMapping("update")
     public Result updateById(@RequestBody SysUser user) {
+        SysUser existing = service.getById(user.getId());
+        if (existing != null && !StringUtils.hasText(user.getPassword())) {
+            user.setPassword(existing.getPassword());
+        } else if (StringUtils.hasText(user.getPassword())
+                && (existing == null || !user.getPassword().equals(existing.getPassword()))) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         service.updateById(user);
         return Result.ok();
     }

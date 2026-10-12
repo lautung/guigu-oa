@@ -40,7 +40,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 后端连接 MySQL 库 `guigu-oa`（`root`/`root`）。仓库**不含**业务表建表脚本，已补充 `server/guigu-oa-parent/sql/guigu-oa-init.sql`（业务 `sys_*`/`oa_*` 表 + 种子超级管理员）。首次或重置库时执行：
 `mysql -uroot -proot -h127.0.0.1 guigu-oa < server/guigu-oa-parent/sql/guigu-oa-init.sql`
-（库不存在先 `CREATE DATABASE \`guigu-oa\` CHARACTER SET utf8mb4;`）。种子登录账号：**用户名 `admin` / 密码 `111111`**（密码存 MD5，无盐；`userId=1` 自动拥有全部配置菜单权限）。
+（库不存在先 `CREATE DATABASE \`guigu-oa\` CHARACTER SET utf8mb4;`）。种子登录账号：**用户名 `admin` / 密码 `111111`**（密码存 BCrypt；`userId=1` 自动拥有全部配置菜单权限）。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
 
 ### 前端 lint / test / build
 

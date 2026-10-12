@@ -4,6 +4,7 @@ import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.ResponseUtil;
 import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
+import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.vo.system.LoginVo;
 import tools.jackson.databind.ObjectMapper;
@@ -26,9 +27,11 @@ import java.util.Map;
 public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JwtHelper jwtHelper;
 
-    public TokenLoginFilter(AuthenticationManager authenticationManager) {
+    public TokenLoginFilter(AuthenticationManager authenticationManager, JwtHelper jwtHelper) {
         this.setAuthenticationManager(authenticationManager);
+        this.jwtHelper = jwtHelper;
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
@@ -55,15 +58,16 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                             Authentication auth)
             throws IOException, ServletException {
         CustomUser customUser = (CustomUser) auth.getPrincipal();
-        if (customUser.getSysUser().getStatus() == null || customUser.getSysUser().getStatus() == 0) {
+        if (!AccountStatus.isEnabled(customUser.getSysUser().getStatus())) {
             ResponseUtil.out(response, Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
             return;
         }
-        String token = JwtHelper.createToken(customUser.getSysUser().getId(),
-                customUser.getSysUser().getUsername());
+        JwtHelper.TokenPair tokenPair = jwtHelper.createTokenPair(
+                customUser.getSysUser().getId(), customUser.getSysUser().getUsername());
 
         Map<String, Object> map = new HashMap<>();
-        map.put("token", token);
+        map.put("token", tokenPair.token());
+        map.put("refreshToken", tokenPair.refreshToken());
         ResponseUtil.out(response, Result.ok(map));
     }
 

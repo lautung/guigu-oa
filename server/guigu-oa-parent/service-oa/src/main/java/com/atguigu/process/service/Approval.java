@@ -21,6 +21,12 @@ public interface Approval {
 
     Map<String, Object> show(SysUser user, Long id);
 
+    /**
+     * Return an approval after checking that the user is its applicant or an active/past approver.
+     * Related capabilities such as attachment credential issuance must use this same gate.
+     */
+    Process requireApprovalMember(Long processId, SysUser user);
+
     void approve(SysUser user, ApprovalVo approvalVo);
 
     IPage<ProcessVo> findProcessed(SysUser user, Page<Process> pageParam);

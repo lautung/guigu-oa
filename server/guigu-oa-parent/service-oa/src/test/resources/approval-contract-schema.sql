@@ -73,11 +73,15 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
 
 DELETE FROM sys_user WHERE username IN ('alice', 'zhangsan', 'lisi');
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
-VALUES (2, 'alice', '96e79218965eb72c92a549dd5a330112', '小艾', '13800000002', 1, 0);
+VALUES (2, 'alice', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '小艾', '13800000002', 1, 0);
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
-VALUES (3, 'zhangsan', '96e79218965eb72c92a549dd5a330112', '张三', '13800000003', 1, 0);
+VALUES (3, 'zhangsan', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '张三', '13800000003', 1, 0);
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
-VALUES (4, 'lisi', '96e79218965eb72c92a549dd5a330112', '李四', '13800000004', 1, 0);
+VALUES (4, 'lisi', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '李四', '13800000004', 1, 0);
+
+DELETE FROM sys_user WHERE username = 'eve';
+INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
+VALUES (5, 'eve', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '小叶', '13800000005', 1, 0);
 
 DELETE FROM oa_process_record;
 DELETE FROM oa_process;
