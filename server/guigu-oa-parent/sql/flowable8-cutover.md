@@ -43,6 +43,7 @@ cd server/guigu-oa-parent/sql
 - `flowable.database-schema-update: true`
 - `flowable.history-level: full`
 - `flowable.check-process-definitions: false`（不要靠 classpath 样例恢复模板）
+- `GUIGU_OA_PROCESS_DEFINITION_DIR` 指向持久保存流程 zip 的目录；数据库中的流程路径相对该目录解析。容器运行时要把这个目录挂到可写且跨重建保留的 volume。
 
 启动并再部署已发布模板（不改模板状态）：
 

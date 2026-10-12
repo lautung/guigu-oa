@@ -3,8 +3,10 @@ package com.atguigu.process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.controller.OaProcessTemplateController;
 import com.atguigu.process.service.Approval;
 import com.atguigu.process.service.ApprovalTemplate;
+import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -22,21 +24,36 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@TestPropertySource(properties = "guigu.oa.process-definition-dir=target/test-process-definitions")
 @Sql({"/auth-contract-schema.sql", "/approval-contract-schema.sql"})
 public class ApprovalTemplateContractTest {
 
@@ -44,6 +61,12 @@ public class ApprovalTemplateContractTest {
 
     @Autowired
     private ApprovalTemplate approvalTemplate;
+
+    @Autowired
+    private OaProcessTemplateService processTemplateService;
+
+    @Autowired
+    private OaProcessTemplateController processTemplateController;
 
     @Autowired
     private Approval approval;
@@ -58,9 +81,11 @@ public class ApprovalTemplateContractTest {
     private HistoryService historyService;
 
     @BeforeEach
-    public void deployPublishedTemplateEngineDefinition() {
+    public void deployPublishedTemplateEngineDefinition() throws IOException {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
+        copyProcessZip("processes/qingjia.zip");
+        copyProcessZip("processes/bingjia.zip");
         clearEngineInstances();
         if (repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("approvalTwoStep")
@@ -72,9 +97,10 @@ public class ApprovalTemplateContractTest {
     }
 
     @AfterEach
-    public void clearLoginThreadLocal() {
+    public void clearTestState() {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
+        clearEngineDefinitions("uploadedApproval");
     }
 
     @Test
@@ -190,6 +216,56 @@ public class ApprovalTemplateContractTest {
         assertEquals(审批中, approval.findStarted(alice, new Page<>(1, 10)).getRecords().get(0).getStatus());
         assertTrue(approvalTemplate.canInitiate(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
+    }
+
+    @Test
+    public void uploadedFlowZipIsStoredOutsideClasspathAndCanBePublishedFromThatDirectory() throws Exception {
+        Path processDirectory = Path.of("target/test-process-definitions").toAbsolutePath();
+        Path classpathWriteTarget = Path.of("target/classes/processes/uploadedApproval.zip").toAbsolutePath();
+        Files.deleteIfExists(classpathWriteTarget);
+        byte[] zip = processDefinitionZip("uploadedApproval");
+        MockMultipartFile upload = new MockMultipartFile(
+                "file", "../../uploadedApproval.zip", "application/zip", zip);
+
+        var result = processTemplateController.uploadProcessDefinition(upload);
+
+        assertEquals(200, result.getCode());
+        assertFalse(Files.exists(classpathWriteTarget));
+        @SuppressWarnings("unchecked")
+        var uploadData = (Map<String, Object>) result.getData();
+        String relativePath = (String) uploadData.get("processDefinitionPath");
+        assertEquals("processes/uploadedApproval.zip", relativePath);
+        assertArrayEquals(zip, Files.readAllBytes(processDirectory.resolve(relativePath)));
+        ProcessDefinitionStorage recreatedStorage = new ProcessDefinitionStorage(processDirectory);
+        try (InputStream storedAfterRestart = recreatedStorage.open(relativePath)) {
+            assertNotNull(storedAfterRestart);
+            assertArrayEquals(zip, storedAfterRestart.readAllBytes());
+        }
+
+        ProcessTemplate template = 病假申请();
+        template.setProcessDefinitionKey("uploadedApproval");
+        template.setProcessDefinitionPath(relativePath);
+        approvalTemplate.saveUnpublished(template);
+        approvalTemplate.publish(template.getId());
+
+        assertTrue(approvalTemplate.canInitiate(template.getId()));
+        clearEngineDefinitions("uploadedApproval");
+        assertEquals(0L, repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey("uploadedApproval")
+                .count());
+        assertTrue(processTemplateService.redeployPublished() > 0);
+        assertTrue(repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey("uploadedApproval")
+                .count() > 0);
+        assertTrue(approvalTemplate.canInitiate(template.getId()));
+    }
+
+    @Test
+    public void processDefinitionPathCannotEscapeConfiguredDirectory() {
+        ProcessDefinitionStorage storage = new ProcessDefinitionStorage(
+                Path.of("target/test-process-definitions"));
+
+        assertThrows(IllegalArgumentException.class, () -> storage.resolve("../outside.zip"));
     }
 
     @Test
@@ -312,6 +388,40 @@ public class ApprovalTemplateContractTest {
         template.setProcessDefinitionPath("processes/bingjia.zip");
         template.setDescription("员工病假");
         return template;
+    }
+
+    private static byte[] processDefinitionZip(String processDefinitionKey) throws IOException {
+        String bpmn = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                             targetNamespace="http://bpmn.io/schema/bpmn">
+                  <process id="%s" isExecutable="true">
+                    <startEvent id="start"/>
+                    <endEvent id="end"/>
+                    <sequenceFlow id="flow" sourceRef="start" targetRef="end"/>
+                  </process>
+                </definitions>
+                """.formatted(processDefinitionKey);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            zip.putNextEntry(new ZipEntry("approval.bpmn20.xml"));
+            zip.write(bpmn.getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        return bytes.toByteArray();
+    }
+
+    private static void copyProcessZip(String resourcePath) throws IOException {
+        Path destination = Path.of("target/test-process-definitions", resourcePath).toAbsolutePath();
+        Files.createDirectories(destination.getParent());
+        try (InputStream source = ApprovalTemplateContractTest.class.getClassLoader()
+                    .getResourceAsStream(resourcePath)) {
+            if (source == null) {
+                throw new IOException("流程测试 zip 不存在: " + resourcePath);
+            }
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     private static ProcessFormVo publishedLeaveForm() {
