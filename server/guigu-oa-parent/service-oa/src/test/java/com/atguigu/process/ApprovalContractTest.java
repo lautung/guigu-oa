@@ -37,11 +37,15 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.jayway.jsonpath.JsonPath;
 
 import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -412,19 +416,23 @@ public class ApprovalContractTest {
             approvalVo.setTaskId(pendingTask.getTaskId());
             approvalVo.setStatus(通过);
 
-            CountDownLatch ready = new CountDownLatch(2);
-            CountDownLatch start = new CountDownLatch(1);
+            Object approvalTarget = AopTestUtils.getUltimateTargetObject(approval);
+            TaskService originalTaskService = (TaskService) ReflectionTestUtils.getField(approvalTarget, "taskService");
+            CountDownLatch bothTransactionsAtFlowable = new CountDownLatch(2);
+            AtomicInteger activeTransactionsAtFlowable = new AtomicInteger();
+            ReflectionTestUtils.setField(approvalTarget, "taskService",
+                    taskServiceWithConcurrentCompleteBarrier(
+                            originalTaskService, bothTransactionsAtFlowable, activeTransactionsAtFlowable));
             ExecutorService executor = Executors.newFixedThreadPool(2);
             try {
-                Future<Throwable> first = executor.submit(
-                        () -> approveAfterBarrier(zhangsan, approvalVo, ready, start));
-                Future<Throwable> second = executor.submit(
-                        () -> approveAfterBarrier(zhangsan, approvalVo, ready, start));
+                Future<Throwable> first = executor.submit(() -> approveCapturingFailure(zhangsan, approvalVo));
+                Future<Throwable> second = executor.submit(() -> approveCapturingFailure(zhangsan, approvalVo));
 
-                assertTrue(ready.await(5, TimeUnit.SECONDS), "两个审批请求应同时到达同步点");
-                start.countDown();
+                assertTrue(bothTransactionsAtFlowable.await(10, TimeUnit.SECONDS),
+                        "两个审批请求应在各自的事务中同时进入 Flowable complete");
                 Throwable firstFailure = first.get(15, TimeUnit.SECONDS);
                 Throwable secondFailure = second.get(15, TimeUnit.SECONDS);
+                assertEquals(2, activeTransactionsAtFlowable.get(), "两个 Flowable 调用都应处于 Spring 事务中");
 
                 int successes = (firstFailure == null ? 1 : 0) + (secondFailure == null ? 1 : 0);
                 assertEquals(1, successes, "同一任务只能有一个审批请求提交成功");
@@ -450,7 +458,7 @@ public class ApprovalContractTest {
                         .finished()
                         .count());
             } finally {
-                start.countDown();
+                ReflectionTestUtils.setField(approvalTarget, "taskService", originalTaskService);
                 executor.shutdownNow();
                 assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
             }
@@ -516,21 +524,44 @@ public class ApprovalContractTest {
         }
     }
 
-    private Throwable approveAfterBarrier(
-            SysUser user,
-            ApprovalVo approvalVo,
-            CountDownLatch ready,
-            CountDownLatch start) throws InterruptedException {
-        ready.countDown();
-        if (!start.await(5, TimeUnit.SECONDS)) {
-            return new IllegalStateException("审批并发同步超时");
-        }
+    private Throwable approveCapturingFailure(SysUser user, ApprovalVo approvalVo) {
         try {
             approval.approve(user, approvalVo);
             return null;
         } catch (RuntimeException failure) {
             return failure;
         }
+    }
+
+    private TaskService taskServiceWithConcurrentCompleteBarrier(
+            TaskService delegate,
+            CountDownLatch bothTransactionsAtFlowable,
+            AtomicInteger activeTransactionsAtFlowable) {
+        return (TaskService) Proxy.newProxyInstance(
+                TaskService.class.getClassLoader(),
+                new Class<?>[]{TaskService.class},
+                (proxy, method, args) -> {
+                    if ("complete".equals(method.getName())) {
+                        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+                            throw new IllegalStateException("Flowable complete 必须在审批业务事务中执行");
+                        }
+                        activeTransactionsAtFlowable.incrementAndGet();
+                        bothTransactionsAtFlowable.countDown();
+                        try {
+                            if (!bothTransactionsAtFlowable.await(10, TimeUnit.SECONDS)) {
+                                throw new IllegalStateException("两个并发审批未同时进入 Flowable complete");
+                            }
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException("等待并发审批同步点时被中断", interrupted);
+                        }
+                    }
+                    try {
+                        return method.invoke(delegate, args);
+                    } catch (InvocationTargetException invocationFailure) {
+                        throw invocationFailure.getCause();
+                    }
+                });
     }
 
     private String loginToken(String username) throws Exception {

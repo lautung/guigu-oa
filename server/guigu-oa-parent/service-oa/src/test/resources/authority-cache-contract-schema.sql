@@ -30,24 +30,24 @@ DELETE FROM sys_role_menu;
 DELETE FROM sys_user_role;
 DELETE FROM sys_role;
 DELETE FROM sys_menu;
-DELETE FROM sys_user WHERE username IN ('alice', 'bob', 'carol');
+DELETE FROM sys_user WHERE username IN ('cache-alice', 'cache-bob', 'cache-carol');
 
 INSERT INTO sys_user (id, username, password, name, status, is_deleted)
-VALUES (2, 'alice', 'password', '小艾', 1, 0);
+VALUES (102, 'cache-alice', 'password', '缓存小艾', 1, 0);
 INSERT INTO sys_user (id, username, password, name, status, is_deleted)
-VALUES (3, 'bob', 'password', '小波', 1, 0);
+VALUES (103, 'cache-bob', 'password', '缓存小波', 1, 0);
 INSERT INTO sys_user (id, username, password, name, status, is_deleted)
-VALUES (4, 'carol', 'password', '小卡', 1, 0);
+VALUES (104, 'cache-carol', 'password', '缓存小卡', 1, 0);
 INSERT INTO sys_role (id, role_name, role_code, is_deleted)
 VALUES (10, '审批人', 'reviewer', 0);
 INSERT INTO sys_role (id, role_name, role_code, is_deleted)
 VALUES (11, '观察人', 'observer', 0);
 INSERT INTO sys_user_role (id, user_id, role_id, is_deleted)
-VALUES (20, 2, 10, 0);
+VALUES (20, 102, 10, 0);
 INSERT INTO sys_user_role (id, user_id, role_id, is_deleted)
-VALUES (21, 3, 10, 0);
+VALUES (21, 103, 10, 0);
 INSERT INTO sys_user_role (id, user_id, role_id, is_deleted)
-VALUES (22, 4, 11, 0);
+VALUES (22, 104, 11, 0);
 INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted)
 VALUES (30, 10, 20, 0);
 INSERT INTO sys_menu (id, parent_id, name, type, path, perms, status, is_deleted)

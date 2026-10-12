@@ -20,6 +20,8 @@ import java.util.Set;
 @Service
 public class PermissionCacheInvalidator {
 
+    private static final Long SEED_ADMIN_USER_ID = 1L;
+
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
@@ -48,7 +50,7 @@ public class PermissionCacheInvalidator {
 
     public void invalidateMenuMembersAndAdminAfterCommit(Long menuId) {
         Set<Long> userIds = new LinkedHashSet<>();
-        userIds.add(1L);
+        userIds.add(SEED_ADMIN_USER_ID);
         if (menuId != null) {
             LambdaQueryWrapper<SysRoleMenu> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SysRoleMenu::getMenuId, menuId);
