@@ -1,5 +1,7 @@
 # 云尚办公
 
+[![CI](https://github.com/lautung/guigu-oa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lautung/guigu-oa/actions/workflows/ci.yml)
+
 **统一客户端**是唯一前端入口：办事与配置在同一个 Web 里，用用户名和密码登录。登录后落到待处理。微信不是产品的一部分。
 
 ## 起源与改造
