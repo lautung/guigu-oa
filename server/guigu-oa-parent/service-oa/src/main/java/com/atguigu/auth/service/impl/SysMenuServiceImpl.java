@@ -6,6 +6,7 @@ import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysMenu;
 import com.atguigu.auth.mapper.SysMenuMapper;
 import com.atguigu.auth.service.SysMenuService;
+import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.model.system.SysRoleMenu;
 import com.atguigu.vo.system.AssginMenuVo;
 import com.atguigu.vo.system.MetaVo;
@@ -122,20 +123,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //4 根据用户id获取用户可以操作菜单列表
     @Override
     public List<RouterVo> findUserMenuListByUserId(Long userId) {
-        List<SysMenu> sysMenuList = null;
-        //1 判断当前用户是否是管理员   userId=1是管理员
-        //1.1 如果是管理员，查询所有菜单列表
-        if(userId.longValue() == 1) {
-            //查询所有菜单列表
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysMenu::getStatus,1);
-            wrapper.orderByAsc(SysMenu::getSortValue);
-            sysMenuList = baseMapper.selectList(wrapper);
-        } else {
-            //1.2 如果不是管理员，根据userId查询可以操作菜单列表
-            //多表关联查询：用户角色关系表 、 角色菜单关系表、 菜单表
-            sysMenuList = baseMapper.findMenuListByUserId(userId);
-        }
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId, true);
 
         //2 把查询出来数据列表-构建成框架要求的路由结构
         //使用菜单操作工具类构建树形结构
@@ -207,18 +195,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //5 根据用户id获取用户可以操作按钮列表
     @Override
     public List<String> findUserPermsByUserId(Long userId) {
-        //1 判断是否是管理员，如果是管理员，查询所有按钮列表
-        List<SysMenu> sysMenuList = null;
-        if(userId.longValue() == 1) {
-            //查询所有菜单列表
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysMenu::getStatus,1);
-            sysMenuList = baseMapper.selectList(wrapper);
-        } else {
-            //2 如果不是管理员，根据userId查询可以操作按钮列表
-            //多表关联查询：用户角色关系表 、 角色菜单关系表、 菜单表
-            sysMenuList = baseMapper.findMenuListByUserId(userId);
-        }
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId, false);
 
         //3 从查询出来的数据里面，获取可以操作按钮值的list集合，返回
         List<String> permsList = sysMenuList.stream()
@@ -227,5 +204,38 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .collect(Collectors.toList());
 
         return permsList;
+    }
+
+    @Override
+    public boolean hasCurrentUserMenuAccess(String menuPath) {
+        Long userId = LoginUserInfoHelper.getUserId();
+        return userId != null && hasMenuAccess(userId, menuPath);
+    }
+
+    @Override
+    public boolean hasMenuAccess(Long userId, String menuPath) {
+        if (userId == null || !StringUtils.hasText(menuPath)) {
+            return false;
+        }
+
+        List<SysMenu> userMenus = findUserMenuEntities(userId, false);
+
+        return userMenus.stream().anyMatch(menu ->
+                Objects.equals(menu.getType(), 1) && Objects.equals(menu.getPath(), menuPath));
+    }
+
+    private List<SysMenu> findUserMenuEntities(Long userId, boolean orderBySortValue) {
+        if (userId == null) {
+            return List.of();
+        }
+        if (userId.longValue() == 1) {
+            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(SysMenu::getStatus, 1);
+            if (orderBySortValue) {
+                wrapper.orderByAsc(SysMenu::getSortValue);
+            }
+            return baseMapper.selectList(wrapper);
+        }
+        return baseMapper.findMenuListByUserId(userId);
     }
 }

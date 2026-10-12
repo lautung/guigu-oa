@@ -7,6 +7,7 @@ import com.atguigu.model.system.SysMenu;
 import com.atguigu.vo.system.AssginMenuVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class SysMenuController {
     private SysMenuService sysMenuService;
 
     //查询所有菜单和角色分配的菜单
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysRole')")
     @Operation(summary = "查询所有菜单和角色分配的菜单")
     @GetMapping("toAssign/{roleId}")
     public Result toAssign(@PathVariable Long roleId) {
@@ -36,6 +38,7 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysRole')")
     @Operation(summary = "角色分配菜单")
     @PostMapping("/doAssign")
     public Result doAssign(@RequestBody AssginMenuVo assginMenuVo) {

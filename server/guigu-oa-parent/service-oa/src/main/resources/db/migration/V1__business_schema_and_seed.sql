@@ -267,8 +267,8 @@ SELECT
   '未发布病假',
   'https://gw.alicdn.com/tfs/TB1t695CFYqK1RjSZLeXXbXppXa-102-102.png',
   t.id,
-  published_template.form_props,
-  published_template.form_options,
+  '[{"type":"input","field":"reason","title":"请假原因","$required":true,"props":{"placeholder":"请输入请假原因"}},{"type":"input","field":"days","title":"请假天数","$required":true,"props":{"type":"number","placeholder":"请输入请假天数"}}]',
+  '{"submitBtn":false,"form":{"labelPosition":"right","labelWidth":"125px"}}',
   '未发布的病假模板',
   '',
   '',
@@ -277,7 +277,5 @@ SELECT
   NOW(),
   0
 FROM oa_process_type t
-JOIN oa_process_template published_template
-  ON published_template.name='请假申请' AND published_template.is_deleted=0
 WHERE t.name='请假' AND t.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM oa_process_template p WHERE p.name='未发布病假' AND p.is_deleted=0);
