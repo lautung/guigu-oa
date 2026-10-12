@@ -12,7 +12,7 @@
           multiple
           :disabled="loading || uploadingCount > 0"
           @change="onFilesSelected"
-        >
+        />
       </label>
     </div>
 
@@ -49,38 +49,42 @@
   </section>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import {
   completeUpload,
   createDownloadGrant,
   createUpload,
   deletePending,
   listDraft,
-  listForProcess
+  listForProcess,
 } from '@/api/attachment'
 import { uploadAttachment } from '@/work/attachments'
+import type { AttachmentRecord, EntityId } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'AttachmentSection',
   props: {
     draftId: {
       type: String,
-      default: ''
+      default: '',
     },
     processId: {
       type: [Number, String],
-      default: null
-    }
+      default: null,
+    },
   },
+  emits: ['attachments-change', 'busy-change', 'ready-change'],
   data() {
     return {
-      attachments: [],
+      attachments: [] as AttachmentRecord[],
       canUpload: !this.processId,
       loading: false,
       uploadingCount: 0,
       loadFailed: false,
-      deletingId: null,
-      downloadingId: null
+      deletingId: null as EntityId | null,
+      downloadingId: null as EntityId | null,
     }
   },
   created() {
@@ -94,9 +98,8 @@ export default {
       try {
         if (this.processId) {
           const response = await listForProcess(this.processId)
-          const data = response.data || {}
-          this.attachments = data.attachments || []
-          this.canUpload = !!data.canUpload
+          this.attachments = response.data.attachments || []
+          this.canUpload = !!response.data.canUpload
         } else {
           const response = await listDraft(this.draftId)
           this.attachments = response.data || []
@@ -104,7 +107,7 @@ export default {
         this.loadFailed = false
         this.$emit('ready-change', true)
         this.emitAttachmentIds()
-      } catch (error) {
+      } catch {
         this.loadFailed = true
         this.$emit('ready-change', false)
         this.$message.error('附件读取失败')
@@ -113,9 +116,10 @@ export default {
         this.$emit('busy-change', this.uploadingCount > 0)
       }
     },
-    async onFilesSelected(event) {
-      const files = Array.from(event.target.files || [])
-      event.target.value = ''
+    async onFilesSelected(event: Event) {
+      const input = event.currentTarget as HTMLInputElement
+      const files = Array.from(input.files || [])
+      input.value = ''
       if (!files.length) return
 
       for (const file of files) {
@@ -124,32 +128,33 @@ export default {
         try {
           const attachment = await uploadAttachment(file, {
             draftId: this.draftId,
-            processId: this.processId,
+            processId: this.processId ?? undefined,
             createUpload,
             completeUpload,
-            put: (url, options) => fetch(url, options)
+            put: (url, options) => fetch(url, options),
           })
           this.attachments.push(attachment)
           this.emitAttachmentIds()
-        } catch (error) {
-          this.$message.error(error.message || '附件上传失败')
+        } catch (error: unknown) {
+          this.$message.error(error instanceof Error ? error.message : '附件上传失败')
         } finally {
           this.uploadingCount -= 1
           this.$emit('busy-change', this.uploadingCount > 0)
         }
       }
     },
-    async remove(attachment) {
+    async remove(attachment: AttachmentRecord) {
       this.deletingId = attachment.id
       try {
         await deletePending(attachment.id)
-        this.attachments = this.attachments.filter(item => item.id !== attachment.id)
+        this.attachments = this.attachments.filter((item) => item.id !== attachment.id)
         this.emitAttachmentIds()
       } finally {
         this.deletingId = null
       }
     },
-    async download(attachment) {
+    async download(attachment: AttachmentRecord) {
+      if (!this.processId) return
       this.downloadingId = attachment.id
       try {
         const response = await createDownloadGrant(this.processId, attachment.id)
@@ -164,16 +169,19 @@ export default {
         this.downloadingId = null
       }
     },
-    formatSize(sizeBytes) {
+    formatSize(sizeBytes: number) {
       if (sizeBytes < 1024) return `${sizeBytes} B`
       if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`
       return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
     },
     emitAttachmentIds() {
-      this.$emit('attachments-change', this.attachments.map(item => item.id))
-    }
-  }
-}
+      this.$emit(
+        'attachments-change',
+        this.attachments.map((item) => item.id),
+      )
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

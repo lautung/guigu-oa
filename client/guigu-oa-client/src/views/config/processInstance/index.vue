@@ -4,7 +4,7 @@
       <h2 class="page-title">审批实例查询</h2>
     </div>
 
-    <el-form :inline="true" class="filter-form" @submit.native.prevent="search">
+    <el-form :inline="true" class="filter-form" @submit.prevent="search">
       <el-form-item label="关键字">
         <el-input v-model="query.keyword" placeholder="审批编号/标题" clearable />
       </el-form-item>
@@ -44,8 +44,8 @@
       <el-table-column prop="statusLabel" label="状态" width="100" />
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="90" align="center">
-        <template slot-scope="scope">
-          <el-button type="text" @click="openDetail(scope.row)">查看</el-button>
+        <template #default="scope">
+          <el-button type="text" @click="openDetail(scope.row.detailPath)">查看</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -64,29 +64,32 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { getPageList } from '@/api/processInstance'
 import { emptyQuery, presentListPage, STATUS_OPTIONS } from '@/config/process-instance'
+import type { ProcessInstanceListItem } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'ProcessInstanceList',
   data() {
     return {
-      list: [],
+      list: [] as ProcessInstanceListItem[],
       loading: false,
       page: 1,
       limit: 10,
       total: 0,
       query: emptyQuery(),
-      createTimes: [],
-      statusOptions: STATUS_OPTIONS
+      createTimes: [] as string[],
+      statusOptions: STATUS_OPTIONS,
     }
   },
   created() {
     this.fetchList()
   },
   methods: {
-    rowIndex(index) {
+    rowIndex(index: number) {
       return (this.page - 1) * this.limit + index + 1
     },
     currentQuery() {
@@ -102,13 +105,15 @@ export default {
     },
     fetchList() {
       this.loading = true
-      getPageList(this.page, this.limit, this.currentQuery()).then(response => {
-        const page = presentListPage(response.data || {})
-        this.list = page.records
-        this.total = page.total
-      }).finally(() => {
-        this.loading = false
-      })
+      getPageList(this.page, this.limit, this.currentQuery())
+        .then((response) => {
+          const page = presentListPage(response.data || {})
+          this.list = page.records
+          this.total = page.total
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
     search() {
       this.page = 1
@@ -119,20 +124,20 @@ export default {
       this.createTimes = []
       this.search()
     },
-    handlePageChange(page) {
+    handlePageChange(page: number) {
       this.page = page
       this.fetchList()
     },
-    handleSizeChange(limit) {
+    handleSizeChange(limit: number) {
       this.limit = limit
       this.page = 1
       this.fetchList()
     },
-    openDetail(row) {
-      this.$router.push(row.detailPath)
-    }
-  }
-}
+    openDetail(detailPath: string) {
+      this.$router.push(detailPath)
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

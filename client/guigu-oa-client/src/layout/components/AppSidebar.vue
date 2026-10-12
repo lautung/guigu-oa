@@ -24,7 +24,7 @@
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
@@ -35,34 +35,34 @@ const route = useRoute()
 const userStore = useUserStore()
 
 const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
-const groupCollapsed = ref({})
+const groupCollapsed = ref<Record<string, boolean>>({})
 
 const activePath = computed(() => route.path)
 
 const sidebarTree = computed(() =>
   buildSidebarTree({
     menus: userStore.menus,
-    viewportWidth: viewportWidth.value
-  })
+    viewportWidth: viewportWidth.value,
+  }),
 )
 
 watch(
   sidebarTree,
-  tree => {
-    const collapsed = {}
-    tree.forEach(group => {
+  (tree) => {
+    const collapsed: Record<string, boolean> = {}
+    tree.forEach((group) => {
       collapsed[group.key] = !!group.collapsed
     })
     groupCollapsed.value = collapsed
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 function handleResize() {
   viewportWidth.value = window.innerWidth
 }
 
-function toggleGroup(key) {
+function toggleGroup(key: string) {
   if (key !== 'config' || !isMobileViewport(viewportWidth.value)) return
   groupCollapsed.value = { ...groupCollapsed.value, [key]: !groupCollapsed.value[key] }
 }

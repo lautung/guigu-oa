@@ -31,53 +31,52 @@
         />
       </el-form-item>
 
-      <el-button
-        :loading="loading"
-        type="primary"
-        class="login-btn"
-        @click="handleLogin"
-      >
+      <el-button :loading="loading" type="primary" class="login-btn" @click="handleLogin">
         登录
       </el-button>
     </el-form>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+defineOptions({ name: 'LoginPage' })
+
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { buildLoginRedirectPath } from '@/navigation'
+import type { FormInstance } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const loginFormRef = ref(null)
+const loginFormRef = ref<FormInstance | null>(null)
 const loading = ref(false)
-const redirect = ref(undefined)
+const redirect = ref<string | undefined>(undefined)
 
 const loginForm = ref({
   username: '',
-  password: ''
+  password: '',
 })
 
 const loginRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur', min: 6 }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur', min: 6 }],
 }
 
 watch(
   () => route.query,
-  query => {
-    redirect.value = query && query.redirect
+  (query) => {
+    const target = query?.redirect
+    redirect.value = typeof target === 'string' ? target : undefined
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 async function handleLogin() {
   if (!loginFormRef.value) return
-  await loginFormRef.value.validate(async valid => {
+  await loginFormRef.value.validate(async (valid: boolean) => {
     if (!valid) return
     loading.value = true
     try {

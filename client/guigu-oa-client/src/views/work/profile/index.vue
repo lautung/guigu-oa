@@ -8,16 +8,18 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { getCurrentUser } from '@/api/process'
 import { presentProfile } from '@/work/profile'
 
-export default {
+export default defineComponent({
   name: 'WorkProfile',
   data() {
     return {
       loading: false,
-      profile: presentProfile()
+      profile: presentProfile(),
     }
   },
   created() {
@@ -26,14 +28,16 @@ export default {
   methods: {
     fetchProfile() {
       this.loading = true
-      getCurrentUser().then(response => {
-        this.profile = presentProfile(response.data || {})
-      }).finally(() => {
-        this.loading = false
-      })
-    }
-  }
-}
+      getCurrentUser()
+        .then((response) => {
+          this.profile = presentProfile(response.data || {})
+        })
+        .finally(() => {
+          this.loading = false
+        })
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

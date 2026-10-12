@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   server: {
     port: 9530,
@@ -16,14 +16,14 @@ export default defineConfig({
       '/dev-api': {
         target: 'http://localhost:8800',
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/dev-api/, '')
-      }
-    }
+        rewrite: (path) => path.replace(/^\/dev-api/, ''),
+      },
+    },
   },
   build: {
     target: ['chrome85', 'firefox79', 'safari14.1'],
     outDir: 'dist',
-    assetsDir: 'static'
+    assetsDir: 'static',
   },
   test: {
     environment: 'jsdom',
@@ -31,8 +31,8 @@ export default defineConfig({
     include: ['tests/unit/**/*.spec.{js,ts}'],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      }
-    }
-  }
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
+  },
 })

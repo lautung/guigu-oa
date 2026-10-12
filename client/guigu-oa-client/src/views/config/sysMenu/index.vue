@@ -17,8 +17,10 @@
       <el-table-column prop="component" label="组件路径" />
       <el-table-column prop="sortValue" label="排序" width="80" />
       <el-table-column label="操作" width="220" align="center">
-        <template slot-scope="scope">
-          <el-button v-if="scope.row.type !== 2" type="text" @click="openCreate(scope.row)">添加下级</el-button>
+        <template #default="scope">
+          <el-button v-if="scope.row.type !== 2" type="text" @click="openCreate(scope.row)"
+            >添加下级</el-button
+          >
           <el-button type="text" @click="openEdit(scope.row)">编辑</el-button>
           <el-button
             type="text"
@@ -31,7 +33,7 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="520px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px">
       <el-form label-width="90px">
         <el-form-item v-if="form.parentName" label="上级菜单">
           <el-input :value="form.parentName" disabled />
@@ -68,50 +70,61 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <span slot="footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
-      </span>
+      <template #footer>
+        <div>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
 
-<script>
-import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
-import { emptyForm, formForCreate, menuWriteValidationError, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
+<script lang="ts">
+import { defineComponent } from 'vue'
 
-export default {
+import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
+import {
+  emptyForm,
+  formForCreate,
+  menuWriteValidationError,
+  presentConfigMenuTree,
+  presentForm,
+} from '@/config/sys-menu'
+import type { EntityId, MenuNode } from '@/types/domain'
+
+export default defineComponent({
   name: 'SysMenuList',
   data() {
     return {
-      menuTree: [],
+      menuTree: [] as MenuNode[],
       dialogVisible: false,
       saving: false,
       typeLocked: false,
-      form: emptyForm()
+      form: emptyForm(),
     }
   },
   computed: {
     dialogTitle() {
       if (this.form.id) return '编辑菜单'
       return this.form.parentId ? '添加下级节点' : '添加目录节点'
-    }
+    },
   },
   created() {
     this.fetchTree()
   },
   methods: {
     fetchTree() {
-      findNodes().then(response => {
+      findNodes().then((response) => {
         this.menuTree = presentConfigMenuTree(response.data || [])
       })
     },
-    openCreate(parent) {
+    openCreate(parent?: MenuNode) {
       this.form = formForCreate(parent)
       this.typeLocked = !!parent && parent.type === 1
       this.dialogVisible = true
     },
-    openEdit(row) {
+    openEdit(row: MenuNode) {
       this.form = presentForm(row)
       this.typeLocked = true
       this.dialogVisible = true
@@ -123,26 +136,31 @@ export default {
         return
       }
       this.saving = true
-      saveOrUpdate(this.form).then(response => {
-        this.$message.success(response.message || '操作成功')
-        this.dialogVisible = false
-        this.fetchTree()
-      }).finally(() => {
-        this.saving = false
-      })
+      saveOrUpdate(this.form)
+        .then((response) => {
+          this.$message.success(response.message || '操作成功')
+          this.dialogVisible = false
+          this.fetchTree()
+        })
+        .finally(() => {
+          this.saving = false
+        })
     },
-    remove(id) {
+    remove(id: EntityId) {
       this.$confirm('此操作将永久删除该菜单, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => removeById(id)).then(response => {
-        this.$message.success(response.message || '删除成功')
-        this.fetchTree()
-      }).catch(() => {})
-    }
-  }
-}
+        type: 'warning',
+      })
+        .then(() => removeById(id))
+        .then((response) => {
+          this.$message.success(response.message || '删除成功')
+          this.fetchTree()
+        })
+        .catch(() => {})
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

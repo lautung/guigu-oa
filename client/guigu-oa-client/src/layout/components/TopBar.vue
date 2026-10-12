@@ -2,14 +2,14 @@
   <header class="top-bar">
     <div class="brand">云尚办公</div>
     <div class="user-area">
-      <img :src="avatarSrc" class="avatar" alt="">
+      <img :src="avatarSrc" class="avatar" alt="" />
       <span class="username">{{ userStore.name }}</span>
       <el-button type="text" class="logout-btn" @click="handleLogout">退出</el-button>
     </div>
   </header>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
@@ -19,7 +19,8 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const DEFAULT_AVATAR = 'https://static.dingtalk.com/media/lALOnahFD80CgM0CgA_640_640.png_450x10000q90.jpg'
+const DEFAULT_AVATAR =
+  'https://static.dingtalk.com/media/lALOnahFD80CgM0CgA_640_640.png_450x10000q90.jpg'
 
 const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
 

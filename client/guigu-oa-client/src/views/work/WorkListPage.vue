@@ -5,12 +5,7 @@
     <div v-loading="loading && list.length === 0" class="list-container">
       <el-empty v-if="!loading && list.length === 0" :description="pageMeta.emptyDescription" />
 
-      <div
-        v-for="item in list"
-        :key="item.rowKey"
-        class="work-list-item"
-        @click="openDetail(item)"
-      >
+      <div v-for="item in list" :key="item.rowKey" class="work-list-item" @click="openDetail(item)">
         <div class="item-header">
           <h3>{{ item.title }}</h3>
           <span class="time">{{ item.createTime }}</span>
@@ -47,28 +42,31 @@
   </div>
 </template>
 
-<script>
-import request from '@/utils/request'
-import { loadWorkList, presentWorkList } from '@/work/work-list'
+<script lang="ts">
+import { defineComponent } from 'vue'
 
-export default {
+import request from '@/utils/request'
+import { loadWorkList, presentWorkList, type WorkListKind } from '@/work/work-list'
+import type { PresentedWorkListRecord } from '@/types/domain'
+
+export default defineComponent({
   name: 'WorkListPage',
   data() {
     return {
-      list: [],
+      list: [] as PresentedWorkListRecord[],
       loading: false,
       pageNo: 1,
       pageSize: 10,
-      total: 0
+      total: 0,
     }
   },
   computed: {
-    kind() {
-      return this.$route.meta.workListKind
+    kind(): WorkListKind {
+      return this.$route.meta.workListKind as WorkListKind
     },
     pageMeta() {
       return presentWorkList(this.kind)
-    }
+    },
   },
   watch: {
     kind() {
@@ -76,7 +74,7 @@ export default {
       this.list = []
       this.total = 0
       this.fetchList()
-    }
+    },
   },
   created() {
     this.fetchList()
@@ -84,22 +82,24 @@ export default {
   methods: {
     fetchList() {
       this.loading = true
-      loadWorkList(this.kind, this.pageNo, this.pageSize, request).then(page => {
-        this.total = page.total
-        this.list = page.records
-      }).finally(() => {
-        this.loading = false
-      })
+      loadWorkList(this.kind, this.pageNo, this.pageSize, request)
+        .then((page) => {
+          this.total = page.total
+          this.list = page.records
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
-    handlePageChange(page) {
+    handlePageChange(page: number) {
       this.pageNo = page
       this.fetchList()
     },
-    openDetail(item) {
+    openDetail(item: PresentedWorkListRecord) {
       this.$router.push(item.detailPath)
-    }
-  }
-}
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

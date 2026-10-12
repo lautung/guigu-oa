@@ -10,13 +10,15 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { useUserStore } from '@/store/modules/user'
 import { createViewportOccupancyHandler, resolveClientSurface } from './client-surface'
 import TopBar from '@/layout/components/TopBar.vue'
 import AppSidebar from '@/layout/components/AppSidebar.vue'
 
-export default {
+export default defineComponent({
   name: 'ClientSurfaceHost',
   components: { TopBar, AppSidebar },
   setup() {
@@ -24,7 +26,9 @@ export default {
   },
   data() {
     return {
-      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1024
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1024,
+      handleViewportWidth: null as ((viewportWidth: number) => void) | null,
+      onViewportResize: null as (() => void) | null,
     }
   },
   computed: {
@@ -34,36 +38,40 @@ export default {
       return {
         path,
         hasToken: true,
-        menus
+        menus,
       }
     },
     surface() {
       return resolveClientSurface({
         ...this.surfaceInput,
-        viewportWidth: this.viewportWidth
+        viewportWidth: this.viewportWidth,
       })
     },
     contentClass() {
       return this.surface.density ? `is-${this.surface.density}` : null
-    }
+    },
   },
   created() {
     this.handleViewportWidth = createViewportOccupancyHandler({
       getSurfaceInput: () => this.surfaceInput,
-      goTo: to => this.$router.replace(to)
+      goTo: (to) => this.$router.replace(to),
     })
   },
   mounted() {
     this.onViewportResize = () => {
       this.viewportWidth = window.innerWidth
-      this.handleViewportWidth(this.viewportWidth)
+      this.handleViewportWidth?.(this.viewportWidth)
     }
-    window.addEventListener('resize', this.onViewportResize)
+    if (this.onViewportResize) {
+      window.addEventListener('resize', this.onViewportResize)
+    }
   },
   beforeUnmount() {
-    window.removeEventListener('resize', this.onViewportResize)
-  }
-}
+    if (this.onViewportResize) {
+      window.removeEventListener('resize', this.onViewportResize)
+    }
+  },
+})
 </script>
 
 <style lang="scss" scoped>
