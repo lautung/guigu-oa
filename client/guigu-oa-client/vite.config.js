@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 9530,
-    open: true,
+    open: !process.env.CI,
     proxy: {
       '/dev-api': {
         target: 'http://localhost:8800',

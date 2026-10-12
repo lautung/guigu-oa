@@ -40,6 +40,8 @@ Thumbs.db
 # Test / coverage
 coverage/
 .nyc_output/
+**/playwright-report/
+**/test-results/
 
 # Maven
 .mvn/wrapper/maven-wrapper.jar
