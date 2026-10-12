@@ -22,7 +22,7 @@ public class ProcessDefinitionStorage {
 
     @Autowired
     public ProcessDefinitionStorage(
-            @Value("${guigu.oa.process-definition-dir:./data/process-definitions}") String directory) {
+            @Value("${guigu.oa.process-definition-dir}") String directory) {
         this(Path.of(directory));
     }
 
