@@ -3,6 +3,7 @@ package com.atguigu.auth.service.impl;
 import com.atguigu.auth.mapper.SysRoleMapper;
 import com.atguigu.auth.service.SysRoleService;
 import com.atguigu.auth.service.SysUserRoleService;
+import com.atguigu.auth.service.PermissionCacheInvalidator;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.model.system.SysUserRole;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -10,8 +11,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.Serializable;
+import java.util.Collection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +27,50 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private PermissionCacheInvalidator permissionCacheInvalidator;
+
+    @Override
+    @Transactional
+    public boolean updateById(SysRole role) {
+        boolean updated = baseMapper.updateById(role) > 0;
+        if (updated) {
+            permissionCacheInvalidator.invalidateRoleMembersAfterCommit(role.getId());
+        }
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public boolean removeById(Serializable roleId) {
+        boolean removed = baseMapper.deleteById(roleId) > 0;
+        if (removed) {
+            permissionCacheInvalidator.invalidateRoleMembersAfterCommit(Long.valueOf(roleId.toString()));
+        }
+        return removed;
+    }
+
+    @Override
+    public boolean removeById(SysRole role) {
+        return role != null && removeById(role.getId());
+    }
+
+    @Override
+    @Transactional
+    public boolean removeByIds(Collection<?> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return false;
+        }
+        boolean removed = baseMapper.deleteByIds(roleIds) > 0;
+        if (removed) {
+            roleIds.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(roleId -> Long.valueOf(roleId.toString()))
+                    .forEach(permissionCacheInvalidator::invalidateRoleMembersAfterCommit);
+        }
+        return removed;
+    }
     
     //1 查询所有角色 和 当前用户所属角色
     @Override
@@ -65,6 +113,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
     //2 为用户分配角色
     @Override
+    @Transactional
     public void doAssign(AssginRoleVo assginRoleVo) {
         //把用户之前分配角色数据删除，用户角色关系表里面，根据userid删除
         LambdaQueryWrapper<SysUserRole> wrapper = new LambdaQueryWrapper<>();
@@ -82,6 +131,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             sysUserRole.setRoleId(roleId);
             sysUserRoleService.save(sysUserRole);
         }
+        permissionCacheInvalidator.invalidateUserAfterCommit(assginRoleVo.getUserId());
     }
 
 //    @Autowired

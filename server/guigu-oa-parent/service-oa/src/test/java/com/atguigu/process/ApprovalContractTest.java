@@ -13,7 +13,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.TaskService;
 import org.flowable.engine.repository.ProcessDefinition;
+import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.delegate.event.AbstractFlowableEventListener;
+import org.flowable.common.engine.api.delegate.event.FlowableEngineEventType;
+import org.flowable.common.engine.api.delegate.event.FlowableEntityEvent;
+import org.flowable.common.engine.api.delegate.event.FlowableEvent;
+import org.flowable.common.engine.api.delegate.event.FlowableEventType;
+import org.flowable.task.api.Task;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +44,14 @@ import com.jayway.jsonpath.JsonPath;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -72,7 +88,16 @@ public class ApprovalContractTest {
     private RuntimeService runtimeService;
 
     @Autowired
+    private TaskService taskService;
+
+    @Autowired
     private HistoryService historyService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ApprovalTransactionCcProbe approvalTransactionCcProbe;
 
     @Autowired
     private MockMvc mockMvc;
@@ -82,6 +107,9 @@ public class ApprovalContractTest {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
         clearEngineInstances();
+        runtimeService.removeEventListener(approvalTransactionCcProbe);
+        approvalTransactionCcProbe.reset();
+        runtimeService.addEventListener(approvalTransactionCcProbe, FlowableEngineEventType.TASK_CREATED);
         if (repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("approvalTwoStep")
                 .count() == 0) {
@@ -93,6 +121,7 @@ public class ApprovalContractTest {
 
     @AfterEach
     public void clearLoginThreadLocal() {
+        runtimeService.removeEventListener(approvalTransactionCcProbe);
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
     }
@@ -365,6 +394,145 @@ public class ApprovalContractTest {
                 .andExpect(jsonPath("$.data.records[0].title").value("小艾发起请假申请申请"));
     }
 
+    @Test
+    public void concurrentApprovalRequestsForSameTaskHaveExactlyOneCommittedWinner() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+        SysUser lisi = user(4L, "lisi", "李四");
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            approval.startUp(alice, publishedLeaveForm());
+            ProcessVo startedProcess = started(alice).getRecords().stream()
+                    .filter(process -> process.getStatus() == 审批中)
+                    .findFirst()
+                    .orElseThrow();
+            ProcessVo pendingTask = pending(zhangsan).getRecords().get(0);
+            ApprovalVo approvalVo = new ApprovalVo();
+            approvalVo.setProcessId(pendingTask.getId());
+            approvalVo.setTaskId(pendingTask.getTaskId());
+            approvalVo.setStatus(通过);
+
+            CountDownLatch ready = new CountDownLatch(2);
+            CountDownLatch start = new CountDownLatch(1);
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            try {
+                Future<Throwable> first = executor.submit(
+                        () -> approveAfterBarrier(zhangsan, approvalVo, ready, start));
+                Future<Throwable> second = executor.submit(
+                        () -> approveAfterBarrier(zhangsan, approvalVo, ready, start));
+
+                assertTrue(ready.await(5, TimeUnit.SECONDS), "两个审批请求应同时到达同步点");
+                start.countDown();
+                Throwable firstFailure = first.get(15, TimeUnit.SECONDS);
+                Throwable secondFailure = second.get(15, TimeUnit.SECONDS);
+
+                int successes = (firstFailure == null ? 1 : 0) + (secondFailure == null ? 1 : 0);
+                assertEquals(1, successes, "同一任务只能有一个审批请求提交成功");
+                assertEquals(1, (firstFailure == null ? 0 : 1) + (secondFailure == null ? 0 : 1));
+                Throwable losingFailure = firstFailure == null ? secondFailure : firstFailure;
+                assertTrue(losingFailure instanceof FlowableException,
+                        "失败请求应由 Flowable 对同一任务的并发提交拒绝");
+
+                ProcessVo persistedProcess = started(alice).getRecords().stream()
+                        .filter(process -> startedProcess.getId().equals(process.getId()))
+                        .findFirst()
+                        .orElseThrow();
+                assertEquals(审批中, persistedProcess.getStatus());
+                assertEquals(List.of("发起申请", "已通过"),
+                        recordDescriptions(zhangsan, pendingTask.getId()));
+                assertTrue(pending(zhangsan).getRecords().isEmpty());
+                assertEquals(1, pending(lisi).getRecords().stream()
+                        .filter(process -> startedProcess.getId().equals(process.getId()))
+                        .count());
+                assertEquals(1, historyService.createHistoricTaskInstanceQuery()
+                        .processInstanceId(startedProcess.getProcessInstanceId())
+                        .taskAssignee("zhangsan")
+                        .finished()
+                        .count());
+            } finally {
+                start.countDown();
+                executor.shutdownNow();
+                assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+            }
+        }
+    }
+
+    @Test
+    public void startUpRollsBackBusinessFlowableAndSynchronousCarbonCopyWritesTogether() {
+        jdbcTemplate.execute("ALTER TABLE oa_process_record ADD CONSTRAINT reject_test_operator "
+                + "CHECK (operate_user_id IS NULL OR operate_user_id <> 99)");
+        try {
+            assertThrows(RuntimeException.class,
+                    () -> approval.startUp(user(99L, "rollback", "回滚验证"), publishedLeaveForm()));
+
+            assertEquals(1, approvalTransactionCcProbe.taskCreatedCount(),
+                    "测试监听器应已在 Flowable 启动命令中写入抄送探针");
+            assertEquals(0L, jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM oa_process WHERE user_id = 99", Long.class));
+            assertEquals(0L, jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM oa_process_record", Long.class));
+            assertEquals(0L, jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_transaction_cc_probe", Long.class));
+            assertEquals(0, runtimeService.createProcessInstanceQuery().count());
+            assertEquals(0, historyService.createHistoricProcessInstanceQuery().count());
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE oa_process_record DROP CONSTRAINT reject_test_operator");
+        }
+    }
+
+    @Test
+    public void approveRollsBackFlowableCompletionAndBusinessWritesTogether() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo pendingTask = pending(zhangsan).getRecords().get(0);
+
+        jdbcTemplate.execute("ALTER TABLE oa_process_record ADD CONSTRAINT reject_approval_operator "
+                + "CHECK (operate_user_id IS NULL OR operate_user_id <> 3)");
+        try {
+            ApprovalVo approvalVo = new ApprovalVo();
+            approvalVo.setProcessId(pendingTask.getId());
+            approvalVo.setTaskId(pendingTask.getTaskId());
+            approvalVo.setStatus(通过);
+            assertThrows(RuntimeException.class, () -> approval.approve(zhangsan, approvalVo));
+
+            assertEquals(1L, jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM oa_process_record", Long.class), "只保留已提交的发起记录");
+            assertEquals(1L, jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_transaction_cc_probe", Long.class),
+                    "审批事务回滚时只保留发起时的抄送记录");
+            assertEquals(1, taskService.createTaskQuery().taskId(pendingTask.getTaskId()).count());
+            assertEquals(0, taskService.createTaskQuery()
+                    .processInstanceId(pendingTask.getProcessInstanceId())
+                    .taskAssignee("lisi")
+                    .count());
+            assertEquals(0, historyService.createHistoricTaskInstanceQuery()
+                    .taskId(pendingTask.getTaskId())
+                    .finished()
+                    .count());
+            assertEquals(List.of("发起申请"), recordDescriptions(zhangsan, pendingTask.getId()));
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE oa_process_record DROP CONSTRAINT reject_approval_operator");
+        }
+    }
+
+    private Throwable approveAfterBarrier(
+            SysUser user,
+            ApprovalVo approvalVo,
+            CountDownLatch ready,
+            CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        if (!start.await(5, TimeUnit.SECONDS)) {
+            return new IllegalStateException("审批并发同步超时");
+        }
+        try {
+            approval.approve(user, approvalVo);
+            return null;
+        } catch (RuntimeException failure) {
+            return failure;
+        }
+    }
+
     private String loginToken(String username) throws Exception {
         String loginBody = mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -445,6 +613,11 @@ public class ApprovalContractTest {
     @TestConfiguration
     static class InMemoryRedisConfig {
         @Bean
+        public ApprovalTransactionCcProbe approvalTransactionCcProbe(JdbcTemplate jdbcTemplate) {
+            return new ApprovalTransactionCcProbe(jdbcTemplate);
+        }
+
+        @Bean
         @Primary
         public RedisTemplate<String, String> redisTemplate() {
             ConcurrentHashMap<String, String> store = new ConcurrentHashMap<>();
@@ -475,6 +648,49 @@ public class ApprovalContractTest {
                 }
             };
             return template;
+        }
+    }
+
+    static class ApprovalTransactionCcProbe extends AbstractFlowableEventListener {
+        private final JdbcTemplate jdbcTemplate;
+        private final AtomicInteger taskCreatedCount = new AtomicInteger();
+
+        ApprovalTransactionCcProbe(JdbcTemplate jdbcTemplate) {
+            this.jdbcTemplate = jdbcTemplate;
+        }
+
+        @Override
+        public void onEvent(FlowableEvent event) {
+            if (event.getType() != FlowableEngineEventType.TASK_CREATED) {
+                return;
+            }
+            if (!(event instanceof FlowableEntityEvent entityEvent)
+                    || !(entityEvent.getEntity() instanceof Task task)) {
+                throw new IllegalStateException("TASK_CREATED 事件不包含 Flowable task 实体");
+            }
+            taskCreatedCount.incrementAndGet();
+            jdbcTemplate.update(
+                    "INSERT INTO approval_transaction_cc_probe (task_id, process_instance_id) VALUES (?, ?)",
+                    task.getId(),
+                    task.getProcessInstanceId());
+        }
+
+        @Override
+        public boolean isFailOnException() {
+            return false;
+        }
+
+        @Override
+        public java.util.Collection<? extends FlowableEventType> getTypes() {
+            return Set.of(FlowableEngineEventType.TASK_CREATED);
+        }
+
+        void reset() {
+            taskCreatedCount.set(0);
+        }
+
+        int taskCreatedCount() {
+            return taskCreatedCount.get();
         }
     }
 }

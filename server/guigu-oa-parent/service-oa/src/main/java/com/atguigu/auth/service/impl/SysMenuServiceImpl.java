@@ -1,6 +1,7 @@
 package com.atguigu.auth.service.impl;
 
 import com.atguigu.auth.service.SysRoleMenuService;
+import com.atguigu.auth.service.PermissionCacheInvalidator;
 import com.atguigu.auth.utils.MenuHelper;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysMenu;
@@ -14,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -33,6 +35,30 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
+
+    @Autowired
+    private PermissionCacheInvalidator permissionCacheInvalidator;
+
+    @Override
+    @Transactional
+    public boolean save(SysMenu menu) {
+        boolean saved = baseMapper.insert(menu) > 0;
+        if (saved) {
+            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(menu.getId());
+        }
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateById(SysMenu menu) {
+        boolean updated = baseMapper.updateById(menu) > 0;
+        if (updated) {
+            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(menu.getId());
+        }
+        return updated;
+    }
+
     //菜单列表接口
     @Override
     public List<SysMenu> findNodes() {
@@ -56,6 +82,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     //删除菜单
     @Override
+    @Transactional
     public void removeMenuById(Long id) {
         //判断当前菜单是否有下一层菜单
         LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
@@ -64,7 +91,10 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if(count > 0) {
             throw new GuiguException(201,"菜单不能删除");
         }
-        baseMapper.deleteById(id);
+        boolean removed = baseMapper.deleteById(id) > 0;
+        if (removed) {
+            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(id);
+        }
     }
 
     //查询所有菜单和角色分配的菜单
@@ -99,6 +129,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     //为角色分配菜单
     @Override
+    @Transactional
     public void doAssign(AssginMenuVo assginMenuVo) {
         //1 根据角色id 删除菜单角色表 分配数据
         LambdaQueryWrapper<SysRoleMenu> wrapper = new LambdaQueryWrapper<>();
@@ -117,6 +148,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
             sysRoleMenu.setRoleId(assginMenuVo.getRoleId());
             sysRoleMenuService.save(sysRoleMenu);
         }
+        permissionCacheInvalidator.invalidateRoleMembersAfterCommit(assginMenuVo.getRoleId());
     }
 
     //4 根据用户id获取用户可以操作菜单列表
