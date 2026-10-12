@@ -5,6 +5,7 @@ import com.atguigu.common.result.ResponseUtil;
 import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.security.config.PublicApiPaths;
+import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.security.custom.UserDetailsService;
@@ -90,7 +91,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         if (!Objects.equals(userId, currentUser.getSysUser().getId())) {
             return null;
         }
-        if (currentUser.getSysUser().getStatus() == null || currentUser.getSysUser().getStatus() == 0) {
+        if (!AccountStatus.isEnabled(currentUser.getSysUser().getStatus())) {
             throw new AccountDisabledException();
         }
 

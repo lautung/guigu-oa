@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
 import com.atguigu.auth.service.SysUserService;
+import com.atguigu.model.system.SysUser;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +40,9 @@ public class LoginAuthContractTest {
     @Autowired
     private SysUserService sysUserService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Test
     public void correctUsernameAndPasswordReturnToken() throws Exception {
         mockMvc.perform(post("/admin/system/index/login")
@@ -59,6 +64,23 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    public void successfulLoginUpgradesLegacyMd5PasswordToBcrypt() throws Exception {
+        SysUser user = sysUserService.getById(1L);
+        user.setPassword("96e79218965eb72c92a549dd5a330112");
+        sysUserService.updateById(user);
+
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String upgradedPassword = sysUserService.getById(1L).getPassword();
+        org.junit.jupiter.api.Assertions.assertTrue(upgradedPassword.startsWith("$2"));
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("111111", upgradedPassword));
     }
 
     @Test

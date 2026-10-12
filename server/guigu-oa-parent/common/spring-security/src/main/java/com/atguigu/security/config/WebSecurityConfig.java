@@ -1,6 +1,7 @@
 package com.atguigu.security.config;
 
 import com.atguigu.common.jwt.JwtHelper;
+import com.atguigu.security.custom.BcryptPasswordEncoderWithLegacyMd5;
 import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
 import com.atguigu.security.filter.TokenLoginFilter;
@@ -16,7 +17,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -33,16 +34,18 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BcryptPasswordEncoderWithLegacyMd5();
     }
 
     @Bean
     public AuthenticationManager authenticationManager(
             UserDetailsService userDetailsService,
+            UserDetailsPasswordService userDetailsPasswordService,
             PasswordEncoder passwordEncoder
     ) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsPasswordService(userDetailsPasswordService);
         return new ProviderManager(provider);
     }
 

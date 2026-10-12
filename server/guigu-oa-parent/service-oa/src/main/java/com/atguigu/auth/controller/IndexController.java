@@ -6,6 +6,7 @@ import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.vo.system.RefreshTokenVo;
 import com.atguigu.vo.system.RouterVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,7 +81,7 @@ public class IndexController {
         if (user == null || !username.equals(user.getUsername())) {
             return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
         }
-        if (user.getStatus() == null || user.getStatus() == 0) {
+        if (!AccountStatus.isEnabled(user.getStatus())) {
             return Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED);
         }
 
