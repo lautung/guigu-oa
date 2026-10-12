@@ -48,9 +48,9 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 ### 前端 lint / test / build
 
 - 单元测试：`npm run test:unit`（Vitest，脚本名不变）。
-- 构建：`npm run build:prod`；开发：`npm run dev`。
+- 质量检查：`npm run lint`（ESLint）、`npm run typecheck`（vue-tsc）、`npm run format:check`（Prettier）。
+- 构建：`npm run build:prod`（包含类型检查）；开发：`npm run dev`。
 - Node：`engines.node` `^22.18.0`。
-- `npm run lint` 目前**无法运行**：仓库未提交 ESLint 配置文件。这是仓库既有状态，验证以单元测试为准。
 
 ### 已知应用缺陷（非环境问题）
 
