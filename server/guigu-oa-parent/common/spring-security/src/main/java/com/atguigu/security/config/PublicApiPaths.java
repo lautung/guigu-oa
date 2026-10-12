@@ -7,6 +7,7 @@ public final class PublicApiPaths {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
+            "/actuator/health",
             "/favicon.ico",
             "/webjars/**",
             "/admin/processImage/**"
@@ -24,6 +25,7 @@ public final class PublicApiPaths {
         }
         return "/v3/api-docs".equals(uri)
                 || uri.startsWith("/v3/api-docs/")
+                || "/actuator/health".equals(uri)
                 || "/swagger-ui.html".equals(uri)
                 || uri.startsWith("/swagger-ui/")
                 || "/favicon.ico".equals(uri)

@@ -39,3 +39,4 @@ npm run build:prod
 
 - 词汇：[CONTEXT.md](CONTEXT.md)
 - 规格：[docs/spec/云尚办公统一客户端改造规格.md](docs/spec/云尚办公统一客户端改造规格.md)
+- 探活与请求日志：[docs/observability.md](docs/observability.md)

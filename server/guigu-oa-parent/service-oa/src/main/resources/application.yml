@@ -3,3 +3,18 @@ spring:
     name: service-oa
   profiles:
     active: dev
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  structured:
+    format:
+      console: logstash

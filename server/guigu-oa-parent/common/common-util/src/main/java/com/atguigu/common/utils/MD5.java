@@ -24,8 +24,7 @@ public final class MD5 {
             }
             return new String(chars);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            throw new RuntimeException("MD5加密出错！！+" + e);
+            throw new IllegalStateException("MD5 encryption is unavailable", e);
         }
     }
 
