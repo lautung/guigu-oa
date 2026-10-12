@@ -21,8 +21,10 @@ import com.atguigu.common.jwt.JwtHelper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -85,17 +87,35 @@ class FlywayMigrationContractTest {
                 "SELECT id FROM sys_menu WHERE path = 'sysRole'", Integer.class);
         int userMenuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = 'sysUser'", Integer.class);
+        int menuAdminMenuId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = 'sysMenu'", Integer.class);
+        int processTypeMenuId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = 'processType'", Integer.class);
+        int systemRootId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = '/system' AND parent_id = 0", Integer.class);
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (1, '角色页权限', 0)");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (2, '用户页权限', 0)");
+        jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (3, '菜单页权限', 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1, 1, ?, 0)", roleMenuId);
         jdbcTemplate.update(
                 "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (2, 2, ?, 0)", userMenuId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (3, 3, ?, 0)", menuAdminMenuId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (id, parent_id, name, type, path, status, is_deleted) VALUES (1000, ?, '角色新增按钮', 2, '', 1, 0)",
+                roleMenuId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (900, 0, '办事', 0, '/work', 'Layout', 1, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (901, 900, '办事设置', 1, 'settings', 'system/settings/list', 1, 0)");
         jdbcTemplate.execute("ALTER TABLE sys_role_menu ALTER COLUMN id RESTART WITH 100");
         jdbcTemplate.update(
                 "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (1, 1, 2, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (2, 2, 3, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (3, 3, 6, 0)");
         jdbcTemplate.execute("ALTER TABLE sys_user_role ALTER COLUMN id RESTART WITH 100");
         jdbcTemplate.update(
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (3, 'user-manager', '', '用户管理员', 1, 0)");
@@ -103,6 +123,10 @@ class FlywayMigrationContractTest {
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (4, 'ordinary', '', '普通用户', 1, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (5, 'no-config', '', '无配置用户', 1, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (6, 'menu-manager', '', '菜单管理员', 1, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (4, 1, 1000, 0)");
 
         mockMvc.perform(get("/admin/system/sysRole/1/10")
                         .header("token", JwtHelper.createToken(1L, "admin")))
@@ -117,10 +141,28 @@ class FlywayMigrationContractTest {
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", JwtHelper.createToken(2L, "user"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleId\":1,\"menuIdList\":[" + roleMenuId + "]}"))
+                        .content("{\"roleId\":1,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = 1000 AND is_deleted = 0"));
+        mockMvc.perform(post("/admin/system/sysMenu/doAssign")
+                        .header("token", JwtHelper.createToken(2L, "user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roleId\":1,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
+        mockMvc.perform(post("/admin/system/sysMenu/doAssign")
+                        .header("token", JwtHelper.createToken(2L, "user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roleId\":1,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",901]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         mockMvc.perform(get("/admin/system/sysMenu/toAssign/1")
                         .header("token", JwtHelper.createToken(3L, "user-manager")))
                 .andExpect(status().isOk())
@@ -142,6 +184,71 @@ class FlywayMigrationContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 1 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
+        mockMvc.perform(get("/admin/system/sysMenu/findNodes")
+                        .header("token", JwtHelper.createToken(2L, "user")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+        mockMvc.perform(get("/admin/system/sysMenu/findNodes")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
+                                + ",\"type\":1,\"path\":\"sysRole\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + systemRootId + ",\"parentId\":0,\"type\":0,\"path\":\"/work\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + systemRootId
+                                + ",\"parentId\":0,\"type\":0,\"path\":\"/system\",\"status\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND status = 1 AND is_deleted = 0"));
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
+                                + ",\"type\":1,\"path\":\"sysMenu\",\"status\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND status = 1 AND is_deleted = 0"));
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", JwtHelper.createToken(6L, "menu-manager"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"sysRole\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        mockMvc.perform(delete("/admin/system/sysMenu/remove/" + menuAdminMenuId)
+                        .header("token", JwtHelper.createToken(6L, "menu-manager")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND is_deleted = 0"));
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", JwtHelper.createToken(5L, "no-config"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", JwtHelper.createToken(5L, "no-config"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+        mockMvc.perform(delete("/admin/system/sysMenu/remove/999")
+                        .header("token", JwtHelper.createToken(5L, "no-config")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysRole/toAssign/4")
                         .header("token", JwtHelper.createToken(2L, "user")))
                 .andExpect(status().isOk())
@@ -191,6 +298,7 @@ class FlywayMigrationContractTest {
                         .header("token", JwtHelper.createToken(4L, "ordinary")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901)");
     }
 
     private int count(String sql) {

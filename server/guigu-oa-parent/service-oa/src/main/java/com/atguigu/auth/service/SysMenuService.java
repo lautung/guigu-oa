@@ -29,6 +29,10 @@ public interface SysMenuService extends IService<SysMenu> {
     //角色分配菜单
     void doAssign(AssginMenuVo assginMenuVo);
 
+    void saveMenu(SysMenu sysMenu);
+
+    void updateMenu(SysMenu sysMenu);
+
     //4 根据用户id获取用户可以操作菜单列表
     List<RouterVo> findUserMenuListByUserId(Long userId);
 

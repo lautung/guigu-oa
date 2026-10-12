@@ -47,6 +47,7 @@ public class SysMenuController {
     }
 
     //菜单列表接口
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "菜单列表")
     @GetMapping("findNodes")
     public Result findNodes() {
@@ -55,20 +56,23 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "新增菜单")
     @PostMapping("save")
     public Result save(@RequestBody SysMenu sysMenu) {
-        sysMenuService.save(sysMenu);
+        sysMenuService.saveMenu(sysMenu);
         return Result.ok();
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "修改菜单")
     @PutMapping("update")
     public Result updateById(@RequestBody SysMenu sysMenu) {
-        sysMenuService.updateById(sysMenu);
+        sysMenuService.updateMenu(sysMenu);
         return Result.ok();
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "删除菜单")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
