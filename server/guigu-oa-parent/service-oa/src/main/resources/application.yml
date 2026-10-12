@@ -8,3 +8,18 @@ guigu:
   oa:
     # Bind this directory to persistent storage in containers; template paths are relative to it.
     process-definition-dir: ${GUIGU_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  structured:
+    format:
+      console: logstash

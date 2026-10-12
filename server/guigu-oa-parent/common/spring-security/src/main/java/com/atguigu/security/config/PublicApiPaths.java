@@ -2,12 +2,15 @@ package com.atguigu.security.config;
 
 public final class PublicApiPaths {
 
+    private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
+
     public static final String[] REQUEST_MATCHERS = {
             "/admin/system/index/refresh",
             "/v3/api-docs",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
+            ACTUATOR_HEALTH_PATH,
             "/favicon.ico",
             "/webjars/**",
             "/admin/processImage/**"
@@ -26,6 +29,7 @@ public final class PublicApiPaths {
         return "/admin/system/index/refresh".equals(uri)
                 || "/v3/api-docs".equals(uri)
                 || uri.startsWith("/v3/api-docs/")
+                || ACTUATOR_HEALTH_PATH.equals(uri)
                 || "/swagger-ui.html".equals(uri)
                 || uri.startsWith("/swagger-ui/")
                 || "/favicon.ico".equals(uri)
