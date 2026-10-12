@@ -43,10 +43,12 @@
       <el-button :disabled="submitting" @click="submitApproval(-1)">拒绝</el-button>
       <el-button type="primary" :disabled="submitting" @click="submitApproval(1)">通过</el-button>
     </div>
+    <AttachmentSection v-if="detail" :process-id="detail.id" />
   </div>
 </template>
 
 <script>
+import AttachmentSection from '@/components/AttachmentSection.vue'
 import { show, approve } from '@/api/process'
 import {
   buildApprovalPayload,
@@ -58,6 +60,7 @@ import { workListPerspectiveFromRoute } from '@/work/work-list'
 
 export default {
   name: 'PendingDetail',
+  components: { AttachmentSection },
   data() {
     return {
       loading: false,

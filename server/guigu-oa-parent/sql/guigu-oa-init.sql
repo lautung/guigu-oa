@@ -161,6 +161,32 @@ CREATE TABLE IF NOT EXISTS `oa_process_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审批流转记录表';
 
 -- ----------------------------
+-- 审批：附件元数据（文件内容在私有 S3 兼容对象存储）
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `oa_attachment` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `process_id` BIGINT DEFAULT NULL COMMENT '关联审批实例；pending 时为空',
+  `owner_user_id` BIGINT NOT NULL COMMENT '上传用户',
+  `draft_id` VARCHAR(36) DEFAULT NULL COMMENT '发起表单草稿标识',
+  `storage_id` VARCHAR(36) NOT NULL COMMENT '不可枚举的对象标识',
+  `object_key` VARCHAR(512) NOT NULL COMMENT '对象存储 key',
+  `temporary_object_key` VARCHAR(512) DEFAULT NULL COMMENT '发起后待清理的直传 key',
+  `file_name` VARCHAR(255) NOT NULL COMMENT '展示文件名',
+  `content_type` VARCHAR(255) NOT NULL COMMENT '媒体类型',
+  `size_bytes` BIGINT NOT NULL COMMENT '文件字节数',
+  `status` VARCHAR(16) NOT NULL COMMENT 'UPLOADING/PENDING/ATTACHED/DELETED',
+  `upload_expires_at` DATETIME DEFAULT NULL COMMENT '直传凭证有效期',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT NULL,
+  `is_deleted` TINYINT NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_oa_attachment_storage_id` (`storage_id`),
+  KEY `idx_oa_attachment_process` (`process_id`, `status`),
+  KEY `idx_oa_attachment_pending_ttl` (`status`, `process_id`, `create_time`),
+  KEY `idx_oa_attachment_owner_draft` (`owner_user_id`, `draft_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审批附件元数据表';
+
+-- ----------------------------
 -- 种子数据：超级管理员（id=1，登录后自动拥有全部配置菜单权限）
 -- 密码为 BCrypt('111111')，与登录口令 111111 对应
 -- ----------------------------
