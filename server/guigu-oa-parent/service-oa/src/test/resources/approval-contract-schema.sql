@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
-DELETE FROM sys_user WHERE username IN ('alice', 'zhangsan', 'lisi', 'eve', 'cc-reader');
+DELETE FROM sys_user WHERE username IN ('alice', 'zhangsan', 'lisi', 'eve', 'cc-reader', 'user');
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
 VALUES (2, 'alice', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '小艾', '13800000002', 1, 0);
 INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)

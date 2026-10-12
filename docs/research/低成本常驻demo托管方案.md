@@ -40,7 +40,7 @@
 | Flowable 引擎首启建表数 | **32 张**（30 张 `ACT_*` + `FLW_RU_BATCH` / `FLW_RU_BATCH_PART`） | 本地统计：解包 jar 内 `flowable-*-8.0.0.jar` 的 `org/flowable/**/db/create/*mysql*create*.sql`，去重 `CREATE TABLE` |
 | 建表触发条件 | `flowable.database-schema-update: true`，`history-level: full` | `service-oa/src/main/resources/application-dev.yml` |
 | 依赖的中间件 | MySQL 8（库名 `guigu-oa`）、Redis（权限 JSON） | 同上 + `AGENTS.md` |
-| 前端 | Vite 构建出 `dist/` 静态文件 | `前端代码/guigu-oa-client/vite.config.js` |
+| 前端 | Vite 构建出 `dist/` 静态文件 | `client/guigu-oa-client/vite.config.js` |
 | 前端调后端的方式 | `axios.baseURL = import.meta.env.VITE_APP_BASE_API \|\| '/dev-api'`；开发期 Vite 代理把 `/dev-api` **前缀剥掉**再转 8800 | `src/utils/request.js`、`vite.config.js` |
 
 对托管的两个硬约束：
@@ -174,12 +174,12 @@
 
 | 做法 | 怎么做 | 代价 |
 |------|--------|------|
-| **定时重跑种子 SQL** | GitHub Actions `on: schedule`（cron，**最短 5 分钟一次**）跑 `mysql -h ... < sql/guigu-oa-init.sql` | 要把数据库暴露到公网 + 凭据放 repo secrets（Aiven/TiDB 本来就是公网 TLS，Oracle 上要开安全组，风险自负）。官方另有三条硬约束：高峰期 **schedule 可能被延迟甚至丢弃**；只能跑在默认分支；**公共仓库 60 天无活动会自动停用定时工作流** |
+| **定时重跑种子 SQL** | 旧方案曾由 GitHub Actions `on: schedule`（cron，**最短 5 分钟一次**）执行旧业务初始化脚本；当前业务种子由 Flyway 版本化迁移管理，不应重放初始化 SQL | 旧方案要把数据库暴露到公网 + 凭据放 repo secrets（Aiven/TiDB 本来就是公网 TLS，Oracle 上要开安全组，风险自负）。官方另有三条硬约束：高峰期 **schedule 可能被延迟甚至丢弃**；只能跑在默认分支；**公共仓库 60 天无活动会自动停用定时工作流** |
 | **平台侧 cron** | Render Cron Job（Starter 档 $0.00016/分钟，**不在免费档内**）；Oracle/腾讯云上直接用 systemd timer 或 crontab | 平台 cron 要额外付费；VM 上的 cron 免费但要自己运维 |
-| **容器定期重建** | VM 上 `docker compose down -v && docker compose up -d`，让 MySQL 从初始化脚本重建 | 最干净，但每次重建后 **Flowable 要重新建那 32 张表**，冷启动最慢的一次会落在重建后第一个访客头上。缓解办法：重建后立刻自己 warm 一次 |
+| **容器定期重建** | VM 上 `docker compose down -v && docker compose up -d`，由 Flyway 和 Flowable 在空库分别重建业务表与引擎表 | 最干净，但每次重建后 **Flowable 要重新建那 32 张表**，冷启动最慢的一次会落在重建后第一个访客头上。缓解办法：重建后立刻自己 warm 一次 |
 | **只读演示账号** | 本项目权限走「配置权限决定侧栏与占用」这条 seam（见 `CONTEXT.md` 与 #61/#63 系列），做一个只挂查询类菜单的角色最省事 | 审批 demo 的核心就是「发起→待处理→通过」，全只读等于没得玩。更实际的是「只读账号 + 一个可写的沙箱账号 + 每日重置」组合 |
 
-**重置一定要连 `ACT_*` 一起清**：`sql/guigu-oa-init.sql` 只建业务 `sys_*`/`oa_*` 表，Flowable 的 32 张表是引擎首启自建的。只重放业务 SQL 而不清引擎表，会留下一堆孤儿流程实例，`oa_process.process_instance_id` 对不上，待处理列表会出现「查得到实例查不到业务」的脏状态。最省心的是 `DROP DATABASE` + 重建 + 重放种子 SQL + 让 `flowable.database-schema-update: true` 重新建表。
+**重置一定要连 `ACT_*` 一起清**：Flyway 只建业务 `sys_*` / `oa_*` 表，Flowable 的 32 张表由引擎首启创建。只清业务表而保留引擎表，会留下一堆孤儿流程实例，`oa_process.process_instance_id` 对不上，待处理列表会出现「查得到实例查不到业务」的脏状态。最省心的是 `DROP DATABASE` + 重建空库 + 启动应用，让 Flyway 与 `flowable.database-schema-update: true` 分别重建各自的表。
 
 另注：`AGENTS.md` 已记录 `/admin/process/findStarted`（已发起）有既有 MyBatis 绑定缺陷，`findPending`/`findProcessed` 正常。上 demo 前要么修，要么在演示引导里绕开这个入口。
 
@@ -390,7 +390,7 @@ presigned PUT 是浏览器从 demo 前端域名直接发到存储域名的跨域
 23. Sealos 计价标准（各可用区 CPU/内存/存储/网络单价）：<https://sealos.run/docs/billing>
 24. Spring Boot AOT cache 与 CDS（Java 25+ 用 AOT cache，Java 21 用 CDS；须配合 `-Djarmode=tools extract`）：<https://docs.spring.io/spring-boot/reference/packaging/aot-cache.html>
 25. GitHub Actions `schedule`（最短 5 分钟、高峰延迟或丢弃、仅默认分支、公共仓库 60 天无活动自动停用）：<https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows>
-26. 本仓库：`service-oa/target/service-oa.jar`（60 MB）、`application-dev.yml`、`sql/guigu-oa-init.sql`、`前端代码/guigu-oa-client/vite.config.js`、`src/utils/request.js`、`AGENTS.md`；Flowable 8.0.0 建表脚本 32 张表为本地解包统计
+26. 本仓库：`server/guigu-oa-parent/service-oa/target/service-oa.jar`（60 MB）、`application-dev.yml`、`server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`、`client/guigu-oa-client/vite.config.js`、`src/utils/request.js`、`AGENTS.md`；Flowable 8.0.0 建表脚本 32 张表为本地解包统计
 
 **§9 对象存储部分补充的来源（2026-08-21 抓取）**
 

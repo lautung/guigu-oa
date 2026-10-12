@@ -7,6 +7,7 @@ import com.atguigu.model.system.SysMenu;
 import com.atguigu.vo.system.AssginMenuVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class SysMenuController {
     private SysMenuService sysMenuService;
 
     //查询所有菜单和角色分配的菜单
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysRole')")
     @Operation(summary = "查询所有菜单和角色分配的菜单")
     @GetMapping("toAssign/{roleId}")
     public Result toAssign(@PathVariable Long roleId) {
@@ -36,6 +38,7 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysRole')")
     @Operation(summary = "角色分配菜单")
     @PostMapping("/doAssign")
     public Result doAssign(@RequestBody AssginMenuVo assginMenuVo) {
@@ -44,6 +47,7 @@ public class SysMenuController {
     }
 
     //菜单列表接口
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "菜单列表")
     @GetMapping("findNodes")
     public Result findNodes() {
@@ -52,20 +56,23 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "新增菜单")
     @PostMapping("save")
     public Result save(@RequestBody SysMenu sysMenu) {
-        sysMenuService.save(sysMenu);
+        sysMenuService.saveMenu(sysMenu);
         return Result.ok();
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "修改菜单")
     @PutMapping("update")
     public Result updateById(@RequestBody SysMenu sysMenu) {
-        sysMenuService.updateById(sysMenu);
+        sysMenuService.updateMenu(sysMenu);
         return Result.ok();
     }
 
+    @PreAuthorize("@sysMenuServiceImpl.hasCurrentUserMenuAccess('sysMenu')")
     @Operation(summary = "删除菜单")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {

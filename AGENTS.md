@@ -38,9 +38,12 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 ### 数据库初始化
 
-后端连接 MySQL 库 `guigu-oa`（`root`/`root`）。仓库**不含**业务表建表脚本，已补充 `server/guigu-oa-parent/sql/guigu-oa-init.sql`（业务 `sys_*`/`oa_*` 表 + 种子超级管理员）。首次或重置库时执行：
-`mysql -uroot -proot -h127.0.0.1 guigu-oa < server/guigu-oa-parent/sql/guigu-oa-init.sql`
-（库不存在先 `CREATE DATABASE \`guigu-oa\` CHARACTER SET utf8mb4;`）。种子登录账号：**用户名 `admin` / 密码 `111111`**（密码存 BCrypt；`userId=1` 自动拥有全部配置菜单权限）。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
+后端连接 MySQL 库 `guigu-oa`（`root`/`root`）。库不存在时先创建空库：
+```sh
+mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHARACTER SET utf8mb4;'
+```
+首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。不要再手动执行旧的 `guigu-oa-init.sql`；`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`userId=1` 自动拥有全部配置菜单权限）。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
+
 
 ### 前端 lint / test / build
 

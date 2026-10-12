@@ -50,7 +50,9 @@ INSERT INTO sys_user_role (id, user_id, role_id, is_deleted)
 VALUES (22, 104, 11, 0);
 INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted)
 VALUES (30, 10, 20, 0);
-INSERT INTO sys_menu (id, parent_id, name, type, path, perms, status, is_deleted)
-VALUES (20, 0, '审批', 2, 'approval', 'bnt.approval.view', 1, 0);
-INSERT INTO sys_menu (id, parent_id, name, type, path, perms, status, is_deleted)
-VALUES (21, 0, '管理', 2, 'manage', 'bnt.manage.view', 1, 0);
+INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted)
+VALUES (19, 0, '配置', 0, '/system', 'Layout', 1, 0);
+INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted)
+VALUES (20, 19, '用户配置', 1, 'cacheUserSettings', 'system/cacheUserSettings/list', 1, 0);
+INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted)
+VALUES (21, 19, '角色配置', 1, 'cacheRoleSettings', 'system/cacheRoleSettings/list', 1, 0);

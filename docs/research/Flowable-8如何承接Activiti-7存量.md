@@ -31,7 +31,7 @@
 | `spring.activiti.history-level` | `full` |
 | `spring.activiti.check-process-definitions` | `true` |
 
-`sql/guigu-oa-init.sql` 写明 `ACT_*` 由引擎首启自动建，不随业务脚本一起发。
+业务表由 Flyway 管理；`ACT_*` 由引擎首启自动建，不随业务迁移一起发（见 `service-oa/src/main/resources/db/migration/`）。
 
 | 产品能力 | 实现 | 引擎 API |
 |----------|------|----------|
@@ -221,7 +221,7 @@ ELEMENT_TASK_LISTENER = "taskListener"
 
 ## 6. `oa_process.processInstanceId` 与引擎 id
 
-业务列：`oa_process.process_instance_id VARCHAR(100)`（`sql/guigu-oa-init.sql`）。  
+业务列：`oa_process.process_instance_id VARCHAR(100)`（Flyway 业务迁移）。
 `startUp` 写入 `ProcessInstance.getId()`。待处理用 `task.getProcessInstanceId()`；已处理用历史任务的 `processInstanceId` 反查该列。
 
 引擎侧：

@@ -7,6 +7,7 @@ import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysMenu;
 import com.atguigu.auth.mapper.SysMenuMapper;
 import com.atguigu.auth.service.SysMenuService;
+import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.model.system.SysRoleMenu;
 import com.atguigu.vo.system.AssginMenuVo;
 import com.atguigu.vo.system.MetaVo;
@@ -32,6 +33,12 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
+
+    private static final Set<String> CONFIGURATION_ROOT_PATHS = Set.of("/system", "/processSet", "/processMgr");
+    private static final Set<String> PROTECTED_MENU_PATHS = Set.of(
+            "sysUser", "sysRole", "sysMenu", "/system", "/processSet", "/processMgr");
+    private static final Set<String> EXCLUDED_MENU_COMPONENTS = Set.of(
+            "system/sysdept/list", "system/syspost/list", "system/sysoperlog/list", "system/sysloginlog/list");
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
@@ -84,6 +91,11 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional
     public void removeMenuById(Long id) {
+        SysMenu menu = baseMapper.selectById(id);
+        if (menu != null && isProtectedMenuPath(menu.getPath())) {
+            throw new GuiguException(201, "配置菜单入口不能删除");
+        }
+
         //判断当前菜单是否有下一层菜单
         LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysMenu::getParentId,id);
@@ -131,6 +143,33 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional
     public void doAssign(AssginMenuVo assginMenuVo) {
+        LambdaQueryWrapper<SysRoleMenu> currentRoleMenus = new LambdaQueryWrapper<>();
+        currentRoleMenus.eq(SysRoleMenu::getRoleId, assginMenuVo.getRoleId());
+        Set<Long> existingMenuIds = sysRoleMenuService.list(currentRoleMenus).stream()
+                .map(SysRoleMenu::getMenuId)
+                .collect(Collectors.toSet());
+
+        List<Long> requestedMenuIds = assginMenuVo.getMenuIdList();
+        List<Long> assignableMenuIds = new ArrayList<>();
+        if (requestedMenuIds != null) {
+            for (Long menuId : requestedMenuIds) {
+                if (menuId == null) {
+                    continue;
+                }
+
+                SysMenu menu = baseMapper.selectById(menuId);
+                if (!isConfigurationMenu(menu)) {
+                    // Drop legacy button/work-menu grants when the role is resubmitted.
+                    // A newly requested invalid ID still rejects the whole assignment.
+                    if (existingMenuIds.contains(menuId)) {
+                        continue;
+                    }
+                    throw new GuiguException(201, "只能授予配置菜单");
+                }
+                assignableMenuIds.add(menuId);
+            }
+        }
+
         //1 根据角色id 删除菜单角色表 分配数据
         LambdaQueryWrapper<SysRoleMenu> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysRoleMenu::getRoleId,assginMenuVo.getRoleId());
@@ -138,7 +177,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
         //2 从参数里面获取角色新分配菜单id列表，
         // 进行遍历，把每个id数据添加菜单角色表
-        List<Long> menuIdList = assginMenuVo.getMenuIdList();
+        List<Long> menuIdList = assignableMenuIds;
         for(Long menuId:menuIdList) {
             if(StringUtils.isEmpty(menuId)) {
                 continue;
@@ -151,23 +190,82 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         permissionCacheInvalidator.invalidateRoleMembersAfterCommit(assginMenuVo.getRoleId());
     }
 
+    @Override
+    public void saveMenu(SysMenu sysMenu) {
+        if (sysMenu != null && isProtectedMenuPath(sysMenu.getPath())) {
+            throw new GuiguException(201, "菜单路由不可重定义");
+        }
+        save(sysMenu);
+    }
+
+    @Override
+    public void updateMenu(SysMenu sysMenu) {
+        SysMenu existingMenu = sysMenu.getId() == null ? null : baseMapper.selectById(sysMenu.getId());
+        String oldPath = existingMenu == null ? null : existingMenu.getPath();
+        String newPath = sysMenu.getPath();
+        boolean reservedPathIsChanging = isProtectedMenuPath(newPath)
+                && !Objects.equals(oldPath, newPath);
+        boolean reservedMenuIdentityIsChanging = isProtectedMenuPath(oldPath)
+                && (!Objects.equals(oldPath, newPath)
+                || !Objects.equals(existingMenu.getType(), sysMenu.getType())
+                || !Objects.equals(existingMenu.getParentId(), sysMenu.getParentId()));
+        boolean reservedMenuIsBeingDisabled = isProtectedMenuPath(oldPath)
+                && sysMenu.getStatus() != null
+                && !Objects.equals(sysMenu.getStatus(), 1);
+        if (reservedPathIsChanging || reservedMenuIdentityIsChanging || reservedMenuIsBeingDisabled) {
+            throw new GuiguException(201, "菜单路由不可重定义");
+        }
+        updateById(sysMenu);
+    }
+
+    private boolean isConfigurationMenu(SysMenu menu) {
+        Set<Long> visitedMenuIds = new HashSet<>();
+        SysMenu current = menu;
+        while (current != null) {
+            if (!isConfigurationMenuNode(current)) {
+                return false;
+            }
+            if (Objects.equals(current.getParentId(), 0L)) {
+                return Objects.equals(current.getType(), 0)
+                        && current.getPath() != null
+                        && CONFIGURATION_ROOT_PATHS.contains(current.getPath());
+            }
+            if (current.getId() == null || !visitedMenuIds.add(current.getId())
+                    || current.getParentId() == null) {
+                return false;
+            }
+            current = baseMapper.selectById(current.getParentId());
+        }
+        return false;
+    }
+
+    private boolean isConfigurationMenuNode(SysMenu menu) {
+        if ((!Objects.equals(menu.getType(), 0) && !Objects.equals(menu.getType(), 1))
+                || !Objects.equals(menu.getStatus(), 1)) {
+            return false;
+        }
+
+        String path = Objects.toString(menu.getPath(), "").toLowerCase(Locale.ROOT);
+        String component = Objects.toString(menu.getComponent(), "").toLowerCase(Locale.ROOT);
+        return !isWorkMenuPath(path)
+                && !path.contains("wechat") && !component.contains("wechat")
+                && !path.contains("dashboard") && !component.contains("dashboard")
+                && !path.contains("onlineprocessset") && !component.contains("onlineprocessset")
+                && !EXCLUDED_MENU_COMPONENTS.contains(component);
+    }
+
+    private boolean isWorkMenuPath(String path) {
+        return path.equals("work") || path.startsWith("/work") || path.startsWith("work/");
+    }
+
+    private boolean isProtectedMenuPath(String path) {
+        return path != null && PROTECTED_MENU_PATHS.contains(path);
+    }
+
     //4 根据用户id获取用户可以操作菜单列表
     @Override
     public List<RouterVo> findUserMenuListByUserId(Long userId) {
-        List<SysMenu> sysMenuList = null;
-        //1 判断当前用户是否是管理员   userId=1是管理员
-        //1.1 如果是管理员，查询所有菜单列表
-        if(userId.longValue() == 1) {
-            //查询所有菜单列表
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysMenu::getStatus,1);
-            wrapper.orderByAsc(SysMenu::getSortValue);
-            sysMenuList = baseMapper.selectList(wrapper);
-        } else {
-            //1.2 如果不是管理员，根据userId查询可以操作菜单列表
-            //多表关联查询：用户角色关系表 、 角色菜单关系表、 菜单表
-            sysMenuList = baseMapper.findMenuListByUserId(userId);
-        }
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId, true);
 
         //2 把查询出来数据列表-构建成框架要求的路由结构
         //使用菜单操作工具类构建树形结构
@@ -239,18 +337,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //5 根据用户id获取用户可以操作按钮列表
     @Override
     public List<String> findUserPermsByUserId(Long userId) {
-        //1 判断是否是管理员，如果是管理员，查询所有按钮列表
-        List<SysMenu> sysMenuList = null;
-        if(userId.longValue() == 1) {
-            //查询所有菜单列表
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysMenu::getStatus,1);
-            sysMenuList = baseMapper.selectList(wrapper);
-        } else {
-            //2 如果不是管理员，根据userId查询可以操作按钮列表
-            //多表关联查询：用户角色关系表 、 角色菜单关系表、 菜单表
-            sysMenuList = baseMapper.findMenuListByUserId(userId);
-        }
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId, false);
 
         //3 从查询出来的数据里面，获取可以操作按钮值的list集合，返回
         List<String> permsList = sysMenuList.stream()
@@ -259,5 +346,40 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .collect(Collectors.toList());
 
         return permsList;
+    }
+
+    @Override
+    public boolean hasCurrentUserMenuAccess(String menuPath) {
+        Long userId = LoginUserInfoHelper.getUserId();
+        return userId != null && hasMenuAccess(userId, menuPath);
+    }
+
+    @Override
+    public boolean hasMenuAccess(Long userId, String menuPath) {
+        if (userId == null || !StringUtils.hasText(menuPath)) {
+            return false;
+        }
+
+        List<SysMenu> userMenus = findUserMenuEntities(userId, false);
+
+        return userMenus.stream().anyMatch(menu ->
+                Objects.equals(menu.getType(), 1)
+                        && Objects.equals(menu.getPath(), menuPath)
+                        && isConfigurationMenu(menu));
+    }
+
+    private List<SysMenu> findUserMenuEntities(Long userId, boolean orderBySortValue) {
+        if (userId == null) {
+            return List.of();
+        }
+        if (userId.longValue() == 1) {
+            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(SysMenu::getStatus, 1);
+            if (orderBySortValue) {
+                wrapper.orderByAsc(SysMenu::getSortValue);
+            }
+            return baseMapper.selectList(wrapper);
+        }
+        return baseMapper.findMenuListByUserId(userId);
     }
 }
