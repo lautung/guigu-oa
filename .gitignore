@@ -8,6 +8,9 @@ target/
 out/
 *.class
 
+# Agent scratch files
+.scratch/
+
 # Local env / secrets
 .env
 .env.*

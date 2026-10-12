@@ -2,14 +2,14 @@
 
 > 研究票：[#24 Spring Boot 4 线与后端生态坐标](https://github.com/lautung/guigu-oa/issues/24)  
 > 地图票：[#22 升级到 Spring Boot 4 与 Vue 3 的依赖规格](https://github.com/lautung/guigu-oa/issues/22)  
-> 来源：Spring 官方文档 / wiki / 博客、Maven Central、MyBatis-Plus / Knife4j / jjwt / Fastjson2 / Connector/J 第一方文档；仓库坐标来自 `后端代码/guigu-oa-parent` 父 POM 与模块 POM。  
+> 来源：Spring 官方文档 / wiki / 博客、Maven Central、MyBatis-Plus / Knife4j / jjwt / Fastjson2 / Connector/J 第一方文档；仓库坐标来自 `server/guigu-oa-parent` 父 POM 与模块 POM。
 > 说明：时点 **2026-08-19**。只报事实与来源，**不锁定**规格采用 Spring Boot 4.0.x 还是 4.1.x。
 
 ---
 
 ## 1. 仓库现状（对照基线）
 
-父 POM `后端代码/guigu-oa-parent/pom.xml` 当前坐标：
+父 POM `server/guigu-oa-parent/pom.xml` 当前坐标：
 
 | 属性 / 声明 | 当前值 |
 |-------------|--------|
@@ -201,4 +201,4 @@ Maven Central `org.springframework.boot:spring-boot-starter-parent` 的 `maven-m
 - jjwt：[README](https://github.com/jwtk/jjwt)、[CHANGELOG 0.10.0](https://raw.githubusercontent.com/jwtk/jjwt/master/CHANGELOG.md)、[#510](https://github.com/jwtk/jjwt/issues/510)、[#297](https://github.com/jwtk/jjwt/issues/297)
 - Fastjson2：[README](https://github.com/alibaba/fastjson2/)、[1.x 升级指南](https://github.com/alibaba/fastjson2/blob/main/docs/fastjson_1_upgrade_en.md)
 - Maven Compiler Plugin：[3.15.0 mojo](https://maven.apache.org/plugins-archives/maven-compiler-plugin-3.15.0/compile-mojo.html)、[--release 示例](https://maven.apache.org/plugins/maven-compiler-plugin/examples/set-compiler-release.html)
-- 仓库：`后端代码/guigu-oa-parent/pom.xml` 及 `common/*`、`model`、`service-oa` 模块 POM
+- 仓库：`server/guigu-oa-parent/pom.xml` 及 `common/*`、`model`、`service-oa` 模块 POM

@@ -2,15 +2,18 @@
 
 **统一客户端**是唯一前端入口：办事与配置在同一个 Web 里，用用户名和密码登录。登录后落到待处理。微信不是产品的一部分。
 
-旧的 PC 管理端（`前端代码/管理端/guigu-oa-admin`）和公众号员工 H5（`前端代码/员工端/guigu-oa-web`）已退役，不再作为产品入口维护。
+## 起源与改造
+
+本项目从尚硅谷《云尚办公》课程项目起步。旧 PC 管理端与公众号员工 H5 已退役，删前源码保存在 annotated tag `legacy-frontends`。两端能力与路由的历史对照见[研究文档](docs/research/现有两端能力与路由对照.md)。
 
 ## 启动
 
 后端：
 
 ```bash
-cd 后端代码/guigu-oa-parent
-mvn -pl service-oa -am spring-boot:run
+cd server/guigu-oa-parent/service-oa
+mvn -DskipTests install
+java -jar target/service-oa.jar
 ```
 
 默认 API：`http://localhost:8800`。
@@ -18,7 +21,7 @@ mvn -pl service-oa -am spring-boot:run
 统一客户端：
 
 ```bash
-cd 前端代码/guigu-oa-client
+cd client/guigu-oa-client
 npm install
 npm run dev
 ```
@@ -28,7 +31,7 @@ npm run dev
 生产构建：
 
 ```bash
-cd 前端代码/guigu-oa-client
+cd client/guigu-oa-client
 npm run build:prod
 ```
 

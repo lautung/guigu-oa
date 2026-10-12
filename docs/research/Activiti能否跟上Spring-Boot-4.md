@@ -2,7 +2,7 @@
 
 > 研究票：[Activiti 7.1.0.M6 能否跟上 Spring Boot 4](https://github.com/lautung/guigu-oa/issues/23)  
 > 地图票：[升级到 Spring Boot 4 与 Vue 3 的依赖规格](https://github.com/lautung/guigu-oa/issues/22)  
-> 来源：本仓库 `后端代码/guigu-oa-parent`（pom、zip 部署、待处理/已处理/已发起、通过/拒绝）；Activiti / Flowable / Spring 官方文档与 GitHub 发布；Maven Central 与 Alfresco Nexus 坐标。  
+> 来源：本仓库 `server/guigu-oa-parent`（pom、zip 部署、待处理/已处理/已发起、通过/拒绝）；Activiti / Flowable / Spring 官方文档与 GitHub 发布；Maven Central 与 Alfresco Nexus 坐标。
 > 说明：在线 iframe 设计器（`onlineProcessSet`）不在必须跟上的范围；本页只报事实与来源，不推荐产品选型。
 
 ---
@@ -24,11 +24,11 @@
 
 ## 1. 本仓库实际用法（对照范围）
 
-仓库后端父 POM 是 Spring Boot **2.3.6.RELEASE**、Java **1.8**（`后端代码/guigu-oa-parent/pom.xml`）。`service-oa` 显式依赖：
+仓库后端父 POM 是 Spring Boot **2.3.6.RELEASE**、Java **1.8**（`server/guigu-oa-parent/pom.xml`）。`service-oa` 显式依赖：
 
 | 坐标 | 版本 | 文件 |
 |------|------|------|
-| `org.activiti:activiti-spring-boot-starter` | `7.1.0.M6` | `后端代码/guigu-oa-parent/service-oa/pom.xml` |
+| `org.activiti:activiti-spring-boot-starter` | `7.1.0.M6` | `server/guigu-oa-parent/service-oa/pom.xml` |
 | `org.activiti:activiti-modeler` | `5.22.0` | 同上 |
 | `org.activiti:activiti-image-generator` | `5.22.0` | 同上 |
 

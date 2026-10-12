@@ -11,8 +11,8 @@
 
 ## 1. 目标
 
-- 后端 `后端代码/guigu-oa-parent`（`service-oa`）一次跳到 **Spring Boot 4.1.0**，JDK **21**，审批引擎换成 **Flowable 8.0.0** Process starter
-- 前端 `前端代码/guigu-oa-client` 一次跳到 **Vue 3.5 + Vite 8**，组件库 **Element Plus**
+- 后端 `server/guigu-oa-parent`（`service-oa`）一次跳到 **Spring Boot 4.1.0**，JDK **21**，审批引擎换成 **Flowable 8.0.0** Process starter
+- 前端 `client/guigu-oa-client` 一次跳到 **Vue 3.5 + Vite 8**，组件库 **Element Plus**
 - 办事必须能在手机浏览器完成；配置仍按桌面
 - 合同面不动：审批模板流程 zip、待处理 / 已处理 / 已发起、HTTP 路径与请求响应形状、`oa_process` / `oa_process_record`
 

@@ -3,7 +3,7 @@
 > 研究票：[Flowable 8 如何承接 Activiti 7 存量](https://github.com/lautung/guigu-oa/issues/30)  
 > 地图票：[升级到 Spring Boot 4 与 Vue 3 的依赖规格](https://github.com/lautung/guigu-oa/issues/22)  
 > 引擎锁：[审批引擎跟不上 Boot 4 时规格怎么写](https://github.com/lautung/guigu-oa/issues/29) 已锁 `org.flowable:flowable-spring-boot-starter-process:8.0.0`，Boot 4.1.0 parent 不变，不 import Flowable BOM。  
-> 来源：本仓库 `后端代码/guigu-oa-parent`；Flowable / Activiti 官方文档与 GitHub tag `flowable-8.0.0` / `7.1.0.M6` 引擎源码；Maven Central。  
+> 来源：本仓库 `server/guigu-oa-parent`；Flowable / Activiti 官方文档与 GitHub tag `flowable-8.0.0` / `7.1.0.M6` 引擎源码；Maven Central。
 > 说明：只报官方文档与引擎源码事实，不推荐进行中审批怎么迁。在线 iframe 设计器不在范围。
 
 ---
@@ -22,7 +22,7 @@
 
 ## 1. 本仓库实际用法（对照范围）
 
-后端 `service-oa` 现用 `org.activiti:activiti-spring-boot-starter:7.1.0.M6`（`后端代码/guigu-oa-parent/service-oa/pom.xml`）。`application-dev.yml`：
+后端 `service-oa` 现用 `org.activiti:activiti-spring-boot-starter:7.1.0.M6`（`server/guigu-oa-parent/service-oa/pom.xml`）。`application-dev.yml`：
 
 | 键 | 值 |
 |----|----|

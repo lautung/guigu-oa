@@ -2,14 +2,14 @@
 
 > 研究票：[#25 Vue 3 + Vite 下统一客户端依赖的可用后继](https://github.com/lautung/guigu-oa/issues/25)  
 > 地图票：[#22 升级到 Spring Boot 4 与 Vue 3 的依赖规格](https://github.com/lautung/guigu-oa/issues/22)  
-> 来源：统一客户端 `前端代码/guigu-oa-client/package.json`；Vue / Vite / Element Plus / form-create / vue-router / Pinia / Vuex / axios / Vue Test Utils / Vitest 官方文档与 npm registry。  
+> 来源：统一客户端 `client/guigu-oa-client/package.json`；Vue / Vite / Element Plus / form-create / vue-router / Pinia / Vuex / axios / Vue Test Utils / Vitest 官方文档与 npm registry。
 > 说明：只记后继与兼容事实，**不选型、不定目标版本**。npm `dist-tag` 与「当前 latest」为 2026-08-19 观察值，规格票另钉。
 
 ---
 
 ## 0. 仓库里这些依赖怎么用
 
-统一客户端现坐标（`前端代码/guigu-oa-client/package.json`）：Vue 2.6.10 + vue-cli 4.4.4 + Element UI 2.13.2。
+统一客户端现坐标（`client/guigu-oa-client/package.json`）：Vue 2.6.10 + vue-cli 4.4.4 + Element UI 2.13.2。
 
 | 能力 | 现用法 | 仓库出处 |
 |------|--------|----------|
@@ -248,7 +248,7 @@ Vite 下现有 `process.env.VUE_APP_BASE_API` 不会按 vue-cli 规则注入，�
 
 ## 11. 主要来源
 
-- 仓库：`前端代码/guigu-oa-client/package.json`、`src/main.js`、`src/views/config/processTemplate/*`、`src/views/work/start/apply.vue`、`src/config/process-template.js`、`src/work/start-flow.js`、`src/utils/request.js`、`vue.config.js`、`jest.config.js`；根目录 `CONTEXT.md`
+- 仓库：`client/guigu-oa-client/package.json`、`src/main.js`、`src/views/config/processTemplate/*`、`src/views/work/start/apply.vue`、`src/config/process-template.js`、`src/work/start-flow.js`、`src/utils/request.js`、`vue.config.js`、`jest.config.js`；根目录 `CONTEXT.md`
 - Vue：<https://vuejs.org/guide/quick-start.html> <https://vuejs.org/guide/scaling-up/tooling.html> <https://vuejs.org/guide/scaling-up/testing.html> <https://vuejs.org/guide/scaling-up/state-management.html> <https://vuejs.org/about/faq.html> <https://v3-migration.vuejs.org/migration-build.html> <https://v3-migration.vuejs.org/breaking-changes/global-api.html>
 - Vite：<https://vitejs.dev/guide/> <https://vitejs.dev/guide/features.html> <https://vitejs.dev/guide/env-and-mode.html> <https://vitejs.dev/plugins/>
 - Vue CLI：<https://cli.vuejs.org/> <https://cli.vuejs.org/guide/mode-and-env.html>

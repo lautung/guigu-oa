@@ -1,8 +1,0 @@
-{
-    "success":true,
-    "code":200,
-    "data":[
-        {"name":"lucy","age":20},
-        {"name":"mary","age":30}
-    ]
-}
