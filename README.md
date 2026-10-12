@@ -35,6 +35,26 @@ cd client/guigu-oa-client
 npm run build:prod
 ```
 
+## 流程 zip 存储
+
+流程 zip 保存在后端文件系统的 `processes/` 子目录，不写入 classpath，也不进入审批附件桶。数据库中的 `processDefinitionPath` 是相对路径，例如 `processes/qingjia.zip`。
+
+后端目录由 `GUIGU_OA_PROCESS_DEFINITION_DIR` 配置，默认是启动目录下的 `./data/process-definitions`。容器部署应将环境变量指向持久卷挂载点，例如：
+
+```yaml
+services:
+  service-oa:
+    environment:
+      GUIGU_OA_PROCESS_DEFINITION_DIR: /var/lib/guigu-oa/process-definitions
+    volumes:
+      - process-definitions:/var/lib/guigu-oa/process-definitions
+
+volumes:
+  process-definitions:
+```
+
+上传和发布使用同一目录。容器可以只读运行，只需保证上述挂载卷可写且在容器重建后保留；后续 Compose 配置应沿用这个挂载目标。
+
 ## 领域与规格
 
 - 词汇：[CONTEXT.md](CONTEXT.md)

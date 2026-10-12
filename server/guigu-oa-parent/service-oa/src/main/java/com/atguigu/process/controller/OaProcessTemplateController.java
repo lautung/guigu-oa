@@ -3,18 +3,15 @@ package com.atguigu.process.controller;
 
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessTemplate;
+import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.parameters.P;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +30,9 @@ public class OaProcessTemplateController {
 
     @Autowired
     private OaProcessTemplateService processTemplateService;
+
+    @Autowired
+    private ProcessDefinitionStorage processDefinitionStorage;
 
     //分页查询审批模板
     @Operation(summary = "获取分页审批模板数据")
@@ -80,31 +80,19 @@ public class OaProcessTemplateController {
 
     @Operation(summary = "上传流程定义")
     @PostMapping("/uploadProcessDefinition")
-    public Result uploadProcessDefinition(MultipartFile file) throws FileNotFoundException {
-        //获取classes目录位置
-        String path = new File(ResourceUtils.getURL("classpath:")
-                          .getPath()).getAbsolutePath();
-        //设置上传文件夹
-        File tempFile = new File(path + "/processes/");
-        if(!tempFile.exists()) {
-            tempFile.mkdirs();
-        }
-        //创建空文件，实现文件写入
-        String filename = file.getOriginalFilename();
-        File zipFile = new File(path + "/processes/" + filename);
-
-        //保存文件
+    public Result uploadProcessDefinition(@RequestParam("file") MultipartFile file) {
         try {
-            file.transferTo(zipFile);
+            ProcessDefinitionStorage.UploadedProcessDefinition uploaded =
+                    processDefinitionStorage.store(file);
+            Map<String, Object> map = new HashMap<>();
+            map.put("processDefinitionPath", uploaded.processDefinitionPath());
+            map.put("processDefinitionKey", uploaded.processDefinitionKey());
+            return Result.ok(map);
+        } catch (IllegalArgumentException e) {
+            return Result.fail().message(e.getMessage());
         } catch (IOException e) {
             return Result.fail();
         }
-
-        Map<String, Object> map = new HashMap<>();
-        //根据上传地址后续部署流程定义，文件名称为流程定义的默认key
-        map.put("processDefinitionPath", "processes/" + filename);
-        map.put("processDefinitionKey", filename.substring(0, filename.lastIndexOf(".")));
-        return Result.ok(map);
     }
 
     //部署流程定义（发布）
@@ -115,16 +103,6 @@ public class OaProcessTemplateController {
         //流程定义部署
         processTemplateService.publish(id);
         return Result.ok();
-    }
-
-    public static void main(String[] args) {
-        try {
-            String path = new File(ResourceUtils.getURL("classpath:")
-                    .getPath()).getAbsolutePath();
-            System.out.println(path);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
     }
 
 }

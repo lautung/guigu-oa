@@ -8,6 +8,7 @@ import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ProcessApprovalSupport;
+import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
 import com.atguigu.process.mapper.OaProcessMapper;
@@ -52,6 +53,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     private RepositoryService repositoryService;
 
     @Autowired
+    private ProcessDefinitionStorage processDefinitionStorage;
+
+    @Autowired
     private RuntimeService runtimeService;
 
     @Autowired
@@ -82,7 +86,12 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public void deployByZip(String deployPath, String processDefinitionKey) {
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(deployPath);
+        InputStream inputStream;
+        try {
+            inputStream = processDefinitionStorage.open(deployPath);
+        } catch (IOException e) {
+            throw new IllegalStateException("读取流程 zip 失败: " + deployPath, e);
+        }
         if (inputStream == null) {
             throw new IllegalArgumentException("流程 zip 不存在: " + deployPath);
         }

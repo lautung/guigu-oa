@@ -8,6 +8,9 @@ target/
 out/
 *.class
 
+# Uploaded process definition archives
+**/data/process-definitions/
+
 # Agent scratch files
 .scratch/
 
