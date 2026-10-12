@@ -106,6 +106,19 @@ describe('work/start-flow', () => {
         })
       })
     })
+
+    it('sends the independent attachment draft id alongside form values', () => {
+      expect(buildStartPayload({
+        template: { id: 11, processTypeId: 1 },
+        formData: { days: 3 },
+        rule: [{ field: 'days', title: '请假天数' }],
+        attachmentDraftId: 'a9b8ec83-717d-4cf6-8175-3af30680efed',
+        attachmentIds: [2, 3]
+      })).toMatchObject({
+        attachmentDraftId: 'a9b8ec83-717d-4cf6-8175-3af30680efed',
+        attachmentIds: [2, 3]
+      })
+    })
   })
 
   describe('success feedback', () => {

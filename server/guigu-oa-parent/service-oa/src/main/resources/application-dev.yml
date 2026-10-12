@@ -34,6 +34,21 @@ spring:
         max-idle: 5
         min-idle: 0
 
+guigu:
+  oa:
+    attachments:
+      endpoint: ${S3_ENDPOINT:http://localhost:9000}
+      public-endpoint: ${S3_PUBLIC_ENDPOINT:http://localhost:9000}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:guigu-oa-attachments}
+      access-key: ${S3_ACCESS_KEY:local-access-key}
+      secret-key: ${S3_SECRET_KEY:local-secret-key}
+      upload-url-ttl: ${S3_UPLOAD_URL_TTL:PT5M}
+      download-url-ttl: ${S3_DOWNLOAD_URL_TTL:PT15M}
+      pending-ttl: ${S3_PENDING_TTL:PT24H}
+      cleanup-interval: ${S3_CLEANUP_INTERVAL:PT1H}
+      max-file-size-bytes: ${ATTACHMENT_MAX_FILE_SIZE_BYTES:52428800}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

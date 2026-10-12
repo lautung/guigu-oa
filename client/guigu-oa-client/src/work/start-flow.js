@@ -52,7 +52,13 @@ export function presentApplyTemplate(record) {
   }
 }
 
-export function buildStartPayload({ template, formData = {}, rule = [] }) {
+export function buildStartPayload({
+  template,
+  formData = {},
+  rule = [],
+  attachmentDraftId,
+  attachmentIds = []
+}) {
   const formShowData = {}
   rule.forEach(item => {
     if (item.field in formData) {
@@ -60,9 +66,14 @@ export function buildStartPayload({ template, formData = {}, rule = [] }) {
     }
   })
 
-  return {
+  const payload = {
     processTemplateId: template.id,
     processTypeId: template.processTypeId,
     formValues: JSON.stringify({ formData, formShowData })
   }
+  if (attachmentDraftId) {
+    payload.attachmentDraftId = attachmentDraftId
+    payload.attachmentIds = attachmentIds
+  }
+  return payload
 }

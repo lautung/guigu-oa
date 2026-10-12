@@ -9,6 +9,7 @@ import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ProcessApprovalSupport;
 import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
+import com.atguigu.process.attachment.AttachmentService;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
@@ -68,6 +69,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     @Autowired
     private OaProcessRecordService processRecordService;
 
+    @Autowired
+    private AttachmentService attachmentService;
+
     @Override
     public IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo) {
         return baseMapper.selectProcessPage(pageParam, processQueryVo);
@@ -118,6 +122,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         process.setFormValues(processFormVo.getFormValues());
         process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
         baseMapper.insert(process);
+
+        attachmentService.bindDraft(
+                user, processFormVo.getAttachmentDraftId(), processFormVo.getAttachmentIds(), process.getId());
 
         ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
                 processTemplate.getProcessDefinitionKey(),

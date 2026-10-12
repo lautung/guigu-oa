@@ -35,6 +35,22 @@ cd client/guigu-oa-client
 npm run build:prod
 ```
 
+## 审批附件对象存储
+
+附件内容使用私有 S3 兼容桶。开发环境可以用 MinIO；先创建桶，再配置：
+
+| 环境变量 | 用途 | 本地默认值 |
+|---|---|---|
+| `S3_ENDPOINT` | 后端访问对象存储的地址 | `http://localhost:9000` |
+| `S3_PUBLIC_ENDPOINT` | 浏览器直传和下载所用地址，必须从浏览器可达 | `http://localhost:9000` |
+| `S3_BUCKET` | 私有桶名称 | `guigu-oa-attachments` |
+| `S3_REGION` | S3 签名 region | `us-east-1` |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 对象存储凭据 | 本地开发占位值 |
+
+浏览器直传需要在桶上允许客户端来源的 `PUT` 和 `Content-Type` 请求头。容器部署时，`S3_ENDPOINT` 可指向 compose 内的 `http://minio:9000`，而 `S3_PUBLIC_ENDPOINT` 应指向浏览器可访问的地址；签名时使用的主机名必须与浏览器实际请求的主机名一致。不要把本地占位凭据用于部署环境。
+
+预签名上传默认 5 分钟，下载默认 15 分钟；未发起的 pending 附件在 24 小时后由后台清理任务回收。单个附件默认上限 50 MiB，可用 `ATTACHMENT_MAX_FILE_SIZE_BYTES` 调整。
+
 ## 领域与规格
 
 - 词汇：[CONTEXT.md](CONTEXT.md)

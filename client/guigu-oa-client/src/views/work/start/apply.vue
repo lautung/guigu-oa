@@ -9,14 +9,23 @@
       :option="option"
       @submit="onSubmit"
     />
+    <AttachmentSection
+      v-if="attachmentDraftId"
+      :draft-id="attachmentDraftId"
+      @busy-change="onAttachmentBusyChange"
+      @ready-change="onAttachmentReadyChange"
+      @attachments-change="onAttachmentsChange"
+    />
   </div>
 </template>
 
 <script>
+import AttachmentSection from '@/components/AttachmentSection.vue'
 import { startUp } from '@/api/process'
 import { read } from '@/config/process-template'
 import { ROUTES } from '@/navigation/constants'
 import request from '@/utils/request'
+import { clearDraftId, getOrCreateDraftId } from '@/work/attachments'
 import {
   START_SUCCESS_MESSAGE,
   buildStartPayload,
@@ -26,6 +35,7 @@ import {
 
 export default {
   name: 'WorkStartApply',
+  components: { AttachmentSection },
   data() {
     return {
       loading: false,
@@ -34,15 +44,29 @@ export default {
       rule: [],
       option: {},
       formData: {},
-      title: '发起审批'
+      title: '发起审批',
+      attachmentDraftId: '',
+      attachmentIds: [],
+      attachmentBusy: false,
+      attachmentReady: false
     }
   },
   created() {
+    this.attachmentDraftId = getOrCreateDraftId(this.$route.params.processTemplateId)
     this.fetchTemplate()
   },
   methods: {
     goBack() {
       this.$router.push(ROUTES.START)
+    },
+    onAttachmentBusyChange(busy) {
+      this.attachmentBusy = busy
+    },
+    onAttachmentReadyChange(ready) {
+      this.attachmentReady = ready
+    },
+    onAttachmentsChange(ids) {
+      this.attachmentIds = ids
     },
     fetchTemplate() {
       this.loading = true
@@ -64,13 +88,24 @@ export default {
       if (this.submitting) {
         return
       }
+      if (this.attachmentBusy) {
+        this.$message.warning('请等待附件上传完成')
+        return
+      }
+      if (!this.attachmentReady) {
+        this.$message.warning('请等待附件读取完成；若读取失败，请重试')
+        return
+      }
       this.submitting = true
       const payload = buildStartPayload({
         template: this.template,
         formData,
-        rule: this.rule
+        rule: this.rule,
+        attachmentDraftId: this.attachmentDraftId,
+        attachmentIds: this.attachmentIds
       })
       startUp(payload).then(() => {
+        clearDraftId(this.$route.params.processTemplateId)
         this.$message.success(START_SUCCESS_MESSAGE)
         this.$router.push(postStartSuccessRoute())
       }).finally(() => {
