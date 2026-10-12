@@ -15,7 +15,7 @@
             class="template-card"
             @click="openApply(template.id)"
           >
-            <img v-if="template.iconUrl" :src="template.iconUrl" alt="">
+            <img v-if="template.iconUrl" :src="template.iconUrl" alt="" />
             <span>{{ template.name }}</span>
           </button>
         </div>
@@ -24,17 +24,20 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { findStartable } from '@/config/process-template'
 import request from '@/utils/request'
 import { applyPath } from '@/work/start-flow'
+import type { EntityId, ProcessTemplateStartGroup } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'WorkStart',
   data() {
     return {
       loading: false,
-      groups: []
+      groups: [] as ProcessTemplateStartGroup[],
     }
   },
   created() {
@@ -43,17 +46,19 @@ export default {
   methods: {
     fetchGroups() {
       this.loading = true
-      findStartable(request).then(groups => {
-        this.groups = groups
-      }).finally(() => {
-        this.loading = false
-      })
+      findStartable(request)
+        .then((groups) => {
+          this.groups = groups
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
-    openApply(templateId) {
-      this.$router.push(applyPath(templateId))
-    }
-  }
-}
+    openApply(templateId: EntityId | undefined) {
+      if (templateId != null) this.$router.push(applyPath(templateId))
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

@@ -5,7 +5,7 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-form :inline="true" class="filter-form" @submit.native.prevent="search">
+    <el-form :inline="true" class="filter-form" @submit.prevent="search">
       <el-form-item label="角色名称">
         <el-input v-model="roleName" placeholder="角色名称" clearable />
       </el-form-item>
@@ -21,9 +21,11 @@
       <el-table-column prop="roleCode" label="角色编码" />
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="220" align="center">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-button type="text" @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button type="text" @click="openAssign(scope.row)">菜单授权</el-button>
+          <el-button type="text" @click="openAssign(scope.row.id, scope.row.roleName)"
+            >菜单授权</el-button
+          >
           <el-button type="text" @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -41,7 +43,7 @@
       />
     </div>
 
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="480px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
       <el-form label-width="80px">
         <el-form-item label="角色名称">
           <el-input v-model="form.roleName" />
@@ -50,23 +52,28 @@
           <el-input v-model="form.roleCode" />
         </el-form-item>
       </el-form>
-      <span slot="footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
-      </span>
+      <template #footer>
+        <div>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { getById, getPageList, removeById, saveOrUpdate } from '@/api/sysRole'
 import { assignAuthPath, emptyForm, presentForm, presentListPage } from '@/config/sys-role'
+import type { EntityId, RoleListItem } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'SysRoleList',
   data() {
     return {
-      list: [],
+      list: [] as RoleListItem[],
       loading: false,
       page: 1,
       limit: 10,
@@ -74,33 +81,35 @@ export default {
       roleName: '',
       dialogVisible: false,
       saving: false,
-      form: emptyForm()
+      form: emptyForm(),
     }
   },
   computed: {
     dialogTitle() {
       return this.form.id ? '编辑角色' : '新建角色'
-    }
+    },
   },
   created() {
     this.fetchList()
   },
   methods: {
-    rowIndex(index) {
+    rowIndex(index: number) {
       return (this.page - 1) * this.limit + index + 1
     },
-    searchObj() {
+    searchObj(): Record<string, string | number> {
       return this.roleName ? { roleName: this.roleName } : {}
     },
     fetchList() {
       this.loading = true
-      getPageList(this.page, this.limit, this.searchObj()).then(response => {
-        const page = presentListPage(response.data || {})
-        this.list = page.records
-        this.total = page.total
-      }).finally(() => {
-        this.loading = false
-      })
+      getPageList(this.page, this.limit, this.searchObj())
+        .then((response) => {
+          const page = presentListPage(response.data || {})
+          this.list = page.records
+          this.total = page.total
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
     search() {
       this.page = 1
@@ -110,11 +119,11 @@ export default {
       this.roleName = ''
       this.search()
     },
-    handlePageChange(page) {
+    handlePageChange(page: number) {
       this.page = page
       this.fetchList()
     },
-    handleSizeChange(limit) {
+    handleSizeChange(limit: number) {
       this.limit = limit
       this.page = 1
       this.fetchList()
@@ -123,37 +132,42 @@ export default {
       this.form = emptyForm()
       this.dialogVisible = true
     },
-    openEdit(id) {
-      getById(id).then(response => {
+    openEdit(id: EntityId) {
+      getById(id).then((response) => {
         this.form = presentForm(response.data || {})
         this.dialogVisible = true
       })
     },
-    openAssign(row) {
-      this.$router.push(assignAuthPath(row.id, row.roleName))
+    openAssign(id: EntityId, roleName?: string) {
+      this.$router.push(assignAuthPath(id, roleName))
     },
     save() {
       this.saving = true
-      saveOrUpdate(this.form).then(response => {
-        this.$message.success(response.message || '操作成功')
-        this.dialogVisible = false
-        this.fetchList()
-      }).finally(() => {
-        this.saving = false
-      })
+      saveOrUpdate(this.form)
+        .then((response) => {
+          this.$message.success(response.message || '操作成功')
+          this.dialogVisible = false
+          this.fetchList()
+        })
+        .finally(() => {
+          this.saving = false
+        })
     },
-    remove(id) {
+    remove(id: EntityId) {
       this.$confirm('此操作将永久删除该角色, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => removeById(id)).then(response => {
-        this.$message.success(response.message || '删除成功')
-        this.fetchList()
-      }).catch(() => {})
-    }
-  }
-}
+        type: 'warning',
+      })
+        .then(() => removeById(id))
+        .then((response) => {
+          this.$message.success(response.message || '删除成功')
+          this.fetchList()
+        })
+        .catch(() => {})
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

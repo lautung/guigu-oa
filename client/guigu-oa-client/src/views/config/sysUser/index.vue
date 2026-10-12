@@ -5,7 +5,7 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-form :inline="true" class="filter-form" @submit.native.prevent="search">
+    <el-form :inline="true" class="filter-form" @submit.prevent="search">
       <el-form-item label="关键字">
         <el-input v-model="keyword" placeholder="用户名/姓名/手机号码" clearable />
       </el-form-item>
@@ -21,18 +21,20 @@
       <el-table-column prop="name" label="姓名" />
       <el-table-column prop="phone" label="手机" />
       <el-table-column label="状态" width="90" align="center">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-switch
             :value="scope.row.statusEnabled"
-            @change="toggleStatus(scope.row)"
+            @change="toggleStatus(scope.row.id, scope.row.statusEnabled)"
           />
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="220" align="center">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-button type="text" @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button type="text" @click="openAssignRoles(scope.row)">分配角色</el-button>
+          <el-button type="text" @click="openAssignRoles(scope.row.id, scope.row.username)"
+            >分配角色</el-button
+          >
           <el-button type="text" @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -50,7 +52,7 @@
       />
     </div>
 
-    <el-dialog :title="dialogTitle" :visible.sync="dialogVisible" width="480px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
       <el-form label-width="80px">
         <el-form-item label="用户名">
           <el-input v-model="form.username" />
@@ -65,37 +67,44 @@
           <el-input v-model="form.phone" />
         </el-form-item>
       </el-form>
-      <span slot="footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
-      </span>
+      <template #footer>
+        <div>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="saving" @click="save">确定</el-button>
+        </div>
+      </template>
     </el-dialog>
 
-    <el-dialog title="分配角色" :visible.sync="roleDialogVisible" width="480px">
+    <el-dialog v-model="roleDialogVisible" title="分配角色" width="480px">
       <p class="assign-user">用户：{{ assignUser.username }}</p>
       <el-checkbox-group v-model="assignedRoleIds">
         <el-checkbox v-for="role in allRoles" :key="role.id" :label="role.id">
           {{ role.roleName }}
         </el-checkbox>
       </el-checkbox-group>
-      <span slot="footer">
-        <el-button @click="roleDialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="savingRoles" @click="saveRoles">保存</el-button>
-      </span>
+      <template #footer>
+        <div>
+          <el-button @click="roleDialogVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="savingRoles" @click="saveRoles">保存</el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import { getById, getPageList, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import { assignRoles, getRoles } from '@/api/sysRole'
 import { emptyForm, presentForm, presentListPage } from '@/config/sys-user'
+import type { EntityId, RoleListItem, UserListItem } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'SysUserList',
   data() {
     return {
-      list: [],
+      list: [] as UserListItem[],
       loading: false,
       page: 1,
       limit: 10,
@@ -106,35 +115,37 @@ export default {
       form: emptyForm(),
       roleDialogVisible: false,
       savingRoles: false,
-      assignUser: { id: '', username: '' },
-      allRoles: [],
-      assignedRoleIds: []
+      assignUser: { id: '' as EntityId | '', username: '' },
+      allRoles: [] as RoleListItem[],
+      assignedRoleIds: [] as EntityId[],
     }
   },
   computed: {
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
-    }
+    },
   },
   created() {
     this.fetchList()
   },
   methods: {
-    rowIndex(index) {
+    rowIndex(index: number) {
       return (this.page - 1) * this.limit + index + 1
     },
-    searchObj() {
+    searchObj(): Record<string, string | number> {
       return this.keyword ? { keyword: this.keyword } : {}
     },
     fetchList() {
       this.loading = true
-      getPageList(this.page, this.limit, this.searchObj()).then(response => {
-        const page = presentListPage(response.data || {})
-        this.list = page.records
-        this.total = page.total
-      }).finally(() => {
-        this.loading = false
-      })
+      getPageList(this.page, this.limit, this.searchObj())
+        .then((response) => {
+          const page = presentListPage(response.data || {})
+          this.list = page.records
+          this.total = page.total
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
     search() {
       this.page = 1
@@ -144,11 +155,11 @@ export default {
       this.keyword = ''
       this.search()
     },
-    handlePageChange(page) {
+    handlePageChange(page: number) {
       this.page = page
       this.fetchList()
     },
-    handleSizeChange(limit) {
+    handleSizeChange(limit: number) {
       this.limit = limit
       this.page = 1
       this.fetchList()
@@ -157,60 +168,68 @@ export default {
       this.form = emptyForm()
       this.dialogVisible = true
     },
-    openEdit(id) {
-      getById(id).then(response => {
+    openEdit(id: EntityId) {
+      getById(id).then((response) => {
         this.form = presentForm(response.data || {})
         this.dialogVisible = true
       })
     },
     save() {
       this.saving = true
-      saveOrUpdate(this.form).then(response => {
-        this.$message.success(response.message || '操作成功')
-        this.dialogVisible = false
-        this.fetchList()
-      }).finally(() => {
-        this.saving = false
-      })
+      saveOrUpdate(this.form)
+        .then((response) => {
+          this.$message.success(response.message || '操作成功')
+          this.dialogVisible = false
+          this.fetchList()
+        })
+        .finally(() => {
+          this.saving = false
+        })
     },
-    remove(id) {
+    remove(id: EntityId) {
       this.$confirm('此操作将永久删除该用户, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => removeById(id)).then(response => {
-        this.$message.success(response.message || '删除成功')
-        this.fetchList()
-      }).catch(() => {})
+        type: 'warning',
+      })
+        .then(() => removeById(id))
+        .then((response) => {
+          this.$message.success(response.message || '删除成功')
+          this.fetchList()
+        })
+        .catch(() => {})
     },
-    toggleStatus(row) {
-      const nextStatus = row.statusEnabled ? 0 : 1
-      updateStatus(row.id, nextStatus).then(response => {
+    toggleStatus(id: EntityId, statusEnabled: boolean) {
+      const nextStatus = statusEnabled ? 0 : 1
+      updateStatus(id, nextStatus).then((response) => {
         this.$message.success(response.message || '操作成功')
         this.fetchList()
       })
     },
-    openAssignRoles(row) {
-      this.assignUser = { id: row.id, username: row.username }
+    openAssignRoles(id: EntityId, username?: string) {
+      this.assignUser = { id, username: username || '' }
       this.roleDialogVisible = true
-      getRoles(row.id).then(response => {
-        const data = response.data || {}
-        this.allRoles = data.allRolesList || []
-        this.assignedRoleIds = (data.assginRoleList || []).map(item => item.id)
+      getRoles(id).then((response) => {
+        this.allRoles = response.data.allRolesList || []
+        this.assignedRoleIds = (response.data.assginRoleList || []).flatMap((item) =>
+          item.id == null ? [] : [item.id],
+        )
       })
     },
     saveRoles() {
       this.savingRoles = true
-      assignRoles(this.assignUser.id, this.assignedRoleIds).then(response => {
-        this.$message.success(response.message || '分配角色成功')
-        this.roleDialogVisible = false
-        this.fetchList()
-      }).finally(() => {
-        this.savingRoles = false
-      })
-    }
-  }
-}
+      assignRoles(this.assignUser.id, this.assignedRoleIds)
+        .then((response) => {
+          this.$message.success(response.message || '分配角色成功')
+          this.roleDialogVisible = false
+          this.fetchList()
+        })
+        .finally(() => {
+          this.savingRoles = false
+        })
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

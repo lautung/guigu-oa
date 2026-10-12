@@ -1,10 +1,6 @@
 <template>
   <li class="sidebar-node">
-    <router-link
-      :to="item.path"
-      class="menu-link"
-      :class="{ active: isActive }"
-    >
+    <router-link :to="item.path" class="menu-link" :class="{ active: isActive }">
       {{ item.title }}
     </router-link>
     <ul v-if="item.children && item.children.length" class="submenu-list">
@@ -18,25 +14,29 @@
   </li>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from 'vue'
+import type { PropType } from 'vue'
+import type { SidebarItem } from '@/types/domain'
+
+export default defineComponent({
   name: 'SidebarNode',
   props: {
     item: {
-      type: Object,
-      required: true
+      type: Object as PropType<SidebarItem>,
+      required: true,
     },
     activePath: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
     isActive() {
       return this.activePath === this.item.path || this.activePath.startsWith(`${this.item.path}/`)
-    }
-  }
-}
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

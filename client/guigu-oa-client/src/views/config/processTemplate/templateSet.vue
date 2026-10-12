@@ -18,7 +18,7 @@
               v-for="item in processTypeList"
               :key="item.id"
               :label="item.name"
-              :value="item.id"
+              :value="item.id ?? ''"
             />
           </el-select>
         </el-form-item>
@@ -33,7 +33,7 @@
               :label="item.tag"
               :value="item.iconUrl"
             >
-              <img :src="item.iconUrl" class="template-icon" alt="">
+              <img :src="item.iconUrl" class="template-icon" alt="" />
               <span>{{ item.tag }}</span>
             </el-option>
           </el-select>
@@ -68,7 +68,10 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+import type { UploadRawFile } from 'element-plus'
+
 import { findAll as findAllProcessTypes } from '@/api/processType'
 import {
   applyFormDesign,
@@ -80,25 +83,38 @@ import {
   saveValidationError,
   TEMPLATE_ICONS,
   uploadProcessDefinitionUrl,
-  zipUploadError
+  zipUploadError,
 } from '@/config/process-template'
 import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
+import type { ApiResponse, FormDesignerOption, FormRule, ProcessTypeRecord } from '@/types/domain'
+
+interface FormDesignerInstance {
+  setRule(rule: FormRule[]): void
+  setOption(option: FormDesignerOption): void
+  getRule(): FormRule[]
+  getOption(): FormDesignerOption
+}
+
+interface ProcessDefinitionUploadResult {
+  processDefinitionPath?: string
+  processDefinitionKey?: string
+}
 
 const WIZARD_STEPS = ['基本设置', '表单设置', '流程设置']
 
-export default {
+export default defineComponent({
   name: 'ProcessTemplateSet',
   data() {
     return {
       stepIndex: 0,
       saving: false,
-      processTypeList: [],
+      processTypeList: [] as ProcessTypeRecord[],
       form: emptyForm(),
       iconList: TEMPLATE_ICONS,
       wizardSteps: WIZARD_STEPS,
       uploadUrl: uploadProcessDefinitionUrl(),
-      fileList: []
+      fileList: [] as Array<{ name: string; url: string }>,
     }
   },
   computed: {
@@ -106,24 +122,25 @@ export default {
       return this.stepIndex >= this.wizardSteps.length - 1 ? '提交保存' : '下一步'
     },
     uploadHeaders() {
-      return { token: getToken() }
-    }
+      const token = getToken()
+      return token ? { token } : {}
+    },
   },
   created() {
     this.fetchProcessTypes()
     const id = this.$route.query.id
-    if (id) {
+    if (typeof id === 'string') {
       this.fetchById(id)
     }
   },
   methods: {
     fetchProcessTypes() {
-      findAllProcessTypes().then(response => {
+      findAllProcessTypes().then((response) => {
         this.processTypeList = response.data || []
       })
     },
-    fetchById(id) {
-      read(id, request).then(form => {
+    fetchById(id: string | number) {
+      read(id, request).then((form) => {
         this.form = form
         this.fileList = this.form.processDefinitionPath
           ? [{ name: this.form.processDefinitionPath, url: this.form.processDefinitionPath }]
@@ -132,20 +149,22 @@ export default {
       })
     },
     restoreDesigner() {
-      if (!this.$refs.designer) {
+      const designer = this.$refs.designer as unknown as FormDesignerInstance | undefined
+      if (!designer) {
         return
       }
       const design = presentDesignerState(this.form)
-      this.$refs.designer.setRule(design.rule)
-      this.$refs.designer.setOption(design.option)
+      designer.setRule(design.rule)
+      designer.setOption(design.option)
     },
     captureDesigner() {
-      if (!this.$refs.designer) {
+      const designer = this.$refs.designer as unknown as FormDesignerInstance | undefined
+      if (!designer) {
         return
       }
       this.form = applyFormDesign(this.form, {
-        rule: this.$refs.designer.getRule(),
-        option: this.$refs.designer.getOption()
+        rule: designer.getRule(),
+        option: designer.getOption(),
       })
     },
     prev() {
@@ -173,7 +192,7 @@ export default {
       }
       return true
     },
-    beforeUpload(file) {
+    beforeUpload(file: UploadRawFile) {
       const error = zipUploadError(file)
       if (error) {
         this.$message.error(error)
@@ -181,7 +200,7 @@ export default {
       }
       return true
     },
-    onUploadSuccess(res) {
+    onUploadSuccess(res: ApiResponse<ProcessDefinitionUploadResult>) {
       if (!res || res.code !== 200) {
         this.$message.error((res && res.message) || '上传失败')
         return
@@ -194,7 +213,7 @@ export default {
     onUploadRemove() {
       this.form = applyUploadResult(this.form, {
         processDefinitionPath: '',
-        processDefinitionKey: ''
+        processDefinitionKey: '',
       })
       this.fileList = []
     },
@@ -205,18 +224,20 @@ export default {
         return
       }
       this.saving = true
-      saveUnpublished(this.form, request).then(response => {
-        this.$message.success(response.message || '保存成功')
-        this.back()
-      }).finally(() => {
-        this.saving = false
-      })
+      saveUnpublished(this.form, request)
+        .then((response) => {
+          this.$message.success(response.message || '保存成功')
+          this.back()
+        })
+        .finally(() => {
+          this.saving = false
+        })
     },
     back() {
       this.$router.push('/processSet/processTemplate')
-    }
-  }
-}
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

@@ -21,58 +21,85 @@
   </div>
 </template>
 
-<script>
-import { doAssign, getByIdForAssign } from '@/api/sysMenu'
-import { collectCheckedIds, mergeAssignMenuIds, presentAssignableConfigMenus } from '@/config/sys-menu'
-import { useUserStore } from '@/store/modules/user'
+<script lang="ts">
+import { defineComponent } from 'vue'
 
-export default {
+import { doAssign, getByIdForAssign } from '@/api/sysMenu'
+import {
+  collectCheckedIds,
+  mergeAssignMenuIds,
+  presentAssignableConfigMenus,
+} from '@/config/sys-menu'
+import { useUserStore } from '@/store/modules/user'
+import type { EntityId, MenuNode } from '@/types/domain'
+
+interface MenuTreeInstance {
+  setCheckedKeys(keys: EntityId[]): void
+  getCheckedNodes(leafOnly?: boolean, includeHalfChecked?: boolean): MenuNode[]
+}
+
+function queryValue(value: string | null | Array<string | null> | undefined): string {
+  return Array.isArray(value) ? value[0] || '' : value || ''
+}
+
+export default defineComponent({
   name: 'AssignAuth',
   data() {
     return {
       saving: false,
-      fullTree: [],
-      menuTree: [],
+      fullTree: [] as MenuNode[],
+      menuTree: [] as MenuNode[],
       treeProps: {
         children: 'children',
-        label: 'name'
-      }
+        label: 'name',
+      },
     }
   },
   computed: {
     roleName() {
-      return this.$route.query.roleName || ''
-    }
+      return queryValue(this.$route.query.roleName)
+    },
   },
   created() {
     this.fetchTree()
   },
   methods: {
     fetchTree() {
-      getByIdForAssign(this.$route.query.id).then(response => {
+      const roleId = queryValue(this.$route.query.id)
+      if (!roleId) return
+      getByIdForAssign(roleId).then((response) => {
         this.fullTree = response.data || []
         this.menuTree = presentAssignableConfigMenus(this.fullTree)
         this.$nextTick(() => {
-          this.$refs.tree.setCheckedKeys(collectCheckedIds(this.menuTree))
+          const tree = this.$refs.tree as unknown as MenuTreeInstance | undefined
+          tree?.setCheckedKeys(collectCheckedIds(this.menuTree))
         })
       })
     },
     save() {
-      const checkedNodes = this.$refs.tree.getCheckedNodes(false, true)
-      const checkedIds = checkedNodes.map(node => node.id)
+      const roleId = queryValue(this.$route.query.id)
+      const tree = this.$refs.tree as unknown as MenuTreeInstance | undefined
+      if (!roleId || !tree) return
+      const checkedNodes = tree.getCheckedNodes(false, true)
+      const checkedIds = checkedNodes.flatMap((node) => (node.id == null ? [] : [node.id]))
       const menuIdList = mergeAssignMenuIds(checkedIds, this.fullTree)
       this.saving = true
-      doAssign(this.$route.query.id, menuIdList).then(response => {
-        this.$message.success(response.message || '保存成功')
-        return useUserStore().getInfo().catch(() => {})
-      }).then(() => {
-        this.$router.push('/system/sysRole')
-      }).finally(() => {
-        this.saving = false
-      })
-    }
-  }
-}
+      doAssign(roleId, menuIdList)
+        .then((response) => {
+          this.$message.success(response.message || '保存成功')
+          return useUserStore()
+            .getInfo()
+            .catch(() => {})
+        })
+        .then(() => {
+          this.$router.push('/system/sysRole')
+        })
+        .finally(() => {
+          this.saving = false
+        })
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

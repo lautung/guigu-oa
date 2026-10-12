@@ -19,7 +19,9 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import AttachmentSection from '@/components/AttachmentSection.vue'
 import { startUp } from '@/api/process'
 import { read } from '@/config/process-template'
@@ -30,64 +32,76 @@ import {
   START_SUCCESS_MESSAGE,
   buildStartPayload,
   postStartSuccessRoute,
-  presentApplyTemplate
+  presentApplyTemplate,
 } from '@/work/start-flow'
+import type { ApplyTemplate } from '@/work/start-flow'
+import type { EntityId, FormDataRecord, FormDesignerOption, FormRule } from '@/types/domain'
 
-export default {
+export default defineComponent({
   name: 'WorkStartApply',
   components: { AttachmentSection },
   data() {
     return {
       loading: false,
       submitting: false,
-      template: null,
-      rule: [],
-      option: {},
-      formData: {},
+      template: null as Extract<ApplyTemplate, { ok: true }> | null,
+      rule: [] as FormRule[],
+      option: {} as FormDesignerOption,
+      formData: {} as FormDataRecord,
       title: '发起审批',
       attachmentDraftId: '',
-      attachmentIds: [],
+      attachmentIds: [] as EntityId[],
       attachmentBusy: false,
-      attachmentReady: false
+      attachmentReady: false,
     }
   },
   created() {
-    this.attachmentDraftId = getOrCreateDraftId(this.$route.params.processTemplateId)
-    this.fetchTemplate()
+    const templateId = this.$route.params.processTemplateId
+    if (typeof templateId === 'string') {
+      this.attachmentDraftId = getOrCreateDraftId(templateId)
+      this.fetchTemplate()
+    } else {
+      this.goBack()
+    }
   },
   methods: {
     goBack() {
       this.$router.push(ROUTES.START)
     },
-    onAttachmentBusyChange(busy) {
+    onAttachmentBusyChange(busy: boolean) {
       this.attachmentBusy = busy
     },
-    onAttachmentReadyChange(ready) {
+    onAttachmentReadyChange(ready: boolean) {
       this.attachmentReady = ready
     },
-    onAttachmentsChange(ids) {
+    onAttachmentsChange(ids: EntityId[]) {
       this.attachmentIds = ids
     },
     fetchTemplate() {
+      const templateId = this.$route.params.processTemplateId
+      if (typeof templateId !== 'string') return
       this.loading = true
-      read(this.$route.params.processTemplateId, request).then(template => {
-        const presented = presentApplyTemplate(template)
-        if (!presented.ok) {
-          this.$router.replace(presented.redirectTo)
-          return
-        }
-        this.template = presented
-        this.title = presented.name || '发起审批'
-        this.rule = presented.rule
-        this.option = presented.option
-      }).finally(() => {
-        this.loading = false
-      })
+      read(templateId, request)
+        .then((template) => {
+          const presented = presentApplyTemplate(template)
+          if (!presented.ok) {
+            this.$router.replace(presented.redirectTo)
+            return
+          }
+          this.template = presented
+          this.title = presented.name || '发起审批'
+          this.rule = presented.rule
+          this.option = presented.option
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
-    onSubmit(formData) {
+    onSubmit(formData: FormDataRecord) {
       if (this.submitting) {
         return
       }
+      if (!this.template) return
       if (this.attachmentBusy) {
         this.$message.warning('请等待附件上传完成')
         return
@@ -97,23 +111,26 @@ export default {
         return
       }
       this.submitting = true
+      const template = this.template
       const payload = buildStartPayload({
-        template: this.template,
+        template,
         formData,
         rule: this.rule,
         attachmentDraftId: this.attachmentDraftId,
-        attachmentIds: this.attachmentIds
+        attachmentIds: this.attachmentIds,
       })
-      startUp(payload).then(() => {
-        clearDraftId(this.$route.params.processTemplateId)
-        this.$message.success(START_SUCCESS_MESSAGE)
-        this.$router.push(postStartSuccessRoute())
-      }).finally(() => {
-        this.submitting = false
-      })
-    }
-  }
-}
+      startUp(payload)
+        .then(() => {
+          clearDraftId(template.id)
+          this.$message.success(START_SUCCESS_MESSAGE)
+          this.$router.push(postStartSuccessRoute())
+        })
+        .finally(() => {
+          this.submitting = false
+        })
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>

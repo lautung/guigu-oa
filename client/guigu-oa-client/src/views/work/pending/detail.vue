@@ -47,79 +47,87 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue'
+
 import AttachmentSection from '@/components/AttachmentSection.vue'
 import { show, approve } from '@/api/process'
-import {
-  buildApprovalPayload,
-  postApprovalRoute,
-  presentDetail
-} from '@/work/pending-flow'
+import { buildApprovalPayload, postApprovalRoute, presentDetail } from '@/work/pending-flow'
 import { resolveClientSurface } from '@/surface/client-surface'
 import { workListPerspectiveFromRoute } from '@/work/work-list'
+import type { ProcessDetailViewModel } from '@/work/pending-flow'
 
-export default {
+export default defineComponent({
   name: 'PendingDetail',
   components: { AttachmentSection },
   data() {
     return {
       loading: false,
       submitting: false,
-      detail: null
+      detail: null as ProcessDetailViewModel | null,
     }
-  },
-  created() {
-    this.fetchDetail()
   },
   computed: {
     detailSections() {
       if (!this.detail) return []
       if (this.detail.recordsFirst) return ['records', 'form']
       return ['form', 'records']
-    }
+    },
+  },
+  created() {
+    this.fetchDetail()
   },
   methods: {
     fetchDetail() {
+      const processId = this.$route.params.id
+      if (typeof processId !== 'string') return
       this.loading = true
-      show(this.$route.params.id).then(response => {
-        this.detail = presentDetail(
-          response.data || {},
-          workListPerspectiveFromRoute(this.$route)
-        )
-      }).finally(() => {
-        this.loading = false
-      })
+      show(processId)
+        .then((response) => {
+          this.detail = presentDetail(
+            response.data || {},
+            workListPerspectiveFromRoute(this.$route),
+          )
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
-    submitApproval(status) {
+    submitApproval(status: number) {
+      const detail = this.detail
+      const taskId = this.$route.params.taskId
+      if (!detail?.id || typeof taskId !== 'string') return
       const payload = buildApprovalPayload({
-        processId: this.detail.id,
-        taskId: this.$route.params.taskId,
-        status
+        processId: detail.id,
+        taskId,
+        status,
       })
       this.submitting = true
-      approve(payload).then(() => {
-        this.$router.push(postApprovalRoute())
-      }).finally(() => {
-        this.submitting = false
-      })
+      approve(payload)
+        .then(() => {
+          this.$router.push(postApprovalRoute())
+        })
+        .finally(() => {
+          this.submitting = false
+        })
     },
     goBack() {
-      const returnPath = this.detail && this.detail.perspective && this.detail.perspective.returnPath
+      const returnPath = this.detail?.perspective?.returnPath
       if (returnPath) {
         this.$router.push(returnPath)
         return
       }
       const surface = resolveClientSurface({
-        path: this.$route.path
+        path: this.$route.path,
       })
       if (surface.returnPath) {
         this.$router.push(surface.returnPath)
         return
       }
       this.$router.push({ name: 'Pending' })
-    }
-  }
-}
+    },
+  },
+})
 </script>
 
 <style lang="scss" scoped>
