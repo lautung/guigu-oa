@@ -16,7 +16,7 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_flyway_contract;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @ActiveProfiles("test")
 class FlywayMigrationContractTest {
 
@@ -43,7 +43,9 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user WHERE username = 'admin' AND id = 1"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user WHERE username = 'user'"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE path = '/system' AND parent_id = 0"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 2"));
         assertEquals(1, count("SELECT COUNT(*) FROM oa_process_template WHERE name = '请假申请' AND status = 1"));
+        assertEquals(0, count("SELECT COUNT(*) FROM oa_process_template WHERE name LIKE '%草稿%'"));
 
         List<String> tableNames = tableNames();
         BUSINESS_TABLES.forEach(table -> assertTrue(
