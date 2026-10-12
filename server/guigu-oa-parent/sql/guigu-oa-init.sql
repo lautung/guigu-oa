@@ -13,7 +13,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE IF NOT EXISTS `sys_user` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
   `username` VARCHAR(20) DEFAULT NULL COMMENT '用户名',
-  `password` VARCHAR(100) DEFAULT NULL COMMENT '密码(MD5)',
+  `password` VARCHAR(100) DEFAULT NULL COMMENT '密码(BCrypt)',
   `name` VARCHAR(20) DEFAULT NULL COMMENT '姓名',
   `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机',
   `head_url` VARCHAR(200) DEFAULT NULL COMMENT '头像地址',
@@ -162,14 +162,14 @@ CREATE TABLE IF NOT EXISTS `oa_process_record` (
 
 -- ----------------------------
 -- 种子数据：超级管理员（id=1，登录后自动拥有全部配置菜单权限）
--- 密码为 MD5('111111') = 96e79218965eb72c92a549dd5a330112
+-- 密码为 BCrypt('111111')，与登录口令 111111 对应
 -- ----------------------------
 INSERT INTO `sys_user` (`id`,`username`,`password`,`name`,`phone`,`status`,`create_time`,`update_time`,`is_deleted`)
-SELECT 1,'admin','96e79218965eb72c92a549dd5a330112','管理员','13800000000',1,NOW(),NOW(),0
+SELECT 1,'admin','$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa','管理员','13800000000',1,NOW(),NOW(),0
 WHERE NOT EXISTS (SELECT 1 FROM `sys_user` WHERE `username`='admin');
 
 INSERT INTO `sys_user` (`username`,`password`,`name`,`phone`,`status`,`create_time`,`update_time`,`is_deleted`)
-SELECT 'user','96e79218965eb72c92a549dd5a330112','办事用户','13800000001',1,NOW(),NOW(),0
+SELECT 'user','$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa','办事用户','13800000001',1,NOW(),NOW(),0
 WHERE NOT EXISTS (SELECT 1 FROM `sys_user` WHERE `username`='user');
 
 -- ----------------------------

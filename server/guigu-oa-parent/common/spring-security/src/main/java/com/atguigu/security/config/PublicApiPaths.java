@@ -3,6 +3,7 @@ package com.atguigu.security.config;
 public final class PublicApiPaths {
 
     public static final String[] REQUEST_MATCHERS = {
+            "/admin/system/index/refresh",
             "/v3/api-docs",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -22,7 +23,8 @@ public final class PublicApiPaths {
         if ("/admin/system/index/login".equals(uri)) {
             return true;
         }
-        return "/v3/api-docs".equals(uri)
+        return "/admin/system/index/refresh".equals(uri)
+                || "/v3/api-docs".equals(uri)
                 || uri.startsWith("/v3/api-docs/")
                 || "/swagger-ui.html".equals(uri)
                 || uri.startsWith("/swagger-ui/")

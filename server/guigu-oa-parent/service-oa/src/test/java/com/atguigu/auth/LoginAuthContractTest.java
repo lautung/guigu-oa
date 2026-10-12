@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
+import com.atguigu.auth.service.SysUserService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,6 +34,9 @@ public class LoginAuthContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     @Test
     public void correctUsernameAndPasswordReturnToken() throws Exception {
@@ -43,6 +48,93 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.routers").doesNotExist())
                 .andExpect(jsonPath("$.data.buttons").doesNotExist());
+    }
+
+    @Test
+    public void loginReturnsAccessAndRefreshTokens() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    public void refreshRenewsAccessWithoutExtendingRefreshLifetimeAndAccessTokenCannotRefresh() throws Exception {
+        String loginBody = mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String accessToken = JsonPath.read(loginBody, "$.data.token");
+        String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+
+        String refreshedBody = mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String nextRefreshToken = JsonPath.read(refreshedBody, "$.data.refreshToken");
+        assertEquals(refreshToken, nextRefreshToken);
+
+        mockMvc.perform(get("/admin/system/index/info")
+                        .header("token", refreshToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + accessToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void disabledUserCannotRecognizeAnAlreadyIssuedAccessToken() throws Exception {
+        String loginBody = mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String accessToken = JsonPath.read(loginBody, "$.data.token");
+
+        sysUserService.updateStatus(1L, 0);
+
+        mockMvc.perform(get("/admin/system/index/info")
+                        .header("token", accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(209));
+    }
+
+    @Test
+    public void disabledUserCannotRefreshAnAlreadyIssuedRefreshToken() throws Exception {
+        String loginBody = mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+
+        sysUserService.updateStatus(1L, 0);
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(209));
     }
 
     @Test

@@ -26,9 +26,11 @@ import java.util.Map;
 public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JwtHelper jwtHelper;
 
-    public TokenLoginFilter(AuthenticationManager authenticationManager) {
+    public TokenLoginFilter(AuthenticationManager authenticationManager, JwtHelper jwtHelper) {
         this.setAuthenticationManager(authenticationManager);
+        this.jwtHelper = jwtHelper;
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
@@ -59,11 +61,12 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
             ResponseUtil.out(response, Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
             return;
         }
-        String token = JwtHelper.createToken(customUser.getSysUser().getId(),
-                customUser.getSysUser().getUsername());
+        JwtHelper.TokenPair tokenPair = jwtHelper.createTokenPair(
+                customUser.getSysUser().getId(), customUser.getSysUser().getUsername());
 
         Map<String, Object> map = new HashMap<>();
-        map.put("token", token);
+        map.put("token", tokenPair.token());
+        map.put("refreshToken", tokenPair.refreshToken());
         ResponseUtil.out(response, Result.ok(map));
     }
 

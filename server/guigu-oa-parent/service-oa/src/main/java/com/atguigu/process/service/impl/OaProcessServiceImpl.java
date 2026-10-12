@@ -2,6 +2,7 @@ package com.atguigu.process.service.impl;
 
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.config.exception.GuiguException;
+import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
@@ -41,6 +42,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.zip.ZipInputStream;
 
 @Service
@@ -161,7 +163,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public Map<String, Object> show(SysUser user, Long id) {
-        Process process = baseMapper.selectById(id);
+        Process process = requireApprovalMember(id, user);
         LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessRecord::getProcessId, id);
         List<ProcessRecord> processRecordList = processRecordService.list(wrapper);
@@ -178,8 +180,40 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
+    public Process requireApprovalMember(Long processId, SysUser user) {
+        if (processId == null || user == null || user.getId() == null) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        Process process = baseMapper.selectById(processId);
+        if (process == null) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        if (Objects.equals(process.getUserId(), user.getId())) {
+            return process;
+        }
+
+        String username = user.getUsername();
+        String processInstanceId = process.getProcessInstanceId();
+        if (StringUtils.hasText(username) && StringUtils.hasText(processInstanceId)) {
+            boolean isCurrentApprover = taskService.createTaskQuery()
+                    .processInstanceId(processInstanceId)
+                    .taskAssignee(username)
+                    .count() > 0;
+            boolean hasApproved = historyService.createHistoricTaskInstanceQuery()
+                    .processInstanceId(processInstanceId)
+                    .taskAssignee(username)
+                    .count() > 0;
+            if (isCurrentApprover || hasApproved) {
+                return process;
+            }
+        }
+        throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+    }
+
+    @Override
     @Transactional
     public void approve(SysUser user, ApprovalVo approvalVo) {
+        Process process = requireCurrentApprover(user, approvalVo);
         if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
             ProcessEngineApproval.complete(taskService, approvalVo.getTaskId());
         } else {
@@ -192,7 +226,6 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
                 ProcessApprovalSupport.recordDescription(approvalVo.getStatus()),
                 user);
 
-        Process process = baseMapper.selectById(approvalVo.getProcessId());
         List<Task> nextTasks = ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId());
         ProcessApprovalSupport.applyOutcome(
                 process,
@@ -200,6 +233,27 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
                 approverNames(nextTasks),
                 !nextTasks.isEmpty());
         baseMapper.updateById(process);
+    }
+
+    private Process requireCurrentApprover(SysUser user, ApprovalVo approvalVo) {
+        if (user == null || !StringUtils.hasText(user.getUsername())
+                || approvalVo == null || approvalVo.getProcessId() == null
+                || !StringUtils.hasText(approvalVo.getTaskId())) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        Process process = baseMapper.selectById(approvalVo.getProcessId());
+        if (process == null || !StringUtils.hasText(process.getProcessInstanceId())) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        Task task = taskService.createTaskQuery()
+                .taskId(approvalVo.getTaskId())
+                .processInstanceId(process.getProcessInstanceId())
+                .taskAssignee(user.getUsername())
+                .singleResult();
+        if (task == null) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        return process;
     }
 
     @Override

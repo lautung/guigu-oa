@@ -4,6 +4,7 @@ import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.service.Approval;
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
@@ -260,6 +261,23 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void approvalMemberGateIsSharedByApplicantCurrentAndPastApprovers() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+        SysUser eve = user(5L, "eve", "小叶");
+
+        approval.startUp(alice, publishedLeaveForm());
+        Long processId = started(alice).getRecords().get(0).getId();
+
+        assertEquals(processId, approval.requireApprovalMember(processId, alice).getId());
+        assertEquals(processId, approval.requireApprovalMember(processId, zhangsan).getId());
+        assertThrows(GuiguException.class, () -> approval.requireApprovalMember(processId, eve));
+
+        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+        assertEquals(processId, approval.requireApprovalMember(processId, zhangsan).getId());
+    }
+
+    @Test
     public void 已发布审批模板DoesNotStartWhen流程zipNotInEngine() {
         repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("qingjia")
@@ -365,6 +383,62 @@ public class ApprovalContractTest {
                 .andExpect(jsonPath("$.data.records[0].title").value("小艾发起请假申请申请"));
     }
 
+    @Test
+    public void httpRejectsNonMemberReadsAndNonCurrentApprovalActions() throws Exception {
+        String aliceToken = loginToken("alice");
+        String zhangsanToken = loginToken("zhangsan");
+        String lisiToken = loginToken("lisi");
+        String eveToken = loginToken("eve");
+
+        mockMvc.perform(post("/admin/process/startUp")
+                        .header("token", aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processTemplateId\":1,\"processTypeId\":1,\"formValues\":\"{\\\"formData\\\":{\\\"days\\\":1}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String startedBody = mockMvc.perform(get("/admin/process/findStarted/1/10")
+                        .header("token", aliceToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Object processId = JsonPath.read(startedBody, "$.data.records[0].id");
+        String pendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", zhangsanToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String taskId = JsonPath.read(pendingBody, "$.data.records[0].taskId");
+
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", eveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", lisiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
     private String loginToken(String username) throws Exception {
         String loginBody = mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -405,7 +479,14 @@ public class ApprovalContractTest {
     }
 
     private boolean canApprove(SysUser user, Long processId) {
-        return Boolean.TRUE.equals(approval.show(user, processId).get("isApprove"));
+        try {
+            return Boolean.TRUE.equals(approval.show(user, processId).get("isApprove"));
+        } catch (GuiguException e) {
+            if (e.getCode() == 403) {
+                return false;
+            }
+            throw e;
+        }
     }
 
     private List<String> recordDescriptions(SysUser user, Long processId) {

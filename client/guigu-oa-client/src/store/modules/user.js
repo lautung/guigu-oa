@@ -1,10 +1,18 @@
 import { defineStore } from 'pinia'
-import { getToken, setToken, removeToken } from '@/utils/auth'
-import { login, logout, getInfo } from '@/api/user'
+import {
+  getToken,
+  getRefreshToken,
+  setToken,
+  setRefreshToken,
+  removeRefreshToken,
+  removeToken
+} from '@/utils/auth'
+import { login, getInfo } from '@/api/user'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: getToken() || '',
+    refreshToken: getRefreshToken() || '',
     name: '',
     avatar: '',
     menus: []
@@ -16,7 +24,13 @@ export const useUserStore = defineStore('user', {
       const response = await login({ username: username.trim(), password })
       const { data } = response
       this.token = data.token
+      this.refreshToken = data.refreshToken || ''
       setToken(data.token)
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken)
+      } else {
+        removeRefreshToken()
+      }
     },
 
     async getInfo() {
@@ -32,13 +46,13 @@ export const useUserStore = defineStore('user', {
     },
 
     async logout() {
-      await logout()
       this.resetToken()
     },
 
     resetToken() {
       removeToken()
       this.token = ''
+      this.refreshToken = ''
       this.name = ''
       this.avatar = ''
       this.menus = []
