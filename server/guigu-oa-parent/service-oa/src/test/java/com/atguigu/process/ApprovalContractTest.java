@@ -3,6 +3,8 @@ package com.atguigu.process;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.cc.CarbonCopyTrigger;
+import com.atguigu.process.cc.CarbonCopyWriter;
 import com.atguigu.process.service.Approval;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.security.custom.LoginUserInfoHelper;
@@ -85,6 +87,9 @@ public class ApprovalContractTest {
 
     @Autowired
     private Approval approval;
+
+    @Autowired
+    private CarbonCopyWriter carbonCopyWriter;
 
     @Autowired
     private RepositoryService repositoryService;
@@ -569,6 +574,18 @@ public class ApprovalContractTest {
                         .header("token", zhangsanToken))
                 .andReturn().getResponse().getContentAsString();
         String firstTaskId = JsonPath.read(zhangsanPending, "$.data.records[0].taskId");
+        assertEquals(1L, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM oa_process_cc WHERE process_id = ? AND user_id = 5 AND task_id = ?",
+                Long.class,
+                processId,
+                firstTaskId));
+        carbonCopyWriter.copyOnTaskCreated(new CarbonCopyTrigger(
+                "approvalTwoStep", "first", firstTaskId, processId.toString()));
+        assertEquals(1L, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM oa_process_cc WHERE process_id = ? AND user_id = 5 AND task_id = ?",
+                Long.class,
+                processId,
+                firstTaskId), "重复处理同一 TASK_CREATED task_id 不得重复授权");
         mockMvc.perform(post("/admin/process/approve")
                         .header("token", zhangsanToken)
                         .contentType(MediaType.APPLICATION_JSON)

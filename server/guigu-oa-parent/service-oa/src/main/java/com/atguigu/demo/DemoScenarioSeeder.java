@@ -136,10 +136,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     }
 
     private Process findScenario(Long userId, Long templateId, String scenario) {
-        return findScenarioFromDatabase(userId, templateId, scenario);
-    }
-
-    private Process findScenarioFromDatabase(Long userId, Long templateId, String scenario) {
         return jdbcTemplate.query(
                 "SELECT id, process_code, user_id, process_template_id, process_type_id, title, description, "
                         + "form_values, process_instance_id, current_auditor, status, create_time, update_time, is_deleted "
