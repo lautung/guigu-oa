@@ -61,6 +61,9 @@ async function mockApi(page: Page): Promise<SmokeState> {
         },
       ])
     }
+    if (path === '/admin/process/carbonCopyRecipients' && method === 'GET') {
+      return json(route, [{ id: 3, username: 'carol', name: 'Carol' }])
+    }
     if (path === `/admin/process/processTemplate/get/${templateId}` && method === 'GET') {
       return json(route, {
         id: templateId,
@@ -182,6 +185,8 @@ for (const approval of approvalCases) {
     await expect(page.getByRole('heading', { name: '请假申请' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '附件' })).toBeVisible()
     await expect(page.getByText('暂无附件')).toBeVisible()
+    await page.locator('.carbon-copy-select').click()
+    await page.getByRole('option', { name: 'Carol' }).click()
 
     await page.locator('input[type="file"]').setInputFiles({
       name: 'approval-note.txt',
@@ -197,6 +202,7 @@ for (const approval of approvalCases) {
       processTemplateId: templateId,
       processTypeId: 11,
       attachmentIds: ['smoke-attachment-1'],
+      ccUserIds: [3],
     })
     expect(state.uploadRequest).toMatchObject({
       fileName: 'approval-note.txt',

@@ -24,4 +24,7 @@ public class ProcessFormVo {
 	@Schema(description = "本次发起绑定的附件 id")
 	private List<Long> attachmentIds;
 
+	@Schema(description = "发起时抄送的用户 id")
+	private List<Long> ccUserIds;
+
 }

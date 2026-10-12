@@ -12,6 +12,8 @@ import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
 import com.atguigu.process.attachment.AttachmentService;
+import com.atguigu.process.attachment.ProcessMemberAuthorizer;
+import com.atguigu.process.cc.CarbonCopyService;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
@@ -78,6 +80,12 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     @Autowired
     private AttachmentService attachmentService;
 
+    @Autowired
+    private CarbonCopyService carbonCopyService;
+
+    @Autowired
+    private ProcessMemberAuthorizer memberAuthorizer;
+
     @Override
     public IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo) {
         return baseMapper.selectProcessPage(pageParam, processQueryVo);
@@ -133,6 +141,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         process.setFormValues(processFormVo.getFormValues());
         process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
         baseMapper.insert(process);
+
+        carbonCopyService.copyAtStart(user, process.getId(), processFormVo.getCcUserIds());
 
         attachmentService.bindDraft(
                 user, processFormVo.getAttachmentDraftId(), processFormVo.getAttachmentIds(), process.getId());
@@ -201,29 +211,10 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
         Process process = baseMapper.selectById(processId);
-        if (process == null) {
+        if (process == null || !memberAuthorizer.canRead(user, process)) {
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
-        if (Objects.equals(process.getUserId(), user.getId())) {
-            return process;
-        }
-
-        String username = user.getUsername();
-        String processInstanceId = process.getProcessInstanceId();
-        if (StringUtils.hasText(username) && StringUtils.hasText(processInstanceId)) {
-            boolean isCurrentApprover = taskService.createTaskQuery()
-                    .processInstanceId(processInstanceId)
-                    .taskAssignee(username)
-                    .count() > 0;
-            boolean hasApproved = historyService.createHistoricTaskInstanceQuery()
-                    .processInstanceId(processInstanceId)
-                    .taskAssignee(username)
-                    .count() > 0;
-            if (isCurrentApprover || hasApproved) {
-                return process;
-            }
-        }
-        throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        return process;
     }
 
     @Override

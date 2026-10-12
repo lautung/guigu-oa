@@ -119,6 +119,15 @@ describe('work/start-flow', () => {
         attachmentIds: [2, 3]
       })
     })
+
+    it('includes the selected CC recipients when starting an approval', () => {
+      expect(buildStartPayload({
+        template: { id: 11, processTypeId: 1 },
+        ccUserIds: [7, 8]
+      })).toMatchObject({
+        ccUserIds: [7, 8]
+      })
+    })
   })
 
   describe('success feedback', () => {

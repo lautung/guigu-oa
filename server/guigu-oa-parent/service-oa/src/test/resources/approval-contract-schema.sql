@@ -107,6 +107,8 @@ INSERT INTO sys_user (id, username, password, name, phone, status, is_deleted)
 VALUES (6, 'cc-reader', '$2b$10$JF/wulA6oTURVNZYCgyNiuJFpnogF58MsYwPpO8dL/EWDQI4TuiGa', '抄送阅读人', '13800000006', 1, 0);
 
 DELETE FROM oa_process_record;
+DELETE FROM oa_process_cc;
+DELETE FROM oa_process_cc_rule;
 DELETE FROM oa_process;
 DELETE FROM oa_process_template;
 DELETE FROM oa_process_type;

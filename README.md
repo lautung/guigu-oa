@@ -10,6 +10,27 @@
 
 ## 启动
 
+### 一键启动演示环境
+
+安装 Docker Compose 后，在仓库根目录运行：
+
+```bash
+docker compose up --build
+```
+
+浏览器打开 `http://localhost:9530`。演示账号 `admin`、`alice`、`bob`、`carol` 的密码均为 `111111`。初始数据包括 Bob 的待处理和已结束审批、Carol 的抄送列表，以及一条带附件元数据和文件的审批。数据库、对象存储和流程定义会保存在 Compose 卷中。
+
+重置演示数据（会删除该 Compose 项目的数据库、Redis、MinIO 与流程定义卷）：
+
+```bash
+docker compose down --volumes --remove-orphans
+docker compose up --build
+```
+
+端口、演示数据和附件配置见[Compose 演示说明](docs/development/compose-demo.md)。
+
+### 本地开发启动
+
 后端：
 
 ```bash

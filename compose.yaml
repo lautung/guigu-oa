@@ -1,0 +1,104 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: guigu-oa
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: local-access-key
+      MINIO_ROOT_PASSWORD: local-secret-key
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do sleep 2; done;
+        mc mb --ignore-existing local/guigu-oa-attachments;
+        printf '%s' '<CORSConfiguration><CORSRule><AllowedOrigin>http://localhost:9530</AllowedOrigin><AllowedMethod>GET</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedMethod>HEAD</AllowedMethod><AllowedHeader>*</AllowedHeader><ExposeHeader>ETag</ExposeHeader><MaxAgeSeconds>3000</MaxAgeSeconds></CORSRule></CORSConfiguration>' > /tmp/attachments-cors.xml;
+        mc cors set local/guigu-oa-attachments /tmp/attachments-cors.xml
+    environment:
+      MINIO_ROOT_USER: local-access-key
+      MINIO_ROOT_PASSWORD: local-secret-key
+    restart: "no"
+
+  service-oa:
+    build:
+      context: ./server/guigu-oa-parent
+      dockerfile: service-oa/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev,demo
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      GUIGU_OA_PROCESS_DEFINITION_DIR: /var/lib/guigu-oa/process-definitions
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_BUCKET: guigu-oa-attachments
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: local-access-key
+      S3_SECRET_KEY: local-secret-key
+    ports:
+      - "8800:8800"
+    volumes:
+      - process-definitions:/var/lib/guigu-oa/process-definitions
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client/guigu-oa-client
+      dockerfile: Dockerfile
+    ports:
+      - "9530:80"
+    depends_on:
+      service-oa:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
+  process-definitions:

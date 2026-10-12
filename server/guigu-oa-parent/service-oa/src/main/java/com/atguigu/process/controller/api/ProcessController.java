@@ -8,6 +8,8 @@ import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
+import com.atguigu.process.cc.CarbonCopyService;
+import com.atguigu.process.cc.CarbonCopyRecipient;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
@@ -37,6 +39,9 @@ public class ProcessController {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private CarbonCopyService carbonCopyService;
 
     @Operation(summary = "待处理")
     @GetMapping("/findPending/{page}/{limit}")
@@ -95,6 +100,24 @@ public class ProcessController {
         Page<Process> pageParam = new Page<>(page,limit);
         IPage<ProcessVo> pageModel = processService.findProcessed(currentUser(), pageParam);
         return Result.ok(pageModel);
+    }
+
+    @Operation(summary = "抄送我的")
+    @GetMapping("/findCarbonCopied/{page}/{limit}")
+    public Result findCarbonCopied(
+            @Parameter(name = "page", description = "当前页码", required = true)
+            @PathVariable Long page,
+            @Parameter(name = "limit", description = "每页记录数", required = true)
+            @PathVariable Long limit) {
+        Page<ProcessVo> pageParam = new Page<>(page, limit);
+        return Result.ok(carbonCopyService.findMine(pageParam, currentUser().getId()));
+    }
+
+    @Operation(summary = "发起抄送人选项")
+    @GetMapping("/carbonCopyRecipients")
+    public Result carbonCopyRecipients() {
+        List<CarbonCopyRecipient> recipients = carbonCopyService.findRecipients(currentUser().getId());
+        return Result.ok(recipients);
     }
 
     @Operation(summary = "已发起")

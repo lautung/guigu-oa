@@ -2,6 +2,26 @@
   <div v-loading="loading" class="apply-page">
     <el-button type="text" @click="goBack">返回</el-button>
     <h2 class="page-title">{{ title }}</h2>
+    <div class="carbon-copy-field">
+      <label for="carbon-copy-users">抄送给</label>
+      <el-select
+        id="carbon-copy-users"
+        v-model="ccUserIds"
+        multiple
+        filterable
+        collapse-tags
+        collapse-tags-tooltip
+        placeholder="选择知情人（可不选）"
+        class="carbon-copy-select"
+      >
+        <el-option
+          v-for="recipient in ccRecipients"
+          :key="recipient.id"
+          :label="recipient.name"
+          :value="recipient.id"
+        />
+      </el-select>
+    </div>
     <form-create
       v-if="rule.length"
       v-model="formData"
@@ -23,6 +43,7 @@
 import { defineComponent } from 'vue'
 
 import AttachmentSection from '@/components/AttachmentSection.vue'
+import { findCarbonCopyRecipients, type CarbonCopyRecipient } from '@/api/carbon-copy'
 import { startUp } from '@/api/process'
 import { read } from '@/config/process-template'
 import { ROUTES } from '@/navigation/constants'
@@ -53,6 +74,8 @@ export default defineComponent({
       attachmentIds: [] as EntityId[],
       attachmentBusy: false,
       attachmentReady: false,
+      ccRecipients: [] as CarbonCopyRecipient[],
+      ccUserIds: [] as EntityId[],
     }
   },
   created() {
@@ -60,6 +83,7 @@ export default defineComponent({
     if (typeof templateId === 'string') {
       this.attachmentDraftId = getOrCreateDraftId(templateId)
       this.fetchTemplate()
+      this.fetchCarbonCopyRecipients()
     } else {
       this.goBack()
     }
@@ -76,6 +100,11 @@ export default defineComponent({
     },
     onAttachmentsChange(ids: EntityId[]) {
       this.attachmentIds = ids
+    },
+    fetchCarbonCopyRecipients() {
+      findCarbonCopyRecipients().then((response) => {
+        this.ccRecipients = response.data || []
+      })
     },
     fetchTemplate() {
       const templateId = this.$route.params.processTemplateId
@@ -118,6 +147,7 @@ export default defineComponent({
         rule: this.rule,
         attachmentDraftId: this.attachmentDraftId,
         attachmentIds: this.attachmentIds,
+        ccUserIds: this.ccUserIds,
       })
       startUp(payload)
         .then(() => {
@@ -144,6 +174,22 @@ export default defineComponent({
   margin: 0 0 16px;
   font-size: 20px;
   color: #303133;
+}
+
+.carbon-copy-field {
+  display: grid;
+  gap: 8px;
+  max-width: 560px;
+  margin-bottom: 16px;
+
+  label {
+    font-size: 14px;
+    color: #606266;
+  }
+}
+
+.carbon-copy-select {
+  width: 100%;
 }
 
 @media (max-width: 768px) {

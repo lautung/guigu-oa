@@ -35,6 +35,7 @@ export interface StartProcessRequest {
   formValues: string
   attachmentDraftId?: string
   attachmentIds?: EntityId[]
+  ccUserIds?: EntityId[]
 }
 
 export function startUp(data: StartProcessRequest): Promise<ApiResponse<ProcessInstanceRecord>> {

@@ -47,6 +47,13 @@ describe('work/work-list', () => {
         url: '/admin/process/findStarted/1/10'
       })
     })
+
+    it('loads 抄送我的 with GET /admin/process/findCarbonCopied/{page}/{limit}', () => {
+      expect(workListRequest(WORK_LIST_KINDS.COPIED, 1, 10)).toEqual({
+        method: 'get',
+        url: '/admin/process/findCarbonCopied/1/10'
+      })
+    })
   })
 
   describe('presentWorkList', () => {
@@ -128,6 +135,32 @@ describe('work/work-list', () => {
         kind: WORK_LIST_KINDS.PROCESSED,
         relationLabel: '我已处理',
         rowKey: '12'
+      })
+    })
+
+    it('presents a read-only 抄送我的 row linking to its full approval detail', () => {
+      const page = presentWorkList(WORK_LIST_KINDS.COPIED, {
+        records: [{
+          id: 23,
+          title: '小艾发起请假申请',
+          name: '小艾',
+          processTypeName: '请假',
+          status: 1,
+          formValues: FORM_VALUES
+        }],
+        total: 1,
+        pages: 1
+      })
+
+      expect(page).toMatchObject({
+        kind: WORK_LIST_KINDS.COPIED,
+        title: '抄送我的',
+        emptyDescription: '暂无抄送审批',
+        records: [{
+          detailPath: '/work/copied/23',
+          relationLabel: '抄送给我',
+          kind: WORK_LIST_KINDS.COPIED
+        }]
       })
     })
 
@@ -360,6 +393,16 @@ describe('work/work-list', () => {
         returnPath: '/work/started',
         readOnly: true,
         emphasis: '整体进度'
+      })
+    })
+
+    it('opens 抄送我的 as a read-only 视角 that returns to its list', () => {
+      expect(workListPerspective(WORK_LIST_KINDS.COPIED)).toEqual({
+        kind: WORK_LIST_KINDS.COPIED,
+        title: '抄送我的',
+        returnPath: '/work/copied',
+        readOnly: true,
+        emphasis: '知情'
       })
     })
 

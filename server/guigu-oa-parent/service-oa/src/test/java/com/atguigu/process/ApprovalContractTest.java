@@ -473,6 +473,136 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void httpCarbonCopyMemberCanReadFullApprovalButCannotProcessIt() throws Exception {
+        String aliceToken = loginToken("alice");
+        String zhangsanToken = loginToken("zhangsan");
+        String ccReaderToken = loginToken("cc-reader");
+
+        mockMvc.perform(post("/admin/process/startUp")
+                        .header("token", aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processTemplateId\":1,\"processTypeId\":1,"
+                                + "\"formValues\":\"{\\\"formData\\\":{\\\"days\\\":2},"
+                                + "\\\"formShowData\\\":{\\\"请假天数\\\":2}}\","
+                                + "\"ccUserIds\":[6]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String startedBody = mockMvc.perform(get("/admin/process/findStarted/1/10")
+                        .header("token", aliceToken))
+                .andReturn().getResponse().getContentAsString();
+        Object processId = JsonPath.read(startedBody, "$.data.records[0].id");
+        String pendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", zhangsanToken))
+                .andReturn().getResponse().getContentAsString();
+        String taskId = JsonPath.read(pendingBody, "$.data.records[0].taskId");
+
+        mockMvc.perform(get("/admin/process/findCarbonCopied/1/10")
+                        .header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(processId));
+
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.isApprove").value(false))
+                .andExpect(jsonPath("$.data.process.formValues").value(org.hamcrest.Matchers.containsString("\"days\":2")))
+                .andExpect(jsonPath("$.data.processRecordList[0].description").value("发起申请"));
+
+        mockMvc.perform(get("/admin/attachments/processes/" + processId)
+                        .header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.canUpload").value(false));
+
+        mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", ccReaderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    public void httpTaskCreatedRuleGrantsLiveReadAccessThroughApprovalHistory() throws Exception {
+        String aliceToken = loginToken("alice");
+        String zhangsanToken = loginToken("zhangsan");
+        String lisiToken = loginToken("lisi");
+        String eveToken = loginToken("eve");
+
+        jdbcTemplate.update(
+                "INSERT INTO oa_process_cc_rule (process_definition_key, task_definition_key, user_id, is_deleted) "
+                        + "VALUES ('approvalTwoStep', 'first', 5, 0)");
+
+        mockMvc.perform(post("/admin/process/startUp")
+                        .header("token", aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processTemplateId\":1,\"processTypeId\":1,"
+                                + "\"formValues\":\"{\\\"formData\\\":{\\\"days\\\":3}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String startedBody = mockMvc.perform(get("/admin/process/findStarted/1/10")
+                        .header("token", aliceToken))
+                .andReturn().getResponse().getContentAsString();
+        Object processId = JsonPath.read(startedBody, "$.data.records[0].id");
+
+        mockMvc.perform(get("/admin/process/findCarbonCopied/1/10")
+                        .header("token", eveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(processId));
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", eveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isApprove").value(false))
+                .andExpect(jsonPath("$.data.processRecordList[0].description").value("发起申请"));
+
+        String zhangsanPending = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", zhangsanToken))
+                .andReturn().getResponse().getContentAsString();
+        String firstTaskId = JsonPath.read(zhangsanPending, "$.data.records[0].taskId");
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + firstTaskId
+                                + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", zhangsanToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isApprove").value(false));
+
+        String lisiPending = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", lisiToken))
+                .andReturn().getResponse().getContentAsString();
+        String secondTaskId = JsonPath.read(lisiPending, "$.data.records[0].taskId");
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", lisiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + secondTaskId
+                                + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", eveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isApprove").value(false))
+                .andExpect(jsonPath("$.data.process.status").value(审批通过))
+                .andExpect(jsonPath("$.data.processRecordList.length()").value(3));
+    }
+
+    @Test
     public void concurrentApprovalRequestsForSameTaskHaveExactlyOneCommittedWinner() throws Exception {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");

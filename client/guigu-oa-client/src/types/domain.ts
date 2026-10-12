@@ -212,7 +212,7 @@ export interface PresentedWorkListRecord {
   statusTagType: 'warning' | 'success' | 'danger' | 'info'
   summaryFields: WorkSummaryField[]
   detailPath: string
-  kind: 'pending' | 'processed' | 'started'
+  kind: 'pending' | 'processed' | 'started' | 'copied'
   relationLabel: string
   progressLabel: string
   rowKey: string

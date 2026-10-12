@@ -91,6 +91,7 @@ export interface BuildStartPayloadInput {
   rule?: FormRule[]
   attachmentDraftId?: string
   attachmentIds?: EntityId[]
+  ccUserIds?: EntityId[]
 }
 
 export function buildStartPayload({
@@ -99,12 +100,14 @@ export function buildStartPayload({
   rule = [],
   attachmentDraftId,
   attachmentIds = [],
+  ccUserIds = [],
 }: BuildStartPayloadInput): {
   processTemplateId: EntityId
   processTypeId: EntityId
   formValues: string
   attachmentDraftId?: string
   attachmentIds?: EntityId[]
+  ccUserIds?: EntityId[]
 } {
   const formShowData: FormDataRecord = {}
   rule.forEach((item) => {
@@ -119,6 +122,7 @@ export function buildStartPayload({
     formValues: string
     attachmentDraftId?: string
     attachmentIds?: EntityId[]
+    ccUserIds?: EntityId[]
   } = {
     processTemplateId: template.id,
     processTypeId: template.processTypeId,
@@ -127,6 +131,9 @@ export function buildStartPayload({
   if (attachmentDraftId) {
     payload.attachmentDraftId = attachmentDraftId
     payload.attachmentIds = attachmentIds
+  }
+  if (ccUserIds.length > 0) {
+    payload.ccUserIds = ccUserIds
   }
   return payload
 }

@@ -53,6 +53,18 @@ const workChildren = [
     meta: { title: '审批详情', workListKind: WORK_LIST_KINDS.STARTED },
   },
   {
+    path: 'copied',
+    name: 'WorkCopied',
+    component: () => import('@/views/work/WorkListPage.vue'),
+    meta: { title: '抄送我的', workListKind: WORK_LIST_KINDS.COPIED },
+  },
+  {
+    path: 'copied/:id',
+    name: 'CopiedDetail',
+    component: () => import('@/views/work/pending/detail.vue'),
+    meta: { title: '审批详情', workListKind: WORK_LIST_KINDS.COPIED },
+  },
+  {
     path: 'profile',
     name: 'WorkProfile',
     component: () => import('@/views/work/profile/index.vue'),

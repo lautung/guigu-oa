@@ -15,6 +15,7 @@ export const WORK_LIST_KINDS = {
   PENDING: 'pending',
   PROCESSED: 'processed',
   STARTED: 'started',
+  COPIED: 'copied',
 } as const
 
 export type WorkListKind = (typeof WORK_LIST_KINDS)[keyof typeof WORK_LIST_KINDS]
@@ -25,6 +26,7 @@ const LIST_ENDPOINTS: Record<WorkListKind, string> = {
   [WORK_LIST_KINDS.PENDING]: 'findPending',
   [WORK_LIST_KINDS.PROCESSED]: 'findProcessed',
   [WORK_LIST_KINDS.STARTED]: 'findStarted',
+  [WORK_LIST_KINDS.COPIED]: 'findCarbonCopied',
 }
 
 interface WorkListDefinition {
@@ -64,6 +66,15 @@ const LIST_PAGES: Record<WorkListKind, WorkListDefinition> = {
     emphasis: '整体进度',
     relationLabel: '我发起的审批',
     detailPath: (record) => `${ROUTES.STARTED}/${record.id}`,
+  },
+  [WORK_LIST_KINDS.COPIED]: {
+    title: '抄送我的',
+    emptyDescription: '暂无抄送审批',
+    returnPath: ROUTES.COPIED,
+    readOnly: true,
+    emphasis: '知情',
+    relationLabel: '抄送给我',
+    detailPath: (record) => `${ROUTES.COPIED}/${record.id}`,
   },
 }
 
