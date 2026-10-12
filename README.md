@@ -2,15 +2,95 @@
 
 [![CI](https://github.com/lautung/guigu-oa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lautung/guigu-oa/actions/workflows/ci.yml)
 
-**统一客户端**是唯一前端入口：办事与配置在同一个 Web 里，用用户名和密码登录。登录后落到待处理。微信不是产品的一部分。
+**一句话：** 把尚硅谷《云尚办公》课程项目迁成可演示的全栈作品：Spring Boot 4.1、JDK 21、Flowable 8 和 Vue 3 统一客户端，并补上原创的**抄送**与**审批附件直传**。
 
-## 起源与改造
+| 看什么       | 去哪                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------- |
+| 在线演示     | 公网 demo 暂未部署；请用下方 Compose 本地启动                                         |
+| 本地一键启动 | `docker compose up --build`，详见[Compose 演示说明](docs/development/compose-demo.md) |
+| 领域与边界   | [CONTEXT.md](CONTEXT.md)                                                              |
 
-本项目从尚硅谷《云尚办公》课程项目起步。旧 PC 管理端与公众号员工 H5 已退役，删前源码保存在 annotated tag `legacy-frontends`。两端能力与路由的历史对照见[研究文档](docs/research/现有两端能力与路由对照.md)。
+## 项目起点与改造
 
-## 启动
+项目从尚硅谷公开课《云尚办公》起步。课程项目使用 Activiti 7、Spring Boot 2 和 JDK 8，提供 PC 管理端与公众号员工 H5。本仓库已将旧前端退役，源码保存在 `legacy-frontends` annotated tag 中。
 
-### 一键启动演示环境
+改造重点是迁移与工程化：保留 OA 工作流场景，将后端升级到 JDK 21、Spring Boot 4.1 和 Flowable 8；把办事与配置合并到一个 Vue 3 客户端；用 Flyway、BCrypt、CI、Compose 和合同测试把运行与交付过程明确下来。原创部分是抄送与审批附件直传，并非从零编写工作流引擎或整套 OA。
+
+| 维度     | 课程起点                  | 本仓库                                |
+| -------- | ------------------------- | ------------------------------------- |
+| 运行时   | JDK 8、Spring Boot 2.x    | **JDK 21、Spring Boot 4.1**           |
+| 流程引擎 | Activiti 7                | **Flowable 8.0 Process**              |
+| 前端     | PC 管理端 + 公众号员工 H5 | **Vue 3.5 统一客户端**                |
+| 表单     | form-create 2.x           | **form-create 3.x**                   |
+| 工程     | 手动 SQL、旧密码方案      | **Flyway、BCrypt、GitHub Actions CI** |
+| 演示     | 无一键演示环境            | **Compose + MinIO + 演示数据**        |
+
+旧两端的页面与能力对照见[研究文档](docs/research/现有两端能力与路由对照.md)。
+
+## 架构
+
+```mermaid
+flowchart LR
+  Browser["统一客户端\nVue 3 / TypeScript"]
+  API["service-oa\nSpring Boot 4.1"]
+  DB[("MySQL 8\n业务表由 Flyway 管理")]
+  Engine[("Flowable\nACT_* / FLW_*")]
+  Redis[("Redis\n权限缓存")]
+  OSS[("S3 兼容对象存储\n本地 MinIO / 预期线上 R2")]
+
+  Browser -->|"/dev-api · token"| API
+  API --> DB
+  API --> Engine
+  API --> Redis
+  Browser -->|"预签名直传"| OSS
+  API -->|"登记元数据 · 临时下载凭证"| OSS
+```
+
+办事与配置共用一个客户端，侧栏按权限显示。流程定义通过 zip 上传并保存到可配置的外部目录；流程文件不进入附件桶。
+
+## 原创模块
+
+### 抄送
+
+- 审批中增加「抄送我的」列表；抄送人获得知情访问，不进入待处理队列。
+- 发起时和任务到达时按规则生成抄送；规则保存在业务表，不写进 BPMN。
+- `TASK_CREATED` 监听器与引擎事务协同，`task_id` 提供幂等边界。
+- 抄送人可查看表单、流转记录和附件，但不能审批、评论或继续抄送。
+
+### 审批附件直传
+
+- 附件挂在审批实例上，独立于动态表单；权威记录保存在附件元数据表。
+- 浏览器通过预签名 URL 直传到私有 S3 兼容桶；发起后不可删除。
+- 下载前按审批成员身份校验权限，覆盖发起人、审批人和抄送人。
+- 本地 Compose 使用 MinIO；线上 R2 尚未部署。
+
+## 界面截图
+
+以下图片展示统一客户端的页面布局。它们由 Playwright 客户端测试使用接口夹具采集，用于展示界面，不代表后端或公网 demo 已运行。需要体验真实全栈流程时，请按 [Compose 演示说明](docs/development/compose-demo.md)启动环境。
+
+### Bob 的待处理列表
+
+![待处理列表桌面截图](docs/images/pending-list.png)
+
+### Alice 发起审批与附件区
+
+![发起审批和附件区桌面截图](docs/images/start-approval-attachments.png)
+
+### Carol 的抄送列表
+
+![抄送我的桌面截图](docs/images/carbon-copied.png)
+
+### 手机视口办理审批
+
+![手机视口中的待处理列表](docs/images/mobile-workflow.png)
+
+## 工程化
+
+- 后端合同测试覆盖 API、Flowable 和持久层边界；前端使用 Vitest 与 Playwright 冒烟检查。
+- CI 检查前端 lint、类型、单测和 Playwright，运行 Maven 测试，并构建前后端容器镜像；不自动部署。
+- 统一客户端使用 TypeScript、ESLint 和 Prettier；业务表由 Flyway 管理，Flowable 引擎表由引擎创建。
+
+## 快速开始
 
 安装 Docker Compose 后，在仓库根目录运行：
 
@@ -18,20 +98,25 @@
 docker compose up --build
 ```
 
-浏览器打开 `http://localhost:9530`。演示账号 `admin`、`alice`、`bob`、`carol` 的密码均为 `111111`。初始数据包括 Bob 的待处理和已结束审批、Carol 的抄送列表，以及一条带附件元数据和文件的审批。数据库、对象存储和流程定义会保存在 Compose 卷中。
+浏览器打开 <http://localhost:9530>。本地演示账号的密码均为 `111111`：
 
-重置演示数据（会删除该 Compose 项目的数据库、Redis、MinIO 与流程定义卷）：
+| 用户名  | 用途           |
+| ------- | -------------- |
+| `admin` | 配置与办事     |
+| `alice` | 发起审批       |
+| `bob`   | 查看并处理待办 |
+| `carol` | 查看抄送       |
+
+演示数据包含 Bob 的待处理和已结束审批、Carol 的抄送记录，以及一条带附件元数据和文件的审批。重置 Compose 演示数据会删除该项目的 MySQL、Redis、MinIO 和流程定义卷，再由 Flyway、Flowable 与演示初始化器重新生成：
 
 ```bash
 docker compose down --volumes --remove-orphans
 docker compose up --build
 ```
 
-端口、演示数据和附件配置见[Compose 演示说明](docs/development/compose-demo.md)。
+## 本地开发
 
-### 本地开发启动
-
-后端：
+后端需要 JDK 21。启动方式、数据库配置和 API 地址见仓库 [AGENTS.md](AGENTS.md)：
 
 ```bash
 cd server/guigu-oa-parent/service-oa
@@ -39,9 +124,7 @@ mvn -DskipTests install
 java -jar target/service-oa.jar
 ```
 
-默认 API：`http://localhost:8800`。
-
-统一客户端：
+启动统一客户端：
 
 ```bash
 cd client/guigu-oa-client
@@ -49,53 +132,20 @@ npm install
 npm run dev
 ```
 
-开发代理把 `/dev-api` 转到 `http://localhost:8800`。浏览器打开终端提示的本地地址（默认端口 9530）。
-
-生产构建：
+客户端开发代理将 `/dev-api` 转发到 `http://localhost:8800`。质量检查命令：
 
 ```bash
-cd client/guigu-oa-client
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:e2e
 npm run build:prod
 ```
 
-## 流程 zip 存储
+## 文档
 
-流程 zip 保存在后端文件系统的 `processes/` 子目录，不写入 classpath，也不进入审批附件桶。数据库中的 `processDefinitionPath` 是相对路径，例如 `processes/qingjia.zip`。
-
-后端目录由 `GUIGU_OA_PROCESS_DEFINITION_DIR` 配置，默认是启动目录下的 `./data/process-definitions`。容器部署应将环境变量指向持久卷挂载点，例如：
-
-```yaml
-services:
-  service-oa:
-    environment:
-      GUIGU_OA_PROCESS_DEFINITION_DIR: /var/lib/guigu-oa/process-definitions
-    volumes:
-      - process-definitions:/var/lib/guigu-oa/process-definitions
-
-volumes:
-  process-definitions:
-```
-
-上传和发布使用同一目录。容器可以只读运行，只需保证上述挂载卷可写且在容器重建后保留；后续 Compose 配置应沿用这个挂载目标。
-
-## 审批附件对象存储
-
-附件内容使用私有 S3 兼容桶。开发环境可以用 MinIO；先创建桶，再配置：
-
-| 环境变量 | 用途 | 本地默认值 |
-|---|---|---|
-| `S3_ENDPOINT` | 后端访问对象存储的地址 | `http://localhost:9000` |
-| `S3_PUBLIC_ENDPOINT` | 浏览器直传和下载所用地址，必须从浏览器可达 | `http://localhost:9000` |
-| `S3_BUCKET` | 私有桶名称 | `guigu-oa-attachments` |
-| `S3_REGION` | S3 签名 region | `us-east-1` |
-| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 对象存储凭据 | 本地开发占位值 |
-
-浏览器直传需要在桶上允许客户端来源的 `PUT` 和 `Content-Type` 请求头。容器部署时，`S3_ENDPOINT` 可指向 compose 内的 `http://minio:9000`，而 `S3_PUBLIC_ENDPOINT` 应指向浏览器可访问的地址；签名时使用的主机名必须与浏览器实际请求的主机名一致。不要把本地占位凭据用于部署环境。
-
-预签名上传默认 5 分钟，下载默认 15 分钟；未发起的 pending 附件在 24 小时后由后台清理任务回收。单个附件默认上限 50 MiB，可用 `ATTACHMENT_MAX_FILE_SIZE_BYTES` 调整。
-
-## 领域与规格
-
-- 词汇：[CONTEXT.md](CONTEXT.md)
-- 规格：[docs/spec/云尚办公统一客户端改造规格.md](docs/spec/云尚办公统一客户端改造规格.md)
-- 探活与请求日志：[docs/observability.md](docs/observability.md)
+- [Compose 演示与种子数据](docs/development/compose-demo.md)
+- [面试作品化改造规格](docs/spec/面试作品化改造规格.md)
+- [领域词汇](CONTEXT.md)
+- [两端能力与路由对照](docs/research/现有两端能力与路由对照.md)
+- [可观测性](docs/observability.md)
