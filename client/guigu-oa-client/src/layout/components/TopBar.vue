@@ -11,12 +11,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
-import { ROUTES } from '@/navigation/constants'
 
-const route = useRoute()
-const router = useRouter()
 const userStore = useUserStore()
 
 const DEFAULT_AVATAR =
@@ -26,7 +22,6 @@ const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
 
 async function handleLogout() {
   await userStore.logout()
-  router.push(`${ROUTES.LOGIN}?redirect=${encodeURIComponent(route.fullPath)}`)
 }
 </script>
 

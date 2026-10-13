@@ -1,55 +1,37 @@
-import router from './router'
-import { getToken } from '@/utils/auth'
-import { ElMessage } from 'element-plus'
+import type { Pinia } from 'pinia'
+import type { Router } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { resolveNavigationGuard } from '@/navigation'
+import { ROUTES } from '@/navigation/constants'
 import { useUserStore } from '@/store/modules/user'
+import type { Recognition } from '@/recognition'
 
-NProgress.configure({ showSpinner: false })
-
-function getViewportWidth() {
-  return typeof window !== 'undefined' ? window.innerWidth : 1024
-}
-
-router.beforeEach(async (to, from, next) => {
-  NProgress.start()
-  document.title = to.meta.title ? `${to.meta.title} - 云尚办公` : '云尚办公'
-
-  const hasToken = !!getToken()
-  const userStore = useUserStore()
-  let menus = userStore.menus || []
-
-  if (hasToken && to.path !== '/login' && !userStore.name) {
-    try {
-      await userStore.getInfo()
-      menus = userStore.menus || []
-    } catch (error: unknown) {
-      userStore.resetToken()
-      ElMessage.error(error instanceof Error ? error.message : '获取用户信息失败')
-      next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
-      NProgress.done()
-      return
+export function setupNavigation(router: Router, pinia: Pinia, recognition: Recognition): void {
+  NProgress.configure({ showSpinner: false })
+  router.beforeEach(async (to) => {
+    NProgress.start()
+    document.title = to.meta.title ? `${to.meta.title} - 云尚办公` : '云尚办公'
+    const store = useUserStore(pinia)
+    if (recognition.credentials().token && to.path !== ROUTES.LOGIN && !store.recognized) {
+      try {
+        await recognition.recognize(to.fullPath)
+      } catch {
+        NProgress.done()
+        return false
+      }
     }
-  }
-
-  const decision = resolveNavigationGuard({
-    path: to.path,
-    fullPath: to.fullPath,
-    hasToken,
-    viewportWidth: getViewportWidth(),
-    menus,
+    const decision = resolveNavigationGuard({
+      path: to.path,
+      fullPath: to.fullPath,
+      hasToken: !!recognition.credentials().token,
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1024,
+      menus: store.menus,
+    })
+    if (decision.action === 'redirect') {
+      NProgress.done()
+      return decision.to
+    }
   })
-
-  if (decision.action === 'redirect') {
-    next(decision.to)
-    NProgress.done()
-    return
-  }
-
-  next()
-})
-
-router.afterEach(() => {
-  NProgress.done()
-})
+  router.afterEach(() => NProgress.done())
+}

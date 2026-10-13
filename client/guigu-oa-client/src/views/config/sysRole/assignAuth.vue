@@ -87,13 +87,9 @@ export default defineComponent({
       doAssign(roleId, menuIdList)
         .then((response) => {
           this.$message.success(response.message || '保存成功')
-          return useUserStore()
-            .getInfo()
-            .catch(() => {})
+          return useUserStore().recognition?.resume('/system/sysRole')
         })
-        .then(() => {
-          this.$router.push('/system/sysRole')
-        })
+        .catch(() => {})
         .finally(() => {
           this.saving = false
         })

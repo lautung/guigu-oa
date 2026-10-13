@@ -45,7 +45,8 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { buildLoginRedirectPath } from '@/navigation'
-import type { FormInstance } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
+import { RecognitionFailure } from '@/recognition'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +83,10 @@ async function handleLogin() {
     try {
       await userStore.login(loginForm.value)
       router.push({ path: buildLoginRedirectPath(redirect.value) })
+    } catch (error) {
+      if (!(error instanceof RecognitionFailure && error.kind === 'superseded')) {
+        ElMessage.error(error instanceof Error ? error.message : '登录失败')
+      }
     } finally {
       loading.value = false
     }

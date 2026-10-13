@@ -2,6 +2,15 @@ import Cookies from 'js-cookie'
 
 const TokenKey = 'guigu_oa_client_token'
 const RefreshTokenKey = 'guigu_oa_client_refresh_token'
+const EntryKey = 'guigu_oa_client_entry'
+
+export function getEntryId(): string | undefined {
+  return Cookies.get(EntryKey)
+}
+
+export function setEntryId(entryId: string): void {
+  Cookies.set(EntryKey, entryId)
+}
 
 export function getToken(): string | undefined {
   return Cookies.get(TokenKey)
@@ -25,5 +34,6 @@ export function removeRefreshToken(): void {
 
 export function removeToken(): void {
   Cookies.remove(TokenKey)
+  Cookies.remove(EntryKey)
   return removeRefreshToken()
 }

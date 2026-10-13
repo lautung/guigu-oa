@@ -8,13 +8,16 @@ import FcDesigner from '@form-create/designer'
 import App from './App.vue'
 import { setupStore } from './store'
 import router from './router'
-import './permission'
+import { setupNavigation } from './permission'
+import { setupRecognition } from './recognition/browser-adapter'
 
 formCreate.use(autoImport)
 
 const app = createApp(App)
 
-setupStore(app)
+const pinia = setupStore(app)
+const recognition = setupRecognition(pinia, router)
+setupNavigation(router, pinia, recognition)
 app.use(router)
 app.use(ElementPlus, { size: 'small' })
 app.use(formCreate)

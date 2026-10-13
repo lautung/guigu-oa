@@ -87,6 +87,9 @@ export default defineComponent({
           this.total = page.total
           this.list = page.records
         })
+        .catch(() => {
+          // Request failures are already presented (or silently discarded) by recognition.
+        })
         .finally(() => {
           this.loading = false
         })
