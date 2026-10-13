@@ -83,12 +83,11 @@ async function handleResponse(
 
   if (canRefresh) {
     config._authRefreshRetried = true
+    let token: string
     try {
-      const token = await refreshAccessToken(
+      token = await refreshAccessToken(
         config._authSessionRefreshToken || getRefreshToken() || '',
       )
-      setRequestToken(config, token)
-      return (await service(config)) as unknown as ApiResponse<unknown>
     } catch (error: unknown) {
       if (isRequestSessionCurrent(config)) {
         showError(errorMessage(error) || '登录已过期，请重新登录')
@@ -96,6 +95,8 @@ async function handleResponse(
       }
       return Promise.reject(error)
     }
+    setRequestToken(config, token)
+    return (await service(config)) as unknown as ApiResponse<unknown>
   }
 
   const error = new Error(res.message || '请求失败')
