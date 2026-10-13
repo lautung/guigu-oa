@@ -75,6 +75,29 @@ describe('utils/request authentication refresh', () => {
     expect(service).toBe(mocks.service)
   })
 
+  it('keeps the refreshed login state when the retried request is forbidden', async () => {
+    const config = requestHandler({ url: '/admin/process/show/12', headers: {} })
+    mocks.axiosPost.mockResolvedValue({
+      data: { code: 200, data: { token: 'new-access', refreshToken: 'old-refresh' } },
+    })
+    mocks.service.mockImplementation((requestConfig) =>
+      responseHandler({
+        data: { code: 403, message: '无权限' },
+        config: requestConfig,
+      }),
+    )
+
+    await expect(
+      responseHandler({
+        data: { code: 208, message: '认证失败' },
+        config,
+      }),
+    ).rejects.toThrow('无权限')
+
+    expect(getToken()).toBe('new-access')
+    expect(getRefreshToken()).toBe('old-refresh')
+  })
+
   it('attaches the current access token to API requests', () => {
     const config = { headers: {} }
 
