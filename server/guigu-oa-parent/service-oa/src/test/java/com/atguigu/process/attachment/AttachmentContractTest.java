@@ -157,6 +157,7 @@ class AttachmentContractTest {
         String aliceToken = loginToken("alice");
         String lisiToken = loginToken("lisi");
         String zhangsanToken = loginToken("zhangsan");
+        String adminToken = loginToken("admin");
         long attachmentId = uploadAndRegister(aliceToken, DRAFT_ID, "receipt.pdf", 31, "application/pdf");
         startWithDraft(aliceToken, DRAFT_ID, attachmentId);
         Long processId = processMapper.selectList(null).stream()
@@ -165,8 +166,20 @@ class AttachmentContractTest {
                 .findFirst()
                 .orElseThrow();
 
+        mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.routers.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+
         mockMvc.perform(post("/admin/attachments/processes/" + processId + "/" + attachmentId + "/download-url")
                         .header("token", lisiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+        assertEquals(0, objectStore.downloadGrantCount());
+
+        // The configuration-capable seed user is still not a member of this approval.
+        mockMvc.perform(post("/admin/attachments/processes/" + processId + "/" + attachmentId + "/download-url")
+                        .header("token", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         assertEquals(0, objectStore.downloadGrantCount());

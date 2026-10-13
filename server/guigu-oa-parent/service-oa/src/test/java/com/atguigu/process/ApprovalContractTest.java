@@ -62,6 +62,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -380,6 +381,12 @@ public class ApprovalContractTest {
                 .getContentAsString();
         Object processId = JsonPath.read(startedBody, "$.data.records[0].id");
 
+        mockMvc.perform(get("/admin/process/show/" + processId).header("token", aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.isApprove").value(false))
+                .andExpect(jsonPath("$.data.processRecordList.length()").value(1));
+
         String pendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
                         .header("token", zhangsanToken))
                 .andExpect(status().isOk())
@@ -427,6 +434,7 @@ public class ApprovalContractTest {
         String zhangsanToken = loginToken("zhangsan");
         String lisiToken = loginToken("lisi");
         String eveToken = loginToken("eve");
+        String adminToken = loginToken("admin");
 
         mockMvc.perform(post("/admin/process/startUp")
                         .header("token", aliceToken)
@@ -450,8 +458,19 @@ public class ApprovalContractTest {
                 .getContentAsString();
         String taskId = JsonPath.read(pendingBody, "$.data.records[0].taskId");
 
+        mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.routers.length()").value(greaterThan(0)));
+
         mockMvc.perform(get("/admin/process/show/" + processId)
                         .header("token", eveToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
+
+        // userId=1 has the configuration menu tree, but configuration access is not process membership.
+        mockMvc.perform(get("/admin/process/show/" + processId)
+                        .header("token", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
 
@@ -533,6 +552,31 @@ public class ApprovalContractTest {
                         .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String lisiPendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", loginToken("lisi")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String nextTaskId = JsonPath.read(lisiPendingBody, "$.data.records[0].taskId");
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", loginToken("lisi"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + nextTaskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/process/show/" + processId).header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.processRecordList.length()").value(3));
     }
 
     @Test
@@ -597,7 +641,16 @@ public class ApprovalContractTest {
         mockMvc.perform(get("/admin/process/show/" + processId)
                         .header("token", zhangsanToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.isApprove").value(false));
+                .andExpect(jsonPath("$.data.isApprove").value(false))
+                .andExpect(jsonPath("$.data.processRecordList.length()").value(2));
+
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + firstTaskId
+                                + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403));
 
         String lisiPending = mockMvc.perform(get("/admin/process/findPending/1/10")
                         .header("token", lisiToken))

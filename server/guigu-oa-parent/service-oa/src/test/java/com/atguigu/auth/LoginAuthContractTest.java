@@ -1,5 +1,6 @@
 package com.atguigu.auth;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,20 +11,28 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.model.system.SysUser;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import com.atguigu.common.jwt.JwtHelper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 import com.jayway.jsonpath.JsonPath;
 
+import javax.crypto.SecretKey;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,7 +50,18 @@ public class LoginAuthContractTest {
     private SysUserService sysUserService;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtHelper jwtHelper;
+
+    @AfterEach
+    public void removeContractUser() {
+        jdbcTemplate.update("DELETE FROM sys_user WHERE username = ?", "new-contract-user");
+    }
 
     @Test
     public void correctUsernameAndPasswordReturnToken() throws Exception {
@@ -84,6 +104,49 @@ public class LoginAuthContractTest {
     }
 
     @Test
+    public void failedLoginDoesNotUpgradeLegacyMd5Password() throws Exception {
+        String legacyHash = "96e79218965eb72c92a549dd5a330112";
+        SysUser user = sysUserService.getById(1L);
+        user.setPassword(legacyHash);
+        sysUserService.updateById(user);
+
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"wrong-password\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+
+        assertEquals(legacyHash, sysUserService.getById(1L).getPassword());
+    }
+
+    @Test
+    public void newlySavedAndChangedPasswordsAreStoredAsBcrypt() throws Exception {
+        String token = loginToken("admin", "111111");
+
+        mockMvc.perform(post("/admin/system/sysUser/save")
+                        .header("token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"new-contract-user\",\"password\":\"first-secret\","
+                                + "\"name\":\"新用户\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        SysUser createdUser = sysUserService.getUserByUserName("new-contract-user");
+        String createdHash = createdUser.getPassword();
+        org.junit.jupiter.api.Assertions.assertTrue(createdHash.startsWith("$2"));
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("first-secret", createdHash));
+
+        mockMvc.perform(put("/admin/system/sysUser/update")
+                        .header("token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + createdUser.getId() + ",\"password\":\"changed-secret\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        String changedHash = sysUserService.getById(createdUser.getId()).getPassword();
+        org.junit.jupiter.api.Assertions.assertTrue(changedHash.startsWith("$2"));
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("changed-secret", changedHash));
+    }
+
+    @Test
     public void refreshRenewsAccessWithoutExtendingRefreshLifetimeAndAccessTokenCannotRefresh() throws Exception {
         String loginBody = mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,7 +169,13 @@ public class LoginAuthContractTest {
                 .getResponse()
                 .getContentAsString();
         String nextRefreshToken = JsonPath.read(refreshedBody, "$.data.refreshToken");
+        String refreshedAccessToken = JsonPath.read(refreshedBody, "$.data.token");
         assertEquals(refreshToken, nextRefreshToken);
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", refreshedAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.name").value("管理员"));
 
         mockMvc.perform(get("/admin/system/index/info")
                         .header("token", refreshToken))
@@ -116,6 +185,22 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + accessToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void malformedExpiredWrongTypeAndIdentityInconsistentRefreshTokensAreRejected() throws Exception {
+        String accessToken = jwtHelper.createTokenPair(1L, "admin").token();
+        String identityInconsistent = jwtHelper.createTokenPair(1L, "disabled_user").refreshToken();
+        String identityInconsistentAccess = jwtHelper.createTokenPair(1L, "disabled_user").token();
+
+        assertRefreshRejected("not-a-jwt");
+        assertRefreshRejected(expiredRefreshToken());
+        assertRefreshRejected(accessToken);
+        assertRefreshRejected(identityInconsistent);
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", identityInconsistentAccess))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(208));
     }
@@ -226,6 +311,42 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.name").value("管理员"))
                 .andExpect(jsonPath("$.data.routers").exists());
+    }
+
+    private String loginToken(String username, String password) throws Exception {
+        String response = mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return JsonPath.read(response, "$.data.token");
+    }
+
+    private void assertRefreshRejected(String token) throws Exception {
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + token + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    private String expiredRefreshToken() {
+        byte[] secret = "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000"
+                .getBytes(StandardCharsets.UTF_8);
+        SecretKey key = Keys.hmacShaKeyFor(secret);
+        long now = System.currentTimeMillis();
+        return Jwts.builder()
+                .subject("AUTH-USER")
+                .issuedAt(new Date(now - 120_000))
+                .expiration(new Date(now - 60_000))
+                .claim("userId", 1L)
+                .claim("username", "admin")
+                .claim("tokenType", "refresh")
+                .signWith(key)
+                .compact();
     }
 
     @TestConfiguration
