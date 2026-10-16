@@ -1,5 +1,5 @@
 <template>
-  <div class="template-set-page">
+  <div v-loading="loading" class="template-set-page">
     <el-steps :active="stepIndex" finish-status="success" align-center>
       <el-step v-for="title in wizardSteps" :key="title" :title="title" />
     </el-steps>
@@ -108,6 +108,7 @@ export default defineComponent({
   data() {
     return {
       stepIndex: 0,
+      loading: false,
       saving: false,
       processTypeList: [] as ProcessTypeRecord[],
       form: emptyForm(),
@@ -140,13 +141,23 @@ export default defineComponent({
       })
     },
     fetchById(id: string | number) {
-      read(id, request).then((form) => {
-        this.form = form
-        this.fileList = this.form.processDefinitionPath
-          ? [{ name: this.form.processDefinitionPath, url: this.form.processDefinitionPath }]
-          : []
-        this.$nextTick(() => this.restoreDesigner())
-      })
+      this.loading = true
+      read(id, request)
+        .then((form) => {
+          if (form.status === 1) {
+            this.$message.warning('已发布的审批模板只读，请在列表中选择“查看”')
+            this.$router.replace('/processSet/processTemplate')
+            return
+          }
+          this.form = form
+          this.fileList = this.form.processDefinitionPath
+            ? [{ name: this.form.processDefinitionPath, url: this.form.processDefinitionPath }]
+            : []
+          this.$nextTick(() => this.restoreDesigner())
+        })
+        .finally(() => {
+          this.loading = false
+        })
     },
     restoreDesigner() {
       const designer = this.$refs.designer as unknown as FormDesignerInstance | undefined

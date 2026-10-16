@@ -107,5 +107,10 @@ test('keeps unverified published templates frozen and blocks direct start URLs',
   await expect(page.getByRole('alert')).toContainText(unavailableMessage)
   await expect(page.getByLabel('抄送给')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: '附件' })).toHaveCount(0)
+
+  await page.goto(`/processSet/templateSet?id=${templateId}`)
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page.getByRole('alert')).toContainText('已发布的审批模板只读')
+  await expect(page.getByRole('button', { name: '编辑' })).toHaveCount(0)
   expect(sideEffectRequests).toEqual([])
 })
