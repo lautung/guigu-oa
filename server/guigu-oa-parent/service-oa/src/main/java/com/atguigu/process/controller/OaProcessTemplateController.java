@@ -3,7 +3,6 @@ package com.atguigu.process.controller;
 
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessTemplate;
-import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -30,9 +29,6 @@ public class OaProcessTemplateController {
 
     @Autowired
     private OaProcessTemplateService processTemplateService;
-
-    @Autowired
-    private ProcessDefinitionStorage processDefinitionStorage;
 
     //分页查询审批模板
     @Operation(summary = "获取分页审批模板数据")
@@ -82,8 +78,8 @@ public class OaProcessTemplateController {
     @PostMapping("/uploadProcessDefinition")
     public Result uploadProcessDefinition(@RequestParam("file") MultipartFile file) {
         try {
-            ProcessDefinitionStorage.UploadedProcessDefinition uploaded =
-                    processDefinitionStorage.store(file);
+            OaProcessTemplateService.UploadedProcessDefinition uploaded =
+                    processTemplateService.uploadProcessDefinition(file);
             Map<String, Object> map = new HashMap<>();
             map.put("processDefinitionPath", uploaded.processDefinitionPath());
             map.put("processDefinitionKey", uploaded.processDefinitionKey());

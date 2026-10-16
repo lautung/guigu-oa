@@ -15,7 +15,14 @@
       </el-table-column>
       <el-table-column prop="processTypeName" label="审批类型" />
       <el-table-column prop="description" label="描述" />
-      <el-table-column prop="statusLabel" label="状态" width="90" />
+      <el-table-column label="状态" width="220">
+        <template #default="scope">
+          <div>{{ scope.row.statusLabel }}</div>
+          <small v-if="scope.row.availabilityMessage" class="availability-message">
+            {{ scope.row.availabilityMessage }}
+          </small>
+        </template>
+      </el-table-column>
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column prop="updateTime" label="更新时间" />
       <el-table-column label="操作" width="260" align="center">
@@ -184,6 +191,10 @@ export default defineComponent({
   width: 30px;
   height: 30px;
   vertical-align: middle;
+}
+
+.availability-message {
+  color: #b88230;
 }
 
 .pagination-wrap {

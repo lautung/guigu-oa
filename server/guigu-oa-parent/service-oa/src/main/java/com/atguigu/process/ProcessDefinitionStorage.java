@@ -8,17 +8,20 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.FileAlreadyExistsException;
 import java.util.Locale;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 /** Stores process definition archives in a persistent filesystem directory. */
 @Component
 public class ProcessDefinitionStorage {
 
     private final Path directory;
+    private final HardLinkCreator hardLinkCreator;
 
     @Autowired
     public ProcessDefinitionStorage(
@@ -27,7 +30,12 @@ public class ProcessDefinitionStorage {
     }
 
     public ProcessDefinitionStorage(Path directory) {
+        this(directory, Files::createLink);
+    }
+
+    ProcessDefinitionStorage(Path directory, HardLinkCreator hardLinkCreator) {
         this.directory = directory.toAbsolutePath().normalize();
+        this.hardLinkCreator = hardLinkCreator;
     }
 
     public UploadedProcessDefinition store(MultipartFile file) throws IOException {
@@ -44,26 +52,23 @@ public class ProcessDefinitionStorage {
             throw new IllegalArgumentException("流程 zip 文件名无效");
         }
 
-        String relativePath = "processes/" + filename;
-        Path destination = resolve(relativePath);
-        Files.createDirectories(destination.getParent());
-        Path temporaryFile = Files.createTempFile(destination.getParent(), filename + ".", ".upload");
+        Path artifactDirectory = directory.resolve("processes/sha256");
+        Files.createDirectories(artifactDirectory);
+        Path temporaryFile = Files.createTempFile(artifactDirectory, "upload-", ".tmp");
+        String sha256;
         try {
             try (InputStream input = file.getInputStream()) {
-                Files.copy(input, temporaryFile, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(input, temporaryFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
-            try {
-                Files.move(temporaryFile, destination,
-                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporaryFile, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
+            sha256 = sha256(temporaryFile);
+            String relativePath = "processes/sha256/" + sha256 + ".zip";
+            Path destination = resolve(relativePath);
+            createOrReuseWithoutReplacement(temporaryFile, destination);
+            String processDefinitionKey = filename.substring(0, extensionIndex);
+            return new UploadedProcessDefinition(relativePath, processDefinitionKey, sha256);
         } finally {
             Files.deleteIfExists(temporaryFile);
         }
-
-        String processDefinitionKey = filename.substring(0, extensionIndex);
-        return new UploadedProcessDefinition(relativePath, processDefinitionKey);
     }
 
     public InputStream open(String relativePath) throws IOException {
@@ -91,6 +96,69 @@ public class ProcessDefinitionStorage {
         return resolved;
     }
 
+    public boolean matchesSha256(String relativePath, String expectedSha256) throws IOException {
+        if (!StringUtils.hasText(expectedSha256)) {
+            return false;
+        }
+        Path artifact = resolve(relativePath);
+        return Files.isRegularFile(artifact) && expectedSha256.equals(sha256(artifact));
+    }
+
+    public boolean isContentAddressedPath(String relativePath, String expectedSha256) {
+        return StringUtils.hasText(expectedSha256)
+                && ("processes/sha256/" + expectedSha256 + ".zip").equals(relativePath);
+    }
+
+    public String sha256(String relativePath) throws IOException {
+        Path artifact = resolve(relativePath);
+        if (!Files.isRegularFile(artifact)) throw new IOException("流程 zip 不存在");
+        return sha256(artifact);
+    }
+
+    public static String sha256(Path file) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream input = Files.newInputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) >= 0) {
+                    digest.update(buffer, 0, read);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("当前 Java 不支持 SHA-256", e);
+        }
+    }
+
+    private void createOrReuseWithoutReplacement(Path temporaryFile, Path destination) throws IOException {
+        try {
+            hardLinkCreator.create(destination, temporaryFile);
+        } catch (FileAlreadyExistsException e) {
+            requireSameBytes(temporaryFile, destination, e);
+        } catch (IOException | UnsupportedOperationException linkFailure) {
+            try {
+                Files.move(temporaryFile, destination);
+            } catch (FileAlreadyExistsException e) {
+                requireSameBytes(temporaryFile, destination, e);
+            } catch (IOException moveFailure) {
+                moveFailure.addSuppressed(linkFailure);
+                throw moveFailure;
+            }
+        }
+    }
+
+    private static void requireSameBytes(Path requested, Path existing, IOException cause) throws IOException {
+        if (Files.mismatch(requested, existing) != -1) {
+            throw new IOException("内容寻址流程 zip 与已有产物不一致", cause);
+        }
+    }
+
+    @FunctionalInterface
+    interface HardLinkCreator {
+        void create(Path link, Path existing) throws IOException;
+    }
+
     private static String safeFilename(String originalFilename) {
         if (!StringUtils.hasText(originalFilename)) {
             throw new IllegalArgumentException("流程 zip 文件名不能为空");
@@ -103,6 +171,6 @@ public class ProcessDefinitionStorage {
         return filename;
     }
 
-    public record UploadedProcessDefinition(String processDefinitionPath, String processDefinitionKey) {
+    public record UploadedProcessDefinition(String processDefinitionPath, String processDefinitionKey, String sha256) {
     }
 }

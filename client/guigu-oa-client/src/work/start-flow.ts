@@ -50,7 +50,7 @@ function presentApplyOption(option: FormDesignerOption = {}): FormDesignerOption
 }
 
 export type ApplyTemplate =
-  | { ok: false; redirectTo: string }
+  | { ok: false; redirectTo: string; reason?: string }
   | {
       ok: true
       id: EntityId
@@ -65,6 +65,9 @@ export function presentApplyTemplate(record: ProcessTemplateRecord): ApplyTempla
     return {
       ok: false,
       redirectTo: ROUTES.START,
+      ...(record?.status === 1
+        ? { reason: record.availabilityMessage || '暂不可发起，需核实原审批内容' }
+        : {}),
     }
   }
 

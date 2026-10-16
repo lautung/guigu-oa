@@ -20,12 +20,4 @@ public interface OaProcessService extends IService<Process>, Approval {
     //审批管理列表
     IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo);
 
-    //部署流程定义
-    void deployByZip(String deployPath);
-
-    /**
-     * 部署流程 zip，且这次部署必须含有指定流程定义 key，否则不能当作发布成功。
-     */
-    void deployByZip(String deployPath, String processDefinitionKey);
-
 }

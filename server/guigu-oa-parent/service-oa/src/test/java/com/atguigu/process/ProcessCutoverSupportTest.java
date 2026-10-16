@@ -1,13 +1,11 @@
 package com.atguigu.process;
 
-import com.atguigu.model.process.ProcessTemplate;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -61,33 +59,6 @@ public class ProcessCutoverSupportTest {
                 "DROP TABLE IF EXISTS `ACT_RU_TASK`",
                 "DROP TABLE IF EXISTS `FLW_RU_BATCH`"
         ), statements);
-    }
-
-    @Test
-    public void publishedToRedeployKeepsPublishedZipPathsAndDoesNotChangeStatus() {
-        ProcessTemplate published = new ProcessTemplate();
-        published.setName("请假申请");
-        published.setStatus(1);
-        published.setProcessDefinitionPath("processes/qingjia.zip");
-
-        ProcessTemplate unpublished = new ProcessTemplate();
-        unpublished.setName("病假草稿");
-        unpublished.setStatus(0);
-        unpublished.setProcessDefinitionPath("processes/bingjia.zip");
-
-        ProcessTemplate publishedWithoutZip = new ProcessTemplate();
-        publishedWithoutZip.setName("空路径");
-        publishedWithoutZip.setStatus(1);
-        publishedWithoutZip.setProcessDefinitionPath("");
-
-        List<ProcessTemplate> toRedeploy = ProcessCutoverSupport.publishedToRedeploy(
-                Arrays.asList(published, unpublished, publishedWithoutZip));
-
-        assertEquals(1, toRedeploy.size());
-        assertSame(published, toRedeploy.get(0));
-        assertEquals(1, published.getStatus());
-        assertEquals("processes/qingjia.zip", published.getProcessDefinitionPath());
-        assertEquals(0, unpublished.getStatus());
     }
 
     @Test

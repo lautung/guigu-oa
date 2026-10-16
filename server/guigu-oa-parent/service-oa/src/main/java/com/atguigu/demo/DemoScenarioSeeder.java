@@ -13,8 +13,6 @@ import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.flowable.engine.RepositoryService;
-import org.flowable.engine.repository.ProcessDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -41,7 +39,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     private final Approval approval;
     private final OaProcessTemplateService templateService;
     private final SysUserService userService;
-    private final RepositoryService repositoryService;
     private final AttachmentMapper attachmentMapper;
     private final JdbcTemplate jdbcTemplate;
     private final S3Client s3Client;
@@ -51,7 +48,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
             Approval approval,
             OaProcessTemplateService templateService,
             SysUserService userService,
-            RepositoryService repositoryService,
             AttachmentMapper attachmentMapper,
             JdbcTemplate jdbcTemplate,
             S3Client attachmentS3Client,
@@ -59,7 +55,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
         this.approval = approval;
         this.templateService = templateService;
         this.userService = userService;
-        this.repositoryService = repositoryService;
         this.attachmentMapper = attachmentMapper;
         this.jdbcTemplate = jdbcTemplate;
         this.s3Client = attachmentS3Client;
@@ -68,17 +63,18 @@ public class DemoScenarioSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        ensureProcessDefinition();
+        ProcessTemplate template = templateService.findUniquePublishedByProcessDefinitionKey(PROCESS_DEFINITION_KEY);
+        if (template == null) {
+            log.warn("Compose 演示审批模板不唯一或不存在，跳过演示审批写入");
+            return;
+        }
+        if (!Boolean.TRUE.equals(template.getAvailableForInitiation())) {
+            log.warn("Compose 演示审批模板不可发起，保留只读状态并跳过演示审批写入: {}",
+                    template.getAvailabilityMessage());
+            return;
+        }
         SysUser alice = requireUser("alice");
         SysUser bob = requireUser("bob");
-        ProcessTemplate template = templateService.getOne(new LambdaQueryWrapper<ProcessTemplate>()
-                .eq(ProcessTemplate::getProcessDefinitionKey, PROCESS_DEFINITION_KEY)
-                .eq(ProcessTemplate::getStatus, 1)
-                .eq(ProcessTemplate::getIsDeleted, 0)
-                .last("LIMIT 1"));
-        if (template == null) {
-            throw new IllegalStateException("Compose 演示审批模板未由 Flyway 创建");
-        }
 
         Process pending = findScenario(alice.getId(), template.getId(), "demo-pending");
         if (pending == null) {
@@ -102,19 +98,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
                 Long.class);
         log.info("Compose 演示数据就绪 pending={} processed={} carolCopied={}",
                 pendingCount, processedCount, copiedCount);
-    }
-
-    private void ensureProcessDefinition() {
-        ProcessDefinition definition = repositoryService.createProcessDefinitionQuery()
-                .processDefinitionKey(PROCESS_DEFINITION_KEY)
-                .latestVersion()
-                .singleResult();
-        if (definition == null) {
-            repositoryService.createDeployment()
-                    .name("Compose 演示审批")
-                    .addClasspathResource("processes/demo-approval.bpmn20.xml")
-                    .deploy();
-        }
     }
 
     private SysUser requireUser(String username) {

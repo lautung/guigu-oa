@@ -1,8 +1,8 @@
 package com.atguigu.process;
 
 import com.atguigu.model.process.Process;
+import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.process.service.OaProcessService;
-import com.atguigu.process.service.OaProcessTemplateService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,11 +21,11 @@ public class PublishedTemplateRedeployRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(PublishedTemplateRedeployRunner.class);
 
     private final OaProcessService processService;
-    private final OaProcessTemplateService processTemplateService;
+    private final ApprovalTemplate processTemplateService;
 
     public PublishedTemplateRedeployRunner(
             OaProcessService processService,
-            OaProcessTemplateService processTemplateService
+            ApprovalTemplate processTemplateService
     ) {
         this.processService = processService;
         this.processTemplateService = processTemplateService;
@@ -35,7 +35,7 @@ public class PublishedTemplateRedeployRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         ProcessCutoverSupport.requireNoInProgress(
                 processService.count(new LambdaQueryWrapper<Process>().eq(Process::getStatus, 1)));
-        int count = processTemplateService.redeployPublished();
+        int count = processTemplateService.restorePublished();
         log.info("切库再部署已发布审批模板 {} 条", count);
     }
 }

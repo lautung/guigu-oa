@@ -3,7 +3,7 @@
     <h2 class="page-title">发起审批</h2>
 
     <div v-loading="loading">
-      <el-empty v-if="!loading && groups.length === 0" description="暂无已发布的审批模板" />
+      <el-empty v-if="!loading && groups.length === 0" description="暂无可发起的审批模板" />
 
       <div v-for="group in groups" :key="group.id" class="type-group">
         <h3>{{ group.name }}</h3>

@@ -1,10 +1,9 @@
 package com.atguigu.process;
 
-import com.atguigu.model.process.ProcessTemplate;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -43,21 +42,6 @@ public final class ProcessCutoverSupport {
             statements.add("DROP TABLE IF EXISTS `" + tableName.replace("`", "") + "`");
         }
         return statements;
-    }
-
-    public static List<ProcessTemplate> publishedToRedeploy(List<ProcessTemplate> templates) {
-        if (templates == null || templates.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<ProcessTemplate> published = new ArrayList<>();
-        for (ProcessTemplate template : templates) {
-            if (template.getStatus() != null
-                    && template.getStatus() == 1
-                    && StringUtils.hasText(template.getProcessDefinitionPath())) {
-                published.add(template);
-            }
-        }
-        return published;
     }
 
     private static boolean isEngineTable(String tableName) {

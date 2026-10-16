@@ -8,7 +8,6 @@ import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ProcessApprovalSupport;
-import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
 import com.atguigu.process.attachment.AttachmentService;
@@ -17,7 +16,7 @@ import com.atguigu.process.cc.CarbonCopyService;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
-import com.atguigu.process.service.OaProcessTemplateService;
+import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessQueryVo;
@@ -30,33 +29,25 @@ import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
-import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.zip.ZipInputStream;
 
 @Service
 public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> implements OaProcessService {
 
     @Autowired
     private RepositoryService repositoryService;
-
-    @Autowired
-    private ProcessDefinitionStorage processDefinitionStorage;
 
     @Autowired
     private RuntimeService runtimeService;
@@ -71,8 +62,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     private SysUserService sysUserService;
 
     @Autowired
-    @Lazy
-    private OaProcessTemplateService processTemplateService;
+    private ApprovalTemplate processTemplateService;
 
     @Autowired
     private OaProcessRecordService processRecordService;
@@ -92,46 +82,11 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    public void deployByZip(String deployPath) {
-        deployByZip(deployPath, null);
-    }
-
-    @Override
-    public void deployByZip(String deployPath, String processDefinitionKey) {
-        InputStream inputStream;
-        try {
-            inputStream = processDefinitionStorage.open(deployPath);
-        } catch (IOException e) {
-            throw new IllegalStateException("读取流程 zip 失败: " + deployPath, e);
-        }
-        if (inputStream == null) {
-            throw new IllegalArgumentException("流程 zip 不存在: " + deployPath);
-        }
-        try (ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {
-            Deployment deployment = repositoryService.createDeployment()
-                    .addZipInputStream(zipInputStream)
-                    .name(deployPath)
-                    .deploy();
-            if (StringUtils.hasText(processDefinitionKey)
-                    && repositoryService.createProcessDefinitionQuery()
-                    .deploymentId(deployment.getId())
-                    .processDefinitionKey(processDefinitionKey)
-                    .count() == 0) {
-                repositoryService.deleteDeployment(deployment.getId());
-                throw new GuiguException(201, "流程 zip 无法让发起成立");
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("部署流程 zip 失败: " + deployPath, e);
-        }
-    }
-
-    @Override
     @Transactional
     public void startUp(SysUser user, ProcessFormVo processFormVo) {
-        if (!processTemplateService.canInitiate(processFormVo.getProcessTemplateId())) {
-            throw new GuiguException(201, "未发布的审批模板不能发起");
-        }
-        ProcessTemplate processTemplate = processTemplateService.read(processFormVo.getProcessTemplateId());
+        ApprovalTemplate.PublishedApproval publication =
+                processTemplateService.resolveForInitiation(processFormVo.getProcessTemplateId());
+        ProcessTemplate processTemplate = publication.template();
 
         Process process = new Process();
         BeanUtils.copyProperties(processFormVo, process);
@@ -147,8 +102,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         attachmentService.bindDraft(
                 user, processFormVo.getAttachmentDraftId(), processFormVo.getAttachmentIds(), process.getId());
 
-        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
-                processTemplate.getProcessDefinitionKey(),
+        ProcessInstance processInstance = runtimeService.startProcessInstanceById(
+                publication.processDefinitionId(),
                 String.valueOf(process.getId()),
                 ProcessStartSupport.engineVariables(processFormVo.getFormValues()));
 

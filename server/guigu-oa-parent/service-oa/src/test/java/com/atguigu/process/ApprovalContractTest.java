@@ -2,10 +2,12 @@ package com.atguigu.process;
 
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
+import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.cc.CarbonCopyTrigger;
 import com.atguigu.process.cc.CarbonCopyWriter;
 import com.atguigu.process.service.Approval;
+import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.vo.process.ApprovalVo;
@@ -38,6 +40,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.util.AopTestUtils;
@@ -49,6 +52,11 @@ import com.jayway.jsonpath.JsonPath;
 
 import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationTargetException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,6 +98,9 @@ public class ApprovalContractTest {
     private Approval approval;
 
     @Autowired
+    private ApprovalTemplate approvalTemplate;
+
+    @Autowired
     private CarbonCopyWriter carbonCopyWriter;
 
     @Autowired
@@ -114,20 +125,25 @@ public class ApprovalContractTest {
     private MockMvc mockMvc;
 
     @BeforeEach
-    public void deployPublishedTemplateEngineDefinition() {
+    public void deployPublishedTemplateEngineDefinition() throws IOException {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
         clearEngineInstances();
         runtimeService.removeEventListener(approvalTransactionCcProbe);
         approvalTransactionCcProbe.reset();
         runtimeService.addEventListener(approvalTransactionCcProbe, FlowableEngineEventType.TASK_CREATED);
-        if (repositoryService.createProcessDefinitionQuery()
+        repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("approvalTwoStep")
-                .count() == 0) {
-            repositoryService.createDeployment()
-                    .addClasspathResource("process/approval-two-step.bpmn20.xml")
-                    .deploy();
-        }
+                .list()
+                .forEach(definition -> repositoryService.deleteDeployment(definition.getDeploymentId(), true));
+        jdbcTemplate.update("UPDATE oa_process_template SET status = 0 WHERE id = 1");
+        ProcessTemplate template = approvalTemplate.read(1L);
+        var uploaded = approvalTemplate.uploadProcessDefinition(new MockMultipartFile(
+                "file", "approvalTwoStep.zip", "application/zip", approvalTwoStepZip()));
+        template.setProcessDefinitionKey(uploaded.processDefinitionKey());
+        template.setProcessDefinitionPath(uploaded.processDefinitionPath());
+        approvalTemplate.saveUnpublished(template);
+        approvalTemplate.publish(template.getId());
     }
 
     @AfterEach
@@ -905,6 +921,19 @@ public class ApprovalContractTest {
         form.setProcessTypeId(1L);
         form.setFormValues("{\"formData\":{\"days\":1},\"formShowData\":{\"请假天数\":1}}");
         return form;
+    }
+
+    private static byte[] approvalTwoStepZip() throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (InputStream bpmn = ApprovalContractTest.class.getClassLoader()
+                     .getResourceAsStream("process/approval-two-step.bpmn20.xml");
+             ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            if (bpmn == null) throw new IOException("审批合同 BPMN 不存在");
+            zip.putNextEntry(new ZipEntry("approval-two-step.bpmn20.xml"));
+            bpmn.transferTo(zip);
+            zip.closeEntry();
+        }
+        return bytes.toByteArray();
     }
 
     private static SysUser user(Long id, String username, String name) {

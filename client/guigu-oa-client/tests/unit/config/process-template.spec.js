@@ -27,6 +27,18 @@ describe('审批模板', () => {
       expect(canInitiate(published)).toBe(true)
       expect(canWrite(published)).toBe(false)
     })
+
+    it('preserves 已发布 while hiding a template that is unavailable for initiation', () => {
+      const publishedButUnavailable = {
+        id: 19,
+        status: 1,
+        availableForInitiation: false,
+        availabilityMessage: '暂不可发起，需核实原审批内容'
+      }
+
+      expect(canInitiate(publishedButUnavailable)).toBe(false)
+      expect(canWrite(publishedButUnavailable)).toBe(false)
+    })
   })
 
   describe('findPage', () => {
@@ -106,6 +118,30 @@ describe('审批模板', () => {
       expect(canInitiate(page.records[0])).toBe(false)
       expect(canWrite(page.records[1])).toBe(false)
       expect(canInitiate(page.records[1])).toBe(true)
+    })
+
+    it('shows the availability explanation without restoring write actions', async () => {
+      const request = async () => ({
+        data: {
+          records: [{
+            id: 19,
+            name: '旧请假申请',
+            status: 1,
+            availableForInitiation: false,
+            availabilityMessage: '暂不可发起，需核实原审批内容'
+          }]
+        }
+      })
+
+      const page = await findPage(1, 10, request)
+
+      expect(page.records[0]).toMatchObject({
+        statusLabel: '已发布',
+        availabilityMessage: '暂不可发起，需核实原审批内容',
+        canEdit: false,
+        canDelete: false,
+        canPublish: false
+      })
     })
 
     it('treats a missing payload as an empty page', async () => {
@@ -298,8 +334,8 @@ describe('审批模板', () => {
             id: 1,
             name: '请假',
             processTemplateList: [
-              { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png' },
-              { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png' }
+              { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png', status: 1 },
+              { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png', status: 1 }
             ]
           }
         ]
@@ -331,6 +367,25 @@ describe('审批模板', () => {
       const request = async () => ({})
 
       expect(await findStartable(request)).toEqual([])
+    })
+
+    it('filters published templates that are unavailable for initiation', async () => {
+      const request = async () => ({
+        data: [{
+          id: 2,
+          name: '请假',
+          processTemplateList: [
+            { id: 21, name: '正常模板', status: 1 },
+            { id: 22, name: '待核实模板', availableForInitiation: false }
+          ]
+        }]
+      })
+
+      expect(await findStartable(request)).toEqual([{
+        id: 2,
+        name: '请假',
+        templates: [{ id: 21, name: '正常模板', iconUrl: undefined }]
+      }])
     })
   })
 })

@@ -1,8 +1,15 @@
 <template>
   <div v-loading="loading" class="apply-page">
     <el-button type="text" @click="goBack">返回</el-button>
+    <el-alert
+      v-if="unavailableMessage"
+      type="warning"
+      :title="unavailableMessage"
+      :closable="false"
+      show-icon
+    />
     <h2 class="page-title">{{ title }}</h2>
-    <div class="carbon-copy-field">
+    <div v-if="template" class="carbon-copy-field">
       <label for="carbon-copy-users">抄送给</label>
       <el-select
         id="carbon-copy-users"
@@ -23,14 +30,14 @@
       </el-select>
     </div>
     <form-create
-      v-if="rule.length"
+      v-if="template && rule.length"
       v-model="formData"
       :rule="rule"
       :option="option"
       @submit="onSubmit"
     />
     <AttachmentSection
-      v-if="attachmentDraftId"
+      v-if="template && attachmentDraftId"
       :draft-id="attachmentDraftId"
       @busy-change="onAttachmentBusyChange"
       @ready-change="onAttachmentReadyChange"
@@ -64,6 +71,7 @@ export default defineComponent({
   data() {
     return {
       loading: false,
+      unavailableMessage: '',
       submitting: false,
       template: null as Extract<ApplyTemplate, { ok: true }> | null,
       rule: [] as FormRule[],
@@ -81,9 +89,7 @@ export default defineComponent({
   created() {
     const templateId = this.$route.params.processTemplateId
     if (typeof templateId === 'string') {
-      this.attachmentDraftId = getOrCreateDraftId(templateId)
       this.fetchTemplate()
-      this.fetchCarbonCopyRecipients()
     } else {
       this.goBack()
     }
@@ -114,10 +120,13 @@ export default defineComponent({
         .then((template) => {
           const presented = presentApplyTemplate(template)
           if (!presented.ok) {
-            this.$router.replace(presented.redirectTo)
+            if (presented.reason) this.unavailableMessage = presented.reason
+            else this.$router.replace(presented.redirectTo)
             return
           }
           this.template = presented
+          this.attachmentDraftId = getOrCreateDraftId(templateId)
+          this.fetchCarbonCopyRecipients()
           this.title = presented.name || '发起审批'
           this.rule = presented.rule
           this.option = presented.option

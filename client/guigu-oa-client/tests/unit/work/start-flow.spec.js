@@ -89,6 +89,20 @@ describe('work/start-flow', () => {
         redirectTo: ROUTES.START
       })
     })
+
+    it('explains why an old published template cannot be opened for initiation', () => {
+      expect(presentApplyTemplate({
+        id: 19,
+        processTypeId: 1,
+        status: 1,
+        availableForInitiation: false,
+        availabilityMessage: '暂不可发起，需核实原审批内容'
+      })).toEqual({
+        ok: false,
+        redirectTo: ROUTES.START,
+        reason: '暂不可发起，需核实原审批内容'
+      })
+    })
   })
 
   describe('buildStartPayload', () => {

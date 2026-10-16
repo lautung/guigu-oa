@@ -2,6 +2,8 @@ package com.atguigu.process.attachment;
 
 import com.atguigu.model.process.Attachment;
 import com.atguigu.model.process.Process;
+import com.atguigu.model.process.ProcessTemplate;
+import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.jayway.jsonpath.JsonPath;
 import tools.jackson.databind.ObjectMapper;
@@ -21,16 +23,23 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Proxy;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,6 +61,12 @@ class AttachmentContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ApprovalTemplate approvalTemplate;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private AttachmentMapper attachmentMapper;
@@ -81,16 +96,22 @@ class AttachmentContractTest {
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void prepareProcessDefinition() {
+    void prepareProcessDefinition() throws IOException {
         clearEngineInstances();
         objectStore.clear();
-        if (repositoryService.createProcessDefinitionQuery()
+        jdbcTemplate.update("DELETE FROM oa_attachment");
+        repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("approvalTwoStep")
-                .count() == 0) {
-            repositoryService.createDeployment()
-                    .addClasspathResource("process/approval-two-step.bpmn20.xml")
-                    .deploy();
-        }
+                .list()
+                .forEach(definition -> repositoryService.deleteDeployment(definition.getDeploymentId(), true));
+        jdbcTemplate.update("UPDATE oa_process_template SET status = 0 WHERE id = 1");
+        ProcessTemplate template = approvalTemplate.read(1L);
+        var uploaded = approvalTemplate.uploadProcessDefinition(new MockMultipartFile(
+                "file", "approvalTwoStep.zip", "application/zip", approvalTwoStepZip()));
+        template.setProcessDefinitionKey(uploaded.processDefinitionKey());
+        template.setProcessDefinitionPath(uploaded.processDefinitionPath());
+        approvalTemplate.saveUnpublished(template);
+        approvalTemplate.publish(template.getId());
     }
 
     @AfterEach
@@ -374,6 +395,19 @@ class AttachmentContractTest {
                 .forEach(instance -> runtimeService.deleteProcessInstance(instance.getId(), "attachment-contract-reset"));
         historyService.createHistoricProcessInstanceQuery().list()
                 .forEach(instance -> historyService.deleteHistoricProcessInstance(instance.getId()));
+    }
+
+    private static byte[] approvalTwoStepZip() throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (InputStream bpmn = AttachmentContractTest.class.getClassLoader()
+                     .getResourceAsStream("process/approval-two-step.bpmn20.xml");
+             ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            if (bpmn == null) throw new IOException("审批合同 BPMN 不存在");
+            zip.putNextEntry(new ZipEntry("approval-two-step.bpmn20.xml"));
+            bpmn.transferTo(zip);
+            zip.closeEntry();
+        }
+        return bytes.toByteArray();
     }
 
     @TestConfiguration

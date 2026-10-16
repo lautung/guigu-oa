@@ -56,4 +56,12 @@ public class ProcessTemplate extends BaseEntity {
 
 	@TableField(exist = false)
 	private String processTypeName;
+
+	@Schema(description = "当前是否可发起")
+	@TableField(exist = false)
+	private Boolean availableForInitiation;
+
+	@Schema(description = "暂不可发起原因")
+	@TableField(exist = false)
+	private String availabilityMessage;
 }

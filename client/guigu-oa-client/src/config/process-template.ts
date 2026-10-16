@@ -14,11 +14,11 @@ import type {
 const PROCESS_TEMPLATE_API = '/admin/process/processTemplate'
 
 export function canInitiate(record: ProcessTemplateRecord | null | undefined): boolean {
-  return !!record && record.status === 1
+  return !!record && record.status === 1 && record.availableForInitiation !== false
 }
 
 export function canWrite(record: ProcessTemplateRecord | null | undefined): boolean {
-  return !!record && !canInitiate(record)
+  return !!record && record.status !== 1
 }
 
 function presentListItem(record: ProcessTemplateRecord = {}): ProcessTemplateListItem {
@@ -36,12 +36,16 @@ function presentListItem(record: ProcessTemplateRecord = {}): ProcessTemplateLis
     processDefinitionPath: record.processDefinitionPath,
     description: record.description,
     status: record.status,
-    statusLabel: canInitiate(record) ? '已发布' : '未发布',
+    statusLabel: record.status === 1 ? '已发布' : '未发布',
     createTime: record.createTime,
     updateTime: record.updateTime,
     canEdit: writable,
     canDelete: writable,
     canPublish: writable,
+    ...(record.availableForInitiation == null
+      ? {}
+      : { availableForInitiation: record.availableForInitiation }),
+    ...(record.availabilityMessage ? { availabilityMessage: record.availabilityMessage } : {}),
   }
 }
 
@@ -80,6 +84,10 @@ function presentForm(record: ProcessTemplateRecord = {}): PresentedProcessTempla
     processDefinitionPath: record.processDefinitionPath || '',
     description: record.description || '',
     status: record.status == null ? 0 : record.status,
+    ...(record.availableForInitiation == null
+      ? {}
+      : { availableForInitiation: record.availableForInitiation }),
+    ...(record.availabilityMessage ? { availabilityMessage: record.availabilityMessage } : {}),
   }
 }
 
@@ -147,7 +155,7 @@ export function zipUploadError(file: UploadFileCandidate = {}): string | null {
 }
 
 export function saveValidationError(form: ProcessTemplateRecord = {}): string | null {
-  if (form.id && canInitiate(form)) {
+  if (form.id && form.status === 1) {
     return '已发布的审批模板不能保存'
   }
   if (!form.processDefinitionPath) {
@@ -161,7 +169,7 @@ function presentStartGroups(types: ProcessTypeRecord[] = []): ProcessTemplateSta
     .map((type) => ({
       id: type.id,
       name: type.name,
-      templates: (type.processTemplateList || []).map((template) => ({
+      templates: (type.processTemplateList || []).filter(canInitiate).map((template) => ({
         id: template.id,
         name: template.name,
         iconUrl: template.iconUrl,
@@ -217,7 +225,7 @@ export async function saveUnpublished(
   form: PresentedProcessTemplate,
   request: ApiClient,
 ): Promise<ApiResponse<unknown>> {
-  if (form.id && canInitiate(form)) {
+  if (form.id && form.status === 1) {
     return Promise.reject(new Error('已发布的审批模板不能保存'))
   }
   const data = unpublishedPayload(form)

@@ -92,6 +92,8 @@ export interface ProcessTemplateRecord {
   processDefinitionPath?: string
   description?: string
   status?: number
+  availableForInitiation?: boolean
+  availabilityMessage?: string
   createTime?: string
   updateTime?: string
 }
