@@ -1,7 +1,7 @@
 # 升级到 Spring Boot 4 与 Vue 3 的依赖规格
 
 > **地图**：[升级到 Spring Boot 4 与 Vue 3 的依赖规格](https://github.com/lautung/guigu-oa/issues/22)  
-> **领域词汇**：仓库根目录 [`CONTEXT.md`](../../CONTEXT.md)  
+> **领域词汇**：仓库根目录 [`GLOSSARY.md`](../../GLOSSARY.md)\
 > **办事 / 配置合同面**：[云尚办公统一客户端改造规格](./云尚办公统一客户端改造规格.md)（本文不改写那份正文；栈与引擎改口只写在这里）  
 > **坐标时点**：2026-08
 

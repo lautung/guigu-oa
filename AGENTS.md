@@ -1,5 +1,7 @@
 ## Agent skills
 
+Per-repo configuration for [Matt Pocock skills 1.3](https://github.com/mattpocock/skills/releases/tag/v1.3.1).
+
 ### Issue tracker
 
 Issues live in this repo's GitHub Issues (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
@@ -10,7 +12,7 @@ Canonical roles map 1:1 to tracker labels: `needs-triage`, `needs-info`, `ready-
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before exploring the codebase or naming domain concepts, read `docs/agents/domain.md`.
 
 ## Cursor Cloud specific instructions
 

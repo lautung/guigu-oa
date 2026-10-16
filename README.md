@@ -8,7 +8,7 @@
 | ------------ | ------------------------------------------------------------------------------------- |
 | 在线演示     | 公网 demo 暂未部署；请用下方 Compose 本地启动                                         |
 | 本地一键启动 | `docker compose up --build`，详见[Compose 演示说明](docs/development/compose-demo.md) |
-| 领域与边界   | [CONTEXT.md](CONTEXT.md)                                                              |
+| 领域与边界   | [GLOSSARY.md](GLOSSARY.md)                                                              |
 
 ## 项目起点与改造
 
@@ -146,6 +146,6 @@ npm run build:prod
 
 - [Compose 演示与种子数据](docs/development/compose-demo.md)
 - [面试作品化改造规格](docs/spec/面试作品化改造规格.md)
-- [领域词汇](CONTEXT.md)
+- [领域词汇](GLOSSARY.md)
 - [两端能力与路由对照](docs/research/现有两端能力与路由对照.md)
 - [可观测性](docs/observability.md)

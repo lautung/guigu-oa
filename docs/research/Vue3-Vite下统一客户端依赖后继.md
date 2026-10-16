@@ -24,7 +24,7 @@
 | 开发代理 | vue-cli `devServer.proxy['/dev-api']` → `http://localhost:8800` | `vue.config.js` |
 | 单元测试 | Jest + `@vue/cli-plugin-unit-jest` 4.4.4 + `@vue/test-utils` 1.0.0-beta.29 + `vue-jest` | `package.json`、`jest.config.js` |
 
-领域约束（`CONTEXT.md`）：**办事必须能在手机浏览器完成**；**配置按桌面使用**。设计器只出现在配置向导；手机路径是渲染已保存的 JSON 规则，不是拖拽设计。
+领域约束（`GLOSSARY.md`）：**办事必须能在手机浏览器完成**；**配置按桌面使用**。设计器只出现在配置向导；手机路径是渲染已保存的 JSON 规则，不是拖拽设计。
 
 ---
 
@@ -142,7 +142,7 @@ Safari 14.1+ 覆盖 2021 年起的 iOS Safari；是否覆盖产品要支持的�
 ### 5.3 同一官方线里的其它包（不是后继选型）
 
 form-create next README 还列出 `@form-create/vant`（移动端渲染）和 `@form-create/vant-designer`（移动端设计器）。([next README 包表](https://github.com/xaboy/form-create/blob/next/README.md)；[designer next：移动端设计器](https://github.com/xaboy/form-create-designer/blob/next/README.md))  
-按 `CONTEXT.md`：设计器属于**配置（桌面）**；手机只要能填已发布模板。vant-designer 不是当前桌面向导的必需后继，只是同一生态里另有移动端设计器这一事实。
+按 `GLOSSARY.md`：设计器属于**配置（桌面）**；手机只要能填已发布模板。vant-designer 不是当前桌面向导的必需后继，只是同一生态里另有移动端设计器这一事实。
 
 ### 5.4 「若无官方后继」条款
 
@@ -223,8 +223,8 @@ Vite 下现有 `process.env.VUE_APP_BASE_API` 不会按 vue-cli 规则注入，�
 
 | 层 | 事实 | 来源 |
 |----|------|------|
-| 设计器 | 只在配置向导第二步，桌面 | `templateSet.vue`、`CONTEXT.md` |
-| 办事表单 | 手机浏览器渲染 JSON rule | `apply.vue`、`CONTEXT.md` |
+| 设计器 | 只在配置向导第二步，桌面 | `templateSet.vue`、`GLOSSARY.md` |
+| 办事表单 | 手机浏览器渲染 JSON rule | `apply.vue`、`GLOSSARY.md` |
 | Vue 3 | 无 IE11 | Vue FAQ |
 | Element Plus ≥2.5 | Safari ≥14.1 等 | Element Plus Installation |
 | Vite 8 默认 production | 约 2023 年中起的 widely available 浏览器；可下调 target 或加 plugin-legacy | Vite Guide |
@@ -248,7 +248,7 @@ Vite 下现有 `process.env.VUE_APP_BASE_API` 不会按 vue-cli 规则注入，�
 
 ## 11. 主要来源
 
-- 仓库：`client/guigu-oa-client/package.json`、`src/main.js`、`src/views/config/processTemplate/*`、`src/views/work/start/apply.vue`、`src/config/process-template.js`、`src/work/start-flow.js`、`src/utils/request.js`、`vue.config.js`、`jest.config.js`；根目录 `CONTEXT.md`
+- 仓库：`client/guigu-oa-client/package.json`、`src/main.js`、`src/views/config/processTemplate/*`、`src/views/work/start/apply.vue`、`src/config/process-template.js`、`src/work/start-flow.js`、`src/utils/request.js`、`vue.config.js`、`jest.config.js`；根目录 `GLOSSARY.md`
 - Vue：<https://vuejs.org/guide/quick-start.html> <https://vuejs.org/guide/scaling-up/tooling.html> <https://vuejs.org/guide/scaling-up/testing.html> <https://vuejs.org/guide/scaling-up/state-management.html> <https://vuejs.org/about/faq.html> <https://v3-migration.vuejs.org/migration-build.html> <https://v3-migration.vuejs.org/breaking-changes/global-api.html>
 - Vite：<https://vitejs.dev/guide/> <https://vitejs.dev/guide/features.html> <https://vitejs.dev/guide/env-and-mode.html> <https://vitejs.dev/plugins/>
 - Vue CLI：<https://cli.vuejs.org/> <https://cli.vuejs.org/guide/mode-and-env.html>

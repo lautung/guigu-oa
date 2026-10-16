@@ -14,7 +14,7 @@
 | --- | --- |
 | 在线演示 | _（执行后填 Oracle 地址）_ · 账号见下方 |
 | 本地一键起 | `docker compose up`（见 [快速开始](#快速开始)） |
-| 领域词汇 | [CONTEXT.md](../../CONTEXT.md) |
+| 领域词汇 | [GLOSSARY.md](../../GLOSSARY.md) |
 
 ---
 
@@ -132,7 +132,7 @@ docker compose up
 
 | 文档 | 内容 |
 | --- | --- |
-| [CONTEXT.md](../../CONTEXT.md) | 领域词汇 |
+| [GLOSSARY.md](../../GLOSSARY.md) | 领域词汇 |
 | [docs/spec/](../spec/) | 改造规格 |
 | [docs/research/](../research/) | 选型与引擎调研 |
 | tag `legacy-frontends` | 删除旧前端前的快照 |

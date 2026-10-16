@@ -235,7 +235,7 @@ Prior art: admin `tests/unit/utils/*.spec.js`, `tests/unit/components/*.spec.js`
 ## Further Notes
 
 - **地图**：Part of #1（云尚办公统一客户端改造规格）
-- **领域词汇**：仓库根目录 `CONTEXT.md`
+- **领域词汇**：仓库根目录 `GLOSSARY.md`
 - **现状对照**：`docs/research/现有两端能力与路由对照.md`
 - **人类可读规格汇总**：`docs/spec/云尚办公统一客户端改造规格.md`
 - **决策索引**：GitHub issues #2–#7（均已关闭）
