@@ -60,6 +60,14 @@ function validRecords(value: unknown): value is RecoveryRecord[] {
   )
 }
 
+interface AttachmentBatch {
+  busy: boolean
+  openings: Set<() => void>
+}
+// A route remount creates a new factory. Keep only in-flight batch timing in this JS process,
+// scoped to the original entry and approval; file content and presentation stay with the opening.
+const attachmentBatches = new Map<string, AttachmentBatch>()
+
 /** The page issues intentions here; this boundary owns opening, decision and recovery ordering. */
 export function createApprovalDetail(adapter: DetailAdapter) {
   let releaseCurrent = () => {}
@@ -68,6 +76,25 @@ export function createApprovalDetail(adapter: DetailAdapter) {
     const target = { ...input, perspective: { ...input.perspective } }
     const entryId = adapter.entryId()
     const key = `oa-approval-recovery:${entryId}`
+    const batchKey = JSON.stringify([entryId, String(target.processId)])
+    const attachmentBatch = attachmentBatches.get(batchKey) || {
+      busy: false,
+      openings: new Set<() => void>(),
+    }
+    attachmentBatches.set(batchKey, attachmentBatch)
+    function discardIdleBatch() {
+      if (
+        !attachmentBatch.busy &&
+        !attachmentBatch.openings.size &&
+        attachmentBatches.get(batchKey) === attachmentBatch
+      )
+        attachmentBatches.delete(batchKey)
+    }
+    function setBatchBusy(busy: boolean) {
+      attachmentBatch.busy = busy
+      for (const update of attachmentBatch.openings) update()
+      discardIdleBatch()
+    }
     let released = false
     const current = () => !released && !!entryId && adapter.entryId() === entryId
     const io = adapter.forOpening?.(current) || adapter
@@ -84,7 +111,7 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       ended: false,
       attachments: [] as AttachmentRecord[],
       attachmentLoading: false,
-      attachmentBusy: false,
+      attachmentBusy: attachmentBatch.busy,
       attachmentError: '',
       attachmentUploadAllowed: false,
       canAddAttachments: false,
@@ -123,6 +150,7 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       }
     }
     function eligible() {
+      state.attachmentBusy = attachmentBatch.busy
       state.canSubmit =
         current() &&
         !state.loading &&
@@ -145,9 +173,12 @@ export function createApprovalDetail(adapter: DetailAdapter) {
         !state.recoveries.length &&
         !state.recordError
     }
+    attachmentBatch.openings.add(eligible)
     refreshRecords()
     const release = () => {
       released = true
+      attachmentBatch.openings.delete(eligible)
+      discardIdleBatch()
       state.canSubmit = false
       state.canAddAttachments = false
     }
@@ -244,7 +275,7 @@ export function createApprovalDetail(adapter: DetailAdapter) {
     }
     let attachmentRead = 0
     async function reloadAttachments() {
-      if (!current() || state.attachmentBusy) return
+      if (!current()) return
       const request = ++attachmentRead
       state.attachmentLoading = true
       state.attachmentError = ''
@@ -267,7 +298,7 @@ export function createApprovalDetail(adapter: DetailAdapter) {
     async function addAttachments(files: File[]) {
       eligible()
       if (!state.canAddAttachments || !files.length) return
-      state.attachmentBusy = true
+      setBatchBusy(true)
       state.attachmentError = ''
       eligible()
       try {
@@ -281,10 +312,9 @@ export function createApprovalDetail(adapter: DetailAdapter) {
           }
         }
       } finally {
-        if (current()) {
-          state.attachmentBusy = false
-          eligible()
-        }
+        // Releasing an opening never cancels the already-running upload/registration.
+        // Its eventual completion must unlock current openings even when its own view is gone.
+        setBatchBusy(false)
       }
     }
     async function downloadAttachment(attachment: AttachmentRecord) {

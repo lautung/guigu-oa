@@ -123,9 +123,7 @@
       </p>
       <p v-if="state.attachmentLoading" role="status">正在读取附件…</p>
       <p v-if="state.attachmentError" role="alert">{{ state.attachmentError }}</p>
-      <el-button
-        :disabled="state.attachmentLoading || state.attachmentBusy"
-        @click="opening?.reloadAttachments()"
+      <el-button :disabled="state.attachmentLoading" @click="opening?.reloadAttachments()"
         >重新读取附件</el-button
       >
       <p v-if="!state.attachmentLoading && !state.attachments.length">暂无附件</p>

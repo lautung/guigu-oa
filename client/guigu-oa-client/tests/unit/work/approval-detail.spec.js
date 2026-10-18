@@ -26,13 +26,14 @@ const target = (id = 'A', taskId = 'task-A', kind = 'pending') => ({
   taskId,
   perspective: workListPerspective(kind),
 })
+let entrySequence = 0
 function harness(overrides = {}) {
   const reads = [],
     submissions = [],
     navigation = [],
     notifications = []
   const records = new Map()
-  let entry = 'login-1'
+  let entry = `login-${++entrySequence}`
   const adapter = {
     entryId: () => entry,
     read: (id) => {
@@ -63,7 +64,7 @@ function harness(overrides = {}) {
     notifications,
     records,
     changeIdentity: () => {
-      entry = 'login-2'
+      entry = `login-${++entrySequence}`
     },
   }
 }
@@ -442,3 +443,80 @@ it.each([
   expect(fresh.state.detail.perspective.kind).toBe(kind)
   expect(fresh.state.canSubmit).toBe(kind === 'pending')
 })
+
+it.each(['same-factory', 'new-factory'])(
+  '补传在途跨 %s 重开同审批保持互斥，已有附件可读取下载，完成后不自动提交',
+  async (mode) => {
+    const inFlight = deferred()
+    let uploads = 0
+    const downloads = []
+    const h = harness({
+      upload: () => {
+        uploads++
+        return inFlight.promise
+      },
+      listAttachments: async () => ({
+        attachments: [{ id: 7, fileName: '原附件.txt', sizeBytes: 1 }],
+        canUpload: true,
+      }),
+      download: async (...args) => downloads.push(args),
+    })
+    const first = h.module.open(target())
+    h.reads[0].resolve(payload('A'))
+    await first.ready
+    const batch = first.addAttachments([new File(['1'], '1.txt'), new File(['2'], '2.txt')])
+    first.release()
+    const factory = mode === 'same-factory' ? h.module : createApprovalDetail(h.adapter)
+    const reopened = factory.open(target())
+    h.reads[1].resolve(payload('A'))
+    await reopened.ready
+    expect(reopened.state.attachmentBusy).toBe(true)
+    expect(reopened.state.canSubmit).toBe(false)
+    expect(reopened.state.attachments.map((file) => file.fileName)).toEqual(['原附件.txt'])
+    await reopened.downloadAttachment(reopened.state.attachments[0])
+    expect(downloads).toHaveLength(1)
+    await reopened.decide(1)
+    expect(h.submissions).toHaveLength(0)
+    inFlight.resolve({ id: 8, fileName: '旧打开补传结果.txt', sizeBytes: 1 })
+    await batch
+    expect(uploads).toBe(1)
+    expect(reopened.state.attachmentBusy).toBe(false)
+    expect(reopened.state.canSubmit).toBe(true)
+    expect(reopened.state.attachments.map((file) => file.fileName)).toEqual(['原附件.txt'])
+    expect(h.submissions).toHaveLength(0)
+    reopened.release()
+  },
+)
+
+it.each(['other-approval', 'new-entry'])(
+  '旧补传不阻塞 %s，旧失败不提示新页面且互斥最终释放',
+  async (mode) => {
+    const upload = deferred()
+    const h = harness({ upload: () => upload.promise })
+    const old = h.module.open(target())
+    h.reads[0].resolve(payload('A'))
+    await old.ready
+    const batch = old.addAttachments([new File(['1'], '1.txt')])
+    old.release()
+    if (mode === 'new-entry') h.changeIdentity()
+    const processId = mode === 'other-approval' ? 'B' : 'A'
+    const next = createApprovalDetail(h.adapter).open(target(processId, 'new-task'))
+    h.reads[1].resolve(payload(processId))
+    await next.ready
+    expect(next.state.attachmentBusy).toBe(false)
+    expect(next.state.canSubmit).toBe(true)
+    upload.reject(new Error('旧上传登记失败'))
+    await batch
+    expect(next.state.attachmentError).toBe('')
+    expect(next.state.canSubmit).toBe(true)
+    next.release()
+    if (mode === 'other-approval') {
+      const original = createApprovalDetail(h.adapter).open(target())
+      h.reads[2].resolve(payload('A'))
+      await original.ready
+      expect(original.state.attachmentBusy).toBe(false)
+      expect(original.state.canSubmit).toBe(true)
+      original.release()
+    }
+  },
+)

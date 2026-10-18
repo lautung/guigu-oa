@@ -26,6 +26,7 @@ async function setup(
   approve: (route: Route) => Promise<void>,
   uploadGate?: Promise<void>,
   readGate?: Promise<void>,
+  completionGate?: Promise<void>,
 ) {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -74,6 +75,7 @@ async function setup(
     }
     if (path.endsWith('/complete')) {
       completions++
+      if (completionGate) await completionGate
       return json(route, { id: completions, fileName: `补传-${completions}.txt`, sizeBytes: 1 })
     }
     throw new Error(`Unexpected request ${path}`)
@@ -180,5 +182,39 @@ test('读取 A 时返回并打开 B，A 迟到结果不覆盖 B', async ({ page 
   await expect(page.getByRole('heading', { name: '审批 B', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: '审批 A', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '通过', exact: true })).toBeEnabled()
+  expect(h.errors).toEqual([])
+})
+
+test('附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队', async ({ page }) => {
+  const gate = deferred()
+  const h = await setup(page, (route) => json(route, null), undefined, undefined, gate.promise)
+  await page.goto('/work/pending/A/task-A')
+  await expect(page.locator('input[type=file]')).toBeEnabled()
+  const registering = page.waitForRequest('**/admin/attachments/*/complete')
+  await page.locator('input[type=file]').setInputFiles([
+    { name: '1.txt', mimeType: 'text/plain', buffer: Buffer.from('1') },
+    { name: '2.txt', mimeType: 'text/plain', buffer: Buffer.from('2') },
+  ])
+  await registering
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await expect(page).toHaveURL(/\/work\/pending$/)
+  await page.getByText('审批 A', { exact: true }).click()
+  await expect(page.getByRole('heading', { name: '审批 A', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '通过', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '拒绝', exact: true })).toBeDisabled()
+  await expect(page.locator('input[type=file]')).toBeDisabled()
+  await expect(page.getByText('原附件.txt', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '下载', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: '重新读取附件', exact: true }).click()
+  await expect(page.getByText('原附件.txt', { exact: true })).toBeVisible()
+  expect(h.approvals()).toBe(0)
+  gate.resolve()
+  await expect(page.getByRole('button', { name: '通过', exact: true })).toBeEnabled()
+  await expect(page.getByText('补传-1.txt', { exact: true })).toHaveCount(0)
+  expect(h.completions()).toBe(1)
+  expect(h.approvals()).toBe(0)
+  await page.getByRole('button', { name: '通过', exact: true }).click()
+  await expect(page).toHaveURL(/\/work\/processed$/)
+  expect(h.approvals()).toBe(1)
   expect(h.errors).toEqual([])
 })
