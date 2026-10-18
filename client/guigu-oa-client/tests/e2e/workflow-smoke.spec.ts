@@ -57,7 +57,9 @@ async function mockApi(page: Page): Promise<SmokeState> {
         {
           id: 11,
           name: '人事',
-          processTemplateList: [{ id: templateId, name: '请假申请' }],
+          processTemplateList: [
+            { id: templateId, name: '请假申请', status: 1, availableForInitiation: true },
+          ],
         },
       ])
     }
@@ -69,6 +71,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
         id: templateId,
         processTypeId: 11,
         name: '请假申请',
+        availableForInitiation: true,
         status: 1,
         formProps: JSON.stringify([
           {

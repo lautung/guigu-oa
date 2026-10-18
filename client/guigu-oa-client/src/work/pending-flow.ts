@@ -1,9 +1,7 @@
 import {
-  afterPendingAction,
   parseFormValues,
   statusLabel,
   statusTagType,
-  workListPerspective,
   type WorkListPerspective,
 } from '@/work/work-list'
 import type {
@@ -61,20 +59,4 @@ export function presentDetail(
     canApprove: !readOnly && !!payload.isApprove,
     perspective,
   }
-}
-
-export function buildApprovalPayload({
-  processId,
-  taskId,
-  status,
-}: {
-  processId: EntityId
-  taskId: EntityId
-  status: number
-}): { processId: EntityId; taskId: EntityId; status: number } {
-  return { processId, taskId, status }
-}
-
-export function postApprovalRoute(): string {
-  return workListPerspective(afterPendingAction().enterKind).returnPath
 }

@@ -6,7 +6,19 @@ const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'
 const refreshUrl = `${baseURL.replace(/\/$/, '')}/admin/system/index/refresh`
 type RefreshableRequestConfig = InternalAxiosRequestConfig & {
   _authRefreshRetried?: boolean
+  _localErrors?: boolean
+  _isRelevant?: () => boolean
   _recognition?: RequestContext
+}
+
+export class BusinessRequestFailure extends RecognitionFailure {
+  constructor(
+    kind: ConstructorParameters<typeof RecognitionFailure>[0],
+    message: string,
+    readonly businessCode?: number,
+  ) {
+    super(kind, message)
+  }
 }
 
 function businessFailure(response: Partial<ApiResponse<unknown>>): RecognitionFailure {
@@ -18,7 +30,11 @@ function businessFailure(response: Partial<ApiResponse<unknown>>): RecognitionFa
         : response.code === 403
           ? 'forbidden'
           : 'retryable'
-  return new RecognitionFailure(kind, response.message || '请求失败')
+  return new BusinessRequestFailure(
+    kind,
+    response.message || '请求失败',
+    [201, 208, 209, 403].includes(response.code || 0) ? response.code : undefined,
+  )
 }
 
 export function createRequestClient(recognition: Recognition): ApiClient {
@@ -57,13 +73,32 @@ export function createRequestClient(recognition: Recognition): ApiClient {
     return promise
   }
 
+  function rejectRequest(
+    config: RefreshableRequestConfig,
+    context: RequestContext,
+    error: unknown,
+  ) {
+    const authentication =
+      error instanceof RecognitionFailure && ['invalid', 'disabled'].includes(error.kind)
+    const silent =
+      context.silent ||
+      config._isRelevant?.() === false ||
+      (!!config._localErrors && !authentication)
+    return recognition.reject({ ...context, silent }, error)
+  }
+
   async function handleResponse(response: AxiosResponse<ApiResponse<unknown>>) {
     const config = response.config as RefreshableRequestConfig
     const context = config._recognition || recognition.capture(isInfo(config.url))
     recognition.assertCurrent(context)
     const res = response.data
     if (res?.code === 200) return res
-    if (res?.code === 208 && !config._authRefreshRetried && !isAuthentication(config.url)) {
+    if (
+      res?.code === 208 &&
+      !config._authRefreshRetried &&
+      !isAuthentication(config.url) &&
+      config._isRelevant?.() !== false
+    ) {
       config._authRefreshRetried = true
       const latestToken = recognition.credentials().token
       if (latestToken && getRequestToken(config) !== latestToken) {
@@ -75,12 +110,14 @@ export function createRequestClient(recognition: Recognition): ApiClient {
           const token = await refreshAccessToken(context)
           setRequestToken(config, token)
         } catch (error: unknown) {
-          throw recognition.reject(context, error)
+          const reason = rejectRequest(config, context, error)
+          // The original business request was explicitly refused before authentication recovery.
+          throw new BusinessRequestFailure(reason.kind, reason.message, 208)
         }
         return service(config)
       }
     }
-    throw recognition.reject(context, businessFailure(res || {}))
+    throw rejectRequest(config, context, businessFailure(res || {}))
   }
 
   service.interceptors.response.use(
@@ -89,7 +126,11 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       const config = axios.isAxiosError(error)
         ? (error.config as RefreshableRequestConfig)
         : undefined
-      throw recognition.reject(config?._recognition || recognition.capture(), error)
+      throw rejectRequest(
+        config || ({} as RefreshableRequestConfig),
+        config?._recognition || recognition.capture(),
+        error,
+      )
     },
   )
   return service as unknown as ApiClient

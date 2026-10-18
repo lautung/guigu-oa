@@ -1,3 +1,5 @@
+import type { RequestContext } from '@/recognition'
+
 export type EntityId = string | number
 
 export interface ApiResponse<TData> {
@@ -16,6 +18,9 @@ export interface ApiRequestConfig {
   method: 'get' | 'post' | 'put' | 'delete'
   url: string
   data?: unknown
+  _recognition?: RequestContext
+  _localErrors?: boolean
+  _isRelevant?: () => boolean
   params?: Record<string, string | number | boolean | null | undefined>
 }
 
