@@ -1,4 +1,4 @@
-import { reactive, readonly } from 'vue'
+import { markRaw, reactive, readonly } from 'vue'
 import { BusinessRequestFailure } from '@/utils/request'
 import type { Recognition } from '@/recognition'
 import type {
@@ -26,8 +26,8 @@ interface EditorOptions {
   recognition: Pick<Recognition, 'capture'>
   request: ApiClient
   designer(): Promise<Designer>
-  confirm(message: string): Promise<boolean>
-  notify(message: string): void
+  confirm(message: string, kind: 'leave' | 'end-editing'): Promise<boolean>
+  notify(message: string, level: 'success' | 'warning'): void
   navigate(path: string): void
   openList(path: string): void
 }
@@ -116,11 +116,38 @@ export function createTemplateEditor(options: EditorOptions) {
       capturing: false,
       leaving: false,
       snapshot: null as PresentedProcessTemplate | null,
+      get inspectionDesign(): Design | null {
+        if (!state.snapshot) return null
+        // form-create initializes its own rule data; every renderer gets a copy of the fixed JSON.
+        const design = validDesign(
+          JSON.parse(state.snapshot.formProps),
+          JSON.parse(state.snapshot.formOptions),
+        )
+        const form = design.option.form
+        return markRaw({
+          rule: design.rule,
+          option: {
+            ...design.option,
+            form: { ...(form && typeof form === 'object' ? form : {}), disabled: true },
+            submitBtn: false,
+            resetBtn: false,
+          },
+        })
+      },
       get isCurrent(): boolean {
         return current()
       },
       get canEdit(): boolean {
         return current() && state.phase === 'ready' && !state.capturing && !state.leaving
+      },
+      get canNavigateSteps(): boolean {
+        return (
+          state.canEdit ||
+          (current() &&
+            !!state.snapshot &&
+            ['saving', 'uncertain'].includes(state.phase) &&
+            !state.leaving)
+        )
       },
       get canSave(): boolean {
         return (
@@ -191,7 +218,7 @@ export function createTemplateEditor(options: EditorOptions) {
           if (state.form.status === 1) {
             state.phase = 'readonly'
             state.error = '已发布的审批模板只读，请在列表中选择“查看”'
-            options.notify(state.error)
+            options.notify(state.error, 'warning')
             options.navigate(LIST)
             return
           }
@@ -231,7 +258,11 @@ export function createTemplateEditor(options: EditorOptions) {
       state.dirty = true
     }
     async function next() {
-      if (!state.canEdit) return
+      if (!state.canNavigateSteps) return
+      if (!state.canEdit) {
+        if (state.step < 2) state.step++
+        return
+      }
       if (state.step === 0) {
         if (!state.form.processTypeId || !state.form.name.trim()) {
           state.error = '请填写审批类型和名称'
@@ -254,7 +285,7 @@ export function createTemplateEditor(options: EditorOptions) {
       } else await save()
     }
     function previous() {
-      if (state.canEdit && state.step > 0) state.step--
+      if (state.canNavigateSteps && state.step > 0) state.step--
     }
     async function selectZip(file: File) {
       if (!state.canEdit) return
@@ -354,7 +385,7 @@ export function createTemplateEditor(options: EditorOptions) {
         })
         if (!current()) return
         if (response.code !== 200) throw new Error(response.message || '无法确认模板保存结果')
-        options.notify('保存成功，审批模板仍为未发布')
+        options.notify('保存成功，审批模板仍为未发布', 'success')
         release()
         options.navigate(LIST)
       } catch (error: unknown) {
@@ -390,7 +421,7 @@ export function createTemplateEditor(options: EditorOptions) {
               : state.dirty
                 ? '当前有未保存修改，离开将丢弃本次编辑，确认离开？'
                 : ''
-        if (message && !(await options.confirm(message))) return !current()
+        if (message && !(await options.confirm(message, 'leave'))) return !current()
         if (current()) {
           release()
           leftIntentionally = true
@@ -418,6 +449,7 @@ export function createTemplateEditor(options: EditorOptions) {
       try {
         const accepted = await options.confirm(
           '原保存仍可能生效，再次新建或修改可能重复创建或覆盖。结束本次编辑只清理本地内容，不代表保存失败。',
+          'end-editing',
         )
         if (!current() || !accepted) return false
         release()

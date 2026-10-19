@@ -26,12 +26,12 @@
     </p>
 
     <div class="tools">
-      <el-button v-if="state.step > 0" :disabled="!state.canEdit" @click="edit.previous()"
+      <el-button v-if="state.step > 0" :disabled="!state.canNavigateSteps" @click="edit.previous()"
         >上一步</el-button
       >
       <el-button
         type="primary"
-        :disabled="state.step === 2 ? !state.canSave : !state.canEdit"
+        :disabled="state.step === 2 ? !state.canSave : !state.canNavigateSteps"
         @click="edit.next()"
       >
         {{ state.step === 2 ? '提交保存' : '下一步' }}
@@ -91,8 +91,14 @@
       </el-form>
     </div>
 
-    <div v-show="state.step === 1" class="step-pane" :inert="!state.canEdit">
-      <fc-designer ref="designer" height="520px" />
+    <div v-show="state.step === 1" class="step-pane">
+      <div v-show="!inspectionDesign" :inert="!state.canEdit">
+        <fc-designer ref="designer" height="520px" />
+      </div>
+      <div v-if="inspectionDesign" class="submitted-form-preview" aria-label="本次提交的表单设计">
+        <h3>本次提交的表单设计</h3>
+        <form-create :rule="inspectionDesign.rule" :option="inspectionDesign.option" />
+      </div>
     </div>
 
     <div v-show="state.step === 2" class="step-pane">
@@ -144,6 +150,7 @@ const userStore = useUserStore()
 const designer = ref()
 const edit = shallowRef<TemplateEditorOpening>()
 const state = computed(() => edit.value!.state)
+const inspectionDesign = computed(() => edit.value?.state.inspectionDesign)
 const wizardSteps = ['基本设置', '表单设置', '流程设置']
 const iconList = TEMPLATE_ICONS
 const recognition = userStore.recognition
@@ -156,8 +163,8 @@ const editor = createTemplateEditor({
     if (!designer.value) throw new Error('表单设计器暂不可用，请重试或返回')
     return designer.value
   },
-  confirm: async (message) => {
-    const ending = message.includes('结束本次编辑只清理')
+  confirm: async (message, kind) => {
+    const ending = kind === 'end-editing'
     try {
       await ElMessageBox.confirm(message, ending ? '结束本次编辑' : '离开审批模板编辑', {
         type: 'warning',
@@ -169,9 +176,8 @@ const editor = createTemplateEditor({
       return false
     }
   },
-  notify: (message) => {
-    if (message.startsWith('已发布')) ElMessage.warning(message)
-    else ElMessage.success(message)
+  notify: (message, level) => {
+    ElMessage({ message, type: level })
   },
   navigate: (path) => {
     void router.push(path)
