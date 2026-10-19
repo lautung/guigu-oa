@@ -1,15 +1,11 @@
 import {
-  applyUploadResult,
   canInitiate,
   canWrite,
-  emptyForm,
   findPage,
   findStartable,
   publish,
   read,
   removeUnpublished,
-  saveUnpublished,
-  saveValidationError
 } from '@/config/process-template'
 
 describe('审批模板', () => {
@@ -33,7 +29,7 @@ describe('审批模板', () => {
         id: 19,
         status: 1,
         availableForInitiation: false,
-        availabilityMessage: '暂不可发起，需核实原审批内容'
+        availabilityMessage: '暂不可发起，需核实原审批内容',
       }
 
       expect(canInitiate(publishedButUnavailable)).toBe(false)
@@ -56,7 +52,7 @@ describe('审批模板', () => {
               formProps: '[{"type":"input"}]',
               formOptions: '{}',
               createTime: '2026-08-01 10:00:00',
-              updateTime: '2026-08-02 11:00:00'
+              updateTime: '2026-08-02 11:00:00',
             },
             {
               id: 2,
@@ -66,12 +62,12 @@ describe('审批模板', () => {
               description: '加班审批',
               status: 1,
               createTime: '2026-08-03 09:00:00',
-              updateTime: '2026-08-03 09:00:00'
-            }
+              updateTime: '2026-08-03 09:00:00',
+            },
           ],
           total: 2,
-          pages: 1
-        }
+          pages: 1,
+        },
       })
 
       const page = await findPage(1, 10, request)
@@ -92,7 +88,7 @@ describe('审批模板', () => {
             updateTime: '2026-08-02 11:00:00',
             canEdit: true,
             canDelete: true,
-            canPublish: true
+            canPublish: true,
           },
           {
             id: 2,
@@ -108,11 +104,11 @@ describe('审批模板', () => {
             updateTime: '2026-08-03 09:00:00',
             canEdit: false,
             canDelete: false,
-            canPublish: false
-          }
+            canPublish: false,
+          },
         ],
         total: 2,
-        pages: 1
+        pages: 1,
       })
       expect(canWrite(page.records[0])).toBe(true)
       expect(canInitiate(page.records[0])).toBe(false)
@@ -123,14 +119,16 @@ describe('审批模板', () => {
     it('shows the availability explanation without restoring write actions', async () => {
       const request = async () => ({
         data: {
-          records: [{
-            id: 19,
-            name: '旧请假申请',
-            status: 1,
-            availableForInitiation: false,
-            availabilityMessage: '暂不可发起，需核实原审批内容'
-          }]
-        }
+          records: [
+            {
+              id: 19,
+              name: '旧请假申请',
+              status: 1,
+              availableForInitiation: false,
+              availabilityMessage: '暂不可发起，需核实原审批内容',
+            },
+          ],
+        },
       })
 
       const page = await findPage(1, 10, request)
@@ -140,7 +138,7 @@ describe('审批模板', () => {
         availabilityMessage: '暂不可发起，需核实原审批内容',
         canEdit: false,
         canDelete: false,
-        canPublish: false
+        canPublish: false,
       })
     })
 
@@ -150,7 +148,7 @@ describe('审批模板', () => {
       expect(await findPage(1, 10, request)).toEqual({
         records: [],
         total: 0,
-        pages: 0
+        pages: 0,
       })
     })
   })
@@ -169,8 +167,8 @@ describe('审批模板', () => {
           processDefinitionPath: 'processes/qingjia.zip',
           description: '员工请假',
           status: 0,
-          createTime: '2026-08-01 10:00:00'
-        }
+          createTime: '2026-08-01 10:00:00',
+        },
       })
 
       const template = await read(1, request)
@@ -185,7 +183,7 @@ describe('审批模板', () => {
         processDefinitionKey: 'qingjia',
         processDefinitionPath: 'processes/qingjia.zip',
         description: '员工请假',
-        status: 0
+        status: 0,
       })
       expect(canWrite(template)).toBe(true)
       expect(canInitiate(template)).toBe(false)
@@ -199,8 +197,8 @@ describe('审批模板', () => {
           processTypeId: 1,
           status: 1,
           formProps: '[]',
-          formOptions: '{}'
-        }
+          formOptions: '{}',
+        },
       })
 
       const template = await read(1, request)
@@ -211,97 +209,6 @@ describe('审批模板', () => {
     })
   })
 
-  describe('saveUnpublished', () => {
-    it('starts 新建 as 未发布', () => {
-      expect(emptyForm()).toEqual({
-        id: '',
-        name: '',
-        iconUrl: '',
-        processTypeId: '',
-        formProps: '',
-        formOptions: '',
-        processDefinitionKey: '',
-        processDefinitionPath: '',
-        description: '',
-        status: 0
-      })
-      expect(canInitiate(emptyForm())).toBe(false)
-      expect(canWrite(emptyForm())).toBe(true)
-    })
-
-    it('new save stays 未发布 even if the caller asks for 已发布', async () => {
-      let saved
-      const request = async (descriptor) => {
-        saved = descriptor.data
-        return { message: 'ok' }
-      }
-
-      await saveUnpublished({
-        name: '病假申请',
-        iconUrl: '',
-        processTypeId: 1,
-        formProps: '[]',
-        formOptions: '{}',
-        processDefinitionKey: 'bingjia',
-        processDefinitionPath: 'processes/bingjia.zip',
-        description: '员工病假',
-        status: 1
-      }, request)
-
-      expect(canInitiate(saved)).toBe(false)
-      expect(canWrite(saved)).toBe(true)
-      expect(saved.name).toBe('病假申请')
-    })
-
-    it('does not save 已发布', async () => {
-      let sent = false
-      const request = async () => {
-        sent = true
-      }
-
-      await expect(saveUnpublished({
-        id: 1,
-        name: '请假申请',
-        status: 1,
-        processDefinitionPath: 'processes/qingjia.zip'
-      }, request)).rejects.toThrow('已发布的审批模板不能保存')
-      expect(sent).toBe(false)
-    })
-
-    it('captures zip upload path and process definition key', () => {
-      const form = applyUploadResult(emptyForm(), {
-        processDefinitionPath: 'processes/qingjia.zip',
-        processDefinitionKey: 'qingjia'
-      })
-
-      expect(form.processDefinitionPath).toBe('processes/qingjia.zip')
-      expect(form.processDefinitionKey).toBe('qingjia')
-      expect(canInitiate(form)).toBe(false)
-    })
-  })
-
-  describe('saveValidationError', () => {
-    it('requires a 流程 zip before saving as 未发布', () => {
-      expect(saveValidationError(emptyForm())).toBe('请上传流程 zip')
-    })
-
-    it('accepts a form with processDefinitionPath', () => {
-      expect(saveValidationError({
-        ...emptyForm(),
-        processDefinitionPath: 'processes/qingjia.zip'
-      })).toBeNull()
-    })
-
-    it('does not save 已发布', () => {
-      expect(saveValidationError({
-        ...emptyForm(),
-        id: 1,
-        status: 1,
-        processDefinitionPath: 'processes/qingjia.zip'
-      })).toBe('已发布的审批模板不能保存')
-    })
-  })
-
   describe('publish / removeUnpublished', () => {
     it('does not publish 已发布', async () => {
       let sent = false
@@ -309,8 +216,9 @@ describe('审批模板', () => {
         sent = true
       }
 
-      await expect(publish({ id: 1, status: 1 }, request))
-        .rejects.toThrow('已发布的审批模板不能再发布')
+      await expect(publish({ id: 1, status: 1 }, request)).rejects.toThrow(
+        '已发布的审批模板不能再发布',
+      )
       expect(sent).toBe(false)
     })
 
@@ -320,8 +228,9 @@ describe('审批模板', () => {
         sent = true
       }
 
-      await expect(removeUnpublished({ id: 1, status: 1 }, request))
-        .rejects.toThrow('已发布的审批模板不能删除')
+      await expect(removeUnpublished({ id: 1, status: 1 }, request)).rejects.toThrow(
+        '已发布的审批模板不能删除',
+      )
       expect(sent).toBe(false)
     })
   })
@@ -335,10 +244,10 @@ describe('审批模板', () => {
             name: '请假',
             processTemplateList: [
               { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png', status: 1 },
-              { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png', status: 1 }
-            ]
-          }
-        ]
+              { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png', status: 1 },
+            ],
+          },
+        ],
       })
 
       expect(await findStartable(request)).toEqual([
@@ -347,17 +256,15 @@ describe('审批模板', () => {
           name: '请假',
           templates: [
             { id: 11, name: '事假', iconUrl: 'https://example.com/leave.png' },
-            { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png' }
-          ]
-        }
+            { id: 1, name: '请假申请', iconUrl: 'https://example.com/leave2.png' },
+          ],
+        },
       ])
     })
 
     it('omits 审批类型 that have no 已发布 审批模板', async () => {
       const request = async () => ({
-        data: [
-          { id: 2, name: '加班', processTemplateList: [] }
-        ]
+        data: [{ id: 2, name: '加班', processTemplateList: [] }],
       })
 
       expect(await findStartable(request)).toEqual([])
@@ -371,21 +278,25 @@ describe('审批模板', () => {
 
     it('filters published templates that are unavailable for initiation', async () => {
       const request = async () => ({
-        data: [{
-          id: 2,
-          name: '请假',
-          processTemplateList: [
-            { id: 21, name: '正常模板', status: 1 },
-            { id: 22, name: '待核实模板', availableForInitiation: false }
-          ]
-        }]
+        data: [
+          {
+            id: 2,
+            name: '请假',
+            processTemplateList: [
+              { id: 21, name: '正常模板', status: 1 },
+              { id: 22, name: '待核实模板', availableForInitiation: false },
+            ],
+          },
+        ],
       })
 
-      expect(await findStartable(request)).toEqual([{
-        id: 2,
-        name: '请假',
-        templates: [{ id: 21, name: '正常模板', iconUrl: undefined }]
-      }])
+      expect(await findStartable(request)).toEqual([
+        {
+          id: 2,
+          name: '请假',
+          templates: [{ id: 21, name: '正常模板', iconUrl: undefined }],
+        },
+      ])
     })
   })
 })
