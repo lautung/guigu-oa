@@ -296,3 +296,130 @@ test('有配置菜单的手机也不能占用模板编辑页', async ({ page }) 
   await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
   expect(h.saved).toHaveLength(0)
 })
+
+test('新建的合法空设计在有效上传后保存为未发布', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const h = await setup(page)
+  await page.goto('/processSet/templateSet')
+  await page.getByLabel('审批名称', { exact: true }).fill('空设计新建')
+  await page.getByLabel('审批类型', { exact: true }).click()
+  await page.getByRole('option', { name: '请假', exact: true }).click()
+  await flowStep(page)
+  await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
+  await file(page, 'empty.zip')
+  await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: '提交保存', exact: true }).click()
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  expect(h.saved).toHaveLength(1)
+  expect(h.saved[0]).not.toHaveProperty('id')
+  expect(h.saved[0]).toMatchObject({
+    name: '空设计新建',
+    status: 0,
+    formProps: '[]',
+    processDefinitionPath: 'opaque/new.zip',
+  })
+  expect(h.errors).toEqual([])
+})
+
+test('B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  let uploads = 0
+  const h = await setup(page, {
+    upload: (route) =>
+      ++uploads === 1
+        ? json(route, { processDefinitionPath: 'opaque/B.zip', processDefinitionKey: 'B' })
+        : json(route, { processDefinitionPath: 'opaque/C.zip' }),
+  })
+  await page.goto('/processSet/templateSet?id=97')
+  await flowStep(page)
+  await file(page, 'B.zip')
+  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await file(page, 'C.zip')
+  await expect(page.getByText('流程 zip 上传失败', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: '恢复旧 zip', exact: true }).click()
+  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '提交保存', exact: true }).click()
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  expect(h.saved[0]).toMatchObject({
+    processDefinitionPath: 'opaque/B.zip',
+    processDefinitionKey: 'B',
+  })
+  expect(h.errors).toEqual([])
+})
+
+test('保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const gate = deferred()
+  const h = await setup(page, {
+    save: async (route) => {
+      await gate.promise
+      await json(route, null)
+    },
+  })
+  await page.goto('/processSet/templateSet?id=97')
+  await page.getByLabel('审批名称', { exact: true }).fill('在途提交快照')
+  await flowStep(page)
+  const sending = page.waitForRequest('**/processTemplate/update')
+  await page.getByRole('button', { name: '提交保存', exact: true }).click()
+  await sending
+  await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
+  await expect(page.locator('input[type=file]')).toBeDisabled()
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('不撤销')
+  await page.getByRole('button', { name: '确认离开', exact: true }).click()
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await page
+    .locator('.el-table__row')
+    .filter({ hasText: '模板时序测试' })
+    .getByRole('button', { name: '编辑', exact: true })
+    .click()
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('模板时序测试')
+  const response = page.waitForResponse('**/processTemplate/update')
+  gate.resolve()
+  await response
+  await expect(page).toHaveURL(/templateSet\?id=97$/)
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('模板时序测试')
+  await expect(page.getByText('保存成功', { exact: true })).toHaveCount(0)
+  expect(h.saved).toHaveLength(1)
+  expect(h.saved[0]!.name).toBe('在途提交快照')
+  expect(h.errors).toEqual([])
+})
+
+test('普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '从桌面缩为手机')
+  const h = await setup(page)
+  await page.goto('/processSet/templateSet?id=97')
+  await page.getByLabel('审批名称', { exact: true }).fill('尚未保存的编辑')
+  await page.getByRole('link', { name: '待处理', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: '继续编辑', exact: true }).click()
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('尚未保存的编辑')
+  await page.getByRole('link', { name: '待处理', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
+  expect(h.saved).toHaveLength(0)
+  expect(h.errors).toEqual([])
+})
+
+test('结束待确认编辑前说明重复写入风险，取消结束仍保留快照', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const h = await setup(page, { save: (route) => json(route, null, 201) })
+  await page.goto('/processSet/templateSet?id=97')
+  await flowStep(page)
+  await page.getByRole('button', { name: '提交保存', exact: true }).click()
+  await expect(page.getByText('模板保存结果待确认', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '结束本次编辑', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('重复创建或覆盖')
+  await page.getByRole('button', { name: '保留本次编辑', exact: true }).click()
+  await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: '结束本次编辑', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '结束本次编辑', exact: true }).click()
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  expect(h.saved).toHaveLength(1)
+  await expect(page.getByText('保存失败', { exact: true })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
