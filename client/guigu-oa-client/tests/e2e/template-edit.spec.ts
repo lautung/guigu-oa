@@ -113,7 +113,7 @@ test('真实设计器往返三步后提交完整设计，保存仍为未发布',
   await page.getByText('输入框', { exact: true }).click()
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.getByRole('button', { name: '上一步', exact: true }).click()
-  await expect(page.getByText('输入框', { exact: true })).toHaveCount(2)
+  await expect(page.locator('._fc-m').getByRole('textbox')).toBeVisible()
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
