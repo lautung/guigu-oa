@@ -672,3 +672,65 @@ it.each(['force', 'reopen', 'identity'])(
     expect(h.navigation).toEqual([])
   },
 )
+
+it('保存中与待确认可往返核对完整提交快照，查看不读取设计器也不解锁任何写入', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ name: '本次提交名称', processTypeId: 3, description: '本次提交说明' })
+  await edit.next()
+  h.design({
+    rule: [{ type: 'input', field: 'reason', title: '核对原因' }],
+    option: { form: { labelWidth: '140px' }, custom: { enabled: true } },
+  })
+  await edit.next()
+  const saving = edit.save()
+  await flushPromises()
+  const snapshot = JSON.parse(JSON.stringify(edit.state.snapshot))
+  h.designerFailure('查看期间不应再次读取设计器')
+  expect(edit.state.canNavigateSteps).toBe(true)
+  edit.previous()
+  expect(edit.state.step).toBe(1)
+  expect(edit.state.inspectionDesign).toEqual({
+    rule: [{ type: 'input', field: 'reason', title: '核对原因' }],
+    option: {
+      form: { labelWidth: '140px', disabled: true },
+      custom: { enabled: true },
+      submitBtn: false,
+      resetBtn: false,
+    },
+  })
+  const rendererCopy = edit.state.inspectionDesign
+  rendererCopy.rule[0].title = '渲染器内部改动'
+  expect(rendererCopy.rule[0].title).toBe('渲染器内部改动')
+  expect(edit.state.inspectionDesign.rule[0].title).toBe('核对原因')
+  edit.previous()
+  expect(edit.state.step).toBe(0)
+  expect(edit.state.form).toMatchObject({
+    name: '本次提交名称',
+    processTypeId: 3,
+    description: '本次提交说明',
+  })
+  edit.updateBasic({ name: '不能覆盖快照' })
+  await edit.selectZip(zip('cannot-change.zip'))
+  edit.removeZip()
+  edit.restoreZip()
+  await edit.next()
+  await edit.next()
+  await edit.next()
+  expect(edit.state.step).toBe(2)
+  expect(h.uploads).toHaveLength(0)
+  expect(h.saves).toHaveLength(1)
+  expect(edit.state.snapshot).toEqual(snapshot)
+  h.saves[0].reject(new Error('断网'))
+  await saving
+  edit.previous()
+  expect(edit.state.step).toBe(1)
+  expect(edit.state.phase).toBe('uncertain')
+  expect(edit.state.canEdit).toBe(false)
+  expect(edit.state.canSave).toBe(false)
+  expect(edit.state.snapshot).toEqual(snapshot)
+  expect(edit.state.inspectionDesign.rule[0].title).toBe('核对原因')
+})
