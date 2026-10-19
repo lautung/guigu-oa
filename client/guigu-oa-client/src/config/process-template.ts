@@ -99,17 +99,6 @@ function parseJson<T>(value: string | undefined, fallback: T): T {
   }
 }
 
-export function applyFormDesign(
-  form: PresentedProcessTemplate,
-  { rule = [], option = {} }: { rule?: FormRule[]; option?: FormDesignerOption } = {},
-): PresentedProcessTemplate {
-  return {
-    ...form,
-    formProps: JSON.stringify(rule),
-    formOptions: JSON.stringify(option),
-  }
-}
-
 export function presentDesignerState(form: ProcessTemplateRecord = {}): {
   rule: FormRule[]
   option: FormDesignerOption
@@ -117,17 +106,6 @@ export function presentDesignerState(form: ProcessTemplateRecord = {}): {
   return {
     rule: parseJson(form.formProps, []),
     option: parseJson(form.formOptions, {}),
-  }
-}
-
-export function applyUploadResult(
-  form: PresentedProcessTemplate,
-  data: { processDefinitionPath?: string; processDefinitionKey?: string } = {},
-): PresentedProcessTemplate {
-  return {
-    ...form,
-    processDefinitionPath: data.processDefinitionPath || '',
-    processDefinitionKey: data.processDefinitionKey || '',
   }
 }
 
@@ -154,16 +132,6 @@ export function zipUploadError(file: UploadFileCandidate = {}): string | null {
   return null
 }
 
-export function saveValidationError(form: ProcessTemplateRecord = {}): string | null {
-  if (form.id && form.status === 1) {
-    return '已发布的审批模板不能保存'
-  }
-  if (!form.processDefinitionPath) {
-    return '请上传流程 zip'
-  }
-  return null
-}
-
 function presentStartGroups(types: ProcessTypeRecord[] = []): ProcessTemplateStartGroup[] {
   return types
     .map((type) => ({
@@ -176,26 +144,6 @@ function presentStartGroups(types: ProcessTypeRecord[] = []): ProcessTemplateSta
       })),
     }))
     .filter((group) => group.templates.length > 0)
-}
-
-function unpublishedPayload(form: PresentedProcessTemplate): ProcessTemplateRecord {
-  const data: ProcessTemplateRecord = {
-    name: form.name,
-    iconUrl: form.iconUrl,
-    processTypeId: form.processTypeId,
-    formProps: form.formProps,
-    formOptions: form.formOptions,
-    processDefinitionKey: form.processDefinitionKey,
-    processDefinitionPath: form.processDefinitionPath,
-    description: form.description,
-    status: 0,
-  }
-
-  if (form.id) {
-    data.id = form.id
-  }
-
-  return data
 }
 
 export async function findPage(
@@ -219,28 +167,6 @@ export async function read(
     url: `${PROCESS_TEMPLATE_API}/get/${id}`,
   })
   return presentForm(response.data || {})
-}
-
-export async function saveUnpublished(
-  form: PresentedProcessTemplate,
-  request: ApiClient,
-): Promise<ApiResponse<unknown>> {
-  if (form.id && form.status === 1) {
-    return Promise.reject(new Error('已发布的审批模板不能保存'))
-  }
-  const data = unpublishedPayload(form)
-  if (form.id) {
-    return request({
-      method: 'put',
-      url: `${PROCESS_TEMPLATE_API}/update`,
-      data,
-    })
-  }
-  return request({
-    method: 'post',
-    url: `${PROCESS_TEMPLATE_API}/save`,
-    data,
-  })
 }
 
 export async function publish(
@@ -275,11 +201,6 @@ export async function findStartable(request: ApiClient): Promise<ProcessTemplate
     url: '/admin/process/findStartable',
   })
   return presentStartGroups(response.data || [])
-}
-
-export function uploadProcessDefinitionUrl(): string {
-  const base = import.meta.env.VITE_APP_BASE_API || '/dev-api'
-  return `${base}${PROCESS_TEMPLATE_API}/uploadProcessDefinition`
 }
 
 export const TEMPLATE_ICONS = [
