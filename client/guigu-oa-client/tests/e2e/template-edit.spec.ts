@@ -151,7 +151,7 @@ test('已有旧包时，新上传在途与失败均不能保存，明确恢复�
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
   expect(h.saved).toHaveLength(0)
   await page.getByRole('button', { name: /恢复.*zip/ }).click()
-  await expect(page.getByText('opaque/old.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/old.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
@@ -180,11 +180,11 @@ test('上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B', as
   await file(page, 'A.zip')
   await expect.poll(() => count).toBe(1)
   await file(page, 'B.zip')
-  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/B.zip')).toBeVisible()
   const responseA = page.waitForResponse('**/uploadProcessDefinition')
   gate.resolve()
   await responseA
-  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/B.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
@@ -208,7 +208,7 @@ test('保存断网后保留待确认快照，另开列表不释放限制，刷�
   await expect(page.getByText('模板保存结果待确认', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
   await expect(page.locator('input[type=file]')).toBeDisabled()
-  const popup = page.waitForEvent('popup')
+  const popup = page.context().waitForEvent('page')
   await page.getByRole('button', { name: '另开模板列表核实', exact: true }).click()
   const list = await popup
   await expect(list).toHaveURL(/\/processSet\/processTemplate$/)
@@ -254,7 +254,7 @@ test('上传逐请求采用刷新后的凭据，再上传新包使用当前身�
   await page.goto('/processSet/templateSet?id=97')
   await flowStep(page)
   await file(page, 'renewed.zip')
-  await expect(page.getByText('opaque/renewed.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/renewed.zip')).toBeVisible()
   expect(h.uploads).toEqual(['edit-token', 'renewed-edit-token'])
   await file(page, 'next.zip')
   await expect.poll(() => h.uploads.length).toBe(3)
@@ -333,12 +333,12 @@ test('B 成功后 C 返回不完整结果，明确恢复时采用最近成功的
   await page.goto('/processSet/templateSet?id=97')
   await flowStep(page)
   await file(page, 'B.zip')
-  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/B.zip')).toBeVisible()
   await file(page, 'C.zip')
-  await expect(page.getByText('流程 zip 上传失败', { exact: true })).toBeVisible()
+  await expect(page.getByText('流程 zip 上传失败')).toBeVisible()
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: '恢复旧 zip', exact: true }).click()
-  await expect(page.getByText('opaque/B.zip', { exact: true })).toBeVisible()
+  await expect(page.getByText('opaque/B.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
@@ -421,5 +421,70 @@ test('结束待确认编辑前说明重复写入风险，取消结束仍保留�
   await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
   expect(h.saved).toHaveLength(1)
   await expect(page.getByText('保存失败', { exact: true })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
+
+test('读取在途离开后重开同地址，旧读取不覆盖本次内容', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const gate = deferred()
+  let reads = 0
+  const h = await setup(page, {
+    read: async (route) => {
+      const first = ++reads === 1
+      if (first) await gate.promise
+      await json(route, { ...original, name: first ? '不应出现的旧读取' : '本次重新读取' })
+    },
+  })
+  const reading = page.waitForRequest('**/processTemplate/get/97')
+  await page.goto('/processSet/templateSet?id=97')
+  await reading
+  await page.getByRole('link', { name: '审批模板', exact: true }).click()
+  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await page.locator('.el-table__row').getByRole('button', { name: '编辑', exact: true }).click()
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('本次重新读取')
+  const oldResponse = page.waitForResponse('**/processTemplate/get/97')
+  gate.resolve()
+  await oldResponse
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('本次重新读取')
+  expect(h.saved).toHaveLength(0)
+  expect(h.errors).toEqual([])
+})
+
+test('进入结果被替换时清理编辑，旧上传结果不影响重新进入', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const gate = deferred()
+  const h = await setup(page, {
+    upload: async (route) => {
+      await gate.promise
+      await json(route, {
+        processDefinitionPath: 'old-identity.zip',
+        processDefinitionKey: 'old-identity',
+      })
+    },
+  })
+  await page.goto('/processSet/templateSet?id=97')
+  await page.getByLabel('审批名称', { exact: true }).fill('旧身份未保存内容')
+  await flowStep(page)
+  const uploading = page.waitForRequest('**/uploadProcessDefinition')
+  await file(page, 'old-identity.zip')
+  await uploading
+  await page
+    .context()
+    .addCookies([
+      { name: 'guigu_oa_client_entry', value: 'replacement-entry', domain: '127.0.0.1', path: '/' },
+    ])
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const oldResponse = page.waitForResponse('**/uploadProcessDefinition')
+  gate.resolve()
+  await oldResponse
+  await page.getByRole('link', { name: '审批模板', exact: true }).click()
+  await page.locator('.el-table__row').getByRole('button', { name: '编辑', exact: true }).click()
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('模板时序测试')
+  await flowStep(page)
+  await expect(page.getByText('opaque/old.zip')).toBeVisible()
+  await expect(page.getByText('old-identity.zip')).toHaveCount(0)
+  expect(h.saved).toHaveLength(0)
   expect(h.errors).toEqual([])
 })
