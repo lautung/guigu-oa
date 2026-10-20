@@ -1,37 +1,80 @@
+import axios, { AxiosError } from 'axios'
+import { afterEach } from 'vitest'
+import { createRecognition } from '@/recognition'
+import { createRequestClient } from '@/utils/request'
 import { flushPromises } from '@vue/test-utils'
 import { createRoleAssignment } from '@/config/role-assignment'
 import { BusinessRequestFailure } from '@/utils/request'
 
 function deferred() {
   let resolve, reject
-  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
+  const promise = new Promise((yes, no) => {
+    resolve = yes
+    reject = no
+  })
   return { promise, resolve, reject }
 }
-const roles = (assigned = [1]) => ({ code: 200, data: {
-  allRolesList: [{ id: 1, roleName: '用户配置' }, { id: 2, roleName: '审批配置' }],
-  assginRoleList: assigned.map(id => ({ id }))
-} })
+const roles = (assigned = [1]) => ({
+  code: 200,
+  data: {
+    allRolesList: [
+      { id: 1, roleName: '用户配置' },
+      { id: 2, roleName: '审批配置' },
+    ],
+    assginRoleList: assigned.map((id) => ({ id })),
+  },
+})
 function harness() {
-  const reads = [], saves = [], notices = [], confirmations = [], recognitions = []
+  const reads = [],
+    saves = [],
+    notices = [],
+    confirmations = [],
+    recognitions = []
   const storage = new Map()
-  let entry = 'original', confirm = true
+  let entry = 'original',
+    confirm = true
   const options = {
     recognition: {
       capture: () => ({ entryId: entry, generation: 0, silent: false }),
-      recognize: () => { const d = deferred(); recognitions.push(d); return d.promise }
+      recognize: () => {
+        const d = deferred()
+        recognitions.push(d)
+        return d.promise
+      },
     },
-    request: config => { const d = deferred(); (config.method === 'get' ? reads : saves).push({ ...d, config }); return d.promise },
+    request: (config) => {
+      const d = deferred()
+      ;(config.method === 'get' ? reads : saves).push({ ...d, config })
+      return d.promise
+    },
     records: {
-      load: key => storage.get(key) ?? null,
+      load: (key) => storage.get(key) ?? null,
       save: (key, value) => storage.set(key, JSON.parse(JSON.stringify(value))),
-      remove: key => storage.delete(key)
+      remove: (key) => storage.delete(key),
     },
-    confirm: async message => { confirmations.push(message); return confirm },
+    confirm: async (message) => {
+      confirmations.push(message)
+      return confirm
+    },
     cancelConfirmation: () => {},
-    notify: message => notices.push(message)
+    notify: (message) => notices.push(message),
   }
-  return { options, module: createRoleAssignment(options), reads, saves, notices, confirmations, recognitions, storage,
-    identity: value => { entry = value }, confirm: value => { confirm = value } }
+  return {
+    options,
+    module: createRoleAssignment(options),
+    reads,
+    saves,
+    notices,
+    confirmations,
+    recognitions,
+    storage,
+    identity: (value) => {
+      entry = value
+    },
+    confirm: (value) => {
+      confirm = value
+    },
+  }
 }
 async function loaded(h, target = { id: 'A', username: '张三' }, assigned = [1]) {
   const opened = h.module.open(target)
@@ -58,15 +101,18 @@ it('关闭 A 后打开 B，A 的迟到角色不能改变 B 的选择或提交内
 })
 
 it.each([
-  null, {}, { allRolesList: [], assginRoleList: null },
+  null,
+  {},
+  { allRolesList: [], assginRoleList: null },
   { allRolesList: [{ id: 1, roleName: '用户配置' }], assginRoleList: [{ id: 2 }] },
-  { allRolesList: [{ id: 1 }, { id: 1 }], assginRoleList: [] }
-])('无法理解的角色读取 %j 阻止保存，重新读取合法空集合才允许清空', async data => {
+  { allRolesList: [{ id: 1 }, { id: 1 }], assginRoleList: [] },
+])('无法理解的角色读取 %j 阻止保存，重新读取合法空集合才允许清空', async (data) => {
   const h = harness()
   const opened = h.module.open({ id: 'A', username: '张三' })
   await flushPromises()
   expect(h.module.state.canSave).toBe(false)
-  h.reads[0].resolve({ code: 200, data }); await opened
+  h.reads[0].resolve({ code: 200, data })
+  await opened
   await h.module.save()
   expect(h.module.state.phase).toBe('load-error')
   expect(h.saves).toHaveLength(0)
@@ -83,11 +129,14 @@ it('同一目标重复读取只接受最新一次有效结果，读取错误可�
   const opened = h.module.open({ id: 'A', username: '张三' })
   await flushPromises()
   const refreshed = h.module.reload()
-  h.reads[1].reject(new Error('暂时离线')); await refreshed
+  h.reads[1].reject(new Error('暂时离线'))
+  await refreshed
   expect(h.module.state.canSave).toBe(false)
   const retried = h.module.reload()
-  h.reads[2].resolve(roles([2])); await retried
-  h.reads[0].resolve(roles([1])); await opened
+  h.reads[2].resolve(roles([2]))
+  await retried
+  h.reads[0].resolve(roles([1]))
+  await opened
   expect(h.module.state.selectedIds).toEqual([2])
 })
 
@@ -97,7 +146,8 @@ it('未修改直接关闭，修改关闭与切换取消均保留原目标，强�
   expect(await h.module.requestLeave()).toBe(true)
   expect(h.confirmations).toHaveLength(0)
   await loaded(h)
-  h.module.select([2]); h.confirm(false)
+  h.module.select([2])
+  h.confirm(false)
   await h.module.open({ id: 'B', username: '李四' })
   expect(h.module.state.target.id).toBe('A')
   expect(h.module.state.selectedIds).toEqual([2])
@@ -106,7 +156,8 @@ it('未修改直接关闭，修改关闭与切换取消均保留原目标，强�
   const leaving = h.module.requestLeave()
   await h.module.requestLeave(true)
   await loaded(h, { id: 'B', username: '李四' }, [2])
-  pending.resolve(true); await leaving
+  pending.resolve(true)
+  await leaving
   expect(h.module.state.target.id).toBe('B')
   expect(h.module.state.canSave).toBe(true)
 })
@@ -116,7 +167,8 @@ it('固定提交、重复保存与关闭重开共享在途限制，其他用户�
   await loaded(h)
   h.module.select([])
   const saving = h.module.save()
-  h.module.select([2]); void h.module.save()
+  h.module.select([2])
+  void h.module.save()
   expect(h.module.state.selectedIds).toEqual([])
   expect(h.saves).toHaveLength(1)
   expect(await h.module.requestLeave()).toBe(true)
@@ -127,8 +179,10 @@ it('固定提交、重复保存与关闭重开共享在途限制，其他用户�
   expect(await h.module.endAssignment()).toBe(false)
   const other = h.module.open({ id: 'B', username: '李四' })
   await flushPromises()
-  h.reads.at(-1).resolve(roles([2])); await other
-  h.saves[0].resolve({ code: 200, data: null }); await saving
+  h.reads.at(-1).resolve(roles([2]))
+  await other
+  h.saves[0].resolve({ code: 200, data: null })
+  await saving
   expect(h.module.state.target.id).toBe('B')
   expect(h.module.state.selectedIds).toEqual([2])
   expect(h.module.state.canSave).toBe(true)
@@ -137,36 +191,51 @@ it('固定提交、重复保存与关闭重开共享在途限制，其他用户�
   expect(h.storage.size).toBe(0)
 })
 
-it.each(['网络断开', 'timeout', '通用失败'])('%s 保留待确认，核实相同角色或失败均不释放，结束后必须重新读取', async failure => {
-  const h = harness(); await loaded(h)
-  h.module.select([2]); const saved = h.module.save()
-  h.saves[0].reject(new Error(failure)); await saved
-  expect(h.module.state.phase).toBe('uncertain')
-  expect(h.module.state.snapshot.roleIdList).toEqual([2])
-  const reread = h.module.reload(); h.reads[1].resolve(roles([2])); await reread
-  expect(h.module.state.phase).toBe('uncertain')
-  expect(h.module.state.selectedIds).toEqual([2])
-  expect(h.module.state.canSave).toBe(false)
-  const failed = h.module.reload(); h.reads[2].reject(new Error('核实读取失败')); await failed
-  expect(h.module.state.snapshot.roleIdList).toEqual([2])
-  expect(h.module.state.canSave).toBe(false)
-  h.confirm(false); expect(await h.module.endAssignment()).toBe(false)
-  expect(h.module.state.snapshot.roleIdList).toEqual([2])
-  h.confirm(true)
-  const ended = h.module.endAssignment(); await flushPromises()
-  expect(h.module.state.phase).toBe('loading')
-  expect(h.module.state.canSave).toBe(false)
-  expect(h.confirmations.at(-1)).toContain('影响后续分配')
-  h.reads[3].resolve(roles([1])); await ended
-  expect(h.module.state.selectedIds).toEqual([1])
-  expect(h.module.state.snapshot).toBe(null)
-  expect(h.module.state.canSave).toBe(true)
-  expect(h.saves).toHaveLength(1)
-})
+it.each(['网络断开', 'timeout', '通用失败'])(
+  '%s 保留待确认，核实相同角色或失败均不释放，结束后必须重新读取',
+  async (failure) => {
+    const h = harness()
+    await loaded(h)
+    h.module.select([2])
+    const saved = h.module.save()
+    h.saves[0].reject(new Error(failure))
+    await saved
+    expect(h.module.state.phase).toBe('uncertain')
+    expect(h.module.state.snapshot.roleIdList).toEqual([2])
+    const reread = h.module.reload()
+    h.reads[1].resolve(roles([2]))
+    await reread
+    expect(h.module.state.phase).toBe('uncertain')
+    expect(h.module.state.selectedIds).toEqual([2])
+    expect(h.module.state.canSave).toBe(false)
+    const failed = h.module.reload()
+    h.reads[2].reject(new Error('核实读取失败'))
+    await failed
+    expect(h.module.state.snapshot.roleIdList).toEqual([2])
+    expect(h.module.state.canSave).toBe(false)
+    h.confirm(false)
+    expect(await h.module.endAssignment()).toBe(false)
+    expect(h.module.state.snapshot.roleIdList).toEqual([2])
+    h.confirm(true)
+    const ended = h.module.endAssignment()
+    await flushPromises()
+    expect(h.module.state.phase).toBe('loading')
+    expect(h.module.state.canSave).toBe(false)
+    expect(h.confirmations.at(-1)).toContain('影响后续分配')
+    h.reads[3].resolve(roles([1]))
+    await ended
+    expect(h.module.state.selectedIds).toEqual([1])
+    expect(h.module.state.snapshot).toBe(null)
+    expect(h.module.state.canSave).toBe(true)
+    expect(h.saves).toHaveLength(1)
+  },
+)
 
 it('关闭、页面重挂载和刷新恢复提交记录，失去原响应的在途记录按待确认而不重发', async () => {
-  const h = harness(); await loaded(h)
-  h.module.select([2]); void h.module.save()
+  const h = harness()
+  await loaded(h)
+  h.module.select([2])
+  void h.module.save()
   await h.module.requestLeave()
   h.module = createRoleAssignment(h.options)
   await h.module.open({ id: 'A', username: '张三' })
@@ -177,35 +246,46 @@ it('关闭、页面重挂载和刷新恢复提交记录，失去原响应的在�
 })
 
 it('未保存勾选不跨刷新恢复；记录的身份和目标隔离', async () => {
-  const h = harness(); await loaded(h)
+  const h = harness()
+  await loaded(h)
   h.module.select([2])
-  h.module.release(); h.module = createRoleAssignment(h.options)
+  h.module.release()
+  h.module = createRoleAssignment(h.options)
   await loaded(h)
   expect(h.module.state.selectedIds).toEqual([1])
-  void h.module.save(); h.module.release()
-  h.identity('new-entry'); await loaded(h)
+  void h.module.save()
+  h.module.release()
+  h.identity('new-entry')
+  await loaded(h)
   expect(h.module.state.snapshot).toBe(null)
   expect(h.module.state.canSave).toBe(true)
 })
 
-it.each(['throw', 'drop', 'corrupt'])('提交记录 %s 时先不发送保存，并保留原选择与明确错误', async kind => {
-  const h = harness(); await loaded(h)
-  h.module.select([2])
-  h.options.records.save = (key, value) => {
-    if (kind === 'throw') throw new Error('存储不可用')
-    if (kind === 'corrupt') h.storage.set(key, { ...value, roleIdList: [] })
-  }
-  await h.module.save()
-  expect(h.saves).toHaveLength(0)
-  expect(h.module.state.canSave).toBe(false)
-  expect(h.module.state.recordError).toBeTruthy()
-  expect(h.module.state.selectedIds).toEqual([2])
-})
+it.each(['throw', 'drop', 'corrupt'])(
+  '提交记录 %s 时先不发送保存，并保留原选择与明确错误',
+  async (kind) => {
+    const h = harness()
+    await loaded(h)
+    h.module.select([2])
+    h.options.records.save = (key, value) => {
+      if (kind === 'throw') throw new Error('存储不可用')
+      if (kind === 'corrupt') h.storage.set(key, { ...value, roleIdList: [] })
+    }
+    await h.module.save()
+    expect(h.saves).toHaveLength(0)
+    expect(h.module.state.canSave).toBe(false)
+    expect(h.module.state.recordError).toBeTruthy()
+    expect(h.module.state.selectedIds).toEqual([2])
+  },
+)
 
 it('单个目标的损坏或无法读取记录阻止覆盖，其他目标仍可分配', async () => {
-  const h = harness(); await loaded(h)
-  void h.module.save(); h.module.release()
-  const key = [...h.storage.keys()][0]; h.storage.set(key, { broken: true })
+  const h = harness()
+  await loaded(h)
+  void h.module.save()
+  h.module.release()
+  const key = [...h.storage.keys()][0]
+  h.storage.set(key, { broken: true })
   await h.module.open({ id: 'A', username: '张三' })
   expect(h.module.state.recordError).toBeTruthy()
   expect(h.module.state.canSave).toBe(false)
@@ -213,61 +293,302 @@ it('单个目标的损坏或无法读取记录阻止覆盖，其他目标仍可�
   expect(h.module.state.canSave).toBe(true)
 })
 
-
 it('明确成功后认出故障独立恢复，保存结论不回退也不再次提交', async () => {
-  const h = harness(); await loaded(h)
-  const saved = h.module.save(); h.saves[0].resolve({ code: 200, data: null }); await saved
+  const h = harness()
+  await loaded(h)
+  const saved = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
   expect(h.module.state.phase).toBe('closed')
-  h.recognitions[0].reject(new Error('认出临时故障')); await flushPromises()
+  h.recognitions[0].reject(new Error('认出临时故障'))
+  await flushPromises()
   expect(h.module.state.permissionRefresh.status).toBe('retryable')
   expect(h.module.state.permissionRefresh.error).toContain('已保存')
   const retried = h.module.retryRecognition()
-  h.recognitions[1].resolve({ name: '张三', routers: [] }); await retried
+  h.recognitions[1].resolve({ name: '张三', routers: [] })
+  await retried
   expect(h.module.state.permissionRefresh.status).toBe('idle')
   expect(h.saves).toHaveLength(1)
   expect(h.storage.size).toBe(0)
 })
 
 it('切换进入身份后旧成功不认出、不通知、不清理新展示，旧认出故障不影响新身份', async () => {
-  const h = harness(); await loaded(h)
-  const saved = h.module.save(); h.module.release(); h.identity('replacement')
+  const h = harness()
+  await loaded(h)
+  const saved = h.module.save()
+  h.module.release()
+  h.identity('replacement')
   await loaded(h, { id: 'B', username: '李四' })
-  h.saves[0].resolve({ code: 200, data: null }); await saved
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
   expect(h.recognitions).toHaveLength(0)
   expect(h.notices).toEqual([])
   expect(h.module.state.target.id).toBe('B')
-  const next = h.module.save(); h.saves[1].resolve({ code: 200, data: null }); await next
-  h.identity('third'); h.recognitions[0].reject(new Error('旧身份故障')); await flushPromises()
+  const next = h.module.save()
+  h.saves[1].resolve({ code: 200, data: null })
+  await next
+  h.identity('third')
+  h.recognitions[0].reject(new Error('旧身份故障'))
+  await flushPromises()
   await loaded(h)
   expect(h.module.state.permissionRefresh.status).toBe('idle')
   await h.module.retryRecognition()
   expect(h.recognitions).toHaveLength(1)
 })
 
-it.each([208, 209, 205])('明确业务前拒绝 %s 才解除记录并保留原选择，通用 201 仍待确认', async code => {
-  const h = harness(); await loaded(h)
-  h.module.select([2]); const saved = h.module.save()
-  h.saves[0].reject(new BusinessRequestFailure('retryable', '明确拒绝', code)); await saved
-  expect(h.module.state.phase).toBe('ready')
-  expect(h.module.state.selectedIds).toEqual([2])
-  expect(h.module.state.canSave).toBe(true)
-  expect(h.storage.size).toBe(0)
-  const second = h.module.save()
-  h.saves[1].reject(new BusinessRequestFailure('retryable', '通用错误', 201)); await second
-  expect(h.module.state.phase).toBe('uncertain')
-  expect(h.module.state.canSave).toBe(false)
-})
+it.each([208, 209, 205])(
+  '明确业务前拒绝 %s 才解除记录并保留原选择，通用 201 仍待确认',
+  async (code) => {
+    const h = harness()
+    await loaded(h)
+    h.module.select([2])
+    const saved = h.module.save()
+    h.saves[0].reject(new BusinessRequestFailure('retryable', '明确拒绝', code))
+    await saved
+    expect(h.module.state.phase).toBe('ready')
+    expect(h.module.state.selectedIds).toEqual([2])
+    expect(h.module.state.canSave).toBe(true)
+    expect(h.storage.size).toBe(0)
+    const second = h.module.save()
+    h.saves[1].reject(new BusinessRequestFailure('retryable', '通用错误', 201))
+    await second
+    expect(h.module.state.phase).toBe('uncertain')
+    expect(h.module.state.canSave).toBe(false)
+  },
+)
 
 it('取消等待保存的离开保留冻结内容，已关闭的旧失败不污染新展示', async () => {
-  const h = harness(); await loaded(h)
-  const saved = h.module.save(); h.confirm(false)
+  const h = harness()
+  await loaded(h)
+  const saved = h.module.save()
+  h.confirm(false)
   expect(await h.module.requestLeave()).toBe(false)
   expect(h.module.state.phase).toBe('saving')
-  h.confirm(true); await loaded(h, { id: 'B', username: '李四' })
-  h.saves[0].reject(new Error('原保存超时')); await saved
+  h.confirm(true)
+  await loaded(h, { id: 'B', username: '李四' })
+  h.saves[0].reject(new Error('原保存超时'))
+  await saved
   expect(h.module.state.target.id).toBe('B')
   expect(h.module.state.error).toBe('')
   expect(h.notices).toEqual([])
   await h.module.open({ id: 'A', username: '张三' })
   expect(h.module.state.phase).toBe('uncertain')
+})
+
+it('权限刷新恢复仅属于原进入身份，新身份尚未打开弹窗也看不到旧反馈', async () => {
+  const h = harness()
+  await loaded(h)
+  const saved = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
+  h.recognitions[0].reject(new Error('权限刷新故障'))
+  await flushPromises()
+  expect(h.module.state.permissionRefresh.status).toBe('retryable')
+  h.module.release()
+  expect(h.module.state.permissionRefresh.status).toBe('retryable')
+  h.identity('new-identity')
+  expect(h.module.state.permissionRefresh).toEqual({ status: 'idle', error: '' })
+})
+
+it('已明确成功但本地记录无法清理时仍显示已保存，关闭重开不退回等待响应', async () => {
+  const h = harness()
+  await loaded(h)
+  h.options.records.remove = () => {
+    throw new Error('存储写入不可用')
+  }
+  const saved = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
+  expect(h.module.state.phase).toBe('saved')
+  expect(h.module.state.recordError).toBeTruthy()
+  await h.module.requestLeave()
+  await h.module.open({ id: 'A', username: '张三' })
+  expect(h.module.state.phase).toBe('saved')
+  expect(h.module.state.recordError).toBeTruthy()
+  expect(h.module.state.canSave).toBe(false)
+  expect(await h.module.endAssignment()).toBe(false)
+})
+
+it('多个不同目标连续成功会在已在途认出之后再刷新，覆盖后一个保存的权限变化', async () => {
+  const h = harness()
+  await loaded(h)
+  const first = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await first
+  await loaded(h, { id: 'B', username: '李四' })
+  const second = h.module.save()
+  h.saves[1].resolve({ code: 200, data: null })
+  await second
+  expect(h.recognitions).toHaveLength(1)
+  h.recognitions[0].resolve({ name: '操作者', routers: [] })
+  await flushPromises()
+  expect(h.recognitions).toHaveLength(2)
+  h.recognitions[1].resolve({ name: '操作者', routers: [] })
+  await flushPromises()
+  expect(h.module.state.permissionRefresh.status).toBe('idle')
+})
+
+const originalAxiosAdapter = axios.defaults.adapter
+afterEach(() => {
+  axios.defaults.adapter = originalAxiosAdapter
+})
+function transportHarness(respond) {
+  const h = harness(),
+    requests = [],
+    refreshedUsers = []
+  let tokens = { token: 'original-access', refreshToken: 'original-refresh' },
+    entryId = 'original'
+  let request
+  const recognition = createRecognition({
+    credentials: () => tokens,
+    entryId: () => entryId,
+    writeTokens: (value) => {
+      tokens = value
+      entryId ||= 'replacement'
+    },
+    clearUser: () => {
+      tokens = { token: '' }
+      entryId = ''
+    },
+    hasUser: () => true,
+    writeUser: (user) => refreshedUsers.push(user),
+    recovery: () => ({ status: 'idle', target: '' }),
+    showRecovery: () => {},
+    loadUser: async () => (await request({ method: 'get', url: '/admin/system/index/info' })).data,
+    currentPath: () => '/system/sysUser',
+    goTo: () => {},
+    goToLogin: () => {},
+    notify: (value) => h.notices.push(value),
+  })
+  axios.defaults.adapter = async (config) => {
+    requests.push(config)
+    try {
+      return { data: await respond(config), status: 200, statusText: 'OK', headers: {}, config }
+    } catch (error) {
+      throw new AxiosError(error.message, 'ERR_NETWORK', config)
+    }
+  }
+  request = createRequestClient(recognition)
+  h.options.recognition = recognition
+  h.options.request = request
+  h.module = createRoleAssignment(h.options)
+  return { ...h, requests, refreshedUsers, recognition }
+}
+
+it('真实传输的208恢复在关闭后仍只重发一次原提交，重发断网进入待确认且不扰动B', async () => {
+  const refused = deferred(),
+    submissions = []
+  const h = transportHarness((config) => {
+    if (config.url.endsWith('/refresh'))
+      return { code: 200, data: { token: 'renewed', refreshToken: 'renewed-refresh' } }
+    if (config.url.includes('/toAssign/')) return roles(config.url.endsWith('/B') ? [2] : [1])
+    if (config.url.endsWith('/doAssign')) {
+      submissions.push({ data: JSON.parse(config.data), token: config.headers.get('token') })
+      if (submissions.length === 1) return refused.promise
+      throw new Error('重发后网络中断')
+    }
+    throw new Error('不应调用其他接口')
+  })
+  await h.module.open({ id: 'A', username: '张三' })
+  h.module.select([])
+  const saved = h.module.save()
+  await flushPromises()
+  h.module.select([2])
+  await h.module.open({ id: 'B', username: '李四' })
+  refused.resolve({ code: 208, message: '认证过期' })
+  await saved
+  expect(submissions).toEqual([
+    { data: { userId: 'A', roleIdList: [] }, token: 'original-access' },
+    { data: { userId: 'A', roleIdList: [] }, token: 'renewed' },
+  ])
+  expect(h.recognition.capture().entryId).toBe('original')
+  expect(h.module.state.target.id).toBe('B')
+  expect(h.module.state.selectedIds).toEqual([2])
+  expect(h.notices).toEqual([])
+  await h.module.open({ id: 'A', username: '张三' })
+  expect(h.module.state.phase).toBe('uncertain')
+  expect(h.module.state.snapshot.roleIdList).toEqual([])
+  expect(submissions).toHaveLength(2)
+})
+
+it('真实传输的权限拒绝205是业务前拒绝，201与无法识别响应均保留待确认', async () => {
+  let code = 205
+  const h = transportHarness((config) =>
+    config.url.includes('/toAssign/') ? roles() : { code, message: '拒绝或故障' },
+  )
+  await h.module.open({ id: 'A', username: '张三' })
+  h.module.select([2])
+  await h.module.save()
+  expect(h.module.state.phase).toBe('ready')
+  expect(h.module.state.canSave).toBe(true)
+  expect(h.module.state.selectedIds).toEqual([2])
+  code = 201
+  await h.module.save()
+  expect(h.module.state.phase).toBe('uncertain')
+  expect(h.module.state.canSave).toBe(false)
+})
+
+it('切换目标的确认被强制离开清理后，旧确认同意也不能重新打开分配', async () => {
+  const h = harness()
+  await loaded(h)
+  h.module.select([2])
+  const confirmation = deferred()
+  h.options.confirm = () => confirmation.promise
+  const switchTarget = h.module.open({ id: 'B', username: '李四' })
+  await flushPromises()
+  await h.module.requestLeave(true)
+  confirmation.resolve(true)
+  await switchTarget
+  expect(h.module.state.phase).toBe('closed')
+  expect(h.module.state.target).toBe(null)
+  expect(h.reads).toHaveLength(1)
+})
+
+it('保存成功不会把保存前已经在途的认出当成新权限，结算后再读取一次', async () => {
+  const oldInfo = deferred(),
+    infoUsers = []
+  const h = transportHarness((config) => {
+    if (config.url.includes('/toAssign/')) return roles()
+    if (config.url.endsWith('/doAssign')) return { code: 200, data: null }
+    if (config.url.endsWith('/info')) {
+      infoUsers.push(config)
+      return infoUsers.length === 1
+        ? oldInfo.promise
+        : { code: 200, data: { name: '操作者', routers: [] } }
+    }
+    throw new Error('Unexpected request')
+  })
+  const preceding = h.recognition.recognize()
+  await flushPromises()
+  await h.module.open({ id: 'A', username: '张三' })
+  await h.module.save()
+  oldInfo.resolve({ code: 200, data: { name: '操作者', routers: [{ path: '/system/sysUser' }] } })
+  await preceding
+  await flushPromises()
+  expect(infoUsers).toHaveLength(2)
+  expect(h.refreshedUsers.at(-1).routers).toEqual([])
+})
+
+it('保存成功后记录清除的读回失败，仍保留明确保存结论与原快照供查看', async () => {
+  const h = harness()
+  await loaded(h)
+  let unavailable = false
+  const load = h.options.records.load
+  h.options.records.load = (key) => {
+    if (unavailable) throw new Error('存储读取不可用')
+    return load(key)
+  }
+  h.options.records.remove = (key) => {
+    h.storage.delete(key)
+    unavailable = true
+  }
+  const saved = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
+  await h.module.requestLeave()
+  await h.module.open({ id: 'A', username: '张三' })
+  expect(h.module.state.phase).toBe('saved')
+  expect(h.module.state.snapshot.roleIdList).toEqual([1])
+  expect(h.module.state.recordError).toBeTruthy()
+  expect(h.module.state.canSave).toBe(false)
 })

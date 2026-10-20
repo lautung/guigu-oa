@@ -72,6 +72,14 @@ export function createRoleAssignment(options: Options) {
   let context = options.recognition.capture()
   let baseline: EntityId[] = []
   const operations = new Map<string, Submission>()
+  const settlementErrors = new Map<
+    string,
+    { outcome: 'saved' | 'rejected' | 'uncertain'; error: string }
+  >()
+  const permissionRefresh = reactive({
+    status: 'idle' as 'idle' | 'loading' | 'retryable',
+    error: '',
+  })
   let refreshOwner: RequestContext | null = null
   let refreshFlight: Promise<void> | null = null
   let refreshAgain = false
@@ -89,7 +97,11 @@ export function createRoleAssignment(options: Options) {
     error: '',
     recordError: '',
     leaving: false,
-    permissionRefresh: { status: 'idle' as 'idle' | 'loading' | 'retryable', error: '' },
+    get permissionRefresh() {
+      return refreshOwner && sameIdentity(refreshOwner)
+        ? permissionRefresh
+        : { status: 'idle' as const, error: '' }
+    },
     snapshot: null as Submission | null,
     reading: false,
     currentRoles: null as RoleListItem[] | null,
@@ -133,10 +145,10 @@ export function createRoleAssignment(options: Options) {
     state.currentRoles = null
     baseline = []
   }
-  async function requestLeave(force = false) {
+  async function leave(force = false): Promise<'accepted' | 'superseded' | false> {
     if (force || !state.isCurrent) {
       release()
-      return true
+      return 'accepted'
     }
     if (state.leaving) return false
     const owner = opening
@@ -152,14 +164,18 @@ export function createRoleAssignment(options: Options) {
       state.leaving = true
       try {
         const accepted = await options.confirm(warning, 'leave')
-        if (owner !== opening || !state.isCurrent) return true
+        if (owner !== opening || !state.isCurrent) return 'superseded'
         if (!accepted) return false
       } finally {
         if (owner === opening) state.leaving = false
       }
     }
-    if (owner === opening) release()
-    return true
+    if (owner !== opening) return 'superseded'
+    release()
+    return 'accepted'
+  }
+  async function requestLeave(force = false) {
+    return (await leave(force)) !== false
   }
   function readRecord(key: string, entryId: string, target: Target): Submission | null {
     const value = options.records.load(key)
@@ -199,12 +215,18 @@ export function createRoleAssignment(options: Options) {
     options.records.remove(key)
     if (options.records.load(key) != null) throw new Error('分配提交记录未能清理，已暂停保存')
   }
-  function showOperation(operation: Submission) {
+  function showOperation(operation: Submission, key: string) {
     state.snapshot = operation
     state.selectedIds = [...operation.roleIdList]
     state.roles = operation.roles.map((role) => ({ ...role }))
     baseline = [...state.selectedIds]
     state.phase = operation.phase
+    const settlement = settlementErrors.get(key)
+    if (settlement) {
+      state.recordError = settlement.error
+      state.phase = settlement.outcome === 'rejected' ? 'ready' : settlement.outcome
+      if (settlement.outcome === 'rejected') state.snapshot = null
+    }
   }
   async function reload() {
     if (
@@ -250,31 +272,31 @@ export function createRoleAssignment(options: Options) {
     }
   }
   async function open(target: Target) {
-    const owner = opening
-    if (!(await requestLeave()) || opening !== owner + 1) return
+    if ((await leave()) !== 'accepted') return
     context = options.recognition.capture()
     if (refreshOwner && !sameIdentity(refreshOwner)) {
-      state.permissionRefresh = { status: 'idle', error: '' }
+      Object.assign(permissionRefresh, { status: 'idle', error: '' })
       refreshOwner = null
     }
     if (!validId(target.id) || !context.entryId) return
     state.target = { ...target }
     const key = keyFor(context.entryId, target.id)
+    const live = operations.get(key)
     try {
       const record = readRecord(key, context.entryId, target)
-      const live = operations.get(key)
       if (live && record?.operationId !== live.operationId)
         throw new Error('分配提交记录与在途保存不一致，已暂停保存')
       if (record) {
         const operation = live || { ...record, phase: 'uncertain' as const }
         if (!live && record.phase === 'saving') writeRecord(key, operation)
         operations.set(key, operation)
-        showOperation(operation)
+        showOperation(operation, key)
         return
       }
     } catch (error) {
-      state.phase = 'load-error'
-      state.recordError = message(error, '无法读取分配提交记录，已暂停保存')
+      if (live) showOperation(live, key)
+      else state.phase = 'load-error'
+      state.recordError ||= message(error, '无法读取分配提交记录，已暂停保存')
       return
     }
     await reload()
@@ -342,6 +364,10 @@ export function createRoleAssignment(options: Options) {
           writeRecord(key, operation)
         }
       } catch (recordError) {
+        settlementErrors.set(key, {
+          outcome: rejected ? 'rejected' : 'uncertain',
+          error: message(recordError, '无法更新分配提交记录，已暂停保存'),
+        })
         if (sameIdentity(identity) && state.snapshot?.operationId === operation.operationId)
           state.recordError = message(recordError, '无法更新分配提交记录')
       }
@@ -356,8 +382,12 @@ export function createRoleAssignment(options: Options) {
       removeRecord(key, operation)
       operations.delete(key)
     } catch (error) {
+      settlementErrors.set(key, {
+        outcome: 'saved',
+        error: `分配已保存，但提交记录未能清理：${message(error, '已暂停保存')}`,
+      })
       if (sameIdentity(identity) && state.snapshot?.operationId === operation.operationId)
-        state.recordError = message(error, '已保存，但提交记录未能清理')
+        state.recordError = settlementErrors.get(key)!.error
     }
     if (!sameIdentity(identity)) return
     void refreshPermissions(identity)
@@ -373,19 +403,20 @@ export function createRoleAssignment(options: Options) {
       return refreshFlight
     }
     refreshOwner = identity
-    state.permissionRefresh = { status: 'loading', error: '' }
+    Object.assign(permissionRefresh, { status: 'loading', error: '' })
     const flight = (async () => {
       do {
         refreshAgain = false
         try {
-          await options.recognition.recognize(undefined, { quiet: true })
-          if (sameIdentity(identity)) state.permissionRefresh = { status: 'idle', error: '' }
+          await options.recognition.recognize(undefined, { quiet: true, afterPending: true })
+          if (sameIdentity(identity))
+            Object.assign(permissionRefresh, { status: 'idle', error: '' })
         } catch (error) {
           if (sameIdentity(identity))
-            state.permissionRefresh = {
+            Object.assign(permissionRefresh, {
               status: 'retryable',
               error: `分配已保存，权限刷新暂未完成：${message(error, '请重试权限刷新')}`,
-            }
+            })
         }
       } while (refreshAgain && sameIdentity(identity))
     })().finally(() => {

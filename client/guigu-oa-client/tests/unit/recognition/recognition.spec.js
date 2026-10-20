@@ -321,12 +321,32 @@ describe('recognition interface with real request transport', () => {
 it('explicit background recognition keeps retryable feedback with its caller but still invalidates confirmed identity', async () => {
   const h = harness(() => Promise.reject(new Error('background timeout')))
   h.state.user = { name: 'Alice' }
-  await expect(h.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({ kind: 'retryable' })
+  await expect(h.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({
+    kind: 'retryable',
+  })
   expect(h.notifications).toEqual([])
   expect(h.state.user.name).toBe('Alice')
   const invalid = harness(() => ({ code: 209, message: '用户停用' }))
   invalid.state.user = { name: 'Alice' }
-  await expect(invalid.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({ kind: 'disabled' })
+  await expect(invalid.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({
+    kind: 'disabled',
+  })
   expect(invalid.state.tokens.token).toBe('')
   expect(invalid.destinations).toHaveLength(1)
+})
+
+it('afterPending recognition remains owned by the identity captured before waiting', async () => {
+  const pending = deferred()
+  const h = harness(() => pending.promise)
+  h.state.user = { name: 'Alice' }
+  const preceding = h.recognition.recognize()
+  await vi.waitFor(() => expect(h.calls).toHaveLength(1))
+  const refreshed = h.recognition.recognize(undefined, { quiet: true, afterPending: true })
+  const outcomes = Promise.allSettled([preceding, refreshed])
+  h.recognition.establish({ token: 'new-identity' })
+  pending.resolve(ok({ name: 'Alice' }))
+  expect((await outcomes).map((result) => result.reason.kind)).toEqual(['superseded', 'superseded'])
+  expect(h.calls).toHaveLength(1)
+  expect(h.state.user).toBe(null)
+  expect(h.notifications).toEqual([])
 })

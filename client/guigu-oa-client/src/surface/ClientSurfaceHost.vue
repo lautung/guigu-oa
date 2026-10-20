@@ -37,7 +37,7 @@ export default defineComponent({
       const menus = this.userStore.menus || []
       return {
         path,
-        hasToken: true,
+        hasToken: !!this.userStore.token,
         menus,
       }
     },
@@ -49,6 +49,12 @@ export default defineComponent({
     },
     contentClass() {
       return this.surface.density ? `is-${this.surface.density}` : null
+    },
+  },
+  watch: {
+    'surface.occupancy'() {
+      // A late role assignment may refresh menus after its original page has unmounted.
+      this.handleViewportWidth?.(this.viewportWidth)
     },
   },
   created() {
