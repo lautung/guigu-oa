@@ -334,3 +334,19 @@ it('explicit background recognition keeps retryable feedback with its caller but
   expect(invalid.state.tokens.token).toBe('')
   expect(invalid.destinations).toHaveLength(1)
 })
+
+it('afterPending recognition remains owned by the identity captured before waiting', async () => {
+  const pending = deferred()
+  const h = harness(() => pending.promise)
+  h.state.user = { name: 'Alice' }
+  const preceding = h.recognition.recognize()
+  await vi.waitFor(() => expect(h.calls).toHaveLength(1))
+  const refreshed = h.recognition.recognize(undefined, { quiet: true, afterPending: true })
+  const outcomes = Promise.allSettled([preceding, refreshed])
+  h.recognition.establish({ token: 'new-identity' })
+  pending.resolve(ok({ name: 'Alice' }))
+  expect((await outcomes).map((result) => result.reason.kind)).toEqual(['superseded', 'superseded'])
+  expect(h.calls).toHaveLength(1)
+  expect(h.state.user).toBe(null)
+  expect(h.notifications).toEqual([])
+})

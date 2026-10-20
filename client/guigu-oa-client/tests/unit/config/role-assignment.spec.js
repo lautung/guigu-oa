@@ -543,3 +543,52 @@ it('切换目标的确认被强制离开清理后，旧确认同意也不能重�
   expect(h.module.state.target).toBe(null)
   expect(h.reads).toHaveLength(1)
 })
+
+it('保存成功不会把保存前已经在途的认出当成新权限，结算后再读取一次', async () => {
+  const oldInfo = deferred(),
+    infoUsers = []
+  const h = transportHarness((config) => {
+    if (config.url.includes('/toAssign/')) return roles()
+    if (config.url.endsWith('/doAssign')) return { code: 200, data: null }
+    if (config.url.endsWith('/info')) {
+      infoUsers.push(config)
+      return infoUsers.length === 1
+        ? oldInfo.promise
+        : { code: 200, data: { name: '操作者', routers: [] } }
+    }
+    throw new Error('Unexpected request')
+  })
+  const preceding = h.recognition.recognize()
+  await flushPromises()
+  await h.module.open({ id: 'A', username: '张三' })
+  await h.module.save()
+  oldInfo.resolve({ code: 200, data: { name: '操作者', routers: [{ path: '/system/sysUser' }] } })
+  await preceding
+  await flushPromises()
+  expect(infoUsers).toHaveLength(2)
+  expect(h.refreshedUsers.at(-1).routers).toEqual([])
+})
+
+it('保存成功后记录清除的读回失败，仍保留明确保存结论与原快照供查看', async () => {
+  const h = harness()
+  await loaded(h)
+  let unavailable = false
+  const load = h.options.records.load
+  h.options.records.load = (key) => {
+    if (unavailable) throw new Error('存储读取不可用')
+    return load(key)
+  }
+  h.options.records.remove = (key) => {
+    h.storage.delete(key)
+    unavailable = true
+  }
+  const saved = h.module.save()
+  h.saves[0].resolve({ code: 200, data: null })
+  await saved
+  await h.module.requestLeave()
+  await h.module.open({ id: 'A', username: '张三' })
+  expect(h.module.state.phase).toBe('saved')
+  expect(h.module.state.snapshot.roleIdList).toEqual([1])
+  expect(h.module.state.recordError).toBeTruthy()
+  expect(h.module.state.canSave).toBe(false)
+})

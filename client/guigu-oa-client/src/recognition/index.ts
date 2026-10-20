@@ -145,12 +145,21 @@ export function createRecognition(adapter: RecognitionAdapter) {
 
   function recognize(
     destination = adapter.currentPath(),
-    options: { quiet?: boolean } = {},
+    options: { quiet?: boolean; afterPending?: boolean } = {},
   ): Promise<UserInfo> {
     const context = capture()
     const hadUser = adapter.hasUser()
     if (!hadUser) adapter.showRecovery({ status: 'loading', target: destination })
-    if (flight && isCurrent(flight.context)) return flight.promise
+    if (flight && isCurrent(flight.context)) {
+      if (!options.afterPending) return flight.promise
+      // A completed write needs a read started after that write, rather than a prior snapshot.
+      return flight.promise
+        .catch(() => {})
+        .then(() => {
+          assertCurrent(context)
+          return recognize(destination, { quiet: options.quiet })
+        })
+    }
     const promise = Promise.resolve()
       .then(() => {
         assertCurrent(context)

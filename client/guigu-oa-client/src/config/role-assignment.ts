@@ -215,12 +215,18 @@ export function createRoleAssignment(options: Options) {
     options.records.remove(key)
     if (options.records.load(key) != null) throw new Error('分配提交记录未能清理，已暂停保存')
   }
-  function showOperation(operation: Submission) {
+  function showOperation(operation: Submission, key: string) {
     state.snapshot = operation
     state.selectedIds = [...operation.roleIdList]
     state.roles = operation.roles.map((role) => ({ ...role }))
     baseline = [...state.selectedIds]
     state.phase = operation.phase
+    const settlement = settlementErrors.get(key)
+    if (settlement) {
+      state.recordError = settlement.error
+      state.phase = settlement.outcome === 'rejected' ? 'ready' : settlement.outcome
+      if (settlement.outcome === 'rejected') state.snapshot = null
+    }
   }
   async function reload() {
     if (
@@ -275,27 +281,22 @@ export function createRoleAssignment(options: Options) {
     if (!validId(target.id) || !context.entryId) return
     state.target = { ...target }
     const key = keyFor(context.entryId, target.id)
+    const live = operations.get(key)
     try {
       const record = readRecord(key, context.entryId, target)
-      const live = operations.get(key)
       if (live && record?.operationId !== live.operationId)
         throw new Error('分配提交记录与在途保存不一致，已暂停保存')
       if (record) {
         const operation = live || { ...record, phase: 'uncertain' as const }
         if (!live && record.phase === 'saving') writeRecord(key, operation)
         operations.set(key, operation)
-        showOperation(operation)
-        const settlement = settlementErrors.get(key)
-        if (settlement) {
-          state.recordError = settlement.error
-          state.phase = settlement.outcome === 'rejected' ? 'ready' : settlement.outcome
-          if (settlement.outcome === 'rejected') state.snapshot = null
-        }
+        showOperation(operation, key)
         return
       }
     } catch (error) {
-      state.phase = 'load-error'
-      state.recordError = message(error, '无法读取分配提交记录，已暂停保存')
+      if (live) showOperation(live, key)
+      else state.phase = 'load-error'
+      state.recordError ||= message(error, '无法读取分配提交记录，已暂停保存')
       return
     }
     await reload()
@@ -407,7 +408,7 @@ export function createRoleAssignment(options: Options) {
       do {
         refreshAgain = false
         try {
-          await options.recognition.recognize(undefined, { quiet: true })
+          await options.recognition.recognize(undefined, { quiet: true, afterPending: true })
           if (sameIdentity(identity))
             Object.assign(permissionRefresh, { status: 'idle', error: '' })
         } catch (error) {

@@ -37,7 +37,7 @@ export default defineComponent({
       const menus = this.userStore.menus || []
       return {
         path,
-        hasToken: true,
+        hasToken: !!this.userStore.token,
         menus,
       }
     },
