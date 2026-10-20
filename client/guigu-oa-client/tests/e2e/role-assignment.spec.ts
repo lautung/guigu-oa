@@ -39,6 +39,7 @@ async function setup(
     read?: (route: Route, target: string) => Promise<void>
     save?: (route: Route) => Promise<void>
     info?: (route: Route, attempt: number) => Promise<void>
+    expectedResourceFailures?: ('read' | 'save' | 'info')[]
   } = {},
 ) {
   const saved: { userId: string; roleIdList: number[] }[] = []
@@ -49,9 +50,18 @@ async function setup(
   browserErrors.set(page, errors)
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
-    // The fixtures deliberately abort requests or return 503; Chromium reports those as resource errors.
-    if (message.type() === 'error' && !message.text().startsWith('Failed to load resource:'))
-      errors.push(message.text())
+    if (message.type() !== 'error') return
+    const expectedPaths = {
+      read: '/admin/system/sysRole/toAssign/',
+      save: '/admin/system/sysRole/doAssign',
+      info: '/admin/system/index/info',
+    }
+    const expectedResourceFailure =
+      message.text().startsWith('Failed to load resource:') &&
+      options.expectedResourceFailures?.some((kind) =>
+        message.location().url.includes(expectedPaths[kind]),
+      )
+    if (!expectedResourceFailure) errors.push(`${message.text()} (${message.location().url})`)
   })
   await page.context().addCookies([
     { name: 'guigu_oa_client_token', value: 'role-token', domain: '127.0.0.1', path: '/' },
@@ -236,6 +246,7 @@ test.describe('分配角色真实弹窗的受控响应合同', () => {
     let reads = 0
     const finalRead = deferred()
     const h = await setup(page, {
+      expectedResourceFailures: ['read'],
       read: async (route) => {
         reads++
         if (reads === 3) return route.abort('failed')
@@ -384,6 +395,7 @@ test.describe('分配角色真实弹窗的受控响应合同', () => {
     let requests = 0
     const replay = deferred()
     const h = await setup(page, {
+      expectedResourceFailures: ['save'],
       save: async (route) => {
         if (++requests === 1) return json(route, null, 208)
         await replay.promise
@@ -416,6 +428,7 @@ test.describe('分配角色真实弹窗的受控响应合同', () => {
 
   test('保存成功与权限刷新故障分别显示，重试权限刷新不产生第二次保存', async ({ page }) => {
     const h = await setup(page, {
+      expectedResourceFailures: ['info'],
       info: (route, attempt) =>
         attempt === 2
           ? route.fulfill({ status: 503, body: 'temporary recognition failure' })
