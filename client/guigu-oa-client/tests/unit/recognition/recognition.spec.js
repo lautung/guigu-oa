@@ -317,3 +317,16 @@ describe('recognition interface with real request transport', () => {
     expect(h.destinations).toEqual([])
   })
 })
+
+it('explicit background recognition keeps retryable feedback with its caller but still invalidates confirmed identity', async () => {
+  const h = harness(() => Promise.reject(new Error('background timeout')))
+  h.state.user = { name: 'Alice' }
+  await expect(h.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({ kind: 'retryable' })
+  expect(h.notifications).toEqual([])
+  expect(h.state.user.name).toBe('Alice')
+  const invalid = harness(() => ({ code: 209, message: '用户停用' }))
+  invalid.state.user = { name: 'Alice' }
+  await expect(invalid.recognition.recognize(undefined, { quiet: true })).rejects.toMatchObject({ kind: 'disabled' })
+  expect(invalid.state.tokens.token).toBe('')
+  expect(invalid.destinations).toHaveLength(1)
+})

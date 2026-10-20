@@ -33,7 +33,7 @@ function businessFailure(response: Partial<ApiResponse<unknown>>): RecognitionFa
   return new BusinessRequestFailure(
     kind,
     response.message || '请求失败',
-    [201, 208, 209, 403].includes(response.code || 0) ? response.code : undefined,
+    [201, 205, 208, 209, 403].includes(response.code || 0) ? response.code : undefined,
   )
 }
 
