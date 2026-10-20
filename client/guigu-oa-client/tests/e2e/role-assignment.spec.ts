@@ -242,7 +242,7 @@ test.describe('分配角色真实弹窗的受控响应合同', () => {
 
   test('待确认跨刷新保留，核实相同集合或读取失败均不释放，人工结束后必须重新读取', async ({
     page,
-  }) => {
+  }, testInfo) => {
     let reads = 0
     const finalRead = deferred()
     const h = await setup(page, {
@@ -275,7 +275,7 @@ test.describe('分配角色真实弹窗的受控响应合同', () => {
     ).toBeVisible()
     await expect(assignment(page)).toContainText('本次提交角色：人事角色')
     await expect(saveButton(assignment(page))).toBeDisabled()
-    await page.screenshot({ path: '/private/tmp/issue-98-role-assignment.png', fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath('role-assignment.png'), fullPage: true })
     await assignment(page).getByRole('button', { name: '结束本次分配', exact: true }).click()
     const end = page.getByRole('dialog', { name: '结束本次分配', exact: true })
     await expect(end).toContainText('原保存仍可能生效并影响后续分配')
