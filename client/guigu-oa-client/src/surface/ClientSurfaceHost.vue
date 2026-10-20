@@ -51,6 +51,12 @@ export default defineComponent({
       return this.surface.density ? `is-${this.surface.density}` : null
     },
   },
+  watch: {
+    'surface.occupancy'() {
+      // A late role assignment may refresh menus after its original page has unmounted.
+      this.handleViewportWidth?.(this.viewportWidth)
+    },
+  },
   created() {
     this.handleViewportWidth = createViewportOccupancyHandler({
       getSurfaceInput: () => this.surfaceInput,

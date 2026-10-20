@@ -9,6 +9,7 @@ export function useRoleAssignment(recognition: Recognition): RoleAssignment {
   const existing = assignments.get(recognition)
   if (existing) return existing
   let confirming = false
+  let confirmationId = 0
   const assignment = createRoleAssignment({
     recognition,
     request,
@@ -22,6 +23,7 @@ export function useRoleAssignment(recognition: Recognition): RoleAssignment {
     },
     async confirm(message, kind) {
       const ending = kind === 'end-assignment'
+      const owner = ++confirmationId
       confirming = true
       try {
         await ElMessageBox.confirm(message, ending ? '结束本次分配' : '离开分配角色', {
@@ -33,10 +35,11 @@ export function useRoleAssignment(recognition: Recognition): RoleAssignment {
       } catch {
         return false
       } finally {
-        confirming = false
+        if (owner === confirmationId) confirming = false
       }
     },
     cancelConfirmation() {
+      confirmationId++
       if (confirming) {
         confirming = false
         ElMessageBox.close()
