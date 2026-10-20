@@ -75,33 +75,143 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="roleDialogVisible" title="分配角色" width="480px">
-      <p class="assign-user">用户：{{ assignUser.username }}</p>
-      <el-checkbox-group v-model="assignedRoleIds">
-        <el-checkbox v-for="role in allRoles" :key="role.id" :label="role.id">
-          {{ role.roleName }}
-        </el-checkbox>
+    <div v-if="roleState.permissionRefresh.status === 'retryable'" class="role-result" role="alert">
+      <p>{{ roleState.permissionRefresh.error }}</p>
+      <el-button @click="assignment.retryRecognition()">重试权限刷新</el-button>
+    </div>
+    <el-dialog
+      :model-value="roleState.phase !== 'closed'"
+      title="分配角色"
+      width="560px"
+      :before-close="closeRoles"
+    >
+      <p class="assign-user">
+        用户：{{ roleState.target?.username }}（{{ roleState.target?.id }}）
+      </p>
+      <p v-if="roleState.reading" role="status">正在读取角色，完成前不能保存。</p>
+      <p v-if="roleState.phase === 'saving'" role="status">
+        正在保存分配角色，本次提交内容已固定。离开不撤销已提交的保存。
+      </p>
+      <div v-if="roleState.phase === 'uncertain'" class="role-result" role="alert">
+        <h3>分配结果待确认</h3>
+        <p>本次提交已保留，暂停再次保存。当前角色与原提交相同或不同都不能证明原保存的结果。</p>
+        <el-button
+          :disabled="roleState.reading || roleState.leaving || !!roleState.recordError"
+          @click="assignment.reload()"
+          >重新读取当前角色</el-button
+        >
+        <el-button
+          type="warning"
+          :disabled="roleState.leaving || !!roleState.recordError"
+          @click="assignment.endAssignment()"
+          >结束本次分配</el-button
+        >
+      </div>
+      <p v-if="roleState.snapshot" class="submitted-roles">
+        本次提交角色：{{ roleState.submittedRoleNames || '无角色（清空全部）' }}
+      </p>
+      <p v-if="roleState.currentRoles !== null" class="current-roles">
+        当前已保存角色：{{
+          roleState.currentRoles.map((role) => role.roleName).join('、') || '无角色'
+        }}
+      </p>
+      <div v-if="roleState.error || roleState.recordError" role="alert">
+        <p>{{ roleState.recordError || roleState.error }}</p>
+        <el-button
+          v-if="roleState.phase === 'load-error' && !roleState.recordError"
+          @click="assignment.reload()"
+          >重新读取角色</el-button
+        >
+      </div>
+      <p v-if="roleState.phase === 'saved'">分配已保存。</p>
+      <el-checkbox-group
+        :model-value="[...roleState.selectedIds]"
+        :disabled="!roleState.canEdit"
+        @update:model-value="selectRoles"
+      >
+        <el-checkbox v-for="role in roleState.roles" :key="role.id" :value="role.id">{{
+          role.roleName
+        }}</el-checkbox>
       </el-checkbox-group>
+      <p v-if="roleState.phase === 'ready' && roleState.roles.length === 0">
+        当前没有可选角色，可保存空角色集合。
+      </p>
       <template #footer>
-        <div>
-          <el-button @click="roleDialogVisible = false">取消</el-button>
-          <el-button type="primary" :disabled="savingRoles" @click="saveRoles">保存</el-button>
-        </div>
+        <el-button @click="assignment.requestLeave()">关闭</el-button>
+        <el-button
+          v-if="roleState.phase === 'saved'"
+          :disabled="!!roleState.recordError"
+          @click="assignment.reload()"
+          >重新读取角色</el-button
+        >
+        <el-button type="primary" :disabled="!roleState.canSave" @click="assignment.save()"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, onBeforeUnmount, onMounted, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { useRoleAssignment } from '@/config/role-assignment-browser'
+import { useUserStore } from '@/store/modules/user'
+import { resolveClientSurface } from '@/surface/client-surface'
 
 import { getById, getPageList, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
-import { assignRoles, getRoles } from '@/api/sysRole'
 import { emptyForm, presentForm, presentListPage } from '@/config/sys-user'
-import type { EntityId, RoleListItem, UserListItem } from '@/types/domain'
+import type { EntityId, UserListItem } from '@/types/domain'
 
 export default defineComponent({
   name: 'SysUserList',
+  setup() {
+    const userStore = useUserStore(),
+      route = useRoute(),
+      router = useRouter()
+    const recognition = userStore.recognition
+    if (!recognition) throw new Error('认出 module 尚未接入')
+    const assignment = useRoleAssignment(recognition)
+    function mustLeave() {
+      return (
+        !userStore.token ||
+        resolveClientSurface({
+          path: route.path,
+          hasToken: !!userStore.token,
+          menus: userStore.menus,
+          viewportWidth: window.innerWidth,
+        }).occupancy.action === 'redirect'
+      )
+    }
+    function enforceEntry() {
+      if (mustLeave() || !assignment.state.isCurrent) {
+        assignment.release()
+        if (userStore.token) void router.replace('/work/pending')
+      }
+    }
+    onBeforeRouteLeave(() => assignment.requestLeave(mustLeave()))
+    watch(() => [userStore.token, userStore.menus] as const, enforceEntry, { deep: true })
+    onMounted(() => {
+      window.addEventListener('resize', enforceEntry)
+      window.addEventListener('focus', enforceEntry)
+    })
+    onBeforeUnmount(() => {
+      assignment.release()
+      window.removeEventListener('resize', enforceEntry)
+      window.removeEventListener('focus', enforceEntry)
+    })
+    return {
+      assignment,
+      roleState: assignment.state,
+      closeRoles: async (done: () => void) => {
+        if (await assignment.requestLeave()) done()
+      },
+      selectRoles: (ids: (string | number | boolean)[]) =>
+        assignment.select(
+          ids.filter((id): id is EntityId => typeof id === 'string' || typeof id === 'number'),
+        ),
+    }
+  },
   data() {
     return {
       list: [] as UserListItem[],
@@ -113,11 +223,6 @@ export default defineComponent({
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
-      roleDialogVisible: false,
-      savingRoles: false,
-      assignUser: { id: '' as EntityId | '', username: '' },
-      allRoles: [] as RoleListItem[],
-      assignedRoleIds: [] as EntityId[],
     }
   },
   computed: {
@@ -207,26 +312,7 @@ export default defineComponent({
       })
     },
     openAssignRoles(id: EntityId, username?: string) {
-      this.assignUser = { id, username: username || '' }
-      this.roleDialogVisible = true
-      getRoles(id).then((response) => {
-        this.allRoles = response.data.allRolesList || []
-        this.assignedRoleIds = (response.data.assginRoleList || []).flatMap((item) =>
-          item.id == null ? [] : [item.id],
-        )
-      })
-    },
-    saveRoles() {
-      this.savingRoles = true
-      assignRoles(this.assignUser.id, this.assignedRoleIds)
-        .then((response) => {
-          this.$message.success(response.message || '分配角色成功')
-          this.roleDialogVisible = false
-          this.fetchList()
-        })
-        .finally(() => {
-          this.savingRoles = false
-        })
+      void this.assignment.open({ id, username: username || '' })
     },
   },
 })
@@ -259,6 +345,13 @@ export default defineComponent({
 .pagination-wrap {
   margin-top: 16px;
   text-align: center;
+}
+
+.role-result {
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e6a23c;
+  border-radius: 6px;
 }
 
 .assign-user {
