@@ -212,19 +212,25 @@ function pathCoveredByGrant(path: string, leaves: string[]): boolean {
   )
 }
 
-// 已知隐藏页沿用目录里的父级映射，保住既有授予；菜单树里的自定义隐藏页不在目录中，跟进见 #104。
-function catalogHiddenParentOf(path: string): string | undefined {
-  return findBestEntry(normalizePath(path), catalogEntries())?.hiddenParentPath
+// 隐藏页的入口父级和占用父级同源：菜单树里有该页时取菜单树里的可见父级，
+// 只有当前菜单树里没有的已知隐藏页才用目录里的父级映射兜底。
+function hiddenParentOf(path: string, config: MenuEntry[]): string | undefined {
+  return findBestEntry(normalizePath(path), config)?.hiddenParentPath
 }
 
-function pathCanOccupy(path: string, viewportWidth: number, leaves: string[]): boolean {
+function pathCanOccupy(
+  path: string,
+  viewportWidth: number,
+  config: MenuEntry[],
+  leaves: string[],
+): boolean {
   if (isMobileViewport(viewportWidth)) return false
 
   const normalized = normalizePath(path)
   if (pathCoveredByGrant(normalized, leaves)) return true
 
-  const hiddenParentPath = catalogHiddenParentOf(normalized)
-  return hiddenParentPath !== undefined && leaves.includes(hiddenParentPath)
+  const hiddenParentPath = hiddenParentOf(normalized, config)
+  return hiddenParentPath !== undefined && pathCoveredByGrant(hiddenParentPath, leaves)
 }
 
 interface CanOccupyInput {
@@ -245,7 +251,7 @@ export function configPermission(menus: MenuNode[] = []) {
       return publicEntry(findEntryOf(path, work, config))
     },
     canOccupy({ path, viewportWidth }: CanOccupyInput): boolean {
-      return pathCanOccupy(path, viewportWidth, grantedLeaves)
+      return pathCanOccupy(path, viewportWidth, config, grantedLeaves)
     },
   }
 }

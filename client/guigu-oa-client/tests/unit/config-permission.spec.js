@@ -70,6 +70,18 @@ const CUSTOM_CONFIG_MENUS = [
   }
 ]
 
+const CUSTOM_HIDDEN_MENUS = [
+  {
+    path: '/office',
+    component: 'Layout',
+    meta: { title: '办公配置' },
+    children: [
+      { path: 'users', component: 'office/users/list', meta: { title: '用户' } },
+      { path: 'userDetail', component: 'office/users/detail', meta: { title: '用户详情' }, hidden: true }
+    ]
+  }
+]
+
 function canOccupy(permission, path, viewportWidth = DESKTOP_WIDTH) {
   return permission.canOccupy({ path, viewportWidth })
 }
@@ -335,6 +347,61 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/office/roles')).toBe(false)
     })
 
+    it('can occupy a custom hidden page through its visible menu-tree parent', () => {
+      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
+
+      expect(canOccupy(permission, '/office/userDetail')).toBe(true)
+      expect(canOccupy(permission, '/office/userDetail/9')).toBe(true)
+      expect(canOccupy(permission, '/office/userDetail', MOBILE_WIDTH)).toBe(false)
+    })
+
+    it('cannot occupy a custom hidden page whose visible parent has no grant', () => {
+      const permission = configPermission([
+        {
+          path: '/office',
+          meta: { title: '办公配置' },
+          children: [
+            { path: 'userDetail', component: 'office/users/detail', meta: { title: '用户详情' }, hidden: true }
+          ]
+        }
+      ])
+
+      expect(canOccupy(permission, '/office/userDetail')).toBe(false)
+    })
+
+    it('cannot occupy a custom hidden page that the menu tree does not contain', () => {
+      const permission = configPermission(CUSTOM_CONFIG_MENUS)
+
+      expect(canOccupy(permission, '/office/userDetail')).toBe(false)
+    })
+
+    it('uses the same menu-tree parent for a custom hidden page entry and its occupancy', () => {
+      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
+      const entry = permission.entryOf('/office/userDetail')
+
+      expect(entry).toEqual({ path: '/office', group: 'config' })
+      expect(canOccupy(permission, '/office/userDetail')).toBe(canOccupy(permission, entry.path))
+    })
+
+    it('uses the menu-tree parent for a known hidden page present in the menu tree', () => {
+      const permission = configPermission([
+        {
+          path: '/system',
+          meta: { title: '组织与权限' },
+          children: [
+            { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } },
+            { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
+          ]
+        }
+      ])
+
+      expect(permission.entryOf('/system/assignAuth')).toEqual({
+        path: '/system',
+        group: 'config'
+      })
+      expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
+    })
+
     it('does not occupy unknown paths', () => {
       const permission = configPermission(ONLY_USER_MENUS)
 
@@ -409,6 +476,23 @@ describe('配置权限', () => {
         path: '/office/users',
         group: 'config'
       })
+    })
+
+    it('returns the visible menu-tree parent for a custom hidden page', () => {
+      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
+
+      expect(permission.entryOf('/office/userDetail')).toEqual({
+        path: '/office',
+        group: 'config'
+      })
+      expect(permission.entryOf('/office/userDetail/9')).toEqual({
+        path: '/office',
+        group: 'config'
+      })
+    })
+
+    it('returns null for a custom hidden page absent from both the menu tree and the product catalog', () => {
+      expect(configPermission([]).entryOf('/office/userDetail')).toBeNull()
     })
 
     it('returns a parent directory that only has children as a 配置 entry', () => {
