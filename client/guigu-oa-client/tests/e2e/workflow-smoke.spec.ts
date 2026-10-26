@@ -101,7 +101,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
     }
     if (path === '/admin/process/startUp' && method === 'POST') {
       state.startPayload = request.postDataJSON() as Record<string, unknown>
-      return json(route, { id: processId })
+      return json(route, null)
     }
     if (path.startsWith('/admin/process/findStarted/') && method === 'GET') {
       return json(route, {

@@ -130,7 +130,11 @@ export function createRecognition(adapter: RecognitionAdapter) {
     adapter.writeTokens(tokens)
   }
 
-  function reject(context: RequestContext, error: unknown): RecognitionFailure {
+  function reject(
+    context: RequestContext,
+    error: unknown,
+    notifyNormal = true,
+  ): RecognitionFailure {
     if (!isCurrent(context)) return new RecognitionFailure('superseded', '请求所属的进入结果已变化')
     const reason = failure(error)
     if (context.silent || reason.kind === 'superseded') return reason
@@ -139,7 +143,7 @@ export function createRecognition(adapter: RecognitionAdapter) {
       forget()
       adapter.notify(reason.message)
       adapter.goToLogin(destination)
-    } else adapter.notify(reason.message)
+    } else if (notifyNormal) adapter.notify(reason.message)
     return reason
   }
 

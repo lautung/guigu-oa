@@ -1,5 +1,10 @@
 import type { ApiRequestConfig, EntityId, RoleForm, RoleListItem, RoleRecord } from '@/types/domain'
 
+export interface RoleAssignmentLists {
+  allRolesList: RoleListItem[]
+  assginRoleList: RoleListItem[]
+}
+
 function presentListItem(record: RoleRecord = {}): RoleListItem {
   return {
     id: record.id || '',
@@ -80,7 +85,10 @@ export function toAssignRolesRequest(userId: EntityId): ApiRequestConfig {
   }
 }
 
-export function assignRolesRequest(userId: EntityId, roleIdList: EntityId[]): ApiRequestConfig {
+export function assignRolesRequest(
+  userId: EntityId,
+  roleIdList: readonly EntityId[],
+): ApiRequestConfig {
   return {
     method: 'post',
     url: `${SYS_ROLE_API}/doAssign`,

@@ -1,12 +1,6 @@
 import request from '@/utils/request'
 import { getCurrentUserRequest } from '@/work/profile'
-import type {
-  ApiResponse,
-  EntityId,
-  ProcessDetailPayload,
-  ProcessInstanceRecord,
-  Profile,
-} from '@/types/domain'
+import type { ApiResponse, EntityId, ProcessDetailPayload, Profile } from '@/types/domain'
 
 export function show(id: EntityId): Promise<ApiResponse<ProcessDetailPayload>> {
   return request({
@@ -38,7 +32,7 @@ export interface StartProcessRequest {
   ccUserIds?: EntityId[]
 }
 
-export function startUp(data: StartProcessRequest): Promise<ApiResponse<ProcessInstanceRecord>> {
+export function startUp(data: StartProcessRequest): Promise<ApiResponse<void>> {
   return request({
     method: 'post',
     url: '/admin/process/startUp',

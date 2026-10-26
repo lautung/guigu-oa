@@ -2,6 +2,10 @@
 
 Per-repo configuration for [Matt Pocock skills 1.3](https://github.com/mattpocock/skills/releases/tag/v1.3.1).
 
+### Pull requests
+
+创建或更新 PR（包括草稿 PR）前，必须读取并使用 Matt Pocock 的 `pr` skill（在当前可用 skills 中定位 `pr/SKILL.md`），按其模板编写 PR 正文。
+
 ### Issue tracker
 
 Issues live in this repo's GitHub Issues (via the `gh` CLI). See `docs/agents/issue-tracker.md`.

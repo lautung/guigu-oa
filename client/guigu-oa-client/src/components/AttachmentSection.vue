@@ -35,15 +35,6 @@
         >
           {{ downloadingId === attachment.id ? '准备中…' : '下载' }}
         </button>
-        <button
-          v-else
-          type="button"
-          class="text-button danger-button"
-          :disabled="deletingId === attachment.id"
-          @click="remove(attachment)"
-        >
-          {{ deletingId === attachment.id ? '删除中…' : '删除' }}
-        </button>
       </li>
     </ul>
   </section>
@@ -52,38 +43,25 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 
-import {
-  completeUpload,
-  createDownloadGrant,
-  createUpload,
-  deletePending,
-  listDraft,
-  listForProcess,
-} from '@/api/attachment'
+import { completeUpload, createDownloadGrant, createUpload, listForProcess } from '@/api/attachment'
 import { uploadAttachment } from '@/work/attachments'
 import type { AttachmentRecord, EntityId } from '@/types/domain'
 
 export default defineComponent({
   name: 'AttachmentSection',
   props: {
-    draftId: {
-      type: String,
-      default: '',
-    },
     processId: {
       type: [Number, String],
       default: null,
     },
   },
-  emits: ['attachments-change', 'busy-change', 'ready-change'],
   data() {
     return {
       attachments: [] as AttachmentRecord[],
-      canUpload: !this.processId,
+      canUpload: false,
       loading: false,
       uploadingCount: 0,
       loadFailed: false,
-      deletingId: null as EntityId | null,
       downloadingId: null as EntityId | null,
     }
   },
@@ -92,28 +70,18 @@ export default defineComponent({
   },
   methods: {
     async load() {
-      if (!this.processId && !this.draftId) return
+      if (!this.processId) return
       this.loading = true
-      this.$emit('busy-change', true)
       try {
-        if (this.processId) {
-          const response = await listForProcess(this.processId)
-          this.attachments = response.data.attachments || []
-          this.canUpload = !!response.data.canUpload
-        } else {
-          const response = await listDraft(this.draftId)
-          this.attachments = response.data || []
-        }
+        const response = await listForProcess(this.processId)
+        this.attachments = response.data.attachments || []
+        this.canUpload = !!response.data.canUpload
         this.loadFailed = false
-        this.$emit('ready-change', true)
-        this.emitAttachmentIds()
       } catch {
         this.loadFailed = true
-        this.$emit('ready-change', false)
         this.$message.error('附件读取失败')
       } finally {
         this.loading = false
-        this.$emit('busy-change', this.uploadingCount > 0)
       }
     },
     async onFilesSelected(event: Event) {
@@ -124,33 +92,20 @@ export default defineComponent({
 
       for (const file of files) {
         this.uploadingCount += 1
-        this.$emit('busy-change', true)
         try {
           const attachment = await uploadAttachment(file, {
-            draftId: this.draftId,
+            draftId: '',
             processId: this.processId ?? undefined,
             createUpload,
             completeUpload,
             put: (url, options) => fetch(url, options),
           })
           this.attachments.push(attachment)
-          this.emitAttachmentIds()
         } catch (error: unknown) {
           this.$message.error(error instanceof Error ? error.message : '附件上传失败')
         } finally {
           this.uploadingCount -= 1
-          this.$emit('busy-change', this.uploadingCount > 0)
         }
-      }
-    },
-    async remove(attachment: AttachmentRecord) {
-      this.deletingId = attachment.id
-      try {
-        await deletePending(attachment.id)
-        this.attachments = this.attachments.filter((item) => item.id !== attachment.id)
-        this.emitAttachmentIds()
-      } finally {
-        this.deletingId = null
       }
     },
     async download(attachment: AttachmentRecord) {
@@ -173,12 +128,6 @@ export default defineComponent({
       if (sizeBytes < 1024) return `${sizeBytes} B`
       if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`
       return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
-    },
-    emitAttachmentIds() {
-      this.$emit(
-        'attachments-change',
-        this.attachments.map((item) => item.id),
-      )
     },
   },
 })

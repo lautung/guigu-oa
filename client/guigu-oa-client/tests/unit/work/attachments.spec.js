@@ -1,30 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  clearDraftId,
-  draftStorageKey,
-  getOrCreateDraftId,
   uploadAttachment
 } from '@/work/attachments'
 
 describe('work/attachments', () => {
   afterEach(() => {
     vi.restoreAllMocks()
-  })
-
-  it('reuses a per-template draft id for pending attachments', () => {
-    const values = new Map()
-    const storage = {
-      getItem: key => values.get(key) || null,
-      setItem: (key, value) => values.set(key, value),
-      removeItem: key => values.delete(key)
-    }
-    const uuid = vi.fn(() => 'fixed-draft-id')
-
-    expect(getOrCreateDraftId(12, storage, uuid)).toBe('fixed-draft-id')
-    expect(getOrCreateDraftId(12, storage, uuid)).toBe('fixed-draft-id')
-    expect(uuid).toHaveBeenCalledTimes(1)
-    clearDraftId(12, storage)
-    expect(storage.getItem(draftStorageKey(12))).toBeNull()
   })
 
   it('uploads directly to the signed URL and registers only after PUT succeeds', async () => {
@@ -71,6 +52,21 @@ describe('work/attachments', () => {
       completeUpload
     })).rejects.toThrow('附件上传失败')
 
+    expect(completeUpload).not.toHaveBeenCalled()
+  })
+})
+
+describe('upload registration remains in the original entry', () => {
+  it('does not complete an old upload when its owner changes during PUT', async () => {
+    let current = true
+    const completeUpload = vi.fn()
+    await expect(uploadAttachment({ name: 'proof.txt', size: 1, type: 'text/plain' }, {
+      draftId: 'draft',
+      assertCurrent: () => { if (!current) throw new Error('进入结果已变化') },
+      createUpload: async () => ({ data: { attachmentId: 7, uploadUrl: 'https://objects.test/put', headers: {} } }),
+      put: async () => { current = false; return { ok: true } },
+      completeUpload,
+    })).rejects.toThrow('进入结果已变化')
     expect(completeUpload).not.toHaveBeenCalled()
   })
 })

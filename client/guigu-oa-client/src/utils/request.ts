@@ -9,19 +9,47 @@ type RefreshableRequestConfig = InternalAxiosRequestConfig & {
   _localErrors?: boolean
   _isRelevant?: () => boolean
   _recognition?: RequestContext
+  normalErrorNotification?: 'global' | 'caller'
 }
 
-export class BusinessRequestFailure extends RecognitionFailure {
+export interface RequestFailureDetail {
+  source: 'business' | 'http' | 'timeout' | 'network' | 'unexpected'
+  operation: 'request' | 'refresh'
+  businessCode?: number
+  httpStatus?: number
+  originalBusinessCode?: number
+}
+
+export class RequestFailure extends RecognitionFailure {
+  constructor(
+    kind: ConstructorParameters<typeof RecognitionFailure>[0],
+    message: string,
+    readonly detail: RequestFailureDetail,
+  ) {
+    super(kind, message)
+    this.name = 'RequestFailure'
+  }
+}
+
+export class BusinessRequestFailure extends RequestFailure {
   constructor(
     kind: ConstructorParameters<typeof RecognitionFailure>[0],
     message: string,
     readonly businessCode?: number,
+    detail: RequestFailureDetail = {
+      source: businessCode === undefined ? 'unexpected' : 'business',
+      operation: 'request',
+      businessCode,
+    },
   ) {
-    super(kind, message)
+    super(kind, message, detail)
   }
 }
 
-function businessFailure(response: Partial<ApiResponse<unknown>>): RecognitionFailure {
+function businessFailure(
+  response: Partial<ApiResponse<unknown>>,
+  operation: 'request' | 'refresh' = 'request',
+): RequestFailure {
   const kind =
     response.code === 208
       ? 'invalid'
@@ -34,7 +62,33 @@ function businessFailure(response: Partial<ApiResponse<unknown>>): RecognitionFa
     kind,
     response.message || '请求失败',
     [201, 208, 209, 403].includes(response.code || 0) ? response.code : undefined,
+    {
+      source: typeof response.code === 'number' ? 'business' : 'unexpected',
+      operation,
+      businessCode: response.code,
+    },
   )
+}
+
+function transportFailure(
+  error: unknown,
+  operation: 'request' | 'refresh' = 'request',
+): RecognitionFailure {
+  if (error instanceof RecognitionFailure) return error
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined
+  const timeout =
+    axios.isAxiosError(error) && ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code || '')
+  return new RequestFailure('retryable', error instanceof Error ? error.message : '请求失败', {
+    source: status
+      ? 'http'
+      : timeout
+        ? 'timeout'
+        : axios.isAxiosError(error)
+          ? 'network'
+          : 'unexpected',
+    operation,
+    httpStatus: status,
+  })
 }
 
 export function createRequestClient(recognition: Recognition): ApiClient {
@@ -60,11 +114,24 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       .post<ApiResponse<LoginTokens>>(refreshUrl, { refreshToken }, { timeout: 15000 })
       .then(({ data: response }) => {
         recognition.assertCurrent(context)
-        if (!response || response.code !== 200) throw businessFailure(response || {})
+        if (!response || response.code !== 200) throw businessFailure(response || {}, 'refresh')
         if (!response.data?.token || !response.data.refreshToken)
-          throw new RecognitionFailure('retryable', '暂时无法验证用户，请重试')
+          throw new RequestFailure('retryable', '暂时无法验证用户，请重试', {
+            source: 'unexpected',
+            operation: 'refresh',
+          })
         recognition.commitRefresh(context, response.data)
         return response.data.token
+      })
+      .catch((error: unknown) => {
+        const reason = transportFailure(error, 'refresh')
+        if (reason instanceof RequestFailure) {
+          throw new RequestFailure(reason.kind, reason.message, {
+            ...reason.detail,
+            originalBusinessCode: 208,
+          })
+        }
+        throw reason
       })
       .finally(() => {
         if (refreshFlight?.promise === promise) refreshFlight = null
@@ -78,13 +145,12 @@ export function createRequestClient(recognition: Recognition): ApiClient {
     context: RequestContext,
     error: unknown,
   ) {
-    const authentication =
-      error instanceof RecognitionFailure && ['invalid', 'disabled'].includes(error.kind)
-    const silent =
-      context.silent ||
-      config._isRelevant?.() === false ||
-      (!!config._localErrors && !authentication)
-    return recognition.reject({ ...context, silent }, error)
+    const silent = context.silent || config._isRelevant?.() === false
+    return recognition.reject(
+      { ...context, silent },
+      error,
+      !config._localErrors && config.normalErrorNotification !== 'caller',
+    )
   }
 
   async function handleResponse(response: AxiosResponse<ApiResponse<unknown>>) {
@@ -112,7 +178,14 @@ export function createRequestClient(recognition: Recognition): ApiClient {
         } catch (error: unknown) {
           const reason = rejectRequest(config, context, error)
           // The original business request was explicitly refused before authentication recovery.
-          throw new BusinessRequestFailure(reason.kind, reason.message, 208)
+          throw new BusinessRequestFailure(
+            reason.kind,
+            reason.message,
+            208,
+            reason instanceof RequestFailure
+              ? reason.detail
+              : { source: 'unexpected', operation: 'refresh', originalBusinessCode: 208 },
+          )
         }
         return service(config)
       }
@@ -129,7 +202,7 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       throw rejectRequest(
         config || ({} as RefreshableRequestConfig),
         config?._recognition || recognition.capture(),
-        error,
+        transportFailure(error),
       )
     },
   )

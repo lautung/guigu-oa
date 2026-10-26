@@ -22,6 +22,7 @@ export interface ApiRequestConfig {
   _localErrors?: boolean
   _isRelevant?: () => boolean
   params?: Record<string, string | number | boolean | null | undefined>
+  normalErrorNotification?: 'global' | 'caller'
 }
 
 export interface ApiClient {
@@ -288,7 +289,7 @@ export interface FormRule {
 export interface FormDesignerOption {
   [key: string]: unknown
   form?: Record<string, unknown>
-  submitBtn?: boolean
+  submitBtn?: boolean | { disabled?: boolean; loading?: boolean }
 }
 
 export interface FormDesignerState {

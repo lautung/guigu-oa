@@ -317,3 +317,37 @@ describe('recognition interface with real request transport', () => {
     expect(h.destinations).toEqual([])
   })
 })
+
+describe('caller-owned normal errors preserve request evidence and recognition', () => {
+  const start = { method: 'post', url: '/admin/process/startUp', normalErrorNotification: 'caller', data: {} }
+  it('retains definitive business rejection evidence without a global ordinary toast', async () => {
+    const h = harness(() => ({ code: 201, message: '不能发起' }))
+    await expect(h.request(start)).rejects.toMatchObject({ kind: 'retryable', detail: { source: 'business', operation: 'request', businessCode: 201 } })
+    expect(h.notifications).toEqual([])
+    expect(h.state.tokens.token).toBe('old-access')
+  })
+  it('distinguishes an original request timeout from a business rejection', async () => {
+    const h = harness(config => Promise.reject(new AxiosError('timeout', 'ECONNABORTED', config)))
+    await expect(h.request(start)).rejects.toMatchObject({ detail: { source: 'timeout', operation: 'request' } })
+    expect(h.notifications).toEqual([])
+  })
+  it('retains the original auth rejection when only the refresh request times out', async () => {
+    const h = harness(config => config.url.endsWith('/refresh') ? Promise.reject(new AxiosError('timeout', 'ECONNABORTED', config)) : expired)
+    await expect(h.request(start)).rejects.toMatchObject({ detail: { source: 'timeout', operation: 'refresh', originalBusinessCode: 208 } })
+    expect(h.notifications).toEqual([])
+    expect(h.state.tokens.token).toBe('old-access')
+    expect(h.calls.filter(call => call.url === start.url)).toHaveLength(1)
+  })
+  it('still clears a disabled identity and presents recognition even when ordinary errors belong to the caller', async () => {
+    const h = harness(() => ({ code: 209, message: '停用' }))
+    await expect(h.request(start)).rejects.toMatchObject({ kind: 'disabled' })
+    expect(h.state.tokens.token).toBe('')
+    expect(h.destinations).toHaveLength(1)
+    expect(h.notifications).toEqual(['停用'])
+  })
+  it('keeps malformed responses distinct from a definitive rejection', async () => {
+    const h = harness(() => ({ message: 'invalid payload' }))
+    await expect(h.request(start)).rejects.toMatchObject({ detail: { source: 'unexpected', operation: 'request' } })
+    expect(h.notifications).toEqual([])
+  })
+})

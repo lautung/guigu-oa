@@ -29,12 +29,15 @@
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="创建时间" />
-      <el-table-column label="操作" width="220" align="center">
+      <el-table-column label="操作" width="250" align="center">
         <template #default="scope">
           <el-button type="text" @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button type="text" @click="openAssignRoles(scope.row.id, scope.row.username)"
-            >分配角色</el-button
-          >
+          <span class="assign-action">
+            <el-button type="text" @click="openAssignRoles(scope.row.id, scope.row.username)"
+              >分配角色</el-button
+            >
+            <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
+          </span>
           <el-button type="text" @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -75,33 +78,96 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="roleDialogVisible" title="分配角色" width="480px">
-      <p class="assign-user">用户：{{ assignUser.username }}</p>
-      <el-checkbox-group v-model="assignedRoleIds">
-        <el-checkbox v-for="role in allRoles" :key="role.id" :label="role.id">
-          {{ role.roleName }}
-        </el-checkbox>
-      </el-checkbox-group>
-      <template #footer>
-        <div>
-          <el-button @click="roleDialogVisible = false">取消</el-button>
-          <el-button type="primary" :disabled="savingRoles" @click="saveRoles">保存</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <AssignRolesDialog ref="assignRolesDialog" v-model="assignRolesVisible" :user="assignUser" />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 
 import { getById, getPageList, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
-import { assignRoles, getRoles } from '@/api/sysRole'
+import { useAssignRoles } from '@/config/assign-roles-browser'
 import { emptyForm, presentForm, presentListPage } from '@/config/sys-user'
-import type { EntityId, RoleListItem, UserListItem } from '@/types/domain'
+import { ROUTES } from '@/navigation/constants'
+import { useUserStore } from '@/store/modules/user'
+import { resolveClientSurface } from '@/surface/client-surface'
+import type { EntityId, UserListItem } from '@/types/domain'
+import AssignRolesDialog from './AssignRolesDialog.vue'
+
+interface AssignRolesDialogHandle {
+  requestLeave(force?: boolean): Promise<boolean>
+}
 
 export default defineComponent({
   name: 'SysUserList',
+  components: { AssignRolesDialog },
+  setup() {
+    const assignRolesDialog = ref<AssignRolesDialogHandle>()
+    const assignRolesVisible = ref(false)
+    const assignUser = ref<{ id: EntityId; username: string } | null>(null)
+    const assignRoles = useAssignRoles()
+    const pendingIds = computed(() => new Set(assignRoles.pendingUserIds.value))
+    const userStore = useUserStore()
+    const router = useRouter()
+    const route = useRoute()
+
+    function isPending(id: EntityId): boolean {
+      return pendingIds.value.has(String(id))
+    }
+
+    async function requestAssignRolesLeave(force = false): Promise<boolean> {
+      return (await assignRolesDialog.value?.requestLeave(force)) ?? true
+    }
+
+    async function openAssignRoles(id: EntityId, username?: string): Promise<void> {
+      if (assignRolesVisible.value) {
+        const left = await requestAssignRolesLeave()
+        if (!left) return
+      }
+      assignUser.value = { id, username: username || '' }
+      assignRolesVisible.value = true
+    }
+
+    function mustLeave(): boolean {
+      return (
+        !userStore.token ||
+        resolveClientSurface({
+          path: route.path,
+          hasToken: !!userStore.token,
+          menus: userStore.menus,
+          viewportWidth: window.innerWidth,
+        }).occupancy.action === 'redirect'
+      )
+    }
+
+    async function enforceEntry(): Promise<void> {
+      if (!mustLeave()) return
+      await requestAssignRolesLeave(true)
+      ElMessageBox.close()
+      if (userStore.token) void router.replace(ROUTES.PENDING)
+    }
+
+    watch(() => [userStore.token, userStore.menus] as const, enforceEntry, { deep: true })
+    onBeforeRouteLeave(async () => requestAssignRolesLeave(mustLeave()))
+    onMounted(() => {
+      window.addEventListener('resize', enforceEntry)
+      window.addEventListener('focus', enforceEntry)
+    })
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', enforceEntry)
+      window.removeEventListener('focus', enforceEntry)
+    })
+
+    return {
+      assignRolesDialog,
+      assignRolesVisible,
+      assignUser,
+      isPending,
+      openAssignRoles,
+    }
+  },
   data() {
     return {
       list: [] as UserListItem[],
@@ -113,11 +179,6 @@ export default defineComponent({
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
-      roleDialogVisible: false,
-      savingRoles: false,
-      assignUser: { id: '' as EntityId | '', username: '' },
-      allRoles: [] as RoleListItem[],
-      assignedRoleIds: [] as EntityId[],
     }
   },
   computed: {
@@ -206,28 +267,6 @@ export default defineComponent({
         this.fetchList()
       })
     },
-    openAssignRoles(id: EntityId, username?: string) {
-      this.assignUser = { id, username: username || '' }
-      this.roleDialogVisible = true
-      getRoles(id).then((response) => {
-        this.allRoles = response.data.allRolesList || []
-        this.assignedRoleIds = (response.data.assginRoleList || []).flatMap((item) =>
-          item.id == null ? [] : [item.id],
-        )
-      })
-    },
-    saveRoles() {
-      this.savingRoles = true
-      assignRoles(this.assignUser.id, this.assignedRoleIds)
-        .then((response) => {
-          this.$message.success(response.message || '分配角色成功')
-          this.roleDialogVisible = false
-          this.fetchList()
-        })
-        .finally(() => {
-          this.savingRoles = false
-        })
-    },
   },
 })
 </script>
@@ -261,8 +300,9 @@ export default defineComponent({
   text-align: center;
 }
 
-.assign-user {
-  margin: 0 0 12px;
-  color: #606266;
+.assign-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 </style>

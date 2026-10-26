@@ -1,15 +1,12 @@
 <template>
-  <div v-loading="loading" class="apply-page">
-    <el-button type="text" @click="goBack">返回</el-button>
-    <el-alert
-      v-if="unavailableMessage"
-      type="warning"
-      :title="unavailableMessage"
-      :closable="false"
-      show-icon
-    />
-    <h2 class="page-title">{{ title }}</h2>
-    <div v-if="template" class="carbon-copy-field">
+  <div v-loading="view.loading" class="apply-page">
+    <el-button link @click="goBack">返回</el-button>
+    <h2 class="page-title">{{ view.template?.name || '发起审批' }}</h2>
+    <el-alert v-if="view.error" :title="view.error" type="error" :closable="false" show-icon />
+    <el-button v-if="view.error && view.phase === 'editing'" @click="start.reload"
+      >重试读取</el-button
+    >
+    <div v-if="view.template" class="carbon-copy-field">
       <label for="carbon-copy-users">抄送给</label>
       <el-select
         id="carbon-copy-users"
@@ -20,9 +17,10 @@
         collapse-tags-tooltip
         placeholder="选择知情人（可不选）"
         class="carbon-copy-select"
+        :disabled="view.locked"
       >
         <el-option
-          v-for="recipient in ccRecipients"
+          v-for="recipient in view.recipients"
           :key="recipient.id"
           :label="recipient.name"
           :value="recipient.id"
@@ -30,183 +28,105 @@
       </el-select>
     </div>
     <form-create
-      v-if="template && rule.length"
+      v-if="view.template"
       v-model="formData"
       :rule="rule"
       :option="option"
-      @submit="onSubmit"
+      @submit="start.submit"
     />
-    <AttachmentSection
-      v-if="template && attachmentDraftId"
-      :draft-id="attachmentDraftId"
-      @busy-change="onAttachmentBusyChange"
-      @ready-change="onAttachmentReadyChange"
-      @attachments-change="onAttachmentsChange"
-    />
+    <ApprovalStartAttachments v-if="view.template" :start="start" />
+    <section
+      v-if="view.phase === 'unconfirmed' || view.phase === 'completed'"
+      class="confirmation"
+      aria-label="核实发起结果"
+    >
+      <h3>{{ view.phase === 'completed' ? '本次已发起' : '发起结果待确认' }}</h3>
+      <p>
+        {{
+          view.phase === 'completed'
+            ? '请查看已发起，再结束本次内容。'
+            : '请先核实已发起。暂未找到对应审批，并不能证明本次发起没有成功。'
+        }}
+      </p>
+      <div class="confirmation-actions">
+        <router-link :to="ROUTES.STARTED">查看已发起</router-link>
+        <el-button @click="start.finishFoundApproval">已找到，结束本次</el-button>
+        <el-button v-if="view.phase === 'unconfirmed'" @click="start.prepareStartAgain"
+          >仍未找到，重新发起</el-button
+        >
+      </div>
+    </section>
   </div>
 </template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-
-import AttachmentSection from '@/components/AttachmentSection.vue'
-import { findCarbonCopyRecipients, type CarbonCopyRecipient } from '@/api/carbon-copy'
-import { startUp } from '@/api/process'
-import { read } from '@/config/process-template'
+<script setup lang="ts">
+import { useRoute, useRouter } from 'vue-router'
 import { ROUTES } from '@/navigation/constants'
-import request from '@/utils/request'
-import { clearDraftId, getOrCreateDraftId } from '@/work/attachments'
-import {
-  START_SUCCESS_MESSAGE,
-  buildStartPayload,
-  postStartSuccessRoute,
-  presentApplyTemplate,
-} from '@/work/start-flow'
-import type { ApplyTemplate } from '@/work/start-flow'
-import type { EntityId, FormDataRecord, FormDesignerOption, FormRule } from '@/types/domain'
-
-export default defineComponent({
-  name: 'WorkStartApply',
-  components: { AttachmentSection },
-  data() {
-    return {
-      loading: false,
-      unavailableMessage: '',
-      submitting: false,
-      template: null as Extract<ApplyTemplate, { ok: true }> | null,
-      rule: [] as FormRule[],
-      option: {} as FormDesignerOption,
-      formData: {} as FormDataRecord,
-      title: '发起审批',
-      attachmentDraftId: '',
-      attachmentIds: [] as EntityId[],
-      attachmentBusy: false,
-      attachmentReady: false,
-      ccRecipients: [] as CarbonCopyRecipient[],
-      ccUserIds: [] as EntityId[],
-    }
-  },
-  created() {
-    const templateId = this.$route.params.processTemplateId
-    if (typeof templateId === 'string') {
-      this.fetchTemplate()
-    } else {
-      this.goBack()
-    }
-  },
-  methods: {
-    goBack() {
-      this.$router.push(ROUTES.START)
-    },
-    onAttachmentBusyChange(busy: boolean) {
-      this.attachmentBusy = busy
-    },
-    onAttachmentReadyChange(ready: boolean) {
-      this.attachmentReady = ready
-    },
-    onAttachmentsChange(ids: EntityId[]) {
-      this.attachmentIds = ids
-    },
-    fetchCarbonCopyRecipients() {
-      findCarbonCopyRecipients().then((response) => {
-        this.ccRecipients = response.data || []
-      })
-    },
-    fetchTemplate() {
-      const templateId = this.$route.params.processTemplateId
-      if (typeof templateId !== 'string') return
-      this.loading = true
-      read(templateId, request)
-        .then((template) => {
-          const presented = presentApplyTemplate(template)
-          if (!presented.ok) {
-            if (presented.reason) this.unavailableMessage = presented.reason
-            else this.$router.replace(presented.redirectTo)
-            return
-          }
-          this.template = presented
-          this.attachmentDraftId = getOrCreateDraftId(templateId)
-          this.fetchCarbonCopyRecipients()
-          this.title = presented.name || '发起审批'
-          this.rule = presented.rule
-          this.option = presented.option
-        })
-        .finally(() => {
-          this.loading = false
-        })
-    },
-    onSubmit(formData: FormDataRecord) {
-      if (this.submitting) {
-        return
-      }
-      if (!this.template) return
-      if (this.attachmentBusy) {
-        this.$message.warning('请等待附件上传完成')
-        return
-      }
-      if (!this.attachmentReady) {
-        this.$message.warning('请等待附件读取完成；若读取失败，请重试')
-        return
-      }
-      this.submitting = true
-      const template = this.template
-      const payload = buildStartPayload({
-        template,
-        formData,
-        rule: this.rule,
-        attachmentDraftId: this.attachmentDraftId,
-        attachmentIds: this.attachmentIds,
-        ccUserIds: this.ccUserIds,
-      })
-      startUp(payload)
-        .then(() => {
-          clearDraftId(template.id)
-          this.$message.success(START_SUCCESS_MESSAGE)
-          this.$router.push(postStartSuccessRoute())
-        })
-        .finally(() => {
-          this.submitting = false
-        })
-    },
-  },
-})
+import { useApprovalStart } from '@/work/approval-start-browser'
+import ApprovalStartAttachments from '@/work/ApprovalStartAttachments.vue'
+defineOptions({ name: 'WorkStartApply' })
+const route = useRoute(),
+  router = useRouter()
+const start = useApprovalStart(() =>
+  typeof route.params.processTemplateId === 'string' ? route.params.processTemplateId : undefined,
+)
+const { view, formData, ccUserIds, rule, option } = start
+function goBack() {
+  void router.push(ROUTES.START)
+}
 </script>
-
-<style lang="scss" scoped>
+<style scoped>
 .apply-page {
   background: #fff;
   border-radius: 8px;
   padding: 16px;
 }
-
 .page-title {
   margin: 0 0 16px;
   font-size: 20px;
   color: #303133;
 }
-
 .carbon-copy-field {
   display: grid;
   gap: 8px;
   max-width: 560px;
-  margin-bottom: 16px;
-
-  label {
-    font-size: 14px;
-    color: #606266;
-  }
+  margin: 16px 0;
 }
-
+.carbon-copy-field label {
+  font-size: 14px;
+  color: #606266;
+}
 .carbon-copy-select {
   width: 100%;
 }
-
+.confirmation {
+  margin-top: 20px;
+  padding: 16px;
+  background: #fdf6ec;
+  border: 1px solid #e6a23c;
+  border-radius: 8px;
+}
+.confirmation h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.confirmation p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.confirmation-actions .el-button {
+  margin: 0;
+}
 @media (max-width: 768px) {
   .apply-page {
     padding: 12px;
     border-radius: 0;
   }
-
   .page-title {
     font-size: 18px;
   }
