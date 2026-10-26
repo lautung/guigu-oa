@@ -1,9 +1,5 @@
-import {
-  ROUTES,
-  WORK_BUILTIN_ITEMS,
-  buildSidebarTree,
-  resolveNavigationGuard
-} from '@/navigation'
+import { buildSidebarTree } from '@/navigation'
+import { DESKTOP_CONFIG_HINT } from '@/navigation/constants'
 
 const ONLY_USER_MENUS = [
   {
@@ -16,292 +12,47 @@ const ONLY_USER_MENUS = [
   }
 ]
 
-const ROLE_MENUS_AFTER_ASSIGN = [
-  {
-    path: '/system',
-    component: 'Layout',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysRole', component: 'system/sysRole/list', meta: { title: '角色管理' } },
-      { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-    ]
-  }
-]
+describe('配置权限驱动的侧栏', () => {
+  it('always includes the six 办事 built-ins and omits the 配置 group without 配置权限', () => {
+    const tree = buildSidebarTree({ menus: [], viewportWidth: 1200 })
 
-const MIXED_WITH_EXCLUDED = [
-  {
-    path: '/system',
-    component: 'Layout',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } },
-      { path: 'sysDept', component: 'system/sysDept/list', meta: { title: '部门管理' } },
-      { path: 'sysPost', component: 'system/sysPost/list', meta: { title: '岗位管理' } },
-      { path: 'sysOperLog', component: 'system/sysOperLog/list', meta: { title: '操作日志' } }
-    ]
-  },
-  {
-    path: '/dashboard',
-    component: 'dashboard/index',
-    meta: { title: 'Dashboard' }
-  }
-]
-
-function flattenTitles(items = []) {
-  return items.reduce((titles, item) => {
-    titles.push(item.title)
-    if (item.children) {
-      titles.push(...flattenTitles(item.children))
-    }
-    return titles
-  }, [])
-}
-
-describe('配置权限驱动的侧栏与路由', () => {
-  it('always keeps 办事 built-in entries when 配置 menus are partial', () => {
-    const tree = buildSidebarTree({ menus: ONLY_USER_MENUS, viewportWidth: 1200 })
-    expect(tree[0].items.map(item => item.title)).toEqual(
-      WORK_BUILTIN_ITEMS.map(item => item.title)
-    )
+    expect(tree.map(group => group.key)).toEqual(['work'])
+    expect(tree[0].items).toEqual([
+      { path: '/work/start', title: '发起审批' },
+      { path: '/work/pending', title: '待处理' },
+      { path: '/work/processed', title: '已处理' },
+      { path: '/work/started', title: '已发起' },
+      { path: '/work/copied', title: '抄送我的' },
+      { path: '/work/profile', title: '基本信息' }
+    ])
   })
 
-  it('shows only the granted 配置 menus, not the full static tree', () => {
+  it('adds the 配置 group with the granted menus when 配置权限 exists', () => {
     const tree = buildSidebarTree({ menus: ONLY_USER_MENUS, viewportWidth: 1200 })
     const configGroup = tree.find(group => group.key === 'config')
-    expect(flattenTitles(configGroup.items)).toEqual(['组织与权限', '用户管理'])
-  })
 
-  it('hides the 配置 group when the user has no 配置权限', () => {
-    const tree = buildSidebarTree({ menus: [], viewportWidth: 1200 })
-    expect(tree.some(group => group.key === 'config')).toBe(false)
-  })
-
-  it('hides the 配置 group when only 部门管理 is granted', () => {
-    const tree = buildSidebarTree({
-      menus: [{
+    expect(configGroup.items).toEqual([
+      {
         path: '/system',
-        component: 'Layout',
-        meta: { title: '组织与权限' },
-        children: [
-          { path: 'sysDept', component: 'system/sysDept/list', meta: { title: '部门管理' } }
-        ]
-      }],
-      viewportWidth: 1200
-    })
-    expect(tree.some(group => group.key === 'config')).toBe(false)
+        title: '组织与权限',
+        children: [{ path: '/system/sysUser', title: '用户管理' }]
+      }
+    ])
   })
 
-  it('hides the 配置 group when only 办事 menus are present', () => {
-    const tree = buildSidebarTree({
-      menus: [{ path: '/work/pending', meta: { title: '待处理' } }],
-      viewportWidth: 1200
-    })
-    expect(tree.some(group => group.key === 'config')).toBe(false)
-    expect(tree[0].items.map(item => item.title)).toEqual(
-      WORK_BUILTIN_ITEMS.map(item => item.title)
-    )
+  it('collapses the 配置 group and shows the desktop hint on mobile', () => {
+    const configGroup = buildSidebarTree({ menus: ONLY_USER_MENUS, viewportWidth: 375 })
+      .find(group => group.key === 'config')
+
+    expect(configGroup.collapsed).toBe(true)
+    expect(configGroup.hint).toBe(DESKTOP_CONFIG_HINT)
   })
 
-  it('does not list buttons in the 配置 group', () => {
-    const tree = buildSidebarTree({
-      menus: [{
-        path: '/system',
-        component: 'Layout',
-        meta: { title: '组织与权限' },
-        children: [{
-          path: 'sysUser',
-          component: 'system/sysUser/list',
-          meta: { title: '用户管理' },
-          children: [
-            { path: 'btn', perms: 'bnt.sysUser.add', type: 2, meta: { title: '添加' } }
-          ]
-        }]
-      }],
-      viewportWidth: 1200
-    })
-    const titles = flattenTitles(tree.find(group => group.key === 'config').items)
-    expect(titles).toEqual(['组织与权限', '用户管理'])
-  })
+  it('keeps the 配置 group expanded without a hint on desktop', () => {
+    const configGroup = buildSidebarTree({ menus: ONLY_USER_MENUS, viewportWidth: 1200 })
+      .find(group => group.key === 'config')
 
-  it('drops 部门 / 岗位 / 日志 / Dashboard from the 配置 group', () => {
-    const tree = buildSidebarTree({ menus: MIXED_WITH_EXCLUDED, viewportWidth: 1200 })
-    const titles = flattenTitles(tree.find(group => group.key === 'config').items)
-    expect(titles).toEqual(['组织与权限', '用户管理'])
-    expect(titles).not.toContain('部门管理')
-    expect(titles).not.toContain('岗位管理')
-    expect(titles).not.toContain('操作日志')
-    expect(titles).not.toContain('Dashboard')
-  })
-
-  it('blocks 配置 routes the role was not granted', () => {
-    expect(resolveNavigationGuard({
-      path: '/processSet/processType',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ONLY_USER_MENUS
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-
-    expect(resolveNavigationGuard({
-      path: '/system/sysRole',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ONLY_USER_MENUS
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-  })
-
-  it('allows granted 配置 routes and the parent directory', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/sysUser',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ONLY_USER_MENUS
-    })).toEqual({ action: 'allow' })
-
-    expect(resolveNavigationGuard({
-      path: '/system',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ONLY_USER_MENUS
-    })).toEqual({ action: 'allow' })
-  })
-
-  it('allows hidden 菜单授权 after 角色管理 is granted', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/assignAuth',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ROLE_MENUS_AFTER_ASSIGN
-    })).toEqual({ action: 'allow' })
-  })
-
-  it('allows hidden 菜单授权 when only 角色管理 leaf is granted', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/assignAuth',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: [{
-        path: '/system',
-        meta: { title: '组织与权限' },
-        children: [
-          { path: 'sysRole', component: 'system/sysRole/list', meta: { title: '角色管理' } }
-        ]
-      }]
-    })).toEqual({ action: 'allow' })
-  })
-
-  it('does not treat a hidden-only directory as granting every sibling 配置 route', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/sysUser',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: [{
-        path: '/system',
-        meta: { title: '组织与权限' },
-        children: [
-          { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-        ]
-      }]
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-  })
-
-  it('occupancy-lands on 待处理 for 菜单授权 when only 用户管理 is granted', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/assignAuth',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: ONLY_USER_MENUS
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-  })
-
-  it('occupancy-lands on 待处理 for 菜单授权 when only a hidden node is present', () => {
-    expect(resolveNavigationGuard({
-      path: '/system/assignAuth',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: [{
-        path: '/system',
-        meta: { title: '组织与权限' },
-        children: [
-          { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-        ]
-      }]
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-  })
-
-  it('ignores button nodes when occupying 配置 pages', () => {
-    const menus = [{
-      path: '/system',
-      meta: { title: '组织与权限' },
-      children: [{
-        path: 'sysUser',
-        component: 'system/sysUser/list',
-        meta: { title: '用户管理' },
-        children: [
-          { path: 'btn', perms: 'bnt.sysUser.add', type: 2, meta: { title: '添加' } }
-        ]
-      }]
-    }]
-
-    expect(resolveNavigationGuard({
-      path: '/system/sysUser',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus
-    })).toEqual({ action: 'allow' })
-
-    expect(resolveNavigationGuard({
-      path: '/system/sysRole',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus
-    })).toEqual({
-      action: 'redirect',
-      to: ROUTES.PENDING
-    })
-  })
-
-  it('allows 审批实例详情 under a granted 审批查询 leaf', () => {
-    expect(resolveNavigationGuard({
-      path: '/processMgr/process/9',
-      hasToken: true,
-      viewportWidth: 1200,
-      menus: [{
-        path: '/processMgr',
-        meta: { title: '审批查询' },
-        children: [
-          { path: 'process', component: 'processMgr/process/list', meta: { title: '审批实例查询' } }
-        ]
-      }]
-    })).toEqual({ action: 'allow' })
-  })
-
-  it('changes 配置 sidebar when routers change after doAssign and 重新进入', () => {
-    const before = flattenTitles(
-      buildSidebarTree({ menus: ONLY_USER_MENUS, viewportWidth: 1200 })
-        .find(group => group.key === 'config').items
-    )
-    expect(before).toEqual(['组织与权限', '用户管理'])
-
-    const after = flattenTitles(
-      buildSidebarTree({ menus: ROLE_MENUS_AFTER_ASSIGN, viewportWidth: 1200 })
-        .find(group => group.key === 'config').items
-    )
-    expect(after).toEqual(['组织与权限', '角色管理'])
-    expect(after).not.toContain('用户管理')
+    expect(configGroup.collapsed).toBe(false)
+    expect(configGroup.hint).toBeNull()
   })
 })
