@@ -15,17 +15,7 @@
       </el-form-item>
     </el-form>
 
-    <el-alert
-      v-if="view.status === 'failed'"
-      class="list-error"
-      type="error"
-      :closable="false"
-      :title="view.error || '加载失败'"
-    >
-      <template #default>
-        <el-button type="text" @click="retry">重试</el-button>
-      </template>
-    </el-alert>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
@@ -106,6 +96,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 
 import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
+import ListLoadError from '@/components/ListLoadError.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
 import { emptyForm, listRequest, presentForm, presentListPage } from '@/config/sys-user'
 import { createListRead } from '@/list-read'
@@ -122,7 +113,7 @@ interface AssignRolesDialogHandle {
 
 export default defineComponent({
   name: 'SysUserList',
-  components: { AssignRolesDialog },
+  components: { AssignRolesDialog, ListLoadError },
   setup() {
     const assignRolesDialog = ref<AssignRolesDialogHandle>()
     const assignRolesVisible = ref(false)
@@ -136,7 +127,6 @@ export default defineComponent({
       recognition,
       request,
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
-      query: {},
     })
     const router = useRouter()
     const route = useRoute()
@@ -211,11 +201,7 @@ export default defineComponent({
       return this.opening.view
     },
     rows(): UserListItem[] {
-      return presentListPage({
-        records: this.view.records,
-        total: this.view.total,
-        pages: this.view.pages,
-      }).records
+      return presentListPage(this.view).records
     },
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
@@ -311,10 +297,6 @@ export default defineComponent({
 }
 
 .filter-form {
-  margin-bottom: 12px;
-}
-
-.list-error {
   margin-bottom: 12px;
 }
 

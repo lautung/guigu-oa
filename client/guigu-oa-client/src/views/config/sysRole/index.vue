@@ -15,17 +15,7 @@
       </el-form-item>
     </el-form>
 
-    <el-alert
-      v-if="view.status === 'failed'"
-      class="list-error"
-      type="error"
-      :closable="false"
-      :title="view.error || '加载失败'"
-    >
-      <template #default>
-        <el-button type="text" @click="retry">重试</el-button>
-      </template>
-    </el-alert>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
@@ -84,6 +74,7 @@
 import { defineComponent, onBeforeUnmount } from 'vue'
 
 import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
+import ListLoadError from '@/components/ListLoadError.vue'
 import {
   assignAuthPath,
   emptyForm,
@@ -98,6 +89,7 @@ import request from '@/utils/request'
 
 export default defineComponent({
   name: 'SysRoleList',
+  components: { ListLoadError },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -106,7 +98,6 @@ export default defineComponent({
       recognition,
       request,
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
-      query: {},
     })
     onBeforeUnmount(() => opening.release())
     return { opening }
@@ -124,11 +115,7 @@ export default defineComponent({
       return this.opening.view
     },
     rows(): RoleListItem[] {
-      return presentListPage({
-        records: this.view.records,
-        total: this.view.total,
-        pages: this.view.pages,
-      }).records
+      return presentListPage(this.view).records
     },
     dialogTitle() {
       return this.form.id ? '编辑角色' : '新建角色'
@@ -220,10 +207,6 @@ export default defineComponent({
 }
 
 .filter-form {
-  margin-bottom: 12px;
-}
-
-.list-error {
   margin-bottom: 12px;
 }
 

@@ -5,17 +5,7 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-alert
-      v-if="view.status === 'failed'"
-      class="list-error"
-      type="error"
-      :closable="false"
-      :title="view.error || '加载失败'"
-    >
-      <template #default>
-        <el-button type="text" @click="retry">重试</el-button>
-      </template>
-    </el-alert>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
@@ -93,6 +83,7 @@
 import { defineComponent, onBeforeUnmount } from 'vue'
 
 import request from '@/utils/request'
+import ListLoadError from '@/components/ListLoadError.vue'
 import {
   listRequest,
   presentDesignerState,
@@ -100,7 +91,7 @@ import {
   publish,
   removeUnpublished,
 } from '@/config/process-template'
-import { createListRead } from '@/list-read'
+import { createListRead, type NoListQuery } from '@/list-read'
 import { useUserStore } from '@/store/modules/user'
 import type {
   FormDesignerOption,
@@ -111,11 +102,12 @@ import type {
 
 export default defineComponent({
   name: 'ProcessTemplateList',
+  components: { ListLoadError },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<ProcessTemplateRecord>({
+    const opening = createListRead<ProcessTemplateRecord, NoListQuery>({
       recognition,
       request,
       toRequest: ({ page, size }) => listRequest(page, size),
@@ -136,11 +128,7 @@ export default defineComponent({
       return this.opening.view
     },
     rows(): ProcessTemplateListItem[] {
-      return presentListPage({
-        records: this.view.records,
-        total: this.view.total,
-        pages: this.view.pages,
-      }).records
+      return presentListPage(this.view).records
     },
   },
   methods: {
@@ -221,10 +209,6 @@ export default defineComponent({
 
 .availability-message {
   color: #b88230;
-}
-
-.list-error {
-  margin-bottom: 12px;
 }
 
 .pagination-wrap {

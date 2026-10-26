@@ -5,17 +5,7 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-alert
-      v-if="view.status === 'failed'"
-      class="list-error"
-      type="error"
-      :closable="false"
-      :title="view.error || '加载失败'"
-    >
-      <template #default>
-        <el-button type="text" @click="retry">重试</el-button>
-      </template>
-    </el-alert>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
@@ -72,6 +62,7 @@
 import { defineComponent, onBeforeUnmount } from 'vue'
 
 import { getById, removeById, saveOrUpdate } from '@/api/processType'
+import ListLoadError from '@/components/ListLoadError.vue'
 import {
   emptyForm,
   listRequest,
@@ -79,18 +70,19 @@ import {
   presentListPage,
   type ProcessTypeListItem,
 } from '@/config/process-type'
-import { createListRead } from '@/list-read'
+import { createListRead, type NoListQuery } from '@/list-read'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, ProcessTypeRecord } from '@/types/domain'
 import request from '@/utils/request'
 
 export default defineComponent({
   name: 'ProcessTypeList',
+  components: { ListLoadError },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<ProcessTypeRecord>({
+    const opening = createListRead<ProcessTypeRecord, NoListQuery>({
       recognition,
       request,
       toRequest: ({ page, size }) => listRequest(page, size),
@@ -110,11 +102,7 @@ export default defineComponent({
       return this.opening.view
     },
     rows(): ProcessTypeListItem[] {
-      return presentListPage({
-        records: this.view.records,
-        total: this.view.total,
-        pages: this.view.pages,
-      }).records
+      return presentListPage(this.view).records
     },
     dialogTitle() {
       return this.form.id ? '编辑审批类型' : '新建审批类型'
@@ -195,9 +183,5 @@ export default defineComponent({
 .pagination-wrap {
   margin-top: 16px;
   text-align: center;
-}
-
-.list-error {
-  margin-bottom: 12px;
 }
 </style>
