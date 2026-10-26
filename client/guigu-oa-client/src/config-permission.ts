@@ -155,9 +155,20 @@ function catalogEntries(): MenuEntry[] {
 
 function configEntriesFrom(menus: MenuNode[]): MenuEntry[] {
   const fromMenus = flattenMenuEntries(menus)
-  const seenPaths = new Set(fromMenus.map((entry) => entry.path))
-  const fromCatalog = catalogEntries().filter((entry) => !seenPaths.has(entry.path))
-  return [...fromMenus, ...fromCatalog]
+  const catalog = catalogEntries()
+  const catalogParents = new Map<string, string>()
+  catalog.forEach((entry) => {
+    if (entry.hiddenParentPath) {
+      catalogParents.set(entry.path, entry.hiddenParentPath)
+    }
+  })
+
+  const entries = fromMenus.map((entry) => {
+    const catalogParentPath = entry.hidden ? catalogParents.get(entry.path) : undefined
+    return catalogParentPath ? { ...entry, hiddenParentPath: catalogParentPath } : entry
+  })
+  const seenPaths = new Set(entries.map((entry) => entry.path))
+  return [...entries, ...catalog.filter((entry) => !seenPaths.has(entry.path))]
 }
 
 function workEntries(): MenuEntry[] {
@@ -194,11 +205,12 @@ function findEntry(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEn
 
 function findEntryOf(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEntry | null {
   const entry = findEntry(path, work, config)
-  if (!entry || !entry.hidden || !entry.hiddenParentPath) {
+  const hiddenParentPath = entry?.hidden ? hiddenParentPathOf(path, config) : undefined
+  if (!hiddenParentPath) {
     return entry
   }
 
-  return findEntry(entry.hiddenParentPath, work, config) || entry
+  return findEntry(hiddenParentPath, work, config) || entry
 }
 
 function publicEntry(entry: MenuEntry | null): { path: string; group: MenuGroup } | null {
@@ -212,10 +224,11 @@ function pathCoveredByGrant(path: string, leaves: string[]): boolean {
   )
 }
 
-// 隐藏页的入口父级和占用父级同源：菜单树里有该页时取菜单树里的可见父级，
-// 只有当前菜单树里没有的已知隐藏页才用目录里的父级映射兜底。
-function hiddenParentOf(path: string, config: MenuEntry[]): string | undefined {
-  return findBestEntry(normalizePath(path), config)?.hiddenParentPath
+// 隐藏页的入口父级和占用父级共用这一份解析：已知隐藏页始终用目录里的显式父级，
+// 目录里没有的自定义隐藏页才跟随菜单树里最近的可见父级。
+function hiddenParentPathOf(path: string, config: MenuEntry[]): string | undefined {
+  const entry = findBestEntry(normalizePath(path), config)
+  return entry?.hidden ? entry.hiddenParentPath : undefined
 }
 
 function pathCanOccupy(
@@ -229,7 +242,7 @@ function pathCanOccupy(
   const normalized = normalizePath(path)
   if (pathCoveredByGrant(normalized, leaves)) return true
 
-  const hiddenParentPath = hiddenParentOf(normalized, config)
+  const hiddenParentPath = hiddenParentPathOf(normalized, config)
   return hiddenParentPath !== undefined && pathCoveredByGrant(hiddenParentPath, leaves)
 }
 

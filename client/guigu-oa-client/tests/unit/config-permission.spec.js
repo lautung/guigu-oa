@@ -383,7 +383,7 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/office/userDetail')).toBe(canOccupy(permission, entry.path))
     })
 
-    it('uses the menu-tree parent for a known hidden page present in the menu tree', () => {
+    it('keeps the catalog parent for a known hidden page present in the menu tree', () => {
       const permission = configPermission([
         {
           path: '/system',
@@ -396,10 +396,22 @@ describe('配置权限', () => {
       ])
 
       expect(permission.entryOf('/system/assignAuth')).toEqual({
-        path: '/system',
+        path: '/system/sysRole',
         group: 'config'
       })
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
+      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
+    })
+
+    it('falls back to the hidden page itself when no parent is known', () => {
+      const permission = configPermission([
+        { path: '/officeDetail', meta: { title: '详情' }, hidden: true }
+      ])
+
+      expect(permission.entryOf('/officeDetail')).toEqual({
+        path: '/officeDetail',
+        group: 'config'
+      })
+      expect(canOccupy(permission, '/officeDetail')).toBe(false)
     })
 
     it('does not occupy unknown paths', () => {
@@ -519,7 +531,7 @@ describe('配置权限', () => {
       })
     })
 
-    it('returns the nearest visible ancestor when the hidden page is a sibling in the menu tree', () => {
+    it('returns the catalog parent for a known hidden page present in the menu tree', () => {
       const permission = configPermission([
         {
           path: '/system',
@@ -532,7 +544,7 @@ describe('配置权限', () => {
       ])
 
       expect(permission.entryOf('/system/assignAuth')).toEqual({
-        path: '/system',
+        path: '/system/sysRole',
         group: 'config'
       })
       expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
