@@ -1,9 +1,8 @@
 import {
   WORK_LIST_KINDS,
-  afterPendingAction,
-  loadWorkList,
   presentWorkList,
   statusLabel,
+  workListDefinition,
   workListPerspective,
   workListPerspectiveFromRoute,
   workListRequest
@@ -53,6 +52,17 @@ describe('work/work-list', () => {
         method: 'get',
         url: '/admin/process/findCarbonCopied/1/10'
       })
+    })
+  })
+
+  describe('workListDefinition', () => {
+    it.each([
+      [WORK_LIST_KINDS.PENDING, '待处理', '暂无待处理审批'],
+      [WORK_LIST_KINDS.PROCESSED, '已处理', '暂无已处理审批'],
+      [WORK_LIST_KINDS.STARTED, '已发起', '暂无已发起审批'],
+      [WORK_LIST_KINDS.COPIED, '抄送我的', '暂无抄送审批']
+    ])('provides the %s list title and empty description', (kind, title, emptyDescription) => {
+      expect(workListDefinition(kind)).toMatchObject({ title, emptyDescription })
     })
   })
 
@@ -314,57 +324,6 @@ describe('work/work-list', () => {
     })
   })
 
-  describe('loadWorkList', () => {
-    it('loads a 待处理 page from kind and pagination through the list request', async () => {
-      const request = async (req) => {
-        expect(req).toEqual({
-          method: 'get',
-          url: '/admin/process/findPending/1/10'
-        })
-        return {
-          data: {
-            records: [{
-              id: 12,
-              taskId: 'task-9',
-              title: '张三提交的请假申请',
-              createTime: '2026-08-18 10:00:00',
-              status: 1,
-              formValues: FORM_VALUES
-            }],
-            total: 11,
-            pages: 2
-          }
-        }
-      }
-
-      const page = await loadWorkList(WORK_LIST_KINDS.PENDING, 1, 10, request)
-
-      expect(page.title).toBe('待处理')
-      expect(page.total).toBe(11)
-      expect(page.pages).toBe(2)
-      expect(page.records[0].detailPath).toBe('/work/pending/12/task-9')
-      expect(page.records[0].statusLabel).toBe('审批中')
-    })
-
-    it('dispatches 已处理和已发起 list requests by 办事列表种类', async () => {
-      const seen = []
-      const request = async (req) => {
-        seen.push(req.url)
-        return { data: { records: [], total: 0, pages: 0 } }
-      }
-
-      const processed = await loadWorkList(WORK_LIST_KINDS.PROCESSED, 2, 5, request)
-      const started = await loadWorkList(WORK_LIST_KINDS.STARTED, 1, 10, request)
-
-      expect(seen).toEqual([
-        '/admin/process/findProcessed/2/5',
-        '/admin/process/findStarted/1/10'
-      ])
-      expect(processed.emptyDescription).toBe('暂无已处理审批')
-      expect(started.emptyDescription).toBe('暂无已发起审批')
-    })
-  })
-
   describe('workListPerspective', () => {
     it('keeps 待处理 as an actionable 视角 with a return path to that list', () => {
       expect(workListPerspective(WORK_LIST_KINDS.PENDING)).toEqual({
@@ -449,18 +408,4 @@ describe('work/work-list', () => {
     })
   })
 
-  describe('afterPendingAction', () => {
-    it('moves an 审批 out of 待处理 into 已处理 and keeps 已发起 only for the initiator', () => {
-      expect(afterPendingAction()).toEqual({
-        leaveKind: WORK_LIST_KINDS.PENDING,
-        enterKind: WORK_LIST_KINDS.PROCESSED,
-        remainingKinds: [WORK_LIST_KINDS.PROCESSED]
-      })
-      expect(afterPendingAction({ isInitiator: true })).toEqual({
-        leaveKind: WORK_LIST_KINDS.PENDING,
-        enterKind: WORK_LIST_KINDS.PROCESSED,
-        remainingKinds: [WORK_LIST_KINDS.PROCESSED, WORK_LIST_KINDS.STARTED]
-      })
-    })
-  })
 })

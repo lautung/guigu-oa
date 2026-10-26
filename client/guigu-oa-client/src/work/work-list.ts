@@ -1,9 +1,7 @@
 import { ROUTES } from '@/navigation/constants'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type {
-  ApiClient,
   ApiRequestConfig,
-  ApiResponse,
   FormDataRecord,
   PageResult,
   ProcessFormValues,
@@ -29,7 +27,7 @@ const LIST_ENDPOINTS: Record<WorkListKind, string> = {
   [WORK_LIST_KINDS.COPIED]: 'findCarbonCopied',
 }
 
-interface WorkListDefinition {
+export interface WorkListDefinition {
   title: string
   emptyDescription: string
   returnPath: string
@@ -137,6 +135,10 @@ export function summaryFields(formShowData: FormDataRecord = {}) {
     .map((key) => ({ key, value: formShowData[key] }))
 }
 
+export function workListDefinition(kind: WorkListKind): WorkListDefinition {
+  return LIST_PAGES[kind]
+}
+
 export function workListRequest(kind: WorkListKind, page: number, limit: number): ApiRequestConfig {
   return {
     method: 'get',
@@ -186,18 +188,6 @@ export function presentWorkList(
   }
 }
 
-export async function loadWorkList(
-  kind: WorkListKind,
-  page: number,
-  limit: number,
-  request: ApiClient,
-): Promise<WorkListPage> {
-  const response: ApiResponse<PageResult<ProcessInstanceRecord>> = await request(
-    workListRequest(kind, page, limit),
-  )
-  return presentWorkList(kind, response.data || {})
-}
-
 export function workListPerspective(kind: WorkListKind): WorkListPerspective {
   const definition = LIST_PAGES[kind]
   return {
@@ -227,16 +217,4 @@ export function workListPerspectiveFromRoute(
     }
   }
   return workListPerspective(kind)
-}
-
-export function afterPendingAction({ isInitiator = false }: { isInitiator?: boolean } = {}) {
-  const remainingKinds: WorkListKind[] = [WORK_LIST_KINDS.PROCESSED]
-  if (isInitiator) {
-    remainingKinds.push(WORK_LIST_KINDS.STARTED)
-  }
-  return {
-    leaveKind: WORK_LIST_KINDS.PENDING,
-    enterKind: WORK_LIST_KINDS.PROCESSED,
-    remainingKinds,
-  }
 }
