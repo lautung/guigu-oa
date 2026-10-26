@@ -51,6 +51,11 @@ export default defineComponent({
       return this.surface.density ? `is-${this.surface.density}` : null
     },
   },
+  watch: {
+    '$route.path'() {
+      this.handleViewportWidth?.(this.viewportWidth)
+    },
+  },
   created() {
     this.handleViewportWidth = createViewportOccupancyHandler({
       getSurfaceInput: () => this.surfaceInput,
@@ -65,6 +70,7 @@ export default defineComponent({
     if (this.onViewportResize) {
       window.addEventListener('resize', this.onViewportResize)
     }
+    this.handleViewportWidth?.(this.viewportWidth)
   },
   beforeUnmount() {
     if (this.onViewportResize) {
