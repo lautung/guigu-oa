@@ -1,14 +1,6 @@
 import request from '@/utils/request'
-import { getRequest, listRequest, removeRequest, writeRequest } from '@/config/sys-role'
-import type { ApiResponse, EntityId, PageResult, RoleRecord } from '@/types/domain'
-
-export function getPageList(
-  page: number,
-  limit: number,
-  searchObj: Record<string, string | number> = {},
-): Promise<ApiResponse<PageResult<RoleRecord>>> {
-  return request(listRequest(page, limit, searchObj))
-}
+import { getRequest, removeRequest, writeRequest } from '@/config/sys-role'
+import type { ApiResponse, EntityId, RoleRecord } from '@/types/domain'
 
 export function getById(id: EntityId): Promise<ApiResponse<RoleRecord>> {
   return request(getRequest(id))

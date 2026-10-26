@@ -40,7 +40,6 @@ function harness(options = {}) {
         url: `/admin/process/findPending/${page}/${size}`,
         params: query,
       })),
-    page: options.page,
     size: options.size,
     query: options.query,
   })
@@ -48,24 +47,10 @@ function harness(options = {}) {
 }
 
 it('创建后立即自动读取一次，初始 view 是加载中的空页，ready 后提交结果', async () => {
-  const reads = []
-  const captured = { generation: 1, entryId: 'entry-1', silent: false }
-  const opening = createListRead({
-    recognition: { capture: () => captured },
-    request: (config) => {
-      const pending = deferred()
-      reads.push({ config, ...pending })
-      return pending.promise
-    },
-    toRequest: ({ page, size, query }) => ({
-      method: 'get',
-      url: `/admin/process/findPending/${page}/${size}`,
-      params: query,
-    }),
-  })
-  expect(reads).toHaveLength(1)
-  expect(isReadonly(opening.view)).toBe(true)
-  expect(opening.view).toMatchObject({
+  const h = harness()
+  expect(h.reads).toHaveLength(1)
+  expect(isReadonly(h.opening.view)).toBe(true)
+  expect(h.opening.view).toMatchObject({
     status: 'loading',
     records: [],
     total: 0,
@@ -74,19 +59,19 @@ it('创建后立即自动读取一次，初始 view 是加载中的空页，read
     size: 10,
     error: '',
   })
-  expect(opening.view).not.toHaveProperty('query')
-  expect(reads[0].config).toMatchObject({
+  expect(h.opening.view).not.toHaveProperty('query')
+  expect(h.reads[0].config).toMatchObject({
     method: 'get',
     url: '/admin/process/findPending/1/10',
     params: {},
-    _recognition: captured,
+    _recognition: h.captured,
     normalErrorNotification: 'caller',
   })
-  expect(reads[0].config._isRelevant()).toBe(true)
+  expect(h.reads[0].config._isRelevant()).toBe(true)
   const records = [{ id: 'A', title: '审批 A' }]
-  reads[0].resolve({ code: 200, data: { records, total: 1, pages: 1 } })
-  await opening.ready
-  expect(opening.view).toMatchObject({
+  h.reads[0].resolve({ code: 200, data: { records, total: 1, pages: 1 } })
+  await h.opening.ready
+  expect(h.opening.view).toMatchObject({
     status: 'ready',
     total: 1,
     pages: 1,
@@ -94,8 +79,8 @@ it('创建后立即自动读取一次，初始 view 是加载中的空页，read
     size: 10,
     error: '',
   })
-  expect(opening.view.records).toHaveLength(1)
-  expect(opening.view.records[0]).toEqual(records[0])
+  expect(h.opening.view.records).toHaveLength(1)
+  expect(h.opening.view.records[0]).toEqual(records[0])
 })
 
 it('切换列表种类时旧 opening 的迟到读取不污染新 opening', async () => {
@@ -194,7 +179,7 @@ it('release() 中断在途读取，释放后 resolve 不改变释放前的 view'
 })
 
 it.each(['invalid', 'disabled', 'superseded'])(
-  '识别层终态 %s 不进入失败态也不写 error',
+  '识别层终态 %s 不进入失败态也不写 error，恢复上次成功状态',
   async (kind) => {
     const h = harness()
     h.reads[0].resolve(pageResult([{ id: 'A' }], 1, 1))
@@ -202,11 +187,32 @@ it.each(['invalid', 'disabled', 'superseded'])(
     const pending = h.opening.read()
     h.reads[1].reject(Object.assign(new Error('识别层已处理'), { kind }))
     await pending
-    expect(h.opening.view.status).not.toBe('failed')
+    expect(h.opening.view.status).toBe('ready')
     expect(h.opening.view.error).toBe('')
     expect(ids(h.opening.view)).toEqual(['A'])
   },
 )
+
+it('翻页时被 superseded，view.page 回到上次成功页且随后 read() 仍重放被取代的目标页', async () => {
+  const h = harness()
+  h.reads[0].resolve(pageResult([{ id: 'A' }], 30, 3))
+  await h.opening.ready
+  const pending = h.opening.read({ page: 2 })
+  expect(h.opening.view.page).toBe(2)
+  h.reads[1].reject(Object.assign(new Error('识别层已处理'), { kind: 'superseded' }))
+  await pending
+  expect(h.opening.view.status).toBe('ready')
+  expect(h.opening.view.error).toBe('')
+  expect(h.opening.view.page).toBe(1)
+  expect(h.opening.view.size).toBe(10)
+  expect(ids(h.opening.view)).toEqual(['A'])
+  const retry = h.opening.read()
+  expect(h.reads[2].config.url).toBe('/admin/process/findPending/2/10')
+  h.reads[2].resolve(pageResult([{ id: 'P2' }], 30, 3))
+  await retry
+  expect(h.opening.view.page).toBe(2)
+  expect(ids(h.opening.view)).toEqual(['P2'])
+})
 
 it('失败后 read() 重放完全相同的已应用命令，成功后恢复 ready', async () => {
   const h = harness()
@@ -269,11 +275,12 @@ it.each([
   expect(h.opening.view.error).toBe('')
 })
 
-it('失败保留上次成功结果，错误与状态明确可重试', async () => {
+it('失败保留上次成功结果，view 的 page/size 回到成功结果，重试重放失败的已应用命令', async () => {
   const h = harness()
   h.reads[0].resolve(pageResult([{ id: 'A' }], 1, 1))
   await h.opening.ready
   const retry = h.opening.read({ page: 2 })
+  expect(h.opening.view.page).toBe(2)
   h.reads[1].reject(new Error('网络故障'))
   await retry
   expect(h.opening.view.status).toBe('failed')
@@ -281,7 +288,28 @@ it('失败保留上次成功结果，错误与状态明确可重试', async () =
   expect(ids(h.opening.view)).toEqual(['A'])
   expect(h.opening.view.total).toBe(1)
   expect(h.opening.view.pages).toBe(1)
+  expect(h.opening.view.page).toBe(1)
+  expect(h.opening.view.size).toBe(10)
+  const replay = h.opening.read()
+  expect(h.reads[2].config.url).toBe('/admin/process/findPending/2/10')
+  h.reads[2].resolve(pageResult([{ id: 'P2' }], 31, 4))
+  await replay
+  expect(h.opening.view.status).toBe('ready')
   expect(h.opening.view.page).toBe(2)
+  expect(ids(h.opening.view)).toEqual(['P2'])
+})
+
+it('首次读取失败且尚无成功结果时保留目标 page/size 并进入失败态', async () => {
+  const h = harness({ size: 20 })
+  h.reads[0].reject(new Error('网络故障'))
+  await h.opening.ready
+  expect(h.opening.view.status).toBe('failed')
+  expect(h.opening.view.error).toBe('网络故障')
+  expect(h.opening.view.page).toBe(1)
+  expect(h.opening.view.size).toBe(20)
+  expect(h.opening.view.records).toEqual([])
+  expect(h.opening.view.total).toBe(0)
+  expect(h.opening.view.pages).toBe(0)
 })
 
 it('原始记录原样交给页面，不做 presenter 化或克隆', async () => {

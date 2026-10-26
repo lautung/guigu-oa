@@ -3,10 +3,7 @@
     <h2 class="page-title">{{ definition.title }}</h2>
 
     <div v-loading="view.status === 'loading'" class="list-container">
-      <div v-if="view.status === 'failed'" class="list-error">
-        <el-alert :title="view.error || '加载失败'" type="error" :closable="false" show-icon />
-        <el-button class="retry-button" @click="retry">重试</el-button>
-      </div>
+      <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
 
       <el-empty
         v-if="view.status === 'ready' && rows.length === 0"
@@ -54,7 +51,8 @@
 import { computed, defineComponent, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { createListRead, type ListReadOpening } from '@/list-read'
+import ListLoadError from '@/components/ListLoadError.vue'
+import { createListRead, type ListReadOpening, type NoListQuery } from '@/list-read'
 import { useUserStore } from '@/store/modules/user'
 import request from '@/utils/request'
 import type { ProcessInstanceRecord, PresentedWorkListRecord } from '@/types/domain'
@@ -65,10 +63,11 @@ import {
   type WorkListKind,
 } from '@/work/work-list'
 
-type WorkListOpening = ListReadOpening<ProcessInstanceRecord, Record<string, never>>
+type WorkListOpening = ListReadOpening<ProcessInstanceRecord, NoListQuery>
 
 export default defineComponent({
   name: 'WorkListPage',
+  components: { ListLoadError },
   setup() {
     const route = useRoute()
     const userStore = useUserStore()
@@ -80,11 +79,10 @@ export default defineComponent({
     function open(kind: WorkListKind): WorkListOpening {
       const recognition = userStore.recognition
       if (!recognition) throw new Error('认出 module 尚未接入')
-      return createListRead<ProcessInstanceRecord, Record<string, never>>({
+      return createListRead<ProcessInstanceRecord, NoListQuery>({
         recognition,
         request,
         toRequest: ({ page, size }) => workListRequest(kind, page, size),
-        size: 10,
       })
     }
 
@@ -93,12 +91,7 @@ export default defineComponent({
     const view = computed(() => opening.value.view)
     const definition = computed(() => workListDefinition(kind.value))
     const rows = computed<PresentedWorkListRecord[]>(
-      () =>
-        presentWorkList(kind.value, {
-          records: view.value.records,
-          total: view.value.total,
-          pages: view.value.pages,
-        }).records,
+      () => presentWorkList(kind.value, view.value).records,
     )
 
     watch(kind, (next) => {
@@ -129,14 +122,6 @@ export default defineComponent({
     margin: 0 0 16px;
     font-size: 20px;
     color: #303133;
-  }
-
-  .list-error {
-    margin-bottom: 12px;
-  }
-
-  .retry-button {
-    margin-top: 8px;
   }
 }
 

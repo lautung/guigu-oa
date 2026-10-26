@@ -6,6 +6,7 @@ export type ListReadStatus = 'loading' | 'ready' | 'failed'
 export interface ListReadQuery {
   [key: string]: string | number | undefined
 }
+export type NoListQuery = Record<string, never>
 export interface ListReadCommand<TQuery extends ListReadQuery = ListReadQuery> {
   page: number
   size: number
@@ -24,7 +25,6 @@ export interface ListReadOptions<TQuery extends ListReadQuery = ListReadQuery> {
   recognition: Pick<Recognition, 'capture'>
   request: ApiClient
   toRequest: (command: ListReadCommand<TQuery>) => ApiRequestConfig
-  page?: number
   size?: number
   query?: TQuery
 }
@@ -51,6 +51,18 @@ function failureMessage(error: unknown): string {
   return '加载失败'
 }
 
+function nextCommand<TQuery extends ListReadQuery>(
+  command: ListReadCommand<TQuery>,
+  partial: Partial<ListReadCommand<TQuery>>,
+): ListReadCommand<TQuery> {
+  const sizeChanged = partial.size != null && partial.size !== command.size
+  return {
+    page: partial.page ?? (sizeChanged ? 1 : command.page),
+    size: partial.size ?? command.size,
+    query: partial.query === undefined ? command.query : ({ ...partial.query } as TQuery),
+  }
+}
+
 /** One list opening owns the applied read command and the latest-read rule. */
 export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQuery>(
   options: ListReadOptions<TQuery>,
@@ -62,29 +74,25 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
     records: [],
     total: 0,
     pages: 0,
-    page: options.page ?? 1,
+    page: 1,
     size: options.size ?? 10,
     error: '',
   }) as unknown as ListReadView<TRecord>
   let command: ListReadCommand<TQuery> = {
-    page: options.page ?? 1,
+    page: 1,
     size: options.size ?? 10,
     query: { ...(options.query ?? {}) } as TQuery,
   }
+  // Page and size of the last successful read; the view falls back to these when a read fails.
+  let settled: { page: number; size: number } | null = null
   let released = false
   let sequence = 0
 
   async function read(partial: Partial<ListReadCommand<TQuery>> = {}): Promise<void> {
     if (released) return
-    const page = partial.page ?? command.page
-    const size = partial.size ?? command.size
-    command = {
-      page:
-        partial.page == null && partial.size != null && partial.size !== command.size ? 1 : page,
-      size,
-      query: partial.query === undefined ? command.query : ({ ...partial.query } as TQuery),
-    }
+    command = nextCommand(command, partial)
     const number = ++sequence
+    const previous = { status: view.status, error: view.error }
     view.status = 'loading'
     view.error = ''
     view.page = command.page
@@ -101,10 +109,19 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
       view.records = data.records || []
       view.total = data.total || 0
       view.pages = data.pages || 0
+      settled = { page: command.page, size: command.size }
       view.status = 'ready'
     } catch (error: unknown) {
       if (released || number !== sequence) return
-      if (TERMINAL_FAILURES.has(failureKind(error) ?? '')) return
+      if (settled) {
+        view.page = settled.page
+        view.size = settled.size
+      }
+      if (TERMINAL_FAILURES.has(failureKind(error) ?? '')) {
+        view.status = previous.status
+        view.error = previous.error
+        return
+      }
       view.error = failureMessage(error)
       view.status = 'failed'
     }
