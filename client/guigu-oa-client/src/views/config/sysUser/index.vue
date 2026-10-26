@@ -15,7 +15,25 @@
       </el-form-item>
     </el-form>
 
-    <el-table v-loading="loading" :data="list" stripe border>
+    <el-alert
+      v-if="view.status === 'failed'"
+      class="list-error"
+      type="error"
+      :closable="false"
+      :title="view.error || '加载失败'"
+    >
+      <template #default>
+        <el-button type="text" @click="retry">重试</el-button>
+      </template>
+    </el-alert>
+
+    <el-table
+      v-loading="view.status === 'loading'"
+      :data="rows"
+      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      stripe
+      border
+    >
       <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
       <el-table-column prop="username" label="用户名" />
       <el-table-column prop="name" label="姓名" />
@@ -45,10 +63,10 @@
 
     <div class="pagination-wrap">
       <el-pagination
-        :current-page="page"
-        :page-size="limit"
+        :current-page="view.page"
+        :page-size="view.size"
         :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="total"
+        :total="view.total"
         layout="sizes, prev, pager, next, jumper, ->, total"
         @current-change="handlePageChange"
         @size-change="handleSizeChange"
@@ -87,13 +105,15 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } fro
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 
-import { getById, getPageList, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
+import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import { useAssignRoles } from '@/config/assign-roles-browser'
-import { emptyForm, presentForm, presentListPage } from '@/config/sys-user'
+import { emptyForm, listRequest, presentForm, presentListPage } from '@/config/sys-user'
+import { createListRead } from '@/list-read'
 import { ROUTES } from '@/navigation/constants'
 import { useUserStore } from '@/store/modules/user'
 import { resolveClientSurface } from '@/surface/client-surface'
-import type { EntityId, UserListItem } from '@/types/domain'
+import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
+import request from '@/utils/request'
 import AssignRolesDialog from './AssignRolesDialog.vue'
 
 interface AssignRolesDialogHandle {
@@ -110,6 +130,14 @@ export default defineComponent({
     const assignRoles = useAssignRoles()
     const pendingIds = computed(() => new Set(assignRoles.pendingUserIds.value))
     const userStore = useUserStore()
+    const recognition = userStore.recognition
+    if (!recognition) throw new Error('认出 module 尚未接入')
+    const opening = createListRead<UserRecord, Record<string, string | number>>({
+      recognition,
+      request,
+      toRequest: ({ page, size, query }) => listRequest(page, size, query),
+      query: {},
+    })
     const router = useRouter()
     const route = useRoute()
 
@@ -156,6 +184,7 @@ export default defineComponent({
       window.addEventListener('focus', enforceEntry)
     })
     onBeforeUnmount(() => {
+      opening.release()
       window.removeEventListener('resize', enforceEntry)
       window.removeEventListener('focus', enforceEntry)
     })
@@ -166,15 +195,11 @@ export default defineComponent({
       assignUser,
       isPending,
       openAssignRoles,
+      opening,
     }
   },
   data() {
     return {
-      list: [] as UserListItem[],
-      loading: false,
-      page: 1,
-      limit: 10,
-      total: 0,
       keyword: '',
       dialogVisible: false,
       saving: false,
@@ -182,48 +207,42 @@ export default defineComponent({
     }
   },
   computed: {
+    view() {
+      return this.opening.view
+    },
+    rows(): UserListItem[] {
+      return presentListPage({
+        records: this.view.records,
+        total: this.view.total,
+        pages: this.view.pages,
+      }).records
+    },
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
     },
   },
-  created() {
-    this.fetchList()
-  },
   methods: {
     rowIndex(index: number) {
-      return (this.page - 1) * this.limit + index + 1
+      return (this.view.page - 1) * this.view.size + index + 1
     },
     searchObj(): Record<string, string | number> {
       return this.keyword ? { keyword: this.keyword } : {}
     },
-    fetchList() {
-      this.loading = true
-      getPageList(this.page, this.limit, this.searchObj())
-        .then((response) => {
-          const page = presentListPage(response.data || {})
-          this.list = page.records
-          this.total = page.total
-        })
-        .finally(() => {
-          this.loading = false
-        })
-    },
     search() {
-      this.page = 1
-      this.fetchList()
+      this.opening.read({ page: 1, query: this.searchObj() })
     },
     reset() {
       this.keyword = ''
       this.search()
     },
-    handlePageChange(page: number) {
-      this.page = page
-      this.fetchList()
+    retry() {
+      this.opening.read()
     },
-    handleSizeChange(limit: number) {
-      this.limit = limit
-      this.page = 1
-      this.fetchList()
+    handlePageChange(page: number) {
+      this.opening.read({ page })
+    },
+    handleSizeChange(size: number) {
+      this.opening.read({ size })
     },
     openCreate() {
       this.form = emptyForm()
@@ -241,7 +260,7 @@ export default defineComponent({
         .then((response) => {
           this.$message.success(response.message || '操作成功')
           this.dialogVisible = false
-          this.fetchList()
+          this.opening.read()
         })
         .finally(() => {
           this.saving = false
@@ -256,7 +275,7 @@ export default defineComponent({
         .then(() => removeById(id))
         .then((response) => {
           this.$message.success(response.message || '删除成功')
-          this.fetchList()
+          this.opening.read()
         })
         .catch(() => {})
     },
@@ -264,7 +283,7 @@ export default defineComponent({
       const nextStatus = statusEnabled ? 0 : 1
       updateStatus(id, nextStatus).then((response) => {
         this.$message.success(response.message || '操作成功')
-        this.fetchList()
+        this.opening.read()
       })
     },
   },
@@ -292,6 +311,10 @@ export default defineComponent({
 }
 
 .filter-form {
+  margin-bottom: 12px;
+}
+
+.list-error {
   margin-bottom: 12px;
 }
 
