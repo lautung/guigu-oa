@@ -81,10 +81,30 @@ describe('统一客户端表面', () => {
       hasToken: false,
       menus: []
     })
+    const trailingSlash = resolveClientSurface({
+      path: '/login/',
+      viewportWidth: 1200,
+      hasToken: false,
+      menus: []
+    })
 
     expect(surface.showSurface).toBe(false)
     expect(surface.menuGroup).toBeNull()
     expect(surface.density).toBeNull()
+    expect(surface.occupancy).toEqual({ action: 'allow' })
+    expect(trailingSlash).toEqual(surface)
+  })
+
+  it('a tokenless 配置 path keeps occupancy allow without showing the surface', () => {
+    const surface = resolveClientSurface({
+      path: '/system/sysUser',
+      viewportWidth: 1200,
+      hasToken: false,
+      menus: []
+    })
+
+    expect(surface.showSurface).toBe(false)
+    expect(surface.menuGroup).toBe('config')
     expect(surface.occupancy).toEqual({ action: 'allow' })
   })
 

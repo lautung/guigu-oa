@@ -49,13 +49,17 @@ function noSurface(): ClientSurfaceResolution {
   }
 }
 
+function isLoginPath(path: string): boolean {
+  return path.replace(/\/$/, '') === ROUTES.LOGIN
+}
+
 export function resolveClientSurface({
   path = '',
   viewportWidth = 1024,
   hasToken = false,
   menus = [],
 }: ClientSurfaceInput = {}): ClientSurfaceResolution {
-  if (path === ROUTES.LOGIN) {
+  if (isLoginPath(path)) {
     return noSurface()
   }
 
@@ -66,7 +70,7 @@ export function resolveClientSurface({
   }
 
   const canOccupy =
-    entry.group !== MENU_GROUPS.CONFIG || permission.canOccupy({ path, viewportWidth })
+    !hasToken || entry.group !== MENU_GROUPS.CONFIG || permission.canOccupy({ path, viewportWidth })
 
   return {
     showSurface: hasToken,
