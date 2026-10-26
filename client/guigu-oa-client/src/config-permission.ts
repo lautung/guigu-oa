@@ -244,9 +244,7 @@ export function configPermission(menus: MenuNode[] = []) {
     entryOf(path: string): { path: string; group: 'work' | 'config' } | null {
       return publicEntry(findEntryOf(path, work, config))
     },
-    canOccupy(input: CanOccupyInput | string): boolean {
-      const { path, viewportWidth } =
-        typeof input === 'string' ? { path: input, viewportWidth: Number.POSITIVE_INFINITY } : input
+    canOccupy({ path, viewportWidth }: CanOccupyInput): boolean {
       return pathCanOccupy(path, viewportWidth, grantedLeaves)
     },
   }
