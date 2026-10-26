@@ -158,6 +158,13 @@ if (!recognition) throw new Error('认出 module 尚未接入')
 const editor = createTemplateEditor({
   recognition,
   request,
+  occupancy: () =>
+    resolveClientSurface({
+      path: route.path,
+      hasToken: !!userStore.token,
+      menus: userStore.menus,
+      viewportWidth: window.innerWidth,
+    }).occupancy,
   designer: async () => {
     await nextTick()
     if (!designer.value) throw new Error('表单设计器暂不可用，请重试或返回')
@@ -176,11 +183,17 @@ const editor = createTemplateEditor({
       return false
     }
   },
+  dismissConfirm: () => {
+    ElMessageBox.close()
+  },
   notify: (message, level) => {
     ElMessage({ message, type: level })
   },
   navigate: (path) => {
     void router.push(path)
+  },
+  replace: (path) => {
+    void router.replace(path)
   },
   openList: (path) => {
     window.open(router.resolve(path).href, '_blank', 'noopener,noreferrer')
@@ -196,30 +209,13 @@ function selectZip(event: Event) {
   input.value = ''
   if (file) void edit.value?.selectZip(file)
 }
-function mustLeave() {
-  return (
-    !userStore.token ||
-    edit.value?.state.phase === 'closed' ||
-    resolveClientSurface({
-      path: route.path,
-      hasToken: !!userStore.token,
-      menus: userStore.menus,
-      viewportWidth: window.innerWidth,
-    }).occupancy.action === 'redirect'
-  )
+function environmentChanged() {
+  void edit.value?.environmentChanged()
 }
-function enforceEntry() {
-  if (!edit.value) return
-  if (mustLeave() || !edit.value.state.isCurrent) {
-    edit.value.release()
-    ElMessageBox.close()
-    if (userStore.token) void router.replace('/work/pending')
-  }
-}
-onBeforeRouteLeave(() => edit.value?.requestLeave(mustLeave()) ?? true)
+onBeforeRouteLeave(() => edit.value?.requestLeave() ?? true)
 onBeforeRouteUpdate(async (to, from) => {
   if (to.query.id === from.query.id) return true
-  return (await edit.value?.requestLeave(mustLeave())) ?? true
+  return (await edit.value?.requestLeave()) ?? true
 })
 watch(
   () => route.query.id,
@@ -227,17 +223,17 @@ watch(
     if (route.path === '/processSet/templateSet') open()
   },
 )
-watch(() => [userStore.token, userStore.menus] as const, enforceEntry, { deep: true })
+watch(() => [userStore.token, userStore.menus] as const, environmentChanged, { deep: true })
 onMounted(() => {
   open()
-  window.addEventListener('resize', enforceEntry)
-  window.addEventListener('focus', enforceEntry)
+  window.addEventListener('resize', environmentChanged)
+  window.addEventListener('focus', environmentChanged)
 })
 onBeforeUnmount(() => {
-  edit.value?.release()
+  edit.value?.dispose()
   ElMessageBox.close()
-  window.removeEventListener('resize', enforceEntry)
-  window.removeEventListener('focus', enforceEntry)
+  window.removeEventListener('resize', environmentChanged)
+  window.removeEventListener('focus', environmentChanged)
 })
 </script>
 

@@ -3,7 +3,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
-import request, { RequestFailure } from '@/utils/request'
+import request from '@/utils/request'
+import { classifySubmissionFailure } from '@/submission-outcome'
 import type { Recognition } from '@/recognition'
 import { ROUTES } from '@/navigation/constants'
 import { uploadAttachment } from './attachments'
@@ -126,17 +127,12 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
             normalErrorNotification: 'caller',
           })
           return { kind: 'started' }
-        } catch (error) {
-          if (error instanceof RequestFailure) {
-            const detail = error.detail
-            if (
-              (detail.operation === 'refresh' && detail.originalBusinessCode === 208) ||
-              (detail.source === 'business' &&
-                [201, 205, 208, 209, 403].includes(detail.businessCode || 0))
-            ) {
-              return { kind: 'rejected', message: error.message }
+        } catch (error: unknown) {
+          if (classifySubmissionFailure(error, 'start-approval') === 'refused')
+            return {
+              kind: 'rejected',
+              message: error instanceof Error ? error.message : '发起审批未获接受',
             }
-          }
           return { kind: 'unconfirmed' }
         }
       },

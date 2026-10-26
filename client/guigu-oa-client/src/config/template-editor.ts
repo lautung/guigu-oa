@@ -1,5 +1,6 @@
 import { markRaw, reactive, readonly } from 'vue'
-import { BusinessRequestFailure } from '@/utils/request'
+import { classifySubmissionFailure } from '@/submission-outcome'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import type { Recognition } from '@/recognition'
 import type {
   ApiClient,
@@ -22,13 +23,17 @@ interface Designer {
   getRule(): unknown
   getOption(): unknown
 }
+type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
 interface EditorOptions {
   recognition: Pick<Recognition, 'capture'>
   request: ApiClient
   designer(): Promise<Designer>
+  occupancy(): Occupancy
   confirm(message: string, kind: 'leave' | 'end-editing'): Promise<boolean>
+  dismissConfirm(): void
   notify(message: string, level: 'success' | 'warning'): void
   navigate(path: string): void
+  replace(path: string): void
   openList(path: string): void
 }
 interface ZipReference {
@@ -134,9 +139,6 @@ export function createTemplateEditor(options: EditorOptions) {
           },
         })
       },
-      get isCurrent(): boolean {
-        return current()
-      },
       get canEdit(): boolean {
         return current() && state.phase === 'ready' && !state.capturing && !state.leaving
       },
@@ -167,6 +169,7 @@ export function createTemplateEditor(options: EditorOptions) {
     let previousZip: ZipReference | null = null
     let selectedFile: File | null = null
     let uploadNumber = 0
+    let confirming = false
     function release() {
       released = true
       leftIntentionally = false
@@ -390,15 +393,19 @@ export function createTemplateEditor(options: EditorOptions) {
         options.navigate(LIST)
       } catch (error: unknown) {
         if (!current()) return
-        const unsubmitted =
-          error instanceof BusinessRequestFailure && [208, 209].includes(error.businessCode || 0)
-        state.phase = unsubmitted ? 'ready' : 'uncertain'
-        if (unsubmitted) state.snapshot = null
+        const refused = classifySubmissionFailure(error, 'save-template') === 'refused'
+        state.phase = refused ? 'ready' : 'uncertain'
+        if (refused) state.snapshot = null
         state.error = errorMessage(error, '无法确认模板保存结果')
       }
     }
-    async function requestLeave(force = false) {
-      if (force || !current()) {
+    function dismissPendingConfirm() {
+      if (state.leaving || confirming) options.dismissConfirm()
+    }
+    async function requestLeave() {
+      const occupancy = options.occupancy()
+      if (!current() || occupancy.action === 'redirect') {
+        dismissPendingConfirm()
         release()
         return true
       }
@@ -431,6 +438,22 @@ export function createTemplateEditor(options: EditorOptions) {
         state.leaving = false
       }
     }
+    async function environmentChanged() {
+      if (released) return
+      if (!current()) {
+        dismissPendingConfirm()
+        const now = options.recognition.capture()
+        release()
+        if (now.entryId) options.replace(getDefaultPostLoginRoute())
+        return
+      }
+      const occupancy = options.occupancy()
+      if (occupancy.action === 'redirect') {
+        dismissPendingConfirm()
+        release()
+        options.replace(occupancy.to)
+      }
+    }
     async function back() {
       if (!current()) return
       if ((await requestLeave()) && leftIntentionally && releaseCurrent === release) {
@@ -442,7 +465,6 @@ export function createTemplateEditor(options: EditorOptions) {
     function openList() {
       if (current() && state.phase === 'uncertain') options.openList(LIST)
     }
-    let confirming = false
     async function endEditing() {
       if (!current() || state.phase !== 'uncertain' || confirming) return false
       confirming = true
@@ -490,8 +512,9 @@ export function createTemplateEditor(options: EditorOptions) {
       openList,
       endEditing,
       requestLeave,
+      environmentChanged,
       back,
-      release,
+      dispose: release,
     }
   }
   return { open }

@@ -1,5 +1,5 @@
 import type { Recognition } from '@/recognition'
-import { BusinessRequestFailure } from '@/utils/request'
+import { classifySubmissionFailure } from '@/submission-outcome'
 import type {
   ApiClient,
   AttachmentRecord,
@@ -40,7 +40,7 @@ export function createHttpDetailAdapter(options: HttpDetailOptions): DetailAdapt
         } catch (error: unknown) {
           return {
             kind:
-              error instanceof BusinessRequestFailure && error.businessCode
+              classifySubmissionFailure(error, 'process-approval') === 'refused'
                 ? 'rejected'
                 : 'uncertain',
             message: error instanceof Error ? error.message : '无法确认处理结果',

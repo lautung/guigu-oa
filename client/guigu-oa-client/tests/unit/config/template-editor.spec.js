@@ -25,15 +25,20 @@ function harness() {
     uploads = [],
     saves = [],
     navigation = [],
+    replacements = [],
     notices = [],
     confirmations = [],
+    dismissals = [],
     lists = []
   let entryId = 'entry-1'
   let design = { rule: [], option: {} }
   let designerFailure = ''
   let confirm = true
+  let occupancy = { action: 'allow' }
   const options = {
     recognition: { capture: () => ({ generation: 1, entryId, silent: false }) },
+    occupancy: () => occupancy,
+    dismissConfirm: () => dismissals.push('dismiss'),
     request: (config) => {
       if (config.url === '/admin/process/processType/findAll')
         return Promise.resolve({ code: 200, data: [{ id: 3, name: '请假' }] })
@@ -64,6 +69,7 @@ function harness() {
       return confirm
     },
     navigate: (path) => navigation.push(path),
+    replace: (path) => replacements.push(path),
     notify: (message) => notices.push(message),
     openList: (path) => lists.push(path),
   }
@@ -74,8 +80,10 @@ function harness() {
     uploads,
     saves,
     navigation,
+    replacements,
     notices,
     confirmations,
+    dismissals,
     lists,
     design: (value) => {
       design = value
@@ -86,8 +94,14 @@ function harness() {
     confirm: (value) => {
       confirm = value
     },
+    occupancy: (value) => {
+      occupancy = value
+    },
     identity: () => {
       entryId = 'entry-2'
+    },
+    entry: (value) => {
+      entryId = value
     },
   }
 }
@@ -358,7 +372,7 @@ it('普通离开先确认，取消保留修改；保存中确认离开不撤销�
   expect(h.notices).toEqual([])
 })
 
-it('仅设计器中的尚未保存修改也需要离开确认；强制离开优先于未完成确认', async () => {
+it('仅设计器中的尚未保存修改也需要离开确认；dispose 只清理本地内容', async () => {
   const h = harness()
   const edit = h.module.open()
   await edit.ready
@@ -366,12 +380,125 @@ it('仅设计器中的尚未保存修改也需要离开确认；强制离开优�
   h.confirm(false)
   expect(await edit.requestLeave()).toBe(false)
   expect(h.confirmations).toHaveLength(1)
-  edit.release()
+  edit.dispose()
   expect(edit.state.canEdit).toBe(false)
   expect(edit.state.form.formProps).toBe('')
 })
 
-it.each([208, 209])('明确认证拒绝 %s 才恢复正常重试；重发后断网仍待确认', async (code) => {
+it('占用不成立时直接释放并用 replace 导航，不请求确认', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ description: '尚未保存' })
+  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  await edit.environmentChanged()
+  expect(edit.state.phase).toBe('closed')
+  expect(h.confirmations).toEqual([])
+  expect(h.replacements).toEqual(['/work/pending'])
+  expect(h.dismissals).toEqual([])
+})
+
+it('占用变化抢在进行中的确认之前，关闭确认且迟到结果不再导航', async () => {
+  const h = harness()
+  const confirming = deferred()
+  h.options.confirm = (message) => {
+    h.confirmations.push(message)
+    return confirming.promise
+  }
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ description: '尚未保存' })
+  const leaving = edit.back()
+  await flushPromises()
+  expect(h.confirmations).toHaveLength(1)
+  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  await edit.environmentChanged()
+  expect(h.dismissals).toEqual(['dismiss'])
+  expect(edit.state.phase).toBe('closed')
+  expect(h.replacements).toEqual(['/work/pending'])
+  confirming.resolve(false)
+  await leaving
+  expect(h.replacements).toEqual(['/work/pending'])
+  expect(h.navigation).toEqual([])
+})
+
+it('身份被替换时释放并落到待处理；进入结果清空时只释放不导航', async () => {
+  const first = harness()
+  const edit = first.module.open('A')
+  await flushPromises()
+  first.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ description: '尚未保存' })
+  first.identity()
+  await edit.environmentChanged()
+  expect(edit.state.phase).toBe('closed')
+  expect(first.confirmations).toEqual([])
+  expect(first.replacements).toEqual(['/work/pending'])
+
+  const second = harness()
+  const other = second.module.open('A')
+  await flushPromises()
+  second.reads[0].resolve({ code: 200, data: record() })
+  await other.ready
+  other.updateBasic({ description: '尚未保存' })
+  second.entry('')
+  await other.environmentChanged()
+  expect(other.state.phase).toBe('closed')
+  expect(second.replacements).toEqual([])
+})
+
+it('占用仍成立且身份未变时环境变化不打断编辑', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ description: '尚未保存' })
+  await edit.environmentChanged()
+  expect(edit.state.phase).toBe('ready')
+  expect(edit.state.form.description).toBe('尚未保存')
+  expect(h.confirmations).toEqual([])
+  expect(h.replacements).toEqual([])
+  expect(h.dismissals).toEqual([])
+})
+
+it('requestLeave 自身读取占用结论，强制离开不弹确认', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  edit.updateBasic({ description: '尚未保存' })
+  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  expect(await edit.requestLeave()).toBe(true)
+  expect(edit.state.phase).toBe('closed')
+  expect(h.confirmations).toEqual([])
+})
+
+it('保存中强制离开不确认，迟到成功不提示也不抢导航', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  const saving = edit.save()
+  await flushPromises()
+  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  await edit.environmentChanged()
+  expect(edit.state.phase).toBe('closed')
+  expect(h.confirmations).toEqual([])
+  h.saves[0].resolve({ code: 200, data: null })
+  await saving
+  expect(h.notices).toEqual([])
+  expect(h.navigation).toEqual([])
+  expect(h.replacements).toEqual(['/work/pending'])
+})
+
+it.each([208, 209])('明确拒绝 %s 恢复正常重试；重发后断网仍待确认', async (code) => {
   const { BusinessRequestFailure } = await import('@/utils/request')
   const h = harness()
   const edit = h.module.open('A')
@@ -603,8 +730,25 @@ it('明确认证拒绝后重发保存再断网，仍保留待确认快照且不�
   }
 })
 
-it.each([201, 403, 599, 'malformed'])(
-  '保存通用响应 %s 不证明未写入，保留待确认且无全局普通错误',
+it.each([201, 205, 403])('保存明确拒绝 %s 可立即重试且无全局普通错误', async (code) => {
+  const h = await transportHarness(async () => ({ code, message: '本次保存未获接受' }))
+  try {
+    const edit = h.module.open('A')
+    await edit.ready
+    await edit.save()
+    expect(edit.state.phase).toBe('ready')
+    expect(edit.state.canSave).toBe(true)
+    expect(edit.state.snapshot).toBeNull()
+    expect(edit.state.error).toBe('本次保存未获接受')
+    expect(h.calls.filter((call) => call.url.endsWith('/update'))).toHaveLength(1)
+    expect(h.globalNotices).toEqual([])
+  } finally {
+    h.restore()
+  }
+})
+
+it.each([599, 'malformed'])(
+  '保存无法证明未写入的响应 %s 保留待确认且无全局普通错误',
   async (code) => {
     const h = await transportHarness(async () =>
       code === 'malformed' ? '<html>bad response</html>' : { code, message: '无法确认写入结果' },
@@ -634,7 +778,7 @@ it.each(['force', 'reopen', 'identity'])(
     edit.updateBasic({ name: '未保存', processTypeId: 3 })
     const leaving = edit.back()
     await flushPromises()
-    if (change === 'force') edit.release()
+    if (change === 'force') edit.dispose()
     if (change === 'reopen') {
       const next = h.module.open()
       await next.ready
@@ -661,7 +805,7 @@ it.each(['force', 'reopen', 'identity'])(
     h.saves[0].reject(new Error('断网'))
     await saving
     const ending = edit.endEditing()
-    if (change === 'force') edit.release()
+    if (change === 'force') edit.dispose()
     if (change === 'reopen') {
       const next = h.module.open()
       await next.ready

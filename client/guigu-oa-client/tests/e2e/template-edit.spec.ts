@@ -434,7 +434,7 @@ test('普通离开可取消，缩到手机时优先强制离开并关闭丢弃�
 
 test('结束待确认编辑前说明重复写入风险，取消结束仍保留快照', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
-  const h = await setup(page, { save: (route) => json(route, null, 201) })
+  const h = await setup(page, { save: (route) => json(route, null, 599) })
   await page.goto('/processSet/templateSet?id=97')
   await flowStep(page)
   await page.getByRole('button', { name: '提交保存', exact: true }).click()

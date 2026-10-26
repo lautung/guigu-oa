@@ -1,7 +1,8 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
-import request, { RequestFailure } from '@/utils/request'
+import request from '@/utils/request'
+import { classifySubmissionFailure } from '@/submission-outcome'
 import type { Recognition } from '@/recognition'
 import type { RoleAssignmentLists } from './sys-role'
 import { assignRolesRequest, toAssignRolesRequest } from './sys-role'
@@ -22,14 +23,6 @@ function storage(): {
     keys: () =>
       Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index) || ''),
   }
-}
-
-function rejectedBeforeWrite(error: RequestFailure): boolean {
-  const detail = error.detail
-  if (detail.operation === 'refresh') return true
-  if (detail.source === 'business' && [208, 209, 403].includes(detail.businessCode || 0))
-    return true
-  return detail.source === 'http' && [401, 403].includes(detail.httpStatus || 0)
 }
 
 export function useAssignRoles() {
@@ -67,8 +60,11 @@ export function useAssignRoles() {
           })
           return { kind: 'saved' }
         } catch (error) {
-          if (error instanceof RequestFailure && rejectedBeforeWrite(error))
-            return { kind: 'rejected', message: error.message }
+          if (classifySubmissionFailure(error, 'assign-roles') === 'refused')
+            return {
+              kind: 'rejected',
+              message: error instanceof Error ? error.message : '分配角色未获接受',
+            }
           return { kind: 'unconfirmed' }
         }
       },
