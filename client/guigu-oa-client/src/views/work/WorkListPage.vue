@@ -1,11 +1,19 @@
 <template>
   <div class="work-list-page">
-    <h2 class="page-title">{{ pageMeta.title }}</h2>
+    <h2 class="page-title">{{ definition.title }}</h2>
 
-    <div v-loading="loading && list.length === 0" class="list-container">
-      <el-empty v-if="!loading && list.length === 0" :description="pageMeta.emptyDescription" />
+    <div v-loading="view.status === 'loading'" class="list-container">
+      <div v-if="view.status === 'failed'" class="list-error">
+        <el-alert :title="view.error || '加载失败'" type="error" :closable="false" show-icon />
+        <el-button class="retry-button" @click="retry">重试</el-button>
+      </div>
 
-      <div v-for="item in list" :key="item.rowKey" class="work-list-item" @click="openDetail(item)">
+      <el-empty
+        v-if="view.status === 'ready' && rows.length === 0"
+        :description="definition.emptyDescription"
+      />
+
+      <div v-for="item in rows" :key="item.rowKey" class="work-list-item" @click="openDetail(item)">
         <div class="item-header">
           <h3>{{ item.title }}</h3>
           <span class="time">{{ item.createTime }}</span>
@@ -28,13 +36,13 @@
         </div>
       </div>
 
-      <div v-if="list.length > 0" class="pagination-wrap">
+      <div v-if="rows.length > 0" class="pagination-wrap">
         <el-pagination
           background
           layout="prev, pager, next"
-          :current-page="pageNo"
-          :page-size="pageSize"
-          :total="total"
+          :current-page="view.page"
+          :page-size="view.size"
+          :total="view.total"
           @current-change="handlePageChange"
         />
       </div>
@@ -43,60 +51,70 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { computed, defineComponent, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
+import { createListRead, type ListReadOpening } from '@/list-read'
+import { useUserStore } from '@/store/modules/user'
 import request from '@/utils/request'
-import { loadWorkList, presentWorkList, type WorkListKind } from '@/work/work-list'
-import type { PresentedWorkListRecord } from '@/types/domain'
+import type { ProcessInstanceRecord, PresentedWorkListRecord } from '@/types/domain'
+import {
+  presentWorkList,
+  workListDefinition,
+  workListRequest,
+  type WorkListKind,
+} from '@/work/work-list'
+
+type WorkListOpening = ListReadOpening<ProcessInstanceRecord, Record<string, never>>
 
 export default defineComponent({
   name: 'WorkListPage',
-  data() {
-    return {
-      list: [] as PresentedWorkListRecord[],
-      loading: false,
-      pageNo: 1,
-      pageSize: 10,
-      total: 0,
+  setup() {
+    const route = useRoute()
+    const userStore = useUserStore()
+
+    function kindFromRoute(): WorkListKind {
+      return route.meta.workListKind as WorkListKind
     }
-  },
-  computed: {
-    kind(): WorkListKind {
-      return this.$route.meta.workListKind as WorkListKind
-    },
-    pageMeta() {
-      return presentWorkList(this.kind)
-    },
-  },
-  watch: {
-    kind() {
-      this.pageNo = 1
-      this.list = []
-      this.total = 0
-      this.fetchList()
-    },
-  },
-  created() {
-    this.fetchList()
+
+    function open(kind: WorkListKind): WorkListOpening {
+      const recognition = userStore.recognition
+      if (!recognition) throw new Error('认出 module 尚未接入')
+      return createListRead<ProcessInstanceRecord, Record<string, never>>({
+        recognition,
+        request,
+        toRequest: ({ page, size }) => workListRequest(kind, page, size),
+        size: 10,
+      })
+    }
+
+    const kind = computed(kindFromRoute)
+    const opening = shallowRef<WorkListOpening>(open(kind.value))
+    const view = computed(() => opening.value.view)
+    const definition = computed(() => workListDefinition(kind.value))
+    const rows = computed<PresentedWorkListRecord[]>(
+      () =>
+        presentWorkList(kind.value, {
+          records: view.value.records,
+          total: view.value.total,
+          pages: view.value.pages,
+        }).records,
+    )
+
+    watch(kind, (next) => {
+      opening.value.release()
+      opening.value = open(next)
+    })
+    onBeforeUnmount(() => opening.value.release())
+
+    return { opening, view, definition, rows }
   },
   methods: {
-    fetchList() {
-      this.loading = true
-      loadWorkList(this.kind, this.pageNo, this.pageSize, request)
-        .then((page) => {
-          this.total = page.total
-          this.list = page.records
-        })
-        .catch(() => {
-          // Request failures are already presented (or silently discarded) by recognition.
-        })
-        .finally(() => {
-          this.loading = false
-        })
-    },
     handlePageChange(page: number) {
-      this.pageNo = page
-      this.fetchList()
+      void this.opening.read({ page })
+    },
+    retry() {
+      void this.opening.read()
     },
     openDetail(item: PresentedWorkListRecord) {
       this.$router.push(item.detailPath)
@@ -111,6 +129,14 @@ export default defineComponent({
     margin: 0 0 16px;
     font-size: 20px;
     color: #303133;
+  }
+
+  .list-error {
+    margin-bottom: 12px;
+  }
+
+  .retry-button {
+    margin-top: 8px;
   }
 }
 
