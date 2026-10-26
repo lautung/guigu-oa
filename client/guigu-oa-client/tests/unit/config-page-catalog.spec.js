@@ -1,28 +1,18 @@
 import { KNOWN_CONFIG_PAGES } from '@/config-permission'
 import { constantRoutes } from '@/router'
-
-function collectPaths(routes, prefix = '') {
-  return routes.reduce((paths, route) => {
-    const current =
-      route.path && route.path.startsWith('/')
-        ? route.path
-        : `${prefix.replace(/\/$/, '')}/${route.path || ''}`
-    paths.push(current)
-    if (route.children) {
-      paths.push(...collectPaths(route.children, current))
-    }
-    return paths
-  }, [])
-}
+import { createMemoryHistory, createRouter } from 'vue-router'
 
 describe('配置页目录与路由注册', () => {
-  const registeredPaths = collectPaths(constantRoutes)
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: constantRoutes,
+  })
   const catalogPaths = KNOWN_CONFIG_PAGES.map((page) => page.path)
 
   it('resolves every catalog path to a registered route', () => {
-    const missing = catalogPaths.filter((path) => !registeredPaths.includes(path))
+    const unresolved = catalogPaths.filter((path) => router.resolve(path).matched.length === 0)
 
-    expect(missing).toEqual([])
+    expect(unresolved).toEqual([])
   })
 
   it('keeps every hidden page parent inside the catalog', () => {

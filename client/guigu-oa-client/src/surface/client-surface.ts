@@ -1,4 +1,5 @@
 import { configPermission } from '@/config-permission'
+import type { MenuGroup } from '@/config-permission'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
 import type { MenuNode } from '@/types/domain'
 
@@ -12,7 +13,6 @@ export const DENSITIES = {
   WIDE: 'wide',
 } as const
 
-type MenuGroup = (typeof MENU_GROUPS)[keyof typeof MENU_GROUPS]
 type Density = (typeof DENSITIES)[keyof typeof DENSITIES]
 type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
 

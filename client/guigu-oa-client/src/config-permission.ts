@@ -8,7 +8,7 @@ import type { MenuNode, SidebarItem } from '@/types/domain'
  * 菜单管理可以问什么算配置类菜单；勾选和增删改仍是配置页的动作。
  */
 
-type MenuGroup = 'work' | 'config'
+export type MenuGroup = 'work' | 'config'
 
 interface MenuEntry {
   path: string
@@ -125,6 +125,7 @@ function collectGrantedLeaves(nodes: SidebarItem[], leaves: string[] = []): stri
   return leaves
 }
 
+// 菜单组分类先覆盖菜单树里的所有条目；某个菜单是否算被授予的配置权限仍由 isConfigClassMenu 决定。
 function flattenMenuEntries(
   menus: MenuNode[],
   parentPath = '',
@@ -182,6 +183,7 @@ function findEntry(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEn
   const configEntry = findBestEntry(normalized, config)
   if (configEntry) return configEntry
 
+  // 只挂着子页的父目录仍属于配置组。
   const descendant = config.find((entry) => entry.path.startsWith(`${normalized}/`))
   if (descendant) {
     return { path: normalized, group: 'config' }
@@ -210,11 +212,9 @@ function pathCoveredByGrant(path: string, leaves: string[]): boolean {
   )
 }
 
+// 已知隐藏页沿用目录里的父级映射，保住既有授予；菜单树里的自定义隐藏页不在目录中，跟进见 #104。
 function catalogHiddenParentOf(path: string): string | undefined {
-  const hidden = KNOWN_CONFIG_PAGES.filter(
-    (page) => page.hiddenParentPath && pathMatchesEntry(path, page.path),
-  ).sort((left, right) => right.path.length - left.path.length)[0]
-  return hidden?.hiddenParentPath
+  return findBestEntry(normalizePath(path), catalogEntries())?.hiddenParentPath
 }
 
 function pathCanOccupy(path: string, viewportWidth: number, leaves: string[]): boolean {

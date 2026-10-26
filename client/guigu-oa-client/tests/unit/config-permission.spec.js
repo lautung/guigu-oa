@@ -1,8 +1,8 @@
 import { configPermission } from '@/config-permission'
+import { MOBILE_BREAKPOINT } from '@/navigation/constants'
 
 const DESKTOP_WIDTH = 1200
 const MOBILE_WIDTH = 375
-const MOBILE_BREAKPOINT = 768
 
 const ONLY_USER_MENUS = [
   {

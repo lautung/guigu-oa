@@ -28,7 +28,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
-import { buildSidebarTree, isMobileViewport } from '@/navigation'
+import { buildSidebarTree } from '@/navigation'
+import { isMobileViewport } from '@/navigation/constants'
 import SidebarNode from './SidebarNode.vue'
 
 const route = useRoute()

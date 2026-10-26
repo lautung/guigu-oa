@@ -12,8 +12,6 @@ import type { MenuNode, SidebarGroup, SidebarItem } from '@/types/domain'
 
 type GuardDecision = { action: 'allow' } | { action: 'redirect'; to: string }
 
-export { isMobileViewport }
-
 export function buildLoginRedirectPath(intendedPath?: string): string {
   return intendedPath || getDefaultPostLoginRoute()
 }
