@@ -56,6 +56,9 @@ export default defineComponent({
       // A late role assignment may refresh menus after its original page has unmounted.
       this.handleViewportWidth?.(this.viewportWidth)
     },
+    '$route.path'() {
+      this.handleViewportWidth?.(this.viewportWidth)
+    },
   },
   created() {
     this.handleViewportWidth = createViewportOccupancyHandler({
@@ -71,6 +74,7 @@ export default defineComponent({
     if (this.onViewportResize) {
       window.addEventListener('resize', this.onViewportResize)
     }
+    this.handleViewportWidth?.(this.viewportWidth)
   },
   beforeUnmount() {
     if (this.onViewportResize) {
