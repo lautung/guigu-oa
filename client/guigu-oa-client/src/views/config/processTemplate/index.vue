@@ -5,7 +5,25 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="list" stripe border>
+    <el-alert
+      v-if="view.status === 'failed'"
+      class="list-error"
+      type="error"
+      :closable="false"
+      :title="view.error || '加载失败'"
+    >
+      <template #default>
+        <el-button type="text" @click="retry">重试</el-button>
+      </template>
+    </el-alert>
+
+    <el-table
+      v-loading="view.status === 'loading'"
+      :data="rows"
+      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      stripe
+      border
+    >
       <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
       <el-table-column prop="name" label="审批名称" />
       <el-table-column label="图标" width="80" align="center">
@@ -43,10 +61,10 @@
 
     <div class="pagination-wrap">
       <el-pagination
-        :current-page="page"
-        :page-size="limit"
+        :current-page="view.page"
+        :page-size="view.size"
         :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="total"
+        :total="view.total"
         layout="sizes, prev, pager, next, jumper, ->, total"
         @current-change="handlePageChange"
         @size-change="handleSizeChange"
@@ -72,15 +90,18 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, onBeforeUnmount } from 'vue'
 
 import request from '@/utils/request'
 import {
-  findPage,
+  listRequest,
   presentDesignerState,
+  presentListPage,
   publish,
   removeUnpublished,
 } from '@/config/process-template'
+import { createListRead } from '@/list-read'
+import { useUserStore } from '@/store/modules/user'
 import type {
   FormDesignerOption,
   FormRule,
@@ -90,45 +111,50 @@ import type {
 
 export default defineComponent({
   name: 'ProcessTemplateList',
+  setup() {
+    const userStore = useUserStore()
+    const recognition = userStore.recognition
+    if (!recognition) throw new Error('认出 module 尚未接入')
+    const opening = createListRead<ProcessTemplateRecord>({
+      recognition,
+      request,
+      toRequest: ({ page, size }) => listRequest(page, size),
+    })
+    onBeforeUnmount(() => opening.release())
+    return { opening }
+  },
   data() {
     return {
-      list: [] as ProcessTemplateListItem[],
-      loading: false,
-      page: 1,
-      limit: 10,
-      total: 0,
       previewVisible: false,
       preview: {} as ProcessTemplateRecord,
       previewRule: [] as FormRule[],
       previewOption: { submitBtn: false } as FormDesignerOption,
     }
   },
-  created() {
-    this.fetchList()
+  computed: {
+    view() {
+      return this.opening.view
+    },
+    rows(): ProcessTemplateListItem[] {
+      return presentListPage({
+        records: this.view.records,
+        total: this.view.total,
+        pages: this.view.pages,
+      }).records
+    },
   },
   methods: {
     rowIndex(index: number) {
-      return (this.page - 1) * this.limit + index + 1
+      return (this.view.page - 1) * this.view.size + index + 1
     },
-    fetchList() {
-      this.loading = true
-      findPage(this.page, this.limit, request)
-        .then((page) => {
-          this.list = page.records
-          this.total = page.total
-        })
-        .finally(() => {
-          this.loading = false
-        })
+    retry() {
+      this.opening.read()
     },
     handlePageChange(page: number) {
-      this.page = page
-      this.fetchList()
+      this.opening.read({ page })
     },
-    handleSizeChange(limit: number) {
-      this.limit = limit
-      this.page = 1
-      this.fetchList()
+    handleSizeChange(size: number) {
+      this.opening.read({ size })
     },
     openCreate() {
       this.$router.push('/processSet/templateSet')
@@ -147,7 +173,7 @@ export default defineComponent({
     publishTemplate(template: ProcessTemplateRecord) {
       publish(template, request).then((response) => {
         this.$message.success(response.message || '发布成功')
-        this.fetchList()
+        this.opening.read()
       })
     },
     remove(template: ProcessTemplateRecord) {
@@ -159,7 +185,7 @@ export default defineComponent({
         .then(() => removeUnpublished(template, request))
         .then((response) => {
           this.$message.success(response.message || '删除成功')
-          this.fetchList()
+          this.opening.read()
         })
         .catch(() => {})
     },
@@ -195,6 +221,10 @@ export default defineComponent({
 
 .availability-message {
   color: #b88230;
+}
+
+.list-error {
+  margin-bottom: 12px;
 }
 
 .pagination-wrap {

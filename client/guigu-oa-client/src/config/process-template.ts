@@ -1,5 +1,6 @@
 import type {
   ApiClient,
+  ApiRequestConfig,
   ApiResponse,
   FormDesignerOption,
   FormRule,
@@ -49,11 +50,18 @@ function presentListItem(record: ProcessTemplateRecord = {}): ProcessTemplateLis
   }
 }
 
-function presentListPage(page: PageResult<ProcessTemplateRecord> = {}) {
+export function presentListPage(page: PageResult<ProcessTemplateRecord> = {}) {
   return {
     records: (page.records || []).map(presentListItem),
     total: page.total || 0,
     pages: page.pages || 0,
+  }
+}
+
+export function listRequest(page: number, limit: number): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${PROCESS_TEMPLATE_API}/${page}/${limit}`,
   }
 }
 
@@ -144,18 +152,6 @@ function presentStartGroups(types: ProcessTypeRecord[] = []): ProcessTemplateSta
       })),
     }))
     .filter((group) => group.templates.length > 0)
-}
-
-export async function findPage(
-  page: number,
-  limit: number,
-  request: ApiClient,
-): Promise<ReturnType<typeof presentListPage>> {
-  const response = await request<PageResult<ProcessTemplateRecord>>({
-    method: 'get',
-    url: `${PROCESS_TEMPLATE_API}/${page}/${limit}`,
-  })
-  return presentListPage(response.data || {})
 }
 
 export async function read(
