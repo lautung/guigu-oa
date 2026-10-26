@@ -1,10 +1,32 @@
+import { isMobileViewport, WORK_BUILTIN_ITEMS } from '@/navigation/constants'
 import type { MenuNode, SidebarItem } from '@/types/domain'
 
 /**
- * 配置权限：有没有、授了哪些配置类菜单、这页能不能占用。
- * 输入是 info 给来的菜单树。不认用户 id，不认按钮。
+ * 配置权限：有没有、授了哪些配置类菜单、某地址属于哪组、这页能不能占用。
+ * 输入是 info 给来的菜单树。不认用户 id，不认按钮，不认认证状态。
+ * 菜单树是授予权威；产品目录只兜底当前菜单树里没有的已知配置页。
  * 菜单管理可以问什么算配置类菜单；勾选和增删改仍是配置页的动作。
  */
+
+type MenuGroup = 'work' | 'config'
+
+interface MenuEntry {
+  path: string
+  group: MenuGroup
+  hidden?: boolean
+  hiddenParentPath?: string
+}
+
+export const KNOWN_CONFIG_PAGES: readonly { path: string; hiddenParentPath?: string }[] = [
+  { path: '/system/sysUser' },
+  { path: '/system/sysRole' },
+  { path: '/system/sysMenu' },
+  { path: '/system/assignAuth', hiddenParentPath: '/system/sysRole' },
+  { path: '/processSet/processType' },
+  { path: '/processSet/processTemplate' },
+  { path: '/processSet/templateSet', hiddenParentPath: '/processSet/processTemplate' },
+  { path: '/processMgr/process' },
+]
 
 const EXCLUDED_PATH_PATTERNS = [/wechat/i, /dashboard/i, /onlineProcessSet/i]
 
@@ -28,7 +50,8 @@ function isExcludedConfigMenu(menu: MenuNode = {}): boolean {
 
 function normalizePath(path: string | undefined): string {
   if (!path) return ''
-  return path.startsWith('/') ? path : `/${path}`
+  const withLeadingSlash = path.startsWith('/') ? path : `/${path}`
+  return withLeadingSlash.replace(/\/$/, '') || '/'
 }
 
 function joinPath(base: string, segment: string | undefined): string {
@@ -102,40 +125,129 @@ function collectGrantedLeaves(nodes: SidebarItem[], leaves: string[] = []): stri
   return leaves
 }
 
-const HIDDEN_CONFIG_PAGES = [
-  { path: '/system/assignAuth', parentPath: '/system/sysRole' },
-  { path: '/processSet/templateSet', parentPath: '/processSet/processTemplate' },
-]
+function flattenMenuEntries(
+  menus: MenuNode[],
+  parentPath = '',
+  visibleParentPath = '',
+): MenuEntry[] {
+  return menus.flatMap((menu) => {
+    const path = resolveMenuPath(menu, parentPath)
+    const hidden = !!menu.hidden
+    const entry: MenuEntry = {
+      path,
+      group: 'config',
+      ...(hidden ? { hidden: true, hiddenParentPath: visibleParentPath || undefined } : {}),
+    }
+    const nextVisibleParent = hidden ? visibleParentPath : path
+    const children = flattenMenuEntries(menu.children || [], path, nextVisibleParent)
+    return [entry, ...children]
+  })
+}
 
-function pathCanOccupy(path: string, leaves: string[]): boolean {
+function catalogEntries(): MenuEntry[] {
+  return KNOWN_CONFIG_PAGES.map((page) => ({
+    path: page.path,
+    group: 'config',
+    ...(page.hiddenParentPath ? { hidden: true, hiddenParentPath: page.hiddenParentPath } : {}),
+  }))
+}
+
+function configEntriesFrom(menus: MenuNode[]): MenuEntry[] {
+  const fromMenus = flattenMenuEntries(menus)
+  const seenPaths = new Set(fromMenus.map((entry) => entry.path))
+  const fromCatalog = catalogEntries().filter((entry) => !seenPaths.has(entry.path))
+  return [...fromMenus, ...fromCatalog]
+}
+
+function workEntries(): MenuEntry[] {
+  return WORK_BUILTIN_ITEMS.map((item) => ({ path: item.path, group: 'work' }))
+}
+
+function pathMatchesEntry(path: string, entryPath: string): boolean {
+  return path === entryPath || path.startsWith(`${entryPath}/`)
+}
+
+function findBestEntry(path: string, entries: MenuEntry[]): MenuEntry | null {
+  const matches = entries
+    .filter((entry) => pathMatchesEntry(path, entry.path))
+    .sort((left, right) => right.path.length - left.path.length)
+  return matches[0] || null
+}
+
+function findEntry(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEntry | null {
   const normalized = normalizePath(path)
-  if (
-    leaves.some(
-      (leaf) =>
-        normalized === leaf ||
-        normalized.startsWith(`${leaf}/`) ||
-        leaf.startsWith(`${normalized}/`),
-    )
-  ) {
-    return true
+  const workEntry = findBestEntry(normalized, work)
+  if (workEntry) return workEntry
+
+  const configEntry = findBestEntry(normalized, config)
+  if (configEntry) return configEntry
+
+  const descendant = config.find((entry) => entry.path.startsWith(`${normalized}/`))
+  if (descendant) {
+    return { path: normalized, group: 'config' }
   }
 
-  return HIDDEN_CONFIG_PAGES.some(
-    (hidden) =>
-      (normalized === hidden.path || normalized.startsWith(`${hidden.path}/`)) &&
-      leaves.includes(hidden.parentPath),
+  return null
+}
+
+function findEntryOf(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEntry | null {
+  const entry = findEntry(path, work, config)
+  if (!entry || !entry.hidden || !entry.hiddenParentPath) {
+    return entry
+  }
+
+  return findEntry(entry.hiddenParentPath, work, config) || entry
+}
+
+function publicEntry(entry: MenuEntry | null): { path: string; group: MenuGroup } | null {
+  if (!entry) return null
+  return { path: entry.path, group: entry.group }
+}
+
+function pathCoveredByGrant(path: string, leaves: string[]): boolean {
+  return leaves.some(
+    (leaf) => path === leaf || path.startsWith(`${leaf}/`) || leaf.startsWith(`${path}/`),
   )
+}
+
+function catalogHiddenParentOf(path: string): string | undefined {
+  const hidden = KNOWN_CONFIG_PAGES.filter(
+    (page) => page.hiddenParentPath && pathMatchesEntry(path, page.path),
+  ).sort((left, right) => right.path.length - left.path.length)[0]
+  return hidden?.hiddenParentPath
+}
+
+function pathCanOccupy(path: string, viewportWidth: number, leaves: string[]): boolean {
+  if (isMobileViewport(viewportWidth)) return false
+
+  const normalized = normalizePath(path)
+  if (pathCoveredByGrant(normalized, leaves)) return true
+
+  const hiddenParentPath = catalogHiddenParentOf(normalized)
+  return hiddenParentPath !== undefined && leaves.includes(hiddenParentPath)
+}
+
+interface CanOccupyInput {
+  path: string
+  viewportWidth: number
 }
 
 export function configPermission(menus: MenuNode[] = []) {
   const grantedConfigMenus = grantedConfigMenusFrom(menus)
   const grantedLeaves = collectGrantedLeaves(grantedConfigMenus)
+  const work = workEntries()
+  const config = configEntriesFrom(menus)
 
   return {
     hasConfigPermission: grantedLeaves.length > 0,
     grantedConfigMenus,
-    canOccupy(path: string): boolean {
-      return pathCanOccupy(path, grantedLeaves)
+    entryOf(path: string): { path: string; group: 'work' | 'config' } | null {
+      return publicEntry(findEntryOf(path, work, config))
+    },
+    canOccupy(input: CanOccupyInput | string): boolean {
+      const { path, viewportWidth } =
+        typeof input === 'string' ? { path: input, viewportWidth: Number.POSITIVE_INFINITY } : input
+      return pathCanOccupy(path, viewportWidth, grantedLeaves)
     },
   }
 }
