@@ -147,11 +147,23 @@ export function createRecognition(adapter: RecognitionAdapter) {
     return reason
   }
 
-  function recognize(destination = adapter.currentPath()): Promise<UserInfo> {
+  function recognize(
+    destination = adapter.currentPath(),
+    options: { quiet?: boolean; afterPending?: boolean } = {},
+  ): Promise<UserInfo> {
     const context = capture()
     const hadUser = adapter.hasUser()
     if (!hadUser) adapter.showRecovery({ status: 'loading', target: destination })
-    if (flight && isCurrent(flight.context)) return flight.promise
+    if (flight && isCurrent(flight.context)) {
+      if (!options.afterPending) return flight.promise
+      // A completed write needs a read started after that write, rather than a prior snapshot.
+      return flight.promise
+        .catch(() => {})
+        .then(() => {
+          assertCurrent(context)
+          return recognize(destination, { quiet: options.quiet })
+        })
+    }
     const promise = Promise.resolve()
       .then(() => {
         assertCurrent(context)
@@ -170,8 +182,9 @@ export function createRecognition(adapter: RecognitionAdapter) {
         const reason = failure(error)
         if (reason.kind === 'invalid' || reason.kind === 'disabled') throw reject(context, reason)
         if (reason.kind !== 'superseded') {
-          if (hadUser) adapter.notify(reason.message)
-          else adapter.showRecovery({ status: 'retryable', target: adapter.recovery().target })
+          if (hadUser && !options.quiet) adapter.notify(reason.message)
+          else if (!hadUser)
+            adapter.showRecovery({ status: 'retryable', target: adapter.recovery().target })
         }
         throw reason
       })
