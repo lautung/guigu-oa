@@ -15,7 +15,15 @@
       </el-form-item>
     </el-form>
 
-    <el-table v-loading="loading" :data="list" stripe border>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+
+    <el-table
+      v-loading="view.status === 'loading'"
+      :data="rows"
+      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      stripe
+      border
+    >
       <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
       <el-table-column prop="roleName" label="角色名称" />
       <el-table-column prop="roleCode" label="角色编码" />
@@ -33,10 +41,10 @@
 
     <div class="pagination-wrap">
       <el-pagination
-        :current-page="page"
-        :page-size="limit"
+        :current-page="view.page"
+        :page-size="view.size"
         :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="total"
+        :total="view.total"
         layout="sizes, prev, pager, next, jumper, ->, total"
         @current-change="handlePageChange"
         @size-change="handleSizeChange"
@@ -63,21 +71,39 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, onBeforeUnmount } from 'vue'
 
-import { getById, getPageList, removeById, saveOrUpdate } from '@/api/sysRole'
-import { assignAuthPath, emptyForm, presentForm, presentListPage } from '@/config/sys-role'
-import type { EntityId, RoleListItem } from '@/types/domain'
+import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
+import ListLoadError from '@/components/ListLoadError.vue'
+import {
+  assignAuthPath,
+  emptyForm,
+  listRequest,
+  presentForm,
+  presentListPage,
+} from '@/config/sys-role'
+import { createListRead } from '@/list-read'
+import { useUserStore } from '@/store/modules/user'
+import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'
+import request from '@/utils/request'
 
 export default defineComponent({
   name: 'SysRoleList',
+  components: { ListLoadError },
+  setup() {
+    const userStore = useUserStore()
+    const recognition = userStore.recognition
+    if (!recognition) throw new Error('认出 module 尚未接入')
+    const opening = createListRead<RoleRecord, Record<string, string | number>>({
+      recognition,
+      request,
+      toRequest: ({ page, size, query }) => listRequest(page, size, query),
+    })
+    onBeforeUnmount(() => opening.release())
+    return { opening }
+  },
   data() {
     return {
-      list: [] as RoleListItem[],
-      loading: false,
-      page: 1,
-      limit: 10,
-      total: 0,
       roleName: '',
       dialogVisible: false,
       saving: false,
@@ -85,48 +111,38 @@ export default defineComponent({
     }
   },
   computed: {
+    view() {
+      return this.opening.view
+    },
+    rows(): RoleListItem[] {
+      return presentListPage(this.view).records
+    },
     dialogTitle() {
       return this.form.id ? '编辑角色' : '新建角色'
     },
   },
-  created() {
-    this.fetchList()
-  },
   methods: {
     rowIndex(index: number) {
-      return (this.page - 1) * this.limit + index + 1
+      return (this.view.page - 1) * this.view.size + index + 1
     },
     searchObj(): Record<string, string | number> {
       return this.roleName ? { roleName: this.roleName } : {}
     },
-    fetchList() {
-      this.loading = true
-      getPageList(this.page, this.limit, this.searchObj())
-        .then((response) => {
-          const page = presentListPage(response.data || {})
-          this.list = page.records
-          this.total = page.total
-        })
-        .finally(() => {
-          this.loading = false
-        })
-    },
     search() {
-      this.page = 1
-      this.fetchList()
+      this.opening.read({ page: 1, query: this.searchObj() })
     },
     reset() {
       this.roleName = ''
       this.search()
     },
-    handlePageChange(page: number) {
-      this.page = page
-      this.fetchList()
+    retry() {
+      this.opening.read()
     },
-    handleSizeChange(limit: number) {
-      this.limit = limit
-      this.page = 1
-      this.fetchList()
+    handlePageChange(page: number) {
+      this.opening.read({ page })
+    },
+    handleSizeChange(size: number) {
+      this.opening.read({ size })
     },
     openCreate() {
       this.form = emptyForm()
@@ -147,7 +163,7 @@ export default defineComponent({
         .then((response) => {
           this.$message.success(response.message || '操作成功')
           this.dialogVisible = false
-          this.fetchList()
+          this.opening.read()
         })
         .finally(() => {
           this.saving = false
@@ -162,7 +178,7 @@ export default defineComponent({
         .then(() => removeById(id))
         .then((response) => {
           this.$message.success(response.message || '删除成功')
-          this.fetchList()
+          this.opening.read()
         })
         .catch(() => {})
     },

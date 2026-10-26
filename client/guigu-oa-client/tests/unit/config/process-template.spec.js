@@ -1,8 +1,9 @@
 import {
   canInitiate,
   canWrite,
-  findPage,
   findStartable,
+  listRequest,
+  presentListPage,
   publish,
   read,
   removeUnpublished,
@@ -37,40 +38,36 @@ describe('审批模板', () => {
     })
   })
 
-  describe('findPage', () => {
-    it('lists 未发布 as writable and 已发布 without write actions', async () => {
-      const request = async () => ({
-        data: {
-          records: [
-            {
-              id: 1,
-              name: '请假申请',
-              iconUrl: 'https://example.com/leave.png',
-              processTypeName: '请假',
-              description: '员工请假',
-              status: 0,
-              formProps: '[{"type":"input"}]',
-              formOptions: '{}',
-              createTime: '2026-08-01 10:00:00',
-              updateTime: '2026-08-02 11:00:00',
-            },
-            {
-              id: 2,
-              name: '加班申请',
-              iconUrl: 'https://example.com/overtime.png',
-              processTypeName: '加班',
-              description: '加班审批',
-              status: 1,
-              createTime: '2026-08-03 09:00:00',
-              updateTime: '2026-08-03 09:00:00',
-            },
-          ],
-          total: 2,
-          pages: 1,
-        },
+  describe('presentListPage / listRequest', () => {
+    it('lists 未发布 as writable and 已发布 without write actions', () => {
+      const page = presentListPage({
+        records: [
+          {
+            id: 1,
+            name: '请假申请',
+            iconUrl: 'https://example.com/leave.png',
+            processTypeName: '请假',
+            description: '员工请假',
+            status: 0,
+            formProps: '[{"type":"input"}]',
+            formOptions: '{}',
+            createTime: '2026-08-01 10:00:00',
+            updateTime: '2026-08-02 11:00:00',
+          },
+          {
+            id: 2,
+            name: '加班申请',
+            iconUrl: 'https://example.com/overtime.png',
+            processTypeName: '加班',
+            description: '加班审批',
+            status: 1,
+            createTime: '2026-08-03 09:00:00',
+            updateTime: '2026-08-03 09:00:00',
+          },
+        ],
+        total: 2,
+        pages: 1,
       })
-
-      const page = await findPage(1, 10, request)
 
       expect(page).toEqual({
         records: [
@@ -116,22 +113,18 @@ describe('审批模板', () => {
       expect(canInitiate(page.records[1])).toBe(true)
     })
 
-    it('shows the availability explanation without restoring write actions', async () => {
-      const request = async () => ({
-        data: {
-          records: [
-            {
-              id: 19,
-              name: '旧请假申请',
-              status: 1,
-              availableForInitiation: false,
-              availabilityMessage: '暂不可发起，需核实原审批内容',
-            },
-          ],
-        },
+    it('shows the availability explanation without restoring write actions', () => {
+      const page = presentListPage({
+        records: [
+          {
+            id: 19,
+            name: '旧请假申请',
+            status: 1,
+            availableForInitiation: false,
+            availabilityMessage: '暂不可发起，需核实原审批内容',
+          },
+        ],
       })
-
-      const page = await findPage(1, 10, request)
 
       expect(page.records[0]).toMatchObject({
         statusLabel: '已发布',
@@ -142,13 +135,18 @@ describe('审批模板', () => {
       })
     })
 
-    it('treats a missing payload as an empty page', async () => {
-      const request = async () => ({})
-
-      expect(await findPage(1, 10, request)).toEqual({
+    it('treats a missing payload as an empty page', () => {
+      expect(presentListPage()).toEqual({
         records: [],
         total: 0,
         pages: 0,
+      })
+    })
+
+    it('reads a page of 审批模板 through GET /admin/process/processTemplate/:page/:limit', () => {
+      expect(listRequest(2, 5)).toEqual({
+        method: 'get',
+        url: '/admin/process/processTemplate/2/5',
       })
     })
   })

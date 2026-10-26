@@ -5,7 +5,15 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="list" stripe border>
+    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+
+    <el-table
+      v-loading="view.status === 'loading'"
+      :data="rows"
+      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      stripe
+      border
+    >
       <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
       <el-table-column prop="name" label="类型名称" />
       <el-table-column prop="description" label="描述" />
@@ -21,10 +29,10 @@
 
     <div class="pagination-wrap">
       <el-pagination
-        :current-page="page"
-        :page-size="limit"
+        :current-page="view.page"
+        :page-size="view.size"
         :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="total"
+        :total="view.total"
         layout="sizes, prev, pager, next, jumper, ->, total"
         @current-change="handlePageChange"
         @size-change="handleSizeChange"
@@ -51,59 +59,67 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, onBeforeUnmount } from 'vue'
 
-import { getById, getPageList, removeById, saveOrUpdate } from '@/api/processType'
-import { emptyForm, presentForm, presentListPage } from '@/config/process-type'
-import type { ProcessTypeListItem } from '@/config/process-type'
-import type { EntityId } from '@/types/domain'
+import { getById, removeById, saveOrUpdate } from '@/api/processType'
+import ListLoadError from '@/components/ListLoadError.vue'
+import {
+  emptyForm,
+  listRequest,
+  presentForm,
+  presentListPage,
+  type ProcessTypeListItem,
+} from '@/config/process-type'
+import { createListRead, type NoListQuery } from '@/list-read'
+import { useUserStore } from '@/store/modules/user'
+import type { EntityId, ProcessTypeRecord } from '@/types/domain'
+import request from '@/utils/request'
 
 export default defineComponent({
   name: 'ProcessTypeList',
+  components: { ListLoadError },
+  setup() {
+    const userStore = useUserStore()
+    const recognition = userStore.recognition
+    if (!recognition) throw new Error('认出 module 尚未接入')
+    const opening = createListRead<ProcessTypeRecord, NoListQuery>({
+      recognition,
+      request,
+      toRequest: ({ page, size }) => listRequest(page, size),
+    })
+    onBeforeUnmount(() => opening.release())
+    return { opening }
+  },
   data() {
     return {
-      list: [] as ProcessTypeListItem[],
-      loading: false,
-      page: 1,
-      limit: 10,
-      total: 0,
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
     }
   },
   computed: {
+    view() {
+      return this.opening.view
+    },
+    rows(): ProcessTypeListItem[] {
+      return presentListPage(this.view).records
+    },
     dialogTitle() {
       return this.form.id ? '编辑审批类型' : '新建审批类型'
     },
   },
-  created() {
-    this.fetchList()
-  },
   methods: {
     rowIndex(index: number) {
-      return (this.page - 1) * this.limit + index + 1
+      return (this.view.page - 1) * this.view.size + index + 1
     },
-    fetchList() {
-      this.loading = true
-      getPageList(this.page, this.limit)
-        .then((response) => {
-          const page = presentListPage(response.data || {})
-          this.list = page.records
-          this.total = page.total
-        })
-        .finally(() => {
-          this.loading = false
-        })
+    retry() {
+      this.opening.read()
     },
     handlePageChange(page: number) {
-      this.page = page
-      this.fetchList()
+      this.opening.read({ page })
     },
-    handleSizeChange(limit: number) {
-      this.limit = limit
-      this.page = 1
-      this.fetchList()
+    handleSizeChange(size: number) {
+      this.opening.read({ size })
     },
     openCreate() {
       this.form = emptyForm()
@@ -121,7 +137,7 @@ export default defineComponent({
         .then((response) => {
           this.$message.success(response.message || '操作成功')
           this.dialogVisible = false
-          this.fetchList()
+          this.opening.read()
         })
         .finally(() => {
           this.saving = false
@@ -136,7 +152,7 @@ export default defineComponent({
         .then(() => removeById(id))
         .then((response) => {
           this.$message.success(response.message || '删除成功')
-          this.fetchList()
+          this.opening.read()
         })
         .catch(() => {})
     },

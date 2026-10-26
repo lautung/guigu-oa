@@ -1,19 +1,6 @@
 import request from '@/utils/request'
-import {
-  findAllRequest,
-  getRequest,
-  listRequest,
-  removeRequest,
-  writeRequest,
-} from '@/config/process-type'
-import type { ApiResponse, PageResult, ProcessTypeRecord } from '@/types/domain'
-
-export function getPageList(
-  page: number,
-  limit: number,
-): Promise<ApiResponse<PageResult<ProcessTypeRecord>>> {
-  return request(listRequest(page, limit))
-}
+import { findAllRequest, getRequest, removeRequest, writeRequest } from '@/config/process-type'
+import type { ApiResponse, ProcessTypeRecord } from '@/types/domain'
 
 export function getById(id: string | number): Promise<ApiResponse<ProcessTypeRecord>> {
   return request(getRequest(id))
