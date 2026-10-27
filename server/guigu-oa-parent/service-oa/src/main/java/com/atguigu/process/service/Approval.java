@@ -23,7 +23,8 @@ public interface Approval {
 
     /**
      * Return an approval after checking that the user is its applicant, active/past approver, or CC recipient.
-     * Related capabilities such as attachment credential issuance must use this same gate.
+     * Related capabilities such as attachment credential issuance must use the same
+     * {@link com.atguigu.process.membership.ApprovalMembership}.
      */
     Process requireApprovalMember(Long processId, SysUser user);
 

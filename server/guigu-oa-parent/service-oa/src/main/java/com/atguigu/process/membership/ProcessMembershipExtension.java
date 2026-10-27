@@ -1,10 +1,10 @@
-package com.atguigu.process.attachment;
+package com.atguigu.process.membership;
 
 import com.atguigu.model.process.Process;
 import com.atguigu.model.system.SysUser;
 
 /**
- * Extension point for additional read-only members, such as future 抄送 recipients.
+ * Extension point for additional read-only members, such as 抄送 recipients.
  */
 public interface ProcessMembershipExtension {
 

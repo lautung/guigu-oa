@@ -3,6 +3,7 @@ package com.atguigu.process.attachment;
 import com.atguigu.model.process.Attachment;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
+import com.atguigu.process.membership.ProcessMembershipExtension;
 import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.jayway.jsonpath.JsonPath;

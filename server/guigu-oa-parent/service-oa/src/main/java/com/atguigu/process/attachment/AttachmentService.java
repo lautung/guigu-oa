@@ -5,6 +5,8 @@ import com.atguigu.model.process.Attachment;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessMapper;
+import com.atguigu.process.membership.ApprovalMembership;
+import com.atguigu.process.membership.ApprovalMembershipResolver;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.slf4j.Logger;
@@ -35,19 +37,19 @@ public class AttachmentService {
     private final OaProcessMapper processMapper;
     private final AttachmentObjectStore objectStore;
     private final AttachmentS3Properties properties;
-    private final ProcessMemberAuthorizer memberAuthorizer;
+    private final ApprovalMembershipResolver membershipResolver;
 
     public AttachmentService(
             AttachmentMapper attachmentMapper,
             OaProcessMapper processMapper,
             AttachmentObjectStore objectStore,
             AttachmentS3Properties properties,
-            ProcessMemberAuthorizer memberAuthorizer) {
+            ApprovalMembershipResolver membershipResolver) {
         this.attachmentMapper = attachmentMapper;
         this.processMapper = processMapper;
         this.objectStore = objectStore;
         this.properties = properties;
-        this.memberAuthorizer = memberAuthorizer;
+        this.membershipResolver = membershipResolver;
     }
 
     @Transactional
@@ -63,7 +65,7 @@ public class AttachmentService {
             draftId = validDraftId(request.getDraftId());
         } else {
             process = processMapper.selectById(request.getProcessId());
-            if (!memberAuthorizer.canUpload(user, process)) {
+            if (!membershipResolver.resolve(user, process).canUpload()) {
                 throw denied();
             }
         }
@@ -101,7 +103,7 @@ public class AttachmentService {
         }
         if (attachment.getProcessId() != null) {
             Process process = processMapper.selectById(attachment.getProcessId());
-            if (!memberAuthorizer.canUpload(user, process)) {
+            if (!membershipResolver.resolve(user, process).canUpload()) {
                 throw denied();
             }
         }
@@ -178,7 +180,8 @@ public class AttachmentService {
 
     public ProcessAttachmentList listForProcess(SysUser user, Long processId) {
         Process process = processMapper.selectById(processId);
-        if (!memberAuthorizer.canRead(user, process)) {
+        ApprovalMembership membership = membershipResolver.resolve(user, process);
+        if (!membership.canRead()) {
             throw denied();
         }
         LambdaQueryWrapper<Attachment> query = new LambdaQueryWrapper<>();
@@ -187,7 +190,7 @@ public class AttachmentService {
                 .orderByAsc(Attachment::getId);
         return new ProcessAttachmentList(
                 attachmentMapper.selectList(query).stream().map(AttachmentView::from).toList(),
-                memberAuthorizer.canUpload(user, process));
+                membership.canUpload());
     }
 
     @Transactional
@@ -213,7 +216,7 @@ public class AttachmentService {
             throw denied();
         }
         Process process = processMapper.selectById(processId);
-        if (!memberAuthorizer.canRead(user, process)) {
+        if (!membershipResolver.resolve(user, process).canRead()) {
             throw denied();
         }
         Date expiresAt = Date.from(Instant.now().plus(properties.getDownloadUrlTtl()));

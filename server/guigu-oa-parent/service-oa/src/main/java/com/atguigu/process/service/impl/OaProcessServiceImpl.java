@@ -11,9 +11,10 @@ import com.atguigu.process.ProcessApprovalSupport;
 import com.atguigu.process.ProcessEngineApproval;
 import com.atguigu.process.ProcessStartSupport;
 import com.atguigu.process.attachment.AttachmentService;
-import com.atguigu.process.attachment.ProcessMemberAuthorizer;
 import com.atguigu.process.cc.CarbonCopyService;
 import com.atguigu.process.mapper.OaProcessMapper;
+import com.atguigu.process.membership.ApprovalMembership;
+import com.atguigu.process.membership.ApprovalMembershipResolver;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.ApprovalTemplate;
@@ -74,7 +75,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     private CarbonCopyService carbonCopyService;
 
     @Autowired
-    private ProcessMemberAuthorizer memberAuthorizer;
+    private ApprovalMembershipResolver membershipResolver;
 
     @Override
     public IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo) {
@@ -144,32 +145,37 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public Map<String, Object> show(SysUser user, Long id) {
-        Process process = requireApprovalMember(id, user);
+        ReadableApproval readable = requireReadableApproval(id, user);
+        Process process = readable.process();
         LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessRecord::getProcessId, id);
         List<ProcessRecord> processRecordList = processRecordService.list(wrapper);
         ProcessTemplate processTemplate = processTemplateService.read(process.getProcessTemplateId());
-
-        List<String> assignees = new ArrayList<>();
-        for (Task task : ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId())) {
-            if (StringUtils.hasText(task.getAssignee())) {
-                assignees.add(task.getAssignee());
-            }
-        }
-        boolean isApprove = ProcessApprovalSupport.isCurrentApprover(assignees, user.getUsername());
-        return ProcessApprovalSupport.showPayload(process, processRecordList, processTemplate, isApprove);
+        return ProcessApprovalSupport.showPayload(
+                process, processRecordList, processTemplate, readable.membership().isCurrentApprover());
     }
 
     @Override
     public Process requireApprovalMember(Long processId, SysUser user) {
+        return requireReadableApproval(processId, user).process();
+    }
+
+    private ReadableApproval requireReadableApproval(Long processId, SysUser user) {
         if (processId == null || user == null || user.getId() == null) {
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
         Process process = baseMapper.selectById(processId);
-        if (process == null || !memberAuthorizer.canRead(user, process)) {
+        if (process == null) {
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
-        return process;
+        ApprovalMembership membership = membershipResolver.resolve(user, process);
+        if (!membership.canRead()) {
+            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
+        }
+        return new ReadableApproval(process, membership);
+    }
+
+    private record ReadableApproval(Process process, ApprovalMembership membership) {
     }
 
     @Override
@@ -207,12 +213,7 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         if (process == null || !StringUtils.hasText(process.getProcessInstanceId())) {
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
-        Task task = taskService.createTaskQuery()
-                .taskId(approvalVo.getTaskId())
-                .processInstanceId(process.getProcessInstanceId())
-                .taskAssignee(user.getUsername())
-                .singleResult();
-        if (task == null) {
+        if (!membershipResolver.resolve(user, process).canAct(approvalVo.getTaskId())) {
             throw new GuiguException(ResultCodeEnum.FORBIDDEN);
         }
         return process;

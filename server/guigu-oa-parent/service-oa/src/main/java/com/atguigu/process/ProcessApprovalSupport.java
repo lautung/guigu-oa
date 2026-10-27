@@ -5,8 +5,6 @@ import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.vo.process.ProcessVo;
 import org.springframework.beans.BeanUtils;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,13 +46,6 @@ public final class ProcessApprovalSupport {
         }
         process.setDescription("审批完成（驳回）");
         process.setStatus(-1);
-    }
-
-    public static boolean isCurrentApprover(List<String> assignees, String username) {
-        if (!StringUtils.hasText(username) || CollectionUtils.isEmpty(assignees)) {
-            return false;
-        }
-        return assignees.stream().anyMatch(username::equals);
     }
 
     public static Map<String, Object> showPayload(
