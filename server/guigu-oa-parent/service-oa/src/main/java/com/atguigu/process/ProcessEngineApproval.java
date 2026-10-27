@@ -6,6 +6,7 @@ import org.flowable.bpmn.model.FlowNode;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
+import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -15,6 +16,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Flowable 8 待处理 / 已处理查询与审批完成动作。
@@ -53,6 +55,14 @@ public final class ProcessEngineApproval {
                 .taskAssignee(username)
                 .finished()
                 .count();
+    }
+
+    public static String start(
+            RuntimeService runtimeService,
+            String processDefinitionId,
+            String businessKey,
+            Map<String, Object> variables) {
+        return runtimeService.startProcessInstanceById(processDefinitionId, businessKey, variables).getId();
     }
 
     public static void complete(TaskService taskService, String taskId) {

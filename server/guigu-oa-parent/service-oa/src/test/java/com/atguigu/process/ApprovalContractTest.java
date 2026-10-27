@@ -1,9 +1,14 @@
 package com.atguigu.process;
 
+import com.atguigu.model.process.Attachment;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.approval.FlowableApprovalEngine;
+import com.atguigu.process.approval.TestApprovalEngine;
+import com.atguigu.process.attachment.AttachmentMapper;
+import com.atguigu.process.attachment.TestAttachmentObjectStore;
 import com.atguigu.process.cc.CarbonCopyTrigger;
 import com.atguigu.process.cc.CarbonCopyWriter;
 import com.atguigu.process.service.Approval;
@@ -43,30 +48,29 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.util.AopTestUtils;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.jayway.jsonpath.JsonPath;
 
 import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationTargetException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -119,6 +123,15 @@ public class ApprovalContractTest {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
+    private AttachmentMapper attachmentMapper;
+
+    @Autowired
+    private TestAttachmentObjectStore objectStore;
+
+    @Autowired
+    private TestApprovalEngine testApprovalEngine;
+
+    @Autowired
     private ApprovalTransactionCcProbe approvalTransactionCcProbe;
 
     @Autowired
@@ -129,6 +142,8 @@ public class ApprovalContractTest {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
         clearEngineInstances();
+        objectStore.clear();
+        testApprovalEngine.reset();
         runtimeService.removeEventListener(approvalTransactionCcProbe);
         approvalTransactionCcProbe.reset();
         runtimeService.addEventListener(approvalTransactionCcProbe, FlowableEngineEventType.TASK_CREATED);
@@ -149,6 +164,7 @@ public class ApprovalContractTest {
     @AfterEach
     public void clearLoginThreadLocal() {
         runtimeService.removeEventListener(approvalTransactionCcProbe);
+        testApprovalEngine.reset();
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
     }
@@ -706,23 +722,18 @@ public class ApprovalContractTest {
             approvalVo.setTaskId(pendingTask.getTaskId());
             approvalVo.setStatus(通过);
 
-            Object approvalTarget = AopTestUtils.getUltimateTargetObject(approval);
-            TaskService originalTaskService = (TaskService) ReflectionTestUtils.getField(approvalTarget, "taskService");
-            CountDownLatch bothTransactionsAtFlowable = new CountDownLatch(2);
-            AtomicInteger activeTransactionsAtFlowable = new AtomicInteger();
-            ReflectionTestUtils.setField(approvalTarget, "taskService",
-                    taskServiceWithConcurrentCompleteBarrier(
-                            originalTaskService, bothTransactionsAtFlowable, activeTransactionsAtFlowable));
+            testApprovalEngine.armCompleteBarrier();
             ExecutorService executor = Executors.newFixedThreadPool(2);
             try {
                 Future<Throwable> first = executor.submit(() -> approveCapturingFailure(zhangsan, approvalVo));
                 Future<Throwable> second = executor.submit(() -> approveCapturingFailure(zhangsan, approvalVo));
 
-                assertTrue(bothTransactionsAtFlowable.await(10, TimeUnit.SECONDS),
+                assertTrue(testApprovalEngine.awaitCompleteBarrier(),
                         "两个审批请求应在各自的事务中同时进入 Flowable complete");
                 Throwable firstFailure = first.get(15, TimeUnit.SECONDS);
                 Throwable secondFailure = second.get(15, TimeUnit.SECONDS);
-                assertEquals(2, activeTransactionsAtFlowable.get(), "两个 Flowable 调用都应处于 Spring 事务中");
+                assertEquals(2, testApprovalEngine.activeTransactionsAtComplete(),
+                        "两个 Flowable 调用都应处于 Spring 事务中");
 
                 int successes = (firstFailure == null ? 1 : 0) + (secondFailure == null ? 1 : 0);
                 assertEquals(1, successes, "同一任务只能有一个审批请求提交成功");
@@ -748,11 +759,160 @@ public class ApprovalContractTest {
                         .finished()
                         .count());
             } finally {
-                ReflectionTestUtils.setField(approvalTarget, "taskService", originalTaskService);
                 executor.shutdownNow();
                 assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
             }
         }
+    }
+
+    @Test
+    public void startUpReturnsProcessIdentityAndCurrentTaskIds() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        Approval.StartOutcome outcome = approval.startUp(alice, publishedLeaveForm());
+
+        ProcessVo started = started(alice).getRecords().get(0);
+        assertEquals(started.getId(), outcome.processId());
+        assertEquals(started.getProcessInstanceId(), outcome.processInstanceId());
+        ProcessVo pending = pending(zhangsan).getRecords().get(0);
+        assertEquals(List.of(pending.getTaskId()), outcome.currentTaskIds());
+    }
+
+    @Test
+    public void approveReturnsNextState() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+        SysUser lisi = user(4L, "lisi", "李四");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo pending = pending(zhangsan).getRecords().get(0);
+
+        Approval.DecisionOutcome outcome = approval.approve(zhangsan, decision(pending, 通过));
+
+        assertEquals(pending.getId(), outcome.processId());
+        assertEquals(审批中, outcome.status());
+        ProcessVo next = pending(lisi).getRecords().get(0);
+        assertEquals(List.of(next.getTaskId()), outcome.nextTaskIds());
+    }
+
+    @Test
+    public void startUpWritesLedgerAndBindsAttachmentsBeforeEngineStart() {
+        SysUser alice = user(2L, "alice", "小艾");
+        String draftId = UUID.randomUUID().toString();
+        Attachment attachment = pendingAttachment(alice, draftId);
+
+        ProcessFormVo form = publishedLeaveForm();
+        form.setAttachmentDraftId(draftId);
+        form.setAttachmentIds(List.of(attachment.getId()));
+        testApprovalEngine.expectLedgerAndAttachmentsBeforeStart(1);
+
+        approval.startUp(alice, form);
+
+        Attachment bound = attachmentMapper.selectById(attachment.getId());
+        assertEquals(Attachment.ATTACHED, bound.getStatus());
+        assertEquals(started(alice).getRecords().get(0).getId(), bound.getProcessId());
+    }
+
+    @Test
+    public void approveRecordsDecisionBeforeReadingNextTasksAndUpdatingProcess() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo pending = pending(zhangsan).getRecords().get(0);
+
+        testApprovalEngine.expectNoDecisionRecordBeforeComplete(pending.getId());
+        testApprovalEngine.expectDecisionRecordBeforeCurrentTasks();
+        Approval.DecisionOutcome outcome = approval.approve(zhangsan, decision(pending, 通过));
+
+        assertEquals(审批中, outcome.status());
+        assertEquals("等待李四审批", started(alice).getRecords().get(0).getDescription());
+    }
+
+    @Test
+    public void startUpEngineFailureDeletesBoundCopyAndKeepsPendingUploadRetryable() {
+        SysUser alice = user(2L, "alice", "小艾");
+        String draftId = UUID.randomUUID().toString();
+        Attachment attachment = pendingAttachment(alice, draftId);
+        String pendingKey = attachment.getObjectKey();
+        String permanentKey = "attachments/" + attachment.getStorageId();
+
+        ProcessFormVo form = publishedLeaveForm();
+        form.setAttachmentDraftId(draftId);
+        form.setAttachmentIds(List.of(attachment.getId()));
+        testApprovalEngine.failNextStart();
+
+        assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
+
+        assertEquals(0L, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM oa_process WHERE user_id = 2", Long.class));
+        Attachment failed = attachmentMapper.selectById(attachment.getId());
+        assertEquals(Attachment.PENDING, failed.getStatus());
+        assertNull(failed.getProcessId());
+        assertEquals(pendingKey, failed.getObjectKey());
+        assertTrue(objectStore.contains(pendingKey));
+        assertFalse(objectStore.contains(permanentKey));
+
+        approval.startUp(alice, form);
+
+        Attachment retried = attachmentMapper.selectById(attachment.getId());
+        assertEquals(Attachment.ATTACHED, retried.getStatus());
+        assertEquals(permanentKey, retried.getObjectKey());
+        assertFalse(objectStore.contains(pendingKey));
+        assertTrue(objectStore.contains(permanentKey));
+    }
+
+    @Test
+    public void startUpAttachmentBatchMidFailureCompensatesEarlierCopiesAndRetries() {
+        SysUser alice = user(2L, "alice", "小艾");
+        String draftId = UUID.randomUUID().toString();
+        Attachment first = pendingAttachment(alice, draftId);
+        Attachment second = pendingAttachment(alice, draftId);
+        String firstPending = first.getObjectKey();
+        String secondPending = second.getObjectKey();
+        String firstPermanent = "attachments/" + first.getStorageId();
+        String secondPermanent = "attachments/" + second.getStorageId();
+
+        ProcessFormVo form = publishedLeaveForm();
+        form.setAttachmentDraftId(draftId);
+        form.setAttachmentIds(List.of(first.getId(), second.getId()));
+        objectStore.failOnCopyAttempt(2);
+
+        assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
+
+        assertEquals(Attachment.PENDING, attachmentMapper.selectById(first.getId()).getStatus());
+        assertEquals(Attachment.PENDING, attachmentMapper.selectById(second.getId()).getStatus());
+        assertFalse(objectStore.contains(firstPermanent));
+        assertFalse(objectStore.contains(secondPermanent));
+        assertTrue(objectStore.contains(firstPending));
+        assertTrue(objectStore.contains(secondPending));
+
+        approval.startUp(alice, form);
+
+        assertEquals(Attachment.ATTACHED, attachmentMapper.selectById(first.getId()).getStatus());
+        assertEquals(Attachment.ATTACHED, attachmentMapper.selectById(second.getId()).getStatus());
+        assertFalse(objectStore.contains(firstPending));
+        assertFalse(objectStore.contains(secondPending));
+        assertTrue(objectStore.contains(firstPermanent));
+        assertTrue(objectStore.contains(secondPermanent));
+    }
+
+    @Test
+    public void approveEngineCompleteFailureKeepsTaskAndWritesNothing() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo pending = pending(zhangsan).getRecords().get(0);
+        testApprovalEngine.failNextComplete();
+
+        assertThrows(RuntimeException.class, () -> approval.approve(zhangsan, decision(pending, 通过)));
+
+        assertEquals(1L, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM oa_process_record", Long.class));
+        assertEquals(审批中, started(alice).getRecords().get(0).getStatus());
+        assertEquals(1, pending(zhangsan).getRecords().size());
+        assertEquals(List.of("发起申请"), recordDescriptions(zhangsan, pending.getId()));
     }
 
     @Test
@@ -823,37 +983,6 @@ public class ApprovalContractTest {
         }
     }
 
-    private TaskService taskServiceWithConcurrentCompleteBarrier(
-            TaskService delegate,
-            CountDownLatch bothTransactionsAtFlowable,
-            AtomicInteger activeTransactionsAtFlowable) {
-        return (TaskService) Proxy.newProxyInstance(
-                TaskService.class.getClassLoader(),
-                new Class<?>[]{TaskService.class},
-                (proxy, method, args) -> {
-                    if ("complete".equals(method.getName())) {
-                        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-                            throw new IllegalStateException("Flowable complete 必须在审批业务事务中执行");
-                        }
-                        activeTransactionsAtFlowable.incrementAndGet();
-                        bothTransactionsAtFlowable.countDown();
-                        try {
-                            if (!bothTransactionsAtFlowable.await(10, TimeUnit.SECONDS)) {
-                                throw new IllegalStateException("两个并发审批未同时进入 Flowable complete");
-                            }
-                        } catch (InterruptedException interrupted) {
-                            Thread.currentThread().interrupt();
-                            throw new IllegalStateException("等待并发审批同步点时被中断", interrupted);
-                        }
-                    }
-                    try {
-                        return method.invoke(delegate, args);
-                    } catch (InvocationTargetException invocationFailure) {
-                        throw invocationFailure.getCause();
-                    }
-                });
-    }
-
     private String loginToken(String username) throws Exception {
         String loginBody = mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -885,12 +1014,16 @@ public class ApprovalContractTest {
         decide(user, pending, 拒绝);
     }
 
-    private void decide(SysUser user, ProcessVo pending, int status) {
+    private ApprovalVo decision(ProcessVo pending, int status) {
         ApprovalVo approvalVo = new ApprovalVo();
         approvalVo.setProcessId(pending.getId());
         approvalVo.setTaskId(pending.getTaskId());
         approvalVo.setStatus(status);
-        approval.approve(user, approvalVo);
+        return approvalVo;
+    }
+
+    private void decide(SysUser user, ProcessVo pending, int status) {
+        approval.approve(user, decision(pending, status));
     }
 
     private boolean canApprove(SysUser user, Long processId) {
@@ -913,6 +1046,22 @@ public class ApprovalContractTest {
 
     private static void assertNoFakeTaskHandle(ProcessVo vo) {
         assertNull(vo.getTaskId());
+    }
+
+    private Attachment pendingAttachment(SysUser owner, String draftId) {
+        Attachment attachment = new Attachment();
+        attachment.setOwnerUserId(owner.getId());
+        attachment.setDraftId(draftId);
+        attachment.setStorageId(UUID.randomUUID().toString());
+        attachment.setObjectKey("pending/" + attachment.getStorageId());
+        attachment.setFileName("receipt.pdf");
+        attachment.setContentType("application/pdf");
+        attachment.setSizeBytes(31L);
+        attachment.setStatus(Attachment.PENDING);
+        attachment.setUploadExpiresAt(Date.from(Instant.now().plus(Duration.ofMinutes(5))));
+        attachmentMapper.insert(attachment);
+        objectStore.put(attachment.getObjectKey(), 31L, "application/pdf");
+        return attachment;
     }
 
     private static ProcessFormVo publishedLeaveForm() {
@@ -956,6 +1105,19 @@ public class ApprovalContractTest {
         @Bean
         public ApprovalTransactionCcProbe approvalTransactionCcProbe(JdbcTemplate jdbcTemplate) {
             return new ApprovalTransactionCcProbe(jdbcTemplate);
+        }
+
+        @Bean
+        @Primary
+        public TestAttachmentObjectStore testAttachmentObjectStore() {
+            return new TestAttachmentObjectStore();
+        }
+
+        @Bean
+        @Primary
+        public TestApprovalEngine testApprovalEngine(
+                FlowableApprovalEngine delegate, JdbcTemplate jdbcTemplate) {
+            return new TestApprovalEngine(delegate, jdbcTemplate);
         }
 
         @Bean

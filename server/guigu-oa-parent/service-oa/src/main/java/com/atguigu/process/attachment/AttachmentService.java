@@ -155,6 +155,7 @@ public class AttachmentService {
         for (Attachment attachment : pending) {
             String temporaryKey = pendingKey(attachment.getStorageId());
             String permanentKey = permanentKey(attachment.getStorageId());
+            deleteBoundCopyOnRollback(permanentKey);
             objectStore.copy(temporaryKey, permanentKey);
             attachment.setObjectKey(permanentKey);
             attachment.setTemporaryObjectKey(temporaryKey);
@@ -324,6 +325,29 @@ public class AttachmentService {
         } catch (RuntimeException exception) {
             log.warn("Unable to delete temporary attachment object");
         }
+    }
+
+    /**
+     * The permanent copy is the only object created by binding. On rollback the pending/temporary
+     * object must survive so the same attachment can be retried; the copied permanent object must not.
+     */
+    private void deleteBoundCopyOnRollback(String key) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_ROLLED_BACK) {
+                    return;
+                }
+                try {
+                    objectStore.delete(key);
+                } catch (RuntimeException exception) {
+                    log.warn("Unable to delete bound attachment object after rollback key={}", key);
+                }
+            }
+        });
     }
 
     private GuiguException denied() {

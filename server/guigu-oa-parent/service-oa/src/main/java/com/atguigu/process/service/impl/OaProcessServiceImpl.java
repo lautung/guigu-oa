@@ -1,6 +1,5 @@
 package com.atguigu.process.service.impl;
 
-import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.process.Process;
@@ -9,14 +8,13 @@ import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ProcessApprovalSupport;
 import com.atguigu.process.ProcessEngineApproval;
-import com.atguigu.process.ProcessStartSupport;
-import com.atguigu.process.attachment.AttachmentService;
-import com.atguigu.process.cc.CarbonCopyService;
+import com.atguigu.process.approval.ApprovalWriter;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.membership.ApprovalMembership;
 import com.atguigu.process.membership.ApprovalMembershipResolver;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.process.service.OaProcessService;
+import com.atguigu.process.service.Approval;
 import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
@@ -27,28 +25,21 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.flowable.engine.HistoryService;
-import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> implements OaProcessService {
-
-    @Autowired
-    private RepositoryService repositoryService;
 
     @Autowired
     private RuntimeService runtimeService;
@@ -60,22 +51,16 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     private HistoryService historyService;
 
     @Autowired
-    private SysUserService sysUserService;
-
-    @Autowired
     private ApprovalTemplate processTemplateService;
 
     @Autowired
     private OaProcessRecordService processRecordService;
 
     @Autowired
-    private AttachmentService attachmentService;
-
-    @Autowired
-    private CarbonCopyService carbonCopyService;
-
-    @Autowired
     private ApprovalMembershipResolver membershipResolver;
+
+    @Autowired
+    private ApprovalWriter approvalWriter;
 
     @Override
     public IPage<ProcessVo> selectPage(Page<ProcessVo> pageParam, ProcessQueryVo processQueryVo) {
@@ -83,37 +68,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    @Transactional
-    public void startUp(SysUser user, ProcessFormVo processFormVo) {
-        ApprovalTemplate.PublishedApproval publication =
-                processTemplateService.resolveForInitiation(processFormVo.getProcessTemplateId());
-        ProcessTemplate processTemplate = publication.template();
-
-        Process process = new Process();
-        BeanUtils.copyProperties(processFormVo, process);
-        process.setStatus(1);
-        process.setProcessCode(System.currentTimeMillis() + "");
-        process.setUserId(user.getId());
-        process.setFormValues(processFormVo.getFormValues());
-        process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
-        baseMapper.insert(process);
-
-        carbonCopyService.copyAtStart(user, process.getId(), processFormVo.getCcUserIds());
-
-        attachmentService.bindDraft(
-                user, processFormVo.getAttachmentDraftId(), processFormVo.getAttachmentIds(), process.getId());
-
-        ProcessInstance processInstance = runtimeService.startProcessInstanceById(
-                publication.processDefinitionId(),
-                String.valueOf(process.getId()),
-                ProcessStartSupport.engineVariables(processFormVo.getFormValues()));
-
-        List<String> nameList = approverNames(ProcessEngineApproval.currentTasks(taskService, processInstance.getId()));
-        process.setProcessInstanceId(processInstance.getId());
-        process.setDescription(ProcessStartSupport.waitingDescription(nameList));
-        baseMapper.updateById(process);
-
-        processRecordService.record(process.getId(), 1, "发起申请", user);
+    public Approval.StartOutcome startUp(SysUser user, ProcessFormVo processFormVo) {
+        return approvalWriter.startUp(user, processFormVo);
     }
 
     @Override
@@ -179,44 +135,8 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     }
 
     @Override
-    @Transactional
-    public void approve(SysUser user, ApprovalVo approvalVo) {
-        Process process = requireCurrentApprover(user, approvalVo);
-        if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
-            ProcessEngineApproval.complete(taskService, approvalVo.getTaskId());
-        } else {
-            ProcessEngineApproval.rejectToEnd(repositoryService, taskService, approvalVo.getTaskId());
-        }
-
-        processRecordService.record(
-                approvalVo.getProcessId(),
-                approvalVo.getStatus(),
-                ProcessApprovalSupport.recordDescription(approvalVo.getStatus()),
-                user);
-
-        List<Task> nextTasks = ProcessEngineApproval.currentTasks(taskService, process.getProcessInstanceId());
-        ProcessApprovalSupport.applyOutcome(
-                process,
-                approvalVo.getStatus(),
-                approverNames(nextTasks),
-                !nextTasks.isEmpty());
-        baseMapper.updateById(process);
-    }
-
-    private Process requireCurrentApprover(SysUser user, ApprovalVo approvalVo) {
-        if (user == null || !StringUtils.hasText(user.getUsername())
-                || approvalVo == null || approvalVo.getProcessId() == null
-                || !StringUtils.hasText(approvalVo.getTaskId())) {
-            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
-        }
-        Process process = baseMapper.selectById(approvalVo.getProcessId());
-        if (process == null || !StringUtils.hasText(process.getProcessInstanceId())) {
-            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
-        }
-        if (!membershipResolver.resolve(user, process).canAct(approvalVo.getTaskId())) {
-            throw new GuiguException(ResultCodeEnum.FORBIDDEN);
-        }
-        return process;
+    public Approval.DecisionOutcome approve(SysUser user, ApprovalVo approvalVo) {
+        return approvalWriter.approve(user, approvalVo);
     }
 
     @Override
@@ -248,20 +168,5 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         ProcessQueryVo processQueryVo = new ProcessQueryVo();
         processQueryVo.setUserId(user.getId());
         return selectPage(pageParam, processQueryVo);
-    }
-
-    private List<String> approverNames(List<Task> taskList) {
-        List<String> nameList = new ArrayList<>();
-        for (Task task : taskList) {
-            String assigneeName = task.getAssignee();
-            if (!StringUtils.hasText(assigneeName)) {
-                continue;
-            }
-            SysUser assignee = sysUserService.getUserByUserName(assigneeName);
-            nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
-                    ? assignee.getName()
-                    : assigneeName);
-        }
-        return nameList;
     }
 }

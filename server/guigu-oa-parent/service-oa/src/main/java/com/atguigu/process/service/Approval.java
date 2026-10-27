@@ -8,14 +8,16 @@ import com.atguigu.vo.process.ProcessVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * 办事六个动作。调用方传入用户；本 interface 不读 ThreadLocal。
+ * 两个写入动作成功时返回 outcome；失败仍抛 {@code GuiguException}，不改变 HTTP 响应形状。
  */
 public interface Approval {
 
-    void startUp(SysUser user, ProcessFormVo processFormVo);
+    StartOutcome startUp(SysUser user, ProcessFormVo processFormVo);
 
     IPage<ProcessVo> findPending(SysUser user, Page<Process> pageParam);
 
@@ -28,9 +30,21 @@ public interface Approval {
      */
     Process requireApprovalMember(Long processId, SysUser user);
 
-    void approve(SysUser user, ApprovalVo approvalVo);
+    DecisionOutcome approve(SysUser user, ApprovalVo approvalVo);
 
     IPage<ProcessVo> findProcessed(SysUser user, Page<Process> pageParam);
 
     IPage<ProcessVo> findStarted(SysUser user, Page<ProcessVo> pageParam);
+
+    record StartOutcome(Long processId, String processInstanceId, List<String> currentTaskIds) {
+        public StartOutcome {
+            currentTaskIds = currentTaskIds == null ? List.of() : List.copyOf(currentTaskIds);
+        }
+    }
+
+    record DecisionOutcome(Long processId, int status, List<String> nextTaskIds) {
+        public DecisionOutcome {
+            nextTaskIds = nextTaskIds == null ? List.of() : List.copyOf(nextTaskIds);
+        }
+    }
 }
