@@ -7,7 +7,6 @@ import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysMenu;
 import com.atguigu.auth.mapper.SysMenuMapper;
 import com.atguigu.auth.service.SysMenuService;
-import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.model.system.SysRoleMenu;
 import com.atguigu.vo.system.AssginMenuVo;
 import com.atguigu.vo.system.MetaVo;
@@ -51,7 +50,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     public boolean save(SysMenu menu) {
         boolean saved = baseMapper.insert(menu) > 0;
         if (saved) {
-            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(menu.getId());
+            permissionCacheInvalidator.invalidateMenuMembersAfterCommit(menu.getId());
         }
         return saved;
     }
@@ -61,7 +60,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     public boolean updateById(SysMenu menu) {
         boolean updated = baseMapper.updateById(menu) > 0;
         if (updated) {
-            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(menu.getId());
+            permissionCacheInvalidator.invalidateMenuMembersAfterCommit(menu.getId());
         }
         return updated;
     }
@@ -105,7 +104,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         }
         boolean removed = baseMapper.deleteById(id) > 0;
         if (removed) {
-            permissionCacheInvalidator.invalidateMenuMembersAndAdminAfterCommit(id);
+            permissionCacheInvalidator.invalidateMenuMembersAfterCommit(id);
         }
     }
 
@@ -265,7 +264,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //4 根据用户id获取用户可以操作菜单列表
     @Override
     public List<RouterVo> findUserMenuListByUserId(Long userId) {
-        List<SysMenu> sysMenuList = findUserMenuEntities(userId, true);
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId);
 
         //2 把查询出来数据列表-构建成框架要求的路由结构
         //使用菜单操作工具类构建树形结构
@@ -337,7 +336,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //5 根据用户id获取用户可以操作按钮列表
     @Override
     public List<String> findUserPermsByUserId(Long userId) {
-        List<SysMenu> sysMenuList = findUserMenuEntities(userId, false);
+        List<SysMenu> sysMenuList = findUserMenuEntities(userId);
 
         //3 从查询出来的数据里面，获取可以操作按钮值的list集合，返回
         List<String> permsList = sysMenuList.stream()
@@ -349,18 +348,12 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     }
 
     @Override
-    public boolean hasCurrentUserMenuAccess(String menuPath) {
-        Long userId = LoginUserInfoHelper.getUserId();
-        return userId != null && hasMenuAccess(userId, menuPath);
-    }
-
-    @Override
     public boolean hasMenuAccess(Long userId, String menuPath) {
         if (userId == null || !StringUtils.hasText(menuPath)) {
             return false;
         }
 
-        List<SysMenu> userMenus = findUserMenuEntities(userId, false);
+        List<SysMenu> userMenus = findUserMenuEntities(userId);
 
         return userMenus.stream().anyMatch(menu ->
                 Objects.equals(menu.getType(), 1)
@@ -368,17 +361,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                         && isConfigurationMenu(menu));
     }
 
-    private List<SysMenu> findUserMenuEntities(Long userId, boolean orderBySortValue) {
+    private List<SysMenu> findUserMenuEntities(Long userId) {
         if (userId == null) {
             return List.of();
-        }
-        if (userId.longValue() == 1) {
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysMenu::getStatus, 1);
-            if (orderBySortValue) {
-                wrapper.orderByAsc(SysMenu::getSortValue);
-            }
-            return baseMapper.selectList(wrapper);
         }
         return baseMapper.findMenuListByUserId(userId);
     }

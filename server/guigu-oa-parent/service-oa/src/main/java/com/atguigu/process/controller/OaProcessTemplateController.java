@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,7 @@ public class OaProcessTemplateController {
     private OaProcessTemplateService processTemplateService;
 
     //分页查询审批模板
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "获取分页审批模板数据")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -42,7 +44,7 @@ public class OaProcessTemplateController {
         return Result.ok(pageModel);
     }
 
-    //@PreAuthorize("hasAuthority('bnt.processTemplate.list')")
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -50,7 +52,7 @@ public class OaProcessTemplateController {
         return Result.ok(processTemplate);
     }
 
-    //@PreAuthorize("hasAuthority('bnt.processTemplate.templateSet')")
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@RequestBody ProcessTemplate processTemplate) {
@@ -58,7 +60,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
-    //@PreAuthorize("hasAuthority('bnt.processTemplate.templateSet')")
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@RequestBody ProcessTemplate processTemplate) {
@@ -66,7 +68,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
-    //@PreAuthorize("hasAuthority('bnt.processTemplate.remove')")
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
@@ -74,6 +76,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "上传流程定义")
     @PostMapping("/uploadProcessDefinition")
     public Result uploadProcessDefinition(@RequestParam("file") MultipartFile file) {
@@ -92,6 +95,7 @@ public class OaProcessTemplateController {
     }
 
     //部署流程定义（发布）
+    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "发布")
     @GetMapping("/publish/{id}")
     public Result publish(@PathVariable Long id) {

@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_permission_cache;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @ActiveProfiles("test")
 @Sql({"/auth-contract-schema.sql", "/authority-cache-contract-schema.sql"})
 class PermissionCacheInvalidationTest {
@@ -50,6 +51,9 @@ class PermissionCacheInvalidationTest {
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -116,8 +120,7 @@ class PermissionCacheInvalidationTest {
     }
 
     @Test
-    void changingMenuDetailsRemovesCachedPermissionJsonForMembersAndAdmin() {
-        permissionCache.put("admin", "[{\"authority\":\"bnt.approval.view\"}]");
+    void changingMenuDetailsRemovesCachedPermissionJsonForRoleMembers() {
         permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
         permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
         permissionCache.put(CACHE_CAROL, "[{\"authority\":\"bnt.manage.view\"}]");
@@ -126,14 +129,27 @@ class PermissionCacheInvalidationTest {
         menu.setStatus(0);
         assertTrue(sysMenuService.updateById(menu));
 
-        assertFalse(permissionCache.containsKey("admin"), "管理员权限列表包含所有启用菜单");
         assertFalse(permissionCache.containsKey(CACHE_ALICE));
         assertFalse(permissionCache.containsKey(CACHE_BOB));
         assertTrue(permissionCache.containsKey(CACHE_CAROL));
     }
 
     @Test
-    void creatingAndDeletingMenuRemovesAdministratorsCachedPermissionJson() {
+    void adminIsInvalidatedAsARoleMemberNotAsASeedAccount() {
+        permissionCache.put("admin", "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
+        jdbcTemplate.update("INSERT INTO sys_user_role (id, user_id, role_id, is_deleted) VALUES (40, 1, 10, 0)");
+
+        SysMenu menu = sysMenuService.getById(20L);
+        menu.setStatus(0);
+        assertTrue(sysMenuService.updateById(menu));
+
+        assertFalse(permissionCache.containsKey("admin"), "admin 是角色成员，按成员失效");
+        assertFalse(permissionCache.containsKey(CACHE_ALICE));
+    }
+
+    @Test
+    void creatingAndDeletingUnassignedMenuKeepsCachedPermissionJson() {
         permissionCache.put("admin", "[{\"authority\":\"bnt.approval.view\"}]");
         permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
 
@@ -146,12 +162,11 @@ class PermissionCacheInvalidationTest {
         menu.setStatus(1);
         assertTrue(sysMenuService.save(menu));
 
-        assertFalse(permissionCache.containsKey("admin"));
+        assertTrue(permissionCache.containsKey("admin"));
         assertTrue(permissionCache.containsKey(CACHE_ALICE));
 
-        permissionCache.put("admin", "[{\"authority\":\"bnt.new.permission\"}]");
         sysMenuService.removeMenuById(menu.getId());
-        assertFalse(permissionCache.containsKey("admin"));
+        assertTrue(permissionCache.containsKey("admin"));
         assertTrue(permissionCache.containsKey(CACHE_ALICE));
     }
 
