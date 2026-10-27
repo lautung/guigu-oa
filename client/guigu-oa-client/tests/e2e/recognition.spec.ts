@@ -27,7 +27,7 @@ test('首次认出临时失败可重试，保留原目标和进入结果', async
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
     if (path.endsWith('/info')) {
       if (++attempts === 1) return route.fulfill({ status: 503, body: 'temporary failure' })
-      return json(route, { name: 'Alice', routers: [] })
+      return json(route, { name: 'Alice', configMenus: [] })
     }
     return json(route, { records: [], total: 0, pages: 0 })
   })
@@ -48,7 +48,7 @@ test('已认出后的刷新网络故障保留原页面与进入结果', async ({
   let refreshCalls = 0
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
-    if (path.endsWith('/info')) return json(route, { name: 'Alice', routers: [] })
+    if (path.endsWith('/info')) return json(route, { name: 'Alice', configMenus: [] })
     if (path.endsWith('/refresh')) {
       refreshCalls += 1
       return route.fulfill({ status: 503, body: 'temporary failure' })
@@ -79,7 +79,7 @@ test('旧业务请求迟到失败不会提示或清掉新用户', async ({ page,
   let pendingCalls = 0
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
-    if (path.endsWith('/info')) return json(route, { name: currentUser, routers: [] })
+    if (path.endsWith('/info')) return json(route, { name: currentUser, configMenus: [] })
     if (path.endsWith('/login')) {
       currentUser = 'Bob'
       return json(route, { token: 'bob-only' })
@@ -119,7 +119,7 @@ test('另一标签的新进入结果不会被旧标签迟到刷新覆盖', async
   let user = 'Alice'
   await context.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
-    if (path.endsWith('/info')) return json(route, { name: user, routers: [] })
+    if (path.endsWith('/info')) return json(route, { name: user, configMenus: [] })
     if (path.endsWith('/login')) {
       user = 'Bob'
       return json(route, { token: 'bob-only' })

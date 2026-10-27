@@ -50,7 +50,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
       return json(route, { token: 'smoke-token', refreshToken: 'smoke-refresh-token' })
     }
     if (path === '/admin/system/index/info' && method === 'GET') {
-      return json(route, { name: 'Alice', avatar: '', routers: [] })
+      return json(route, { name: 'Alice', avatar: '', configMenus: [] })
     }
     if (path === '/admin/process/findStartable' && method === 'GET') {
       return json(route, [

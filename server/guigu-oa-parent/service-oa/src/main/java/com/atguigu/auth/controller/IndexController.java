@@ -1,5 +1,6 @@
 package com.atguigu.auth.controller;
 
+import com.atguigu.auth.grant.ConfigurationGrant;
 import com.atguigu.auth.service.SysMenuService;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.jwt.JwtHelper;
@@ -7,8 +8,8 @@ import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.security.custom.AccountStatus;
+import com.atguigu.vo.system.ConfigMenuVo;
 import com.atguigu.vo.system.RefreshTokenVo;
-import com.atguigu.vo.system.RouterVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class IndexController {
     private SysMenuService sysMenuService;
 
     @Autowired
+    private ConfigurationGrant configurationGrant;
+
+    @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
     @Autowired
@@ -47,7 +51,16 @@ public class IndexController {
         Long userId = jwtHelper.getUserId(token);
 
         SysUser sysUser = sysUserService.getById(userId);
-        List<RouterVo> routerList = sysMenuService.findUserMenuListByUserId(userId);
+        ConfigurationGrant.GrantedConfiguration grant = configurationGrant.snapshot(userId);
+        List<ConfigMenuVo> configMenus = grant.entries().stream()
+                .map(entry -> new ConfigMenuVo(
+                        entry.path(),
+                        entry.parentPath(),
+                        entry.title(),
+                        entry.type(),
+                        entry.hidden(),
+                        entry.sort()))
+                .collect(Collectors.toList());
         List<String> permsList = sysMenuService.findUserPermsByUserId(userId);
         if (permsList == null) {
             permsList = List.of();
@@ -58,7 +71,7 @@ public class IndexController {
         map.put("roles", "[admin]");
         map.put("name", sysUser.getName());
         map.put("avatar", "https://oss.aliyuncs.com/aliyun_id_photo_bucket/default_handsome.jpg");
-        map.put("routers", routerList);
+        map.put("configMenus", configMenus);
         map.put("buttons", permsList);
         return Result.ok(map);
     }

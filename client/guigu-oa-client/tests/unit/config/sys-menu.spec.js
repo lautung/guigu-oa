@@ -3,16 +3,16 @@ import {
   doAssignRequest,
   emptyForm,
   findNodesRequest,
-  menuWriteValidationError,
+  formForCreate,
   mergeAssignMenuIds,
   presentAssignableConfigMenus,
   presentConfigMenuTree,
   removeRequest,
   toAssignRequest,
-  writeRequest
+  writeRequest,
 } from '@/config/sys-menu'
 
-const FULL_TREE = [
+const CONFIG_TREE = [
   {
     id: 1,
     name: '组织与权限',
@@ -38,160 +38,43 @@ const FULL_TREE = [
         status: 1,
         parentId: 1,
         select: true,
-        children: [
-          {
-            id: 111,
-            name: '添加',
-            path: 'btn',
-            component: '',
-            type: 2,
-            icon: '',
-            perms: 'bnt.sysUser.add',
-            sortValue: 1,
-            status: 1,
-            parentId: 11,
-            select: true,
-            children: []
-          }
-        ]
-      }
-    ]
+        children: [],
+      },
+    ],
   },
-  {
-    id: 9,
-    name: '公众号菜单',
-    path: '/wechat',
-    component: 'Layout',
-    type: 0,
-    icon: '',
-    perms: '',
-    sortValue: 9,
-    status: 1,
-    parentId: 0,
-    select: true,
-    children: [
-      {
-        id: 91,
-        name: '菜单列表',
-        path: 'menu',
-        component: 'wechat/menu/list',
-        type: 1,
-        icon: '',
-        perms: '',
-        sortValue: 1,
-        status: 1,
-        parentId: 9,
-        select: true,
-        children: []
-      }
-    ]
-  },
-  {
-    id: 8,
-    name: '部门管理',
-    path: 'sysDept',
-    component: 'system/sysDept/list',
-    type: 1,
-    icon: '',
-    perms: '',
-    sortValue: 8,
-    status: 1,
-    parentId: 0,
-    select: false,
-    children: []
-  },
-  {
-    id: 7,
-    name: 'Dashboard',
-    path: '/dashboard',
-    component: 'dashboard/index',
-    type: 1,
-    icon: '',
-    perms: '',
-    sortValue: 0,
-    status: 1,
-    parentId: 0,
-    select: true,
-    children: []
-  },
-  {
-    id: 6,
-    name: '岗位管理',
-    path: 'sysPost',
-    component: 'system/sysPost/list',
-    type: 1,
-    icon: '',
-    perms: '',
-    sortValue: 6,
-    status: 1,
-    parentId: 0,
-    select: false,
-    children: []
-  },
-  {
-    id: 5,
-    name: '登录日志',
-    path: 'sysLoginLog',
-    component: 'system/sysLoginLog/list',
-    type: 1,
-    icon: '',
-    perms: '',
-    sortValue: 5,
-    status: 1,
-    parentId: 0,
-    select: false,
-    children: []
-  },
-  {
-    id: 4,
-    name: '操作日志',
-    path: 'sysOperLog',
-    component: 'system/sysOperLog/list',
-    type: 1,
-    icon: '',
-    perms: '',
-    sortValue: 4,
-    status: 1,
-    parentId: 0,
-    select: false,
-    children: []
-  }
 ]
 
 describe('config/sys-menu', () => {
   describe('presentConfigMenuTree', () => {
-    it('keeps 配置类 menus and drops 公众号 / Dashboard / 部门岗位日志', () => {
-      const tree = presentConfigMenuTree(FULL_TREE)
-      expect(tree.map(node => node.name)).toEqual(['组织与权限'])
-      expect(tree[0].children.map(node => node.name)).toEqual(['用户管理'])
-    })
+    it('maps the server tree without re-classifying it', () => {
+      const tree = presentConfigMenuTree(CONFIG_TREE)
 
-    it('keeps button records in 菜单管理 tree', () => {
-      expect(presentConfigMenuTree(FULL_TREE)[0].children[0].children.map(node => node.name)).toEqual(['添加'])
+      expect(tree.map((node) => node.name)).toEqual(['组织与权限'])
+      expect(tree[0].children.map((node) => node.name)).toEqual(['用户管理'])
+      expect(tree[0].children[0].select).toBe(true)
     })
   })
 
   describe('菜单授权', () => {
-    it('lets the 角色 menu tree show 配置类菜单, not buttons', () => {
-      const tree = presentAssignableConfigMenus(FULL_TREE)
+    it('maps the assignable tree as returned by the server', () => {
+      const tree = presentAssignableConfigMenus(CONFIG_TREE)
 
-      expect(tree.map(node => node.name)).toEqual(['组织与权限'])
-      expect(tree[0].children.map(node => node.name)).toEqual(['用户管理'])
-      expect(tree[0].children[0].children).toEqual([])
+      expect(tree.map((node) => node.name)).toEqual(['组织与权限'])
+      expect(tree[0].children.map((node) => node.name)).toEqual(['用户管理'])
     })
 
-    it('collects selected 配置类菜单 ids, not button ids', () => {
-      expect(collectCheckedIds(presentAssignableConfigMenus(FULL_TREE))).toEqual([11])
+    it('collects selected page ids', () => {
+      expect(collectCheckedIds(presentAssignableConfigMenus(CONFIG_TREE))).toEqual([11])
     })
 
-    it('keeps previously granted out-of-spec menus and buttons when saving 配置类 checks', () => {
-      expect(mergeAssignMenuIds([11], FULL_TREE)).toEqual([11, 111, 9, 91, 7])
+    it('dedupes checked ids', () => {
+      expect(mergeAssignMenuIds([11, 11, 12])).toEqual([11, 12])
     })
 
     it('loads 菜单授权 with GET /admin/system/sysMenu/toAssign/{roleId}', () => {
       expect(toAssignRequest(3)).toEqual({
         method: 'get',
-        url: '/admin/system/sysMenu/toAssign/3'
+        url: '/admin/system/sysMenu/toAssign/3',
       })
     })
 
@@ -199,44 +82,8 @@ describe('config/sys-menu', () => {
       expect(doAssignRequest(3, [1, 11])).toEqual({
         method: 'post',
         url: '/admin/system/sysMenu/doAssign',
-        data: { roleId: 3, menuIdList: [1, 11] }
+        data: { roleId: 3, menuIdList: [1, 11] },
       })
-    })
-  })
-
-  describe('menuWriteValidationError', () => {
-    it('rejects out-of-spec menus such as 公众号 or 部门', () => {
-      expect(menuWriteValidationError({
-        path: '/wechat',
-        component: 'Layout'
-      })).toBe('只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器')
-
-      expect(menuWriteValidationError({
-        path: 'sysDept',
-        component: 'system/sysDept/list'
-      })).toBe('只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器')
-    })
-
-    it('rejects 办事内置 routes', () => {
-      expect(menuWriteValidationError({
-        path: '/work/pending',
-        component: 'work/pending/index'
-      })).toBe('办事内置入口不在菜单管理中维护')
-    })
-
-    it('accepts a leftover 按钮 record', () => {
-      expect(menuWriteValidationError({
-        type: 2,
-        path: 'btn',
-        perms: 'bnt.sysUser.add'
-      })).toBeNull()
-    })
-
-    it('accepts a 配置类 menu', () => {
-      expect(menuWriteValidationError({
-        path: 'sysUser',
-        component: 'system/sysUser/list'
-      })).toBeNull()
     })
   })
 
@@ -244,21 +91,23 @@ describe('config/sys-menu', () => {
     it('loads the menu tree with GET /admin/system/sysMenu/findNodes', () => {
       expect(findNodesRequest()).toEqual({
         method: 'get',
-        url: '/admin/system/sysMenu/findNodes'
+        url: '/admin/system/sysMenu/findNodes',
       })
     })
 
     it('creates a 配置类 menu with POST /admin/system/sysMenu/save', () => {
-      expect(writeRequest({
-        parentId: 1,
-        name: '用户管理',
-        type: 1,
-        path: 'sysUser',
-        component: 'system/sysUser/list',
-        icon: 'el-icon-user-solid',
-        sortValue: 1,
-        status: 1
-      })).toEqual({
+      expect(
+        writeRequest({
+          parentId: 1,
+          name: '用户管理',
+          type: 1,
+          path: 'sysUser',
+          component: 'system/sysUser/list',
+          icon: 'el-icon-user-solid',
+          sortValue: 1,
+          status: 1,
+        }),
+      ).toEqual({
         method: 'post',
         url: '/admin/system/sysMenu/save',
         data: {
@@ -270,70 +119,73 @@ describe('config/sys-menu', () => {
           perms: '',
           icon: 'el-icon-user-solid',
           sortValue: 1,
-          status: 1
-        }
+          status: 1,
+        },
       })
     })
 
     it('writes Layout for a root directory and ParentView for a nested directory', () => {
-      expect(writeRequest({
-        parentId: 0,
-        name: '组织与权限',
-        type: 0,
-        path: '/system',
-        component: '',
-        sortValue: 1,
-        status: 1
-      }).data.component).toBe('Layout')
+      expect(
+        writeRequest({
+          parentId: 0,
+          name: '组织与权限',
+          type: 0,
+          path: '/system',
+          component: '',
+          sortValue: 1,
+          status: 1,
+        }).data.component,
+      ).toBe('Layout')
 
-      expect(writeRequest({
-        parentId: 1,
-        name: '审批设置',
-        type: 0,
-        path: '/processSet',
-        component: '',
-        sortValue: 1,
-        status: 1
-      }).data.component).toBe('ParentView')
+      expect(
+        writeRequest({
+          parentId: 1,
+          name: '审批设置',
+          type: 0,
+          path: '/processSet',
+          component: '',
+          sortValue: 1,
+          status: 1,
+        }).data.component,
+      ).toBe('ParentView')
     })
 
     it('updates a menu with PUT /admin/system/sysMenu/update', () => {
-      expect(writeRequest({
-        id: 11,
-        parentId: 1,
-        name: '用户管理',
-        type: 1,
-        path: 'sysUser',
-        component: 'system/sysUser/list',
-        perms: '',
-        icon: '',
-        sortValue: 1,
-        status: 1
-      }).method).toBe('put')
+      expect(
+        writeRequest({
+          id: 11,
+          parentId: 1,
+          name: '用户管理',
+          type: 1,
+          path: 'sysUser',
+          component: 'system/sysUser/list',
+          perms: '',
+          icon: '',
+          sortValue: 1,
+          status: 1,
+        }).method,
+      ).toBe('put')
     })
 
     it('deletes a menu with DELETE /admin/system/sysMenu/remove/{id}', () => {
       expect(removeRequest(11)).toEqual({
         method: 'delete',
-        url: '/admin/system/sysMenu/remove/11'
+        url: '/admin/system/sysMenu/remove/11',
       })
     })
   })
 
-  describe('presentForm', () => {
+  describe('formForCreate', () => {
     it('starts 新建 with directory defaults', () => {
-      expect(emptyForm()).toEqual({
-        id: '',
-        parentId: 0,
-        parentName: '',
-        name: '',
-        type: 0,
-        path: '',
-        component: 'Layout',
-        perms: '',
-        icon: '',
-        sortValue: 1,
-        status: 1
+      expect(formForCreate()).toEqual(emptyForm())
+    })
+
+    it('creates a page under a directory', () => {
+      expect(formForCreate(CONFIG_TREE[0])).toMatchObject({
+        parentId: 1,
+        parentName: '组织与权限',
+        type: 1,
+        component: '',
       })
     })
   })

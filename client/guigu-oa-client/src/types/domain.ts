@@ -49,6 +49,16 @@ export interface MenuNode {
   children?: MenuNode[]
 }
 
+/** /info 下发的配置菜单条目：path 是绝对路径，parentPath 只用于展示层级。 */
+export interface ConfigMenuEntry {
+  path: string
+  parentPath?: string | null
+  title: string
+  type: number
+  hidden?: boolean
+  sort?: number | null
+}
+
 export interface SidebarItem {
   path: string
   title: string
@@ -278,7 +288,7 @@ export interface LoginTokens {
 export interface UserInfo {
   name: string
   avatar?: string
-  routers?: MenuNode[]
+  configMenus?: ConfigMenuEntry[]
 }
 
 export interface FormRule {

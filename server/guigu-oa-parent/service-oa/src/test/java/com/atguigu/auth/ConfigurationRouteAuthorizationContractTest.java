@@ -28,6 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -156,6 +159,12 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/system/sysRole/1/10", 101L, "route-user", 205);
         assertCode("/admin/system/sysMenu/findNodes", 101L, "route-user", 205);
         assertCode("/admin/process/1/10", 101L, "route-user", 205);
+
+        mockMvc.perform(get("/admin/system/index/info")
+                        .header("token", jwtHelper.createAccessToken(101L, "route-user")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.configMenus[*].path", hasItems("/system", "/system/sysUser")))
+                .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/system/sysRole"))));
     }
 
     @Test
@@ -165,6 +174,16 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/process/processTemplate/get/" + templateId(), 102L, "route-template", 200);
         assertCode("/admin/process/processTemplate/1/10", 102L, "route-template", 200);
         assertCode("/admin/process/processType/1/10", 102L, "route-template", 205);
+
+        mockMvc.perform(get("/admin/system/index/info")
+                        .header("token", jwtHelper.createAccessToken(102L, "route-template")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
+                        "/processSet", "/processSet/processTemplate", "/processSet/templateSet")))
+                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/processSet/templateSet')].parentPath",
+                        hasItem("/processSet/processTemplate")))
+                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/processSet/templateSet')].hidden",
+                        hasItem(true)));
     }
 
     @Test

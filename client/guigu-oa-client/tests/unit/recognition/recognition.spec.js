@@ -77,7 +77,7 @@ describe('recognition interface with real request transport', () => {
     const respond = vi
       .fn()
       .mockRejectedValueOnce(new Error('network'))
-      .mockResolvedValue(ok({ name: 'Alice', routers: [] }))
+      .mockResolvedValue(ok({ name: 'Alice', configMenus: [] }))
     const h = harness(respond)
     await expect(h.recognition.recognize('/work/pending?source=bookmark')).rejects.toMatchObject({
       kind: 'retryable',
@@ -272,9 +272,9 @@ describe('recognition interface with real request transport', () => {
     expect(h.destinations).toEqual(['/login?redirect=%2Fwork%2Fstarted'])
   })
   it.each([
-    { routers: {} },
-    { routers: [{ path: 12 }] },
-    { routers: [{ children: {} }] },
+    { configMenus: {} },
+    { configMenus: [{ path: 12 }] },
+    { configMenus: [{ path: '/system/sysUser', title: '用户管理', type: 'page' }] },
     { avatar: 42 },
   ])('keeps malformed user data behind the recovery seam: %j', async (bad) => {
     const h = harness(() => ok({ name: 'Alice', ...bad }))

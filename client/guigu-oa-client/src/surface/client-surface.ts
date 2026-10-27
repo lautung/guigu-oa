@@ -1,7 +1,7 @@
 import { configPermission } from '@/config-permission'
 import type { MenuGroup } from '@/config-permission'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
-import type { MenuNode } from '@/types/domain'
+import type { ConfigMenuEntry } from '@/types/domain'
 
 export const MENU_GROUPS = {
   WORK: 'work',
@@ -20,7 +20,7 @@ export interface ClientSurfaceInput {
   path?: string
   viewportWidth?: number
   hasToken?: boolean
-  menus?: MenuNode[]
+  menus?: ConfigMenuEntry[]
 }
 
 interface ClientSurfaceResolution {
@@ -98,8 +98,4 @@ export function createViewportOccupancyHandler({
       goTo(occupancy.to)
     }
   }
-}
-
-export function loadClientSurfaceHost(): Promise<typeof import('./ClientSurfaceHost.vue')> {
-  return import('./ClientSurfaceHost.vue')
 }

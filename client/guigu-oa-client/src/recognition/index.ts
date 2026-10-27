@@ -49,23 +49,19 @@ function nullableString(value: unknown): boolean {
   return value == null || typeof value === 'string'
 }
 
-function validMenus(value: unknown): boolean {
+function validConfigMenus(value: unknown): boolean {
   if (value == null) return true
   if (!Array.isArray(value)) return false
-  return value.every((menu: unknown) => {
-    if (!menu || typeof menu !== 'object' || Array.isArray(menu)) return false
-    const node = menu as Record<string, unknown>
-    const meta = node.meta
+  return value.every((entry: unknown) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false
+    const node = entry as Record<string, unknown>
     return (
-      nullableString(node.path) &&
-      nullableString(node.name) &&
-      nullableString(node.title) &&
+      typeof node.path === 'string' &&
+      nullableString(node.parentPath) &&
+      typeof node.title === 'string' &&
+      typeof node.type === 'number' &&
       (node.hidden == null || typeof node.hidden === 'boolean') &&
-      validMenus(node.children) &&
-      (meta == null ||
-        (typeof meta === 'object' &&
-          !Array.isArray(meta) &&
-          nullableString((meta as Record<string, unknown>).title)))
+      (node.sort == null || typeof node.sort === 'number')
     )
   })
 }
@@ -75,7 +71,7 @@ function validUser(user: UserInfo): boolean {
     !!user &&
     typeof user.name === 'string' &&
     nullableString(user.avatar) &&
-    validMenus(user.routers)
+    validConfigMenus(user.configMenus)
   )
 }
 

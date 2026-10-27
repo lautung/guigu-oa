@@ -88,17 +88,14 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
       state.infoCalls += 1
       return json(route, {
         name: 'Alice',
-        routers: [
+        configMenus: [
+          { path: '/system', title: '系统管理', type: 0, sort: 1 },
           {
-            path: 'system',
-            meta: { title: '系统管理' },
-            children: [
-              {
-                path: 'sysUser',
-                component: 'system/sysUser/list',
-                meta: { title: '用户管理' },
-              },
-            ],
+            path: '/system/sysUser',
+            parentPath: '/system',
+            title: '用户管理',
+            type: 1,
+            sort: 1,
           },
         ],
       })

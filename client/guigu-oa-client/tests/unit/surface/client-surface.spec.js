@@ -7,41 +7,47 @@ import { createViewportOccupancyHandler, resolveClientSurface } from '@/surface/
 import { useUserStore } from '@/store/modules/user'
 
 const SAMPLE_CONFIG_MENUS = [
+  { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 },
+  { path: '/system/sysRole', parentPath: '/system', title: '角色管理', type: 1, sort: 2 },
   {
-    path: '/system',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysUser', meta: { title: '用户管理' } },
-      { path: 'sysRole', meta: { title: '角色管理' } },
-      { path: 'assignAuth', meta: { title: '菜单授权' }, hidden: true }
-    ]
+    path: '/system/assignAuth',
+    parentPath: '/system/sysRole',
+    title: '菜单授权',
+    type: 1,
+    hidden: true,
+    sort: 3
+  },
+  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/processSet/processType', parentPath: '/processSet', title: '审批类型', type: 1, sort: 1 },
+  {
+    path: '/processSet/processTemplate',
+    parentPath: '/processSet',
+    title: '审批模板',
+    type: 1,
+    sort: 2
   },
   {
-    path: '/processSet',
-    meta: { title: '审批设置' },
-    children: [
-      { path: 'processType', meta: { title: '审批类型' } },
-      { path: 'processTemplate', meta: { title: '审批模板' } },
-      { path: 'templateSet', meta: { title: '审批模板设置' }, hidden: true }
-    ]
+    path: '/processSet/templateSet',
+    parentPath: '/processSet/processTemplate',
+    title: '审批模板设置',
+    type: 1,
+    hidden: true,
+    sort: 3
   },
+  { path: '/processMgr', title: '审批查询', type: 0, sort: 3 },
   {
-    path: '/processMgr',
-    meta: { title: '审批查询' },
-    children: [
-      { path: 'process', meta: { title: '审批实例查询' } }
-    ]
+    path: '/processMgr/process',
+    parentPath: '/processMgr',
+    title: '审批实例查询',
+    type: 1,
+    sort: 1
   }
 ]
 
 const ONLY_USER_MENUS = [
-  {
-    path: '/system',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysUser', meta: { title: '用户管理' } }
-    ]
-  }
+  { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 }
 ]
 
 const HOST_ROUTES = [

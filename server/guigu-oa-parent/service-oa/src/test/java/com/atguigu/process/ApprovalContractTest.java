@@ -493,14 +493,14 @@ public class ApprovalContractTest {
         mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.routers.length()").value(greaterThan(0)));
+                .andExpect(jsonPath("$.data.configMenus.length()").value(greaterThan(0)));
 
         mockMvc.perform(get("/admin/process/show/" + processId)
                         .header("token", eveToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
 
-        // userId=1 has the configuration menu tree, but configuration access is not process membership.
+        // admin has the configuration menu grant, but configuration access is not process membership.
         mockMvc.perform(get("/admin/process/show/" + processId)
                         .header("token", adminToken))
                 .andExpect(status().isOk())

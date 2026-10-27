@@ -82,7 +82,7 @@ export default defineComponent({
       if (!roleId || !tree) return
       const checkedNodes = tree.getCheckedNodes(false, true)
       const checkedIds = checkedNodes.flatMap((node) => (node.id == null ? [] : [node.id]))
-      const menuIdList = mergeAssignMenuIds(checkedIds, this.fullTree)
+      const menuIdList = mergeAssignMenuIds(checkedIds)
       this.saving = true
       doAssign(roleId, menuIdList)
         .then((response) => {

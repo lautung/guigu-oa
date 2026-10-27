@@ -1,19 +1,6 @@
-import { isConfigClassMenu, isWorkMenu } from '@/config-permission'
 import type { ApiRequestConfig, EntityId, MenuForm, MenuNode } from '@/types/domain'
 
 const SYS_MENU_API = '/admin/system/sysMenu'
-
-export function menuWriteValidationError(form: Partial<MenuNode> = {}): string | null {
-  if (isWorkMenu(form)) {
-    return '办事内置入口不在菜单管理中维护'
-  }
-
-  if (!isConfigClassMenu(form) && form.type !== 2) {
-    return '只能维护配置类菜单，不能添加公众号、Dashboard、部门/岗位/日志或在线流程设计器'
-  }
-
-  return null
-}
 
 function presentMenuNode(menu: MenuNode = {}): MenuNode {
   return {
@@ -32,20 +19,22 @@ function presentMenuNode(menu: MenuNode = {}): MenuNode {
   }
 }
 
-function presentMenuTree(nodes: MenuNode[], keepNode: (node: MenuNode) => boolean): MenuNode[] {
-  return nodes.filter(keepNode).map((node) => {
+function presentMenuTree(nodes: MenuNode[]): MenuNode[] {
+  return nodes.map((node) => {
     const presented = presentMenuNode(node)
-    presented.children = presentMenuTree(node.children || [], keepNode)
+    presented.children = presentMenuTree(node.children || [])
     return presented
   })
 }
 
+/** 服务端只发配置类菜单；客户端只做展示字段映射。 */
 export function presentConfigMenuTree(nodes: MenuNode[] = []): MenuNode[] {
-  return presentMenuTree(nodes, (node) => isConfigClassMenu(node) || node.type === 2)
+  return presentMenuTree(nodes)
 }
 
+/** 服务端只发可授予的配置类菜单；客户端只做展示字段映射。 */
 export function presentAssignableConfigMenus(nodes: MenuNode[] = []): MenuNode[] {
-  return presentMenuTree(nodes, isConfigClassMenu)
+  return presentMenuTree(nodes)
 }
 
 export function collectCheckedIds(nodes: MenuNode[] = []): EntityId[] {
@@ -58,35 +47,8 @@ export function collectCheckedIds(nodes: MenuNode[] = []): EntityId[] {
   }, [])
 }
 
-function collectSelectedIds(node: MenuNode, ids: EntityId[]): void {
-  if (node.select && node.id != null) {
-    ids.push(node.id)
-  }
-  ;(node.children || []).forEach((child) => collectSelectedIds(child, ids))
-}
-
-export function preservedOutOfSpecMenuIds(nodes: MenuNode[] = []): EntityId[] {
-  const ids: EntityId[] = []
-
-  function walk(list: MenuNode[]): void {
-    list.forEach((node) => {
-      if (!isConfigClassMenu(node)) {
-        collectSelectedIds(node, ids)
-      } else {
-        walk(node.children || [])
-      }
-    })
-  }
-
-  walk(nodes)
-  return ids
-}
-
-export function mergeAssignMenuIds(
-  checkedConfigIds: EntityId[] = [],
-  fullTree: MenuNode[] = [],
-): EntityId[] {
-  return Array.from(new Set(checkedConfigIds.concat(preservedOutOfSpecMenuIds(fullTree))))
+export function mergeAssignMenuIds(checkedConfigIds: EntityId[] = []): EntityId[] {
+  return Array.from(new Set(checkedConfigIds))
 }
 
 export function findNodesRequest(): ApiRequestConfig {
@@ -206,12 +168,7 @@ export function formForCreate(parent?: MenuNode): MenuForm {
   form.parentId = parent.id ?? 0
   form.parentName = parent.name || ''
   form.component = ''
-
-  if (parent.type === 0) {
-    form.type = 1
-  } else if (parent.type === 1) {
-    form.type = 2
-  }
+  form.type = 1
 
   return form
 }

@@ -2,14 +2,14 @@ import { defineStore } from 'pinia'
 import { getToken, getRefreshToken } from '@/utils/auth'
 import { login } from '@/api/user'
 import type { Recognition, RecoveryState } from '@/recognition'
-import type { LoginCredentials, MenuNode, UserInfo } from '@/types/domain'
+import type { ConfigMenuEntry, LoginCredentials, UserInfo } from '@/types/domain'
 
 interface UserState {
   token: string
   refreshToken: string
   name: string
   avatar: string
-  menus: MenuNode[]
+  menus: ConfigMenuEntry[]
   recognized: boolean
   recovery: RecoveryState
   recognition: Recognition | null

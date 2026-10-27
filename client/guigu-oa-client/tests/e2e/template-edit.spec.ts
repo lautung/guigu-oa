@@ -55,10 +55,27 @@ async function setup(
     if (path === '/admin/system/index/info')
       return json(route, {
         name: 'Alice',
-        routers:
+        configMenus:
           options.menus === false
             ? []
-            : [{ path: '/processSet/processTemplate', meta: { title: '审批模板' } }],
+            : [
+                { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+                {
+                  path: '/processSet/processTemplate',
+                  parentPath: '/processSet',
+                  title: '审批模板',
+                  type: 1,
+                  sort: 2,
+                },
+                {
+                  path: '/processSet/templateSet',
+                  parentPath: '/processSet/processTemplate',
+                  title: '审批模板设置',
+                  type: 1,
+                  hidden: true,
+                  sort: 3,
+                },
+              ],
       })
     if (path === '/admin/system/index/refresh')
       return json(route, { token: 'renewed-edit-token', refreshToken: 'renewed-refresh' })

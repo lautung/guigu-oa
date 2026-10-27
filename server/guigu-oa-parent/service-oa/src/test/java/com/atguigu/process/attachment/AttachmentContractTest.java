@@ -191,7 +191,7 @@ class AttachmentContractTest {
         mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.routers.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+                .andExpect(jsonPath("$.data.configMenus.length()").value(org.hamcrest.Matchers.greaterThan(0)));
 
         mockMvc.perform(post("/admin/attachments/processes/" + processId + "/" + attachmentId + "/download-url")
                         .header("token", lisiToken))

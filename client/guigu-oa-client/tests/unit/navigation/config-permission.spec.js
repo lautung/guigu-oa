@@ -2,14 +2,8 @@ import { buildSidebarTree } from '@/navigation'
 import { DESKTOP_CONFIG_HINT } from '@/navigation/constants'
 
 const ONLY_USER_MENUS = [
-  {
-    path: '/system',
-    component: 'Layout',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } }
-    ]
-  }
+  { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 }
 ]
 
 describe('配置权限驱动的侧栏', () => {

@@ -4,82 +4,75 @@ import { MOBILE_BREAKPOINT } from '@/navigation/constants'
 const DESKTOP_WIDTH = 1200
 const MOBILE_WIDTH = 375
 
-const ONLY_USER_MENUS = [
-  {
-    path: '/system',
-    component: 'Layout',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } }
-    ]
-  }
+const USER_PAGE = [
+  { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 },
 ]
 
-const ONLY_ROLE_MENUS = [
+const ROLE_PAGE = [
+  { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+  { path: '/system/sysRole', parentPath: '/system', title: '角色管理', type: 1, sort: 2 },
   {
-    path: '/system',
-    component: 'Layout',
-    meta: { title: '组织与权限' },
-    children: [
-      { path: 'sysRole', component: 'system/sysRole/list', meta: { title: '角色管理' } }
-    ]
-  }
+    path: '/system/assignAuth',
+    parentPath: '/system/sysRole',
+    title: '菜单授权',
+    type: 1,
+    hidden: true,
+    sort: 3,
+  },
 ]
 
-const ONLY_PROCESS_TYPE_MENUS = [
-  {
-    path: '/processSet',
-    component: 'Layout',
-    meta: { title: '审批设置' },
-    children: [
-      { path: 'processType', component: 'processSet/processType/list', meta: { title: '审批类型' } }
-    ]
-  }
+const PROCESS_TYPE_PAGE = [
+  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/processSet/processType', parentPath: '/processSet', title: '审批类型', type: 1, sort: 1 },
 ]
 
-const PROCESS_TEMPLATE_MENUS = [
+const TEMPLATE_PAGE = [
+  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet',
-    component: 'Layout',
-    meta: { title: '审批设置' },
-    children: [
-      { path: 'processTemplate', component: 'processSet/processTemplate/list', meta: { title: '审批模板' } }
-    ]
-  }
+    path: '/processSet/processTemplate',
+    parentPath: '/processSet',
+    title: '审批模板',
+    type: 1,
+    sort: 2,
+  },
+  {
+    path: '/processSet/templateSet',
+    parentPath: '/processSet/processTemplate',
+    title: '审批模板设置',
+    type: 1,
+    hidden: true,
+    sort: 3,
+  },
 ]
 
-const PROCESS_INSTANCE_MENUS = [
+const PROCESS_INSTANCE_PAGE = [
+  { path: '/processMgr', title: '审批查询', type: 0, sort: 3 },
   {
-    path: '/processMgr',
-    component: 'Layout',
-    meta: { title: '审批查询' },
-    children: [
-      { path: 'process', component: 'processMgr/process/list', meta: { title: '审批实例查询' } }
-    ]
-  }
+    path: '/processMgr/process',
+    parentPath: '/processMgr',
+    title: '审批实例查询',
+    type: 1,
+    sort: 1,
+  },
 ]
 
-const CUSTOM_CONFIG_MENUS = [
-  {
-    path: '/office',
-    component: 'Layout',
-    meta: { title: '办公配置' },
-    children: [
-      { path: 'users', component: 'office/users/list', meta: { title: '用户' } }
-    ]
-  }
+const CUSTOM_PAGE = [
+  { path: '/office', title: '办公配置', type: 0, sort: 1 },
+  { path: '/office/users', parentPath: '/office', title: '用户', type: 1, sort: 1 },
 ]
 
-const CUSTOM_HIDDEN_MENUS = [
+const CUSTOM_HIDDEN_PAGE = [
+  { path: '/office', title: '办公配置', type: 0, sort: 1 },
+  { path: '/office/users', parentPath: '/office', title: '用户', type: 1, sort: 1 },
   {
-    path: '/office',
-    component: 'Layout',
-    meta: { title: '办公配置' },
-    children: [
-      { path: 'users', component: 'office/users/list', meta: { title: '用户' } },
-      { path: 'userDetail', component: 'office/users/detail', meta: { title: '用户详情' }, hidden: true }
-    ]
-  }
+    path: '/office/userDetail',
+    parentPath: '/office/users',
+    title: '用户详情',
+    type: 1,
+    hidden: true,
+    sort: 2,
+  },
 ]
 
 function canOccupy(permission, path, viewportWidth = DESKTOP_WIDTH) {
@@ -98,148 +91,75 @@ function flattenTitles(items = []) {
 
 describe('配置权限', () => {
   describe('hasConfigPermission 与 grantedConfigMenus', () => {
-    it('has no 配置权限 when the menu tree is empty', () => {
+    it('has no 配置权限 when the granted entries are empty', () => {
       const permission = configPermission([])
 
       expect(permission.hasConfigPermission).toBe(false)
       expect(permission.grantedConfigMenus).toEqual([])
     })
 
-    it('has no 配置权限 when only 办事 menus are granted', () => {
-      const permission = configPermission([
-        { path: '/work/pending', meta: { title: '待处理' } }
-      ])
+    it('has no 配置权限 when only a directory is granted', () => {
+      const permission = configPermission([{ path: '/system', title: '组织与权限', type: 0 }])
 
       expect(permission.hasConfigPermission).toBe(false)
       expect(permission.grantedConfigMenus).toEqual([])
     })
 
-    it('has 配置权限 when at least one 配置类菜单 is granted', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+    it('has 配置权限 when at least one page is granted', () => {
+      const permission = configPermission(USER_PAGE)
 
       expect(permission.hasConfigPermission).toBe(true)
     })
 
-    it('returns granted 配置类菜单 as 组织与权限 / 用户管理 when only 用户管理 is granted', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+    it('returns the granted tree as 组织与权限 / 用户管理', () => {
+      const permission = configPermission(USER_PAGE)
 
       expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '用户管理'])
     })
 
-    it('drops 部门 / 岗位 / 日志 / Dashboard / 公众号 / 在线流程设计器 from granted 配置类菜单', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          component: 'Layout',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } },
-            { path: 'sysDept', component: 'system/sysDept/list', meta: { title: '部门管理' } },
-            { path: 'sysPost', component: 'system/sysPost/list', meta: { title: '岗位管理' } },
-            { path: 'sysOperLog', component: 'system/sysOperLog/list', meta: { title: '操作日志' } }
-          ]
-        },
-        {
-          path: '/processSet',
-          component: 'Layout',
-          meta: { title: '审批设置' },
-          children: [
-            { path: 'processTemplate', component: 'processSet/processTemplate/list', meta: { title: '审批模板' } },
-            { path: 'onlineProcessSet', component: 'processSet/processTemplate/onlineProcessSet', meta: { title: '在线流程设计器' } }
-          ]
-        },
-        { path: '/dashboard', component: 'dashboard/index', meta: { title: 'Dashboard' } },
-        {
-          path: '/wechat',
-          component: 'Layout',
-          meta: { title: '公众号菜单' },
-          children: [
-            { path: 'menu', component: 'wechat/menu/list', meta: { title: '菜单列表' } }
-          ]
-        }
-      ])
-
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual([
-        '组织与权限',
-        '用户管理',
-        '审批设置',
-        '审批模板'
-      ])
-    })
-
-    it('does not list hidden 配置 pages among granted 配置类菜单', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          component: 'Layout',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysRole', component: 'system/sysRole/list', meta: { title: '角色管理' } },
-            { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-          ]
-        }
-      ])
+    it('does not list hidden pages in the sidebar', () => {
+      const permission = configPermission(ROLE_PAGE)
 
       expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '角色管理'])
     })
 
-    it('omits a parent directory that has no grantable children', () => {
+    it('needs the visible parent page for a hidden page to count', () => {
       const permission = configPermission([
         {
-          path: '/system',
-          component: 'Layout',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysDept', component: 'system/sysDept/list', meta: { title: '部门管理' } }
-          ]
-        }
+          path: '/system/assignAuth',
+          parentPath: '/system/sysRole',
+          title: '菜单授权',
+          type: 1,
+          hidden: true,
+        },
       ])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.grantedConfigMenus).toEqual([])
+      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
     })
 
-    it('ignores button nodes when answering 配置权限', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          meta: { title: '组织与权限' },
-          children: [
-            {
-              path: 'sysUser',
-              component: 'system/sysUser/list',
-              meta: { title: '用户管理' },
-              children: [
-                { path: 'btn', perms: 'bnt.sysUser.add', type: 2, meta: { title: '添加' } }
-              ]
-            }
-          ]
-        }
-      ])
+    it('answers from the current grant, not a previous one', () => {
+      const before = configPermission(USER_PAGE)
+      const after = configPermission(ROLE_PAGE)
 
-      expect(permission.hasConfigPermission).toBe(true)
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '用户管理'])
-    })
-
-    it('does not treat 办事 menus as 配置权限', () => {
-      const permission = configPermission([
-        { path: '/work/pending', meta: { title: '待处理' } }
-      ])
-
-      expect(permission.hasConfigPermission).toBe(false)
+      expect(canOccupy(before, '/system/sysUser')).toBe(true)
+      expect(canOccupy(before, '/system/sysRole')).toBe(false)
+      expect(canOccupy(after, '/system/sysRole')).toBe(true)
+      expect(canOccupy(after, '/system/sysUser')).toBe(false)
     })
   })
 
   describe('canOccupy', () => {
-    it('can occupy a granted 配置 page and its parent directory on desktop', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+    it('can occupy a granted page and its parent directory on desktop', () => {
+      const permission = configPermission(USER_PAGE)
 
       expect(canOccupy(permission, '/system/sysUser')).toBe(true)
+      expect(canOccupy(permission, '/system/sysUser/9')).toBe(true)
       expect(canOccupy(permission, '/system')).toBe(true)
     })
 
-    it('cannot occupy a 配置 page that was not granted', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+    it('cannot occupy a page that was not granted', () => {
+      const permission = configPermission(USER_PAGE)
 
       expect(canOccupy(permission, '/system/sysRole')).toBe(false)
       expect(canOccupy(permission, '/system/sysMenu')).toBe(false)
@@ -247,99 +167,58 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/processSet/processType')).toBe(false)
     })
 
-    it('cannot occupy 菜单授权 when only 用户管理 is granted', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
-
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
-    })
-
-    it('can occupy hidden 菜单授权 when 角色管理 is granted', () => {
-      const permission = configPermission(ONLY_ROLE_MENUS)
+    it('can occupy a hidden page when its visible parent is granted', () => {
+      const permission = configPermission(ROLE_PAGE)
 
       expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
       expect(canOccupy(permission, '/system/assignAuth/9')).toBe(true)
     })
 
+    it('cannot occupy a hidden page when the parent is granted but the entry is absent', () => {
+      const permission = configPermission([
+        { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+        { path: '/system/sysRole', parentPath: '/system', title: '角色管理', type: 1, sort: 2 },
+      ])
+
+      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
+    })
+
     it('can occupy the 审批模板 wizard when 审批模板 is granted', () => {
-      const permission = configPermission(PROCESS_TEMPLATE_MENUS)
+      const permission = configPermission(TEMPLATE_PAGE)
 
       expect(canOccupy(permission, '/processSet/templateSet')).toBe(true)
     })
 
     it('cannot occupy the 审批模板 wizard when only 审批类型 is granted', () => {
-      const permission = configPermission(ONLY_PROCESS_TYPE_MENUS)
+      const permission = configPermission(PROCESS_TYPE_PAGE)
 
       expect(canOccupy(permission, '/processSet/templateSet')).toBe(false)
     })
 
     it('can occupy 审批实例详情 when 审批实例查询 is granted', () => {
-      const permission = configPermission(PROCESS_INSTANCE_MENUS)
+      const permission = configPermission(PROCESS_INSTANCE_PAGE)
 
       expect(canOccupy(permission, '/processMgr/process')).toBe(true)
       expect(canOccupy(permission, '/processMgr/process/9')).toBe(true)
       expect(canOccupy(permission, '/processMgr')).toBe(true)
     })
 
-    it('cannot occupy a known 配置 page that is not in the current grant', () => {
-      const permission = configPermission([])
-
-      expect(canOccupy(permission, '/system/sysUser')).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser/9')).toBe(false)
-      expect(canOccupy(permission, '/processMgr/process/9')).toBe(false)
-    })
-
     it('cannot occupy 配置 on mobile even when granted', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+      const permission = configPermission(USER_PAGE)
 
       expect(canOccupy(permission, '/system/sysUser', MOBILE_WIDTH)).toBe(false)
       expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT)).toBe(false)
       expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT + 1)).toBe(true)
     })
 
-    it('does not treat 办事 menus as 配置 occupancy', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+    it('does not treat 办事 paths as 配置 occupancy', () => {
+      const permission = configPermission(USER_PAGE)
 
       expect(canOccupy(permission, '/work/pending')).toBe(false)
     })
 
-    it('does not treat a hidden-only node as granting sibling pages', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-          ]
-        }
-      ])
-
-      expect(permission.hasConfigPermission).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser')).toBe(false)
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
-    })
-
-    it('answers from the current 配置类菜单 tree, not a previous grant', () => {
-      const before = configPermission(ONLY_USER_MENUS)
-      const after = configPermission(ONLY_ROLE_MENUS)
-
-      expect(canOccupy(before, '/system/sysUser')).toBe(true)
-      expect(canOccupy(before, '/system/sysRole')).toBe(false)
-      expect(canOccupy(after, '/system/sysRole')).toBe(true)
-      expect(canOccupy(after, '/system/sysUser')).toBe(false)
-    })
-
-    it('replaces later grants with the latest menu tree', () => {
-      let permission = configPermission(ONLY_USER_MENUS)
-      expect(canOccupy(permission, '/system/sysUser')).toBe(true)
-
-      permission = configPermission(ONLY_ROLE_MENUS)
-      expect(canOccupy(permission, '/system/sysUser')).toBe(false)
-      expect(canOccupy(permission, '/system/sysRole')).toBe(true)
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
-    })
-
-    it('allows a custom menu path from the menu tree and its parent directory', () => {
-      const permission = configPermission(CUSTOM_CONFIG_MENUS)
+    it('allows a custom granted page and its parent directory', () => {
+      const permission = configPermission(CUSTOM_PAGE)
 
       expect(canOccupy(permission, '/office/users')).toBe(true)
       expect(canOccupy(permission, '/office/users/9')).toBe(true)
@@ -347,8 +226,8 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/office/roles')).toBe(false)
     })
 
-    it('can occupy a custom hidden page through its visible menu-tree parent', () => {
-      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
+    it('can occupy a custom hidden page through its visible page parent', () => {
+      const permission = configPermission(CUSTOM_HIDDEN_PAGE)
 
       expect(canOccupy(permission, '/office/userDetail')).toBe(true)
       expect(canOccupy(permission, '/office/userDetail/9')).toBe(true)
@@ -358,64 +237,19 @@ describe('配置权限', () => {
     it('cannot occupy a custom hidden page whose visible parent has no grant', () => {
       const permission = configPermission([
         {
-          path: '/office',
-          meta: { title: '办公配置' },
-          children: [
-            { path: 'userDetail', component: 'office/users/detail', meta: { title: '用户详情' }, hidden: true }
-          ]
-        }
+          path: '/office/userDetail',
+          parentPath: '/office/users',
+          title: '用户详情',
+          type: 1,
+          hidden: true,
+        },
       ])
 
       expect(canOccupy(permission, '/office/userDetail')).toBe(false)
-    })
-
-    it('cannot occupy a custom hidden page that the menu tree does not contain', () => {
-      const permission = configPermission(CUSTOM_CONFIG_MENUS)
-
-      expect(canOccupy(permission, '/office/userDetail')).toBe(false)
-    })
-
-    it('uses the same menu-tree parent for a custom hidden page entry and its occupancy', () => {
-      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
-      const entry = permission.entryOf('/office/userDetail')
-
-      expect(entry).toEqual({ path: '/office', group: 'config' })
-      expect(canOccupy(permission, '/office/userDetail')).toBe(canOccupy(permission, entry.path))
-    })
-
-    it('keeps the catalog parent for a known hidden page present in the menu tree', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysUser', component: 'system/sysUser/list', meta: { title: '用户管理' } },
-            { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-          ]
-        }
-      ])
-
-      expect(permission.entryOf('/system/assignAuth')).toEqual({
-        path: '/system/sysRole',
-        group: 'config'
-      })
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
-    })
-
-    it('falls back to the hidden page itself when no parent is known', () => {
-      const permission = configPermission([
-        { path: '/officeDetail', meta: { title: '详情' }, hidden: true }
-      ])
-
-      expect(permission.entryOf('/officeDetail')).toEqual({
-        path: '/officeDetail',
-        group: 'config'
-      })
-      expect(canOccupy(permission, '/officeDetail')).toBe(false)
     })
 
     it('does not occupy unknown paths', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+      const permission = configPermission(USER_PAGE)
 
       expect(canOccupy(permission, '/unknown/path')).toBe(false)
       expect(canOccupy(permission, '/dashboard')).toBe(false)
@@ -423,186 +257,105 @@ describe('配置权限', () => {
   })
 
   describe('entryOf', () => {
-    it('returns the nearest 办事 builtin entry', () => {
+    it('returns the nearest 办事 entry', () => {
       const permission = configPermission([])
 
       expect(permission.entryOf('/work/pending')).toEqual({
         path: '/work/pending',
-        group: 'work'
+        group: 'work',
       })
       expect(permission.entryOf('/work/pending/9/task-1')).toEqual({
         path: '/work/pending',
-        group: 'work'
+        group: 'work',
       })
       expect(permission.entryOf('/work/profile')).toEqual({
         path: '/work/profile',
-        group: 'work'
+        group: 'work',
       })
     })
 
-    it('prefers the longest 办事 builtin entry', () => {
+    it('prefers the longest 办事 entry', () => {
       const permission = configPermission([])
 
       expect(permission.entryOf('/work/start/9')).toEqual({
         path: '/work/start',
-        group: 'work'
+        group: 'work',
       })
       expect(permission.entryOf('/work/started/9')).toEqual({
         path: '/work/started',
-        group: 'work'
+        group: 'work',
       })
     })
 
-    it('classifies 办事 pages as 办事 even when they appear in the menu tree', () => {
-      const permission = configPermission([
-        { path: '/work/pending', meta: { title: '待处理' } }
-      ])
-
-      expect(permission.entryOf('/work/pending/9/task-1')).toEqual({
-        path: '/work/pending',
-        group: 'work'
-      })
-    })
-
-    it('returns a 配置 entry from the menu tree', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
-
-      expect(permission.entryOf('/system/sysUser')).toEqual({
-        path: '/system/sysUser',
-        group: 'config'
-      })
-      expect(permission.entryOf('/system/sysUser/9')).toEqual({
-        path: '/system/sysUser',
-        group: 'config'
-      })
-    })
-
-    it('returns a custom menu path as a 配置 entry', () => {
-      const permission = configPermission(CUSTOM_CONFIG_MENUS)
-
-      expect(permission.entryOf('/office/users')).toEqual({
-        path: '/office/users',
-        group: 'config'
-      })
-      expect(permission.entryOf('/office/users/9')).toEqual({
-        path: '/office/users',
-        group: 'config'
-      })
-    })
-
-    it('returns the visible menu-tree parent for a custom hidden page', () => {
-      const permission = configPermission(CUSTOM_HIDDEN_MENUS)
-
-      expect(permission.entryOf('/office/userDetail')).toEqual({
-        path: '/office',
-        group: 'config'
-      })
-      expect(permission.entryOf('/office/userDetail/9')).toEqual({
-        path: '/office',
-        group: 'config'
-      })
-    })
-
-    it('returns null for a custom hidden page absent from both the menu tree and the product catalog', () => {
-      expect(configPermission([]).entryOf('/office/userDetail')).toBeNull()
-    })
-
-    it('returns a parent directory that only has children as a 配置 entry', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
-
-      expect(permission.entryOf('/system')).toEqual({
-        path: '/system',
-        group: 'config'
-      })
-      expect(configPermission([]).entryOf('/processMgr')).toEqual({
-        path: '/processMgr',
-        group: 'config'
-      })
-    })
-
-    it('returns the nearest visible parent for a hidden 配置 page', () => {
-      expect(configPermission(ONLY_ROLE_MENUS).entryOf('/system/assignAuth')).toEqual({
-        path: '/system/sysRole',
-        group: 'config'
-      })
-      expect(configPermission(PROCESS_TEMPLATE_MENUS).entryOf('/processSet/templateSet')).toEqual({
-        path: '/processSet/processTemplate',
-        group: 'config'
-      })
-    })
-
-    it('returns the catalog parent for a known hidden page present in the menu tree', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysRole', component: 'system/sysRole/list', meta: { title: '角色管理' } },
-            { path: 'assignAuth', component: 'system/sysRole/assignAuth', meta: { title: '菜单授权' }, hidden: true }
-          ]
-        }
-      ])
-
-      expect(permission.entryOf('/system/assignAuth')).toEqual({
-        path: '/system/sysRole',
-        group: 'config'
-      })
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
-    })
-
-    it('returns the catalog parent when the hidden 配置 page is absent from the menu tree', () => {
-      expect(configPermission([]).entryOf('/system/assignAuth')).toEqual({
-        path: '/system/sysRole',
-        group: 'config'
-      })
-      expect(configPermission([]).entryOf('/processSet/templateSet')).toEqual({
-        path: '/processSet/processTemplate',
-        group: 'config'
-      })
-    })
-
-    it('falls back to the product catalog for known 配置 pages absent from the menu tree', () => {
+    it('returns a declared 配置 route without needing a grant', () => {
       const permission = configPermission([])
 
       expect(permission.entryOf('/system/sysUser')).toEqual({
         path: '/system/sysUser',
-        group: 'config'
+        group: 'config',
+      })
+      expect(permission.entryOf('/system/sysUser/9')).toEqual({
+        path: '/system/sysUser',
+        group: 'config',
       })
       expect(permission.entryOf('/processMgr/process/9')).toEqual({
         path: '/processMgr/process',
-        group: 'config'
+        group: 'config',
       })
     })
 
-    it('returns the 审批实例查询 entry for an approval-instance detail path', () => {
-      const permission = configPermission(PROCESS_INSTANCE_MENUS)
+    it('returns the visible parent for a declared hidden 配置 page', () => {
+      const permission = configPermission(ROLE_PAGE)
 
-      expect(permission.entryOf('/processMgr/process/9')).toEqual({
-        path: '/processMgr/process',
-        group: 'config'
+      expect(permission.entryOf('/system/assignAuth')).toEqual({
+        path: '/system/sysRole',
+        group: 'config',
+      })
+      expect(permission.entryOf('/system/assignAuth/9')).toEqual({
+        path: '/system/sysRole',
+        group: 'config',
+      })
+      expect(configPermission([]).entryOf('/processSet/templateSet')).toEqual({
+        path: '/processSet/processTemplate',
+        group: 'config',
       })
     })
 
-    it('lets the menu tree win over the product catalog', () => {
-      const permission = configPermission([
-        {
-          path: '/system',
-          meta: { title: '组织与权限' },
-          children: [
-            { path: 'sysUser', meta: { title: '用户管理' }, hidden: true }
-          ]
-        }
-      ])
-
-      expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.entryOf('/system/sysUser')).toEqual({
+    it('returns a parent directory that only has children as a 配置 entry', () => {
+      expect(configPermission(USER_PAGE).entryOf('/system')).toEqual({
         path: '/system',
-        group: 'config'
+        group: 'config',
+      })
+      expect(configPermission([]).entryOf('/processMgr')).toEqual({
+        path: '/processMgr',
+        group: 'config',
+      })
+    })
+
+    it('returns a custom granted page as a 配置 entry', () => {
+      const permission = configPermission(CUSTOM_PAGE)
+
+      expect(permission.entryOf('/office/users')).toEqual({
+        path: '/office/users',
+        group: 'config',
+      })
+      expect(permission.entryOf('/office/users/9')).toEqual({
+        path: '/office/users',
+        group: 'config',
+      })
+    })
+
+    it('returns the visible parent for a custom hidden entry', () => {
+      const permission = configPermission(CUSTOM_HIDDEN_PAGE)
+
+      expect(permission.entryOf('/office/userDetail')).toEqual({
+        path: '/office/users',
+        group: 'config',
       })
     })
 
     it('returns null for unknown paths', () => {
-      const permission = configPermission(ONLY_USER_MENUS)
+      const permission = configPermission(USER_PAGE)
 
       expect(permission.entryOf('/unknown/path')).toBeNull()
       expect(configPermission([]).entryOf('/unknown/path')).toBeNull()

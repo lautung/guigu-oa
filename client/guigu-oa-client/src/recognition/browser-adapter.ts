@@ -54,7 +54,7 @@ export function setupRecognition(pinia: Pinia, router: Router) {
       store.$patch({
         name: user.name,
         avatar: user.avatar || '',
-        menus: user.routers || [],
+        menus: user.configMenus || [],
         recognized: true,
       })
     },

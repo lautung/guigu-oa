@@ -39,7 +39,24 @@ async function mockUnavailableTemplate(page: Page) {
       return json(route, {
         name: 'Alice',
         avatar: '',
-        routers: [{ path: '/processSet/processTemplate', meta: { title: '审批模板' } }],
+        configMenus: [
+          { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+          {
+            path: '/processSet/processTemplate',
+            parentPath: '/processSet',
+            title: '审批模板',
+            type: 1,
+            sort: 2,
+          },
+          {
+            path: '/processSet/templateSet',
+            parentPath: '/processSet/processTemplate',
+            title: '审批模板设置',
+            type: 1,
+            hidden: true,
+            sort: 3,
+          },
+        ],
       })
     }
     if (path === '/admin/process/findStartable' && method === 'GET') {

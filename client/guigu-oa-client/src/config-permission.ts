@@ -1,52 +1,13 @@
-import { isMobileViewport, WORK_BUILTIN_ITEMS } from '@/navigation/constants'
-import type { MenuNode, SidebarItem } from '@/types/domain'
+import { isMobileViewport } from '@/navigation/constants'
+import { ROUTE_GROUP_ENTRIES, type RouteGroupEntry } from '@/router/routes'
+import type { ConfigMenuEntry, SidebarItem } from '@/types/domain'
 
 /**
- * 配置权限：有没有、授了哪些配置类菜单、某地址属于哪组、这页能不能占用。
- * 输入是 info 给来的菜单树。不认用户 id，不认按钮，不认认证状态。
- * 菜单树是授予权威；产品目录只兜底当前菜单树里没有的已知配置页。
- * 菜单管理可以问什么算配置类菜单；勾选和增删改仍是配置页的动作。
+ * 配置授予的客户端投影：组归属来自路由表，授予内容来自 /info 的 configMenus。
+ * 不认按钮，不认用户 id，不再维护产品目录。
  */
 
 export type MenuGroup = 'work' | 'config'
-
-interface MenuEntry {
-  path: string
-  group: MenuGroup
-  hidden?: boolean
-  hiddenParentPath?: string
-}
-
-export const KNOWN_CONFIG_PAGES: readonly { path: string; hiddenParentPath?: string }[] = [
-  { path: '/system/sysUser' },
-  { path: '/system/sysRole' },
-  { path: '/system/sysMenu' },
-  { path: '/system/assignAuth', hiddenParentPath: '/system/sysRole' },
-  { path: '/processSet/processType' },
-  { path: '/processSet/processTemplate' },
-  { path: '/processSet/templateSet', hiddenParentPath: '/processSet/processTemplate' },
-  { path: '/processMgr/process' },
-]
-
-const EXCLUDED_PATH_PATTERNS = [/wechat/i, /dashboard/i, /onlineProcessSet/i]
-
-const EXCLUDED_COMPONENTS = [
-  'system/sysDept/list',
-  'system/sysPost/list',
-  'system/sysOperLog/list',
-  'system/sysLoginLog/list',
-]
-
-function isExcludedConfigMenu(menu: MenuNode = {}): boolean {
-  const path = menu.path || ''
-  const component = menu.component || ''
-
-  if (EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(path) || pattern.test(component))) {
-    return true
-  }
-
-  return EXCLUDED_COMPONENTS.includes(component)
-}
 
 function normalizePath(path: string | undefined): string {
   if (!path) return ''
@@ -54,217 +15,137 @@ function normalizePath(path: string | undefined): string {
   return withLeadingSlash.replace(/\/$/, '') || '/'
 }
 
-function joinPath(base: string, segment: string | undefined): string {
-  const normalizedBase = normalizePath(base).replace(/\/$/, '')
-  const normalizedSegment = (segment || '').replace(/^\//, '')
-  if (!normalizedSegment) return normalizedBase
-  return `${normalizedBase}/${normalizedSegment}`
-}
-
-function resolveMenuPath(menu: MenuNode, parentPath = ''): string {
-  const segment = menu.path || ''
-  if (segment.startsWith('/')) {
-    return normalizePath(segment)
-  }
-  return joinPath(parentPath, segment)
-}
-
-function titleOf(menu: MenuNode): string {
-  return menu.meta?.title || menu.title || menu.name || ''
-}
-
-export function isWorkMenu(menu: MenuNode = {}): boolean {
-  const path = menu.path || ''
-  return path === 'work' || /^\/work/i.test(path) || /^work\//i.test(path)
-}
-
-function isButtonMenu(menu: MenuNode): boolean {
-  return menu.type === 2
-}
-
-export function isConfigClassMenu(menu: MenuNode): boolean {
-  return !isButtonMenu(menu) && !isWorkMenu(menu) && !isExcludedConfigMenu(menu)
-}
-
-function grantedConfigMenusFrom(menus: MenuNode[], parentPath = ''): SidebarItem[] {
-  const granted: SidebarItem[] = []
-
-  menus.forEach((menu) => {
-    if (menu.hidden || !isConfigClassMenu(menu)) {
-      return
-    }
-
-    const path = resolveMenuPath(menu, parentPath)
-    const pageChildren = (menu.children || []).filter((child) => !isButtonMenu(child))
-    const children = grantedConfigMenusFrom(pageChildren, path)
-    if (pageChildren.length > 0 && children.length === 0) {
-      return
-    }
-
-    const node: SidebarItem = {
-      path,
-      title: titleOf(menu),
-    }
-    if (children.length > 0) {
-      node.children = children
-    }
-    granted.push(node)
-  })
-
-  return granted
-}
-
-function collectGrantedLeaves(nodes: SidebarItem[], leaves: string[] = []): string[] {
-  nodes.forEach((node) => {
-    if (node.children && node.children.length > 0) {
-      collectGrantedLeaves(node.children, leaves)
-    } else {
-      leaves.push(node.path)
-    }
-  })
-  return leaves
-}
-
-// 菜单组分类先覆盖菜单树里的所有条目；某个菜单是否算被授予的配置权限仍由 isConfigClassMenu 决定。
-function flattenMenuEntries(
-  menus: MenuNode[],
-  parentPath = '',
-  visibleParentPath = '',
-): MenuEntry[] {
-  return menus.flatMap((menu) => {
-    const path = resolveMenuPath(menu, parentPath)
-    const hidden = !!menu.hidden
-    const entry: MenuEntry = {
-      path,
-      group: 'config',
-      ...(hidden ? { hidden: true, hiddenParentPath: visibleParentPath || undefined } : {}),
-    }
-    const nextVisibleParent = hidden ? visibleParentPath : path
-    const children = flattenMenuEntries(menu.children || [], path, nextVisibleParent)
-    return [entry, ...children]
-  })
-}
-
-function catalogEntries(): MenuEntry[] {
-  return KNOWN_CONFIG_PAGES.map((page) => ({
-    path: page.path,
-    group: 'config',
-    ...(page.hiddenParentPath ? { hidden: true, hiddenParentPath: page.hiddenParentPath } : {}),
-  }))
-}
-
-function configEntriesFrom(menus: MenuNode[]): MenuEntry[] {
-  const fromMenus = flattenMenuEntries(menus)
-  const catalog = catalogEntries()
-  const catalogParents = new Map<string, string>()
-  catalog.forEach((entry) => {
-    if (entry.hiddenParentPath) {
-      catalogParents.set(entry.path, entry.hiddenParentPath)
-    }
-  })
-
-  const entries = fromMenus.map((entry) => {
-    const catalogParentPath = entry.hidden ? catalogParents.get(entry.path) : undefined
-    return catalogParentPath ? { ...entry, hiddenParentPath: catalogParentPath } : entry
-  })
-  const seenPaths = new Set(entries.map((entry) => entry.path))
-  return [...entries, ...catalog.filter((entry) => !seenPaths.has(entry.path))]
-}
-
-function workEntries(): MenuEntry[] {
-  return WORK_BUILTIN_ITEMS.map((item) => ({ path: item.path, group: 'work' }))
-}
-
-function pathMatchesEntry(path: string, entryPath: string): boolean {
+function pathMatches(path: string, entryPath: string): boolean {
   return path === entryPath || path.startsWith(`${entryPath}/`)
 }
 
-function findBestEntry(path: string, entries: MenuEntry[]): MenuEntry | null {
+function bestMatch<T extends { path: string }>(path: string, entries: readonly T[]): T | null {
   const matches = entries
-    .filter((entry) => pathMatchesEntry(path, entry.path))
+    .filter((entry) => pathMatches(path, entry.path))
     .sort((left, right) => right.path.length - left.path.length)
   return matches[0] || null
 }
 
-function findEntry(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEntry | null {
-  const normalized = normalizePath(path)
-  const workEntry = findBestEntry(normalized, work)
-  if (workEntry) return workEntry
+function routeEntryOf(path: string): RouteGroupEntry | null {
+  const route = bestMatch(path, ROUTE_GROUP_ENTRIES)
+  if (route) return route
 
-  const configEntry = findBestEntry(normalized, config)
-  if (configEntry) return configEntry
-
-  // 只挂着子页的父目录仍属于配置组。
-  const descendant = config.find((entry) => entry.path.startsWith(`${normalized}/`))
-  if (descendant) {
-    return { path: normalized, group: 'config' }
-  }
-
-  return null
+  // 只挂着子页的父目录仍属于该组。
+  const descendant = ROUTE_GROUP_ENTRIES.find((entry) => entry.path.startsWith(`${path}/`))
+  return descendant ? { path, group: descendant.group } : null
 }
 
-function findEntryOf(path: string, work: MenuEntry[], config: MenuEntry[]): MenuEntry | null {
-  const entry = findEntry(path, work, config)
-  const hiddenParentPath = entry?.hidden ? hiddenParentPathOf(path, config) : undefined
-  if (!hiddenParentPath) {
-    return entry
-  }
-
-  return findEntry(hiddenParentPath, work, config) || entry
+function grantedEntryOf(path: string, entries: readonly ConfigMenuEntry[]): ConfigMenuEntry | null {
+  const match = bestMatch(path, entries)
+  if (match) return match
+  return entries.find((entry) => normalizePath(entry.path).startsWith(`${path}/`)) || null
 }
 
-function publicEntry(entry: MenuEntry | null): { path: string; group: MenuGroup } | null {
+function publicGrantedEntry(
+  entry: ConfigMenuEntry | null,
+): { path: string; group: MenuGroup } | null {
   if (!entry) return null
-  return { path: entry.path, group: entry.group }
+  const path = entry.hidden && entry.parentPath ? entry.parentPath : entry.path
+  return { path: normalizePath(path), group: 'config' }
 }
 
-function pathCoveredByGrant(path: string, leaves: string[]): boolean {
-  return leaves.some(
-    (leaf) => path === leaf || path.startsWith(`${leaf}/`) || leaf.startsWith(`${path}/`),
+function grantedPages(entries: readonly ConfigMenuEntry[]): string[] {
+  const visiblePages = entries
+    .filter((entry) => entry.type === 1 && !entry.hidden)
+    .map((entry) => normalizePath(entry.path))
+    .filter(Boolean)
+  const visible = new Set(visiblePages)
+  const hiddenPages = entries
+    .filter(
+      (entry) =>
+        entry.type === 1 &&
+        entry.hidden &&
+        !!entry.parentPath &&
+        visible.has(normalizePath(entry.parentPath)),
+    )
+    .map((entry) => normalizePath(entry.path))
+    .filter(Boolean)
+  return [...visiblePages, ...hiddenPages]
+}
+
+function pathCoveredByGrant(path: string, pages: readonly string[]): boolean {
+  return pages.some(
+    (page) => path === page || path.startsWith(`${page}/`) || page.startsWith(`${path}/`),
   )
 }
 
-// 隐藏页的入口父级和占用父级共用这一份解析：已知隐藏页始终用目录里的显式父级，
-// 目录里没有的自定义隐藏页才跟随菜单树里最近的可见父级。
-function hiddenParentPathOf(path: string, config: MenuEntry[]): string | undefined {
-  const entry = findBestEntry(normalizePath(path), config)
-  return entry?.hidden ? entry.hiddenParentPath : undefined
+function sidebarEntries(entries: readonly ConfigMenuEntry[]): ConfigMenuEntry[] {
+  const byPath = new Map(entries.map((entry) => [normalizePath(entry.path), entry]))
+  const keep = new Set<string>()
+
+  entries
+    .filter((entry) => entry.type === 1 && !entry.hidden)
+    .forEach((page) => {
+      let current: ConfigMenuEntry | undefined = page
+      while (current) {
+        const path = normalizePath(current.path)
+        if (keep.has(path)) break
+        keep.add(path)
+        current = current.parentPath ? byPath.get(normalizePath(current.parentPath)) : undefined
+      }
+    })
+
+  return entries.filter((entry) => !entry.hidden && keep.has(normalizePath(entry.path)))
 }
 
-function pathCanOccupy(
-  path: string,
-  viewportWidth: number,
-  config: MenuEntry[],
-  leaves: string[],
-): boolean {
-  if (isMobileViewport(viewportWidth)) return false
+function buildSidebar(entries: readonly ConfigMenuEntry[]): SidebarItem[] {
+  const byParent = new Map<string, ConfigMenuEntry[]>()
+  sidebarEntries(entries).forEach((entry) => {
+    const parentPath = entry.parentPath ? normalizePath(entry.parentPath) : ''
+    const siblings = byParent.get(parentPath) || []
+    siblings.push(entry)
+    byParent.set(parentPath, siblings)
+  })
 
-  const normalized = normalizePath(path)
-  if (pathCoveredByGrant(normalized, leaves)) return true
+  const build = (parentPath: string): SidebarItem[] =>
+    (byParent.get(parentPath) || [])
+      .slice()
+      .sort(
+        (left, right) =>
+          (left.sort ?? 0) - (right.sort ?? 0) || left.path.localeCompare(right.path),
+      )
+      .map((entry) => {
+        const path = normalizePath(entry.path)
+        const children = build(path)
+        return {
+          path,
+          title: entry.title,
+          ...(children.length > 0 ? { children } : {}),
+        }
+      })
 
-  const hiddenParentPath = hiddenParentPathOf(normalized, config)
-  return hiddenParentPath !== undefined && pathCoveredByGrant(hiddenParentPath, leaves)
+  return build('')
 }
 
-interface CanOccupyInput {
-  path: string
-  viewportWidth: number
-}
-
-export function configPermission(menus: MenuNode[] = []) {
-  const grantedConfigMenus = grantedConfigMenusFrom(menus)
-  const grantedLeaves = collectGrantedLeaves(grantedConfigMenus)
-  const work = workEntries()
-  const config = configEntriesFrom(menus)
+export function configPermission(menus: ConfigMenuEntry[] = []) {
+  const pages = grantedPages(menus)
 
   return {
-    hasConfigPermission: grantedLeaves.length > 0,
-    grantedConfigMenus,
-    entryOf(path: string): { path: string; group: 'work' | 'config' } | null {
-      return publicEntry(findEntryOf(path, work, config))
+    hasConfigPermission: pages.length > 0,
+    grantedConfigMenus: buildSidebar(menus),
+    entryOf(path: string): { path: string; group: MenuGroup } | null {
+      const normalized = normalizePath(path)
+      if (!normalized) return null
+
+      const route = routeEntryOf(normalized)
+      if (route) {
+        return {
+          path: route.hiddenParentPath || route.path,
+          group: route.group,
+        }
+      }
+
+      return publicGrantedEntry(grantedEntryOf(normalized, menus))
     },
-    canOccupy({ path, viewportWidth }: CanOccupyInput): boolean {
-      return pathCanOccupy(path, viewportWidth, config, grantedLeaves)
+    canOccupy({ path, viewportWidth }: { path: string; viewportWidth: number }): boolean {
+      const normalized = normalizePath(path)
+      if (!normalized || isMobileViewport(viewportWidth)) return false
+      return pathCoveredByGrant(normalized, pages)
     },
   }
 }

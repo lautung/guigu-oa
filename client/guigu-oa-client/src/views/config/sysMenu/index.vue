@@ -18,7 +18,7 @@
       <el-table-column prop="sortValue" label="排序" width="80" />
       <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
-          <el-button v-if="scope.row.type !== 2" type="text" @click="openCreate(scope.row)"
+          <el-button v-if="scope.row.type === 0" type="text" @click="openCreate(scope.row)"
             >添加下级</el-button
           >
           <el-button type="text" @click="openEdit(scope.row)">编辑</el-button>
@@ -42,13 +42,12 @@
           <el-radio-group v-model="form.type" :disabled="typeLocked">
             <el-radio :label="0">目录</el-radio>
             <el-radio :label="1">菜单</el-radio>
-            <el-radio :label="2">按钮</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="菜单名称">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item v-if="form.type !== 2" label="图标">
+        <el-form-item label="图标">
           <el-input v-model="form.icon" placeholder="如 el-icon-s-tools" />
         </el-form-item>
         <el-form-item label="排序">
@@ -59,9 +58,6 @@
         </el-form-item>
         <el-form-item v-if="form.type !== 0" label="组件路径">
           <el-input v-model="form.component" />
-        </el-form-item>
-        <el-form-item v-if="form.type === 2" label="权限字符">
-          <el-input v-model="form.perms" />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -84,13 +80,7 @@
 import { defineComponent } from 'vue'
 
 import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
-import {
-  emptyForm,
-  formForCreate,
-  menuWriteValidationError,
-  presentConfigMenuTree,
-  presentForm,
-} from '@/config/sys-menu'
+import { emptyForm, formForCreate, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
 import type { EntityId, MenuNode } from '@/types/domain'
 
 export default defineComponent({
@@ -121,7 +111,7 @@ export default defineComponent({
     },
     openCreate(parent?: MenuNode) {
       this.form = formForCreate(parent)
-      this.typeLocked = !!parent && parent.type === 1
+      this.typeLocked = !!parent
       this.dialogVisible = true
     },
     openEdit(row: MenuNode) {
@@ -130,11 +120,6 @@ export default defineComponent({
       this.dialogVisible = true
     },
     save() {
-      const error = menuWriteValidationError(this.form)
-      if (error) {
-        this.$message.error(error)
-        return
-      }
       this.saving = true
       saveOrUpdate(this.form)
         .then((response) => {
@@ -142,6 +127,7 @@ export default defineComponent({
           this.dialogVisible = false
           this.fetchTree()
         })
+        .catch(() => {})
         .finally(() => {
           this.saving = false
         })

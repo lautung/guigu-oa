@@ -58,7 +58,11 @@ describe('browser adapter with real Pinia and navigation', () => {
       calls.push(config.url)
       return config.url.endsWith('/login')
         ? ok({ token: 'jwt-alice', refreshToken: 'refresh-alice' })
-        : ok({ name: 'Alice', routers: [{ path: '/system/sysUser' }], buttons: ['ignored'] })
+        : ok({
+            name: 'Alice',
+            configMenus: [{ path: '/system/sysUser', title: '用户管理', type: 1 }],
+            buttons: ['ignored'],
+          })
     })
     await h.router.push('/login')
     await h.store.login({ username: ' alice ', password: '111111' })
@@ -66,7 +70,7 @@ describe('browser adapter with real Pinia and navigation', () => {
     expect(h.store.name).toBe('')
     await h.router.push('/work/pending')
     expect(h.store.name).toBe('Alice')
-    expect(h.store.menus).toEqual([{ path: '/system/sysUser' }])
+    expect(h.store.menus).toEqual([{ path: '/system/sysUser', title: '用户管理', type: 1 }])
     expect(h.store.buttons).toBeUndefined()
     await h.store.logout()
     await flushPromises()
@@ -142,8 +146,8 @@ describe('browser adapter with real Pinia and navigation', () => {
     setToken('only-token')
     const respond = vi
       .fn()
-      .mockResolvedValueOnce(ok({ name: 'Alice', routers: {} }))
-      .mockResolvedValue(ok({ name: 'Alice', routers: [] }))
+      .mockResolvedValueOnce(ok({ name: 'Alice', configMenus: {} }))
+      .mockResolvedValue(ok({ name: 'Alice', configMenus: [] }))
     const h = setup(respond, '/work/pending')
     wrapper = mount(App, { global: { plugins: [h.pinia, h.router, ElementPlus] } })
     await vi.waitFor(() => expect(wrapper.text()).toContain('暂时无法获取用户信息'))

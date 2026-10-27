@@ -39,7 +39,7 @@ async function setup(page: Page): Promise<State> {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
     if (path.endsWith('/login'))
       return json(route, { token: 'test-access', refreshToken: 'test-refresh' })
-    if (path.endsWith('/info')) return json(route, { name: 'Alice', routers: [] })
+    if (path.endsWith('/info')) return json(route, { name: 'Alice', configMenus: [] })
     if (path.includes('/findPending/') || path.includes('/findProcessed/'))
       return json(route, { records: [], total: 0 })
     if (path.includes('/findStarted/'))

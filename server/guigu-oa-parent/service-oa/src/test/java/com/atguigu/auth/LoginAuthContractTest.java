@@ -71,7 +71,7 @@ public class LoginAuthContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
-                .andExpect(jsonPath("$.data.routers").doesNotExist())
+                .andExpect(jsonPath("$.data.configMenus").doesNotExist())
                 .andExpect(jsonPath("$.data.buttons").doesNotExist());
     }
 
@@ -310,7 +310,7 @@ public class LoginAuthContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.name").value("管理员"))
-                .andExpect(jsonPath("$.data.routers").exists());
+                .andExpect(jsonPath("$.data.configMenus").exists());
     }
 
     private String loginToken(String username, String password) throws Exception {
