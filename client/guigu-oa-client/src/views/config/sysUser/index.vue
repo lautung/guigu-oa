@@ -92,23 +92,21 @@
 
 <script lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { onBeforeRouteLeave } from 'vue-router'
 
 import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import ListLoadError from '@/components/ListLoadError.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
 import { emptyForm, listRequest, presentForm, presentListPage } from '@/config/sys-user'
 import { createListRead } from '@/list-read'
-import { ROUTES } from '@/navigation/constants'
 import { useUserStore } from '@/store/modules/user'
-import { resolveClientSurface } from '@/surface/client-surface'
 import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
 import request from '@/utils/request'
 import AssignRolesDialog from './AssignRolesDialog.vue'
 
 interface AssignRolesDialogHandle {
-  requestLeave(force?: boolean): Promise<boolean>
+  requestLeave(): Promise<boolean>
+  environmentChanged(): void
 }
 
 export default defineComponent({
@@ -128,15 +126,17 @@ export default defineComponent({
       request,
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
     })
-    const router = useRouter()
-    const route = useRoute()
 
     function isPending(id: EntityId): boolean {
       return pendingIds.value.has(String(id))
     }
 
-    async function requestAssignRolesLeave(force = false): Promise<boolean> {
-      return (await assignRolesDialog.value?.requestLeave(force)) ?? true
+    async function requestAssignRolesLeave(): Promise<boolean> {
+      return (await assignRolesDialog.value?.requestLeave()) ?? true
+    }
+
+    function environmentChanged(): void {
+      assignRolesDialog.value?.environmentChanged()
     }
 
     async function openAssignRoles(id: EntityId, username?: string): Promise<void> {
@@ -148,35 +148,16 @@ export default defineComponent({
       assignRolesVisible.value = true
     }
 
-    function mustLeave(): boolean {
-      return (
-        !userStore.token ||
-        resolveClientSurface({
-          path: route.path,
-          hasToken: !!userStore.token,
-          menus: userStore.menus,
-          viewportWidth: window.innerWidth,
-        }).occupancy.action === 'redirect'
-      )
-    }
-
-    async function enforceEntry(): Promise<void> {
-      if (!mustLeave()) return
-      await requestAssignRolesLeave(true)
-      ElMessageBox.close()
-      if (userStore.token) void router.replace(ROUTES.PENDING)
-    }
-
-    watch(() => [userStore.token, userStore.menus] as const, enforceEntry, { deep: true })
-    onBeforeRouteLeave(async () => requestAssignRolesLeave(mustLeave()))
+    watch(() => [userStore.token, userStore.menus] as const, environmentChanged, { deep: true })
+    onBeforeRouteLeave(async () => requestAssignRolesLeave())
     onMounted(() => {
-      window.addEventListener('resize', enforceEntry)
-      window.addEventListener('focus', enforceEntry)
+      window.addEventListener('resize', environmentChanged)
+      window.addEventListener('focus', environmentChanged)
     })
     onBeforeUnmount(() => {
       opening.release()
-      window.removeEventListener('resize', enforceEntry)
-      window.removeEventListener('focus', enforceEntry)
+      window.removeEventListener('resize', environmentChanged)
+      window.removeEventListener('focus', environmentChanged)
     })
 
     return {

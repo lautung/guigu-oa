@@ -1,4 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
+import router from '@/router'
+import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
 import request from '@/utils/request'
@@ -26,7 +28,8 @@ function storage(): {
 }
 
 export function useAssignRoles() {
-  const recognition = useUserStore().recognition
+  const userStore = useUserStore()
+  const recognition = userStore.recognition
   if (!recognition) throw new Error('认出 module 尚未接入')
   let module = modules.get(recognition)
   if (!module) {
@@ -69,6 +72,13 @@ export function useAssignRoles() {
         }
       },
       refreshOperator: () => recognition.recognize().then(() => undefined),
+      occupancy: () =>
+        resolveClientSurface({
+          path: router.currentRoute.value.path,
+          hasToken: !!userStore.token,
+          menus: userStore.menus,
+          viewportWidth: window.innerWidth,
+        }).occupancy,
       confirm: async (message, kind) => {
         const ending = kind === 'end-assignment'
         try {
@@ -82,8 +92,14 @@ export function useAssignRoles() {
           return false
         }
       },
+      dismissConfirm: () => {
+        ElMessageBox.close()
+      },
       notify: (message, kind) => {
         ElMessage({ message, type: kind, duration: 5000 })
+      },
+      replace: (path) => {
+        void router.replace(path)
       },
     })
     modules.set(recognition, module)

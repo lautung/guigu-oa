@@ -1,4 +1,5 @@
 import { readonly, shallowRef, type DeepReadonly, type Ref } from 'vue'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import type { EntityId } from '@/types/domain'
 
 export interface AssignableRole {
@@ -19,6 +20,8 @@ export interface RoleAssignmentRead {
 export type AssignResult =
   { kind: 'saved' } | { kind: 'rejected'; message: string } | { kind: 'unconfirmed' }
 
+export type AssignOccupancy = { action: 'allow' } | { action: 'redirect'; to: string }
+
 export interface AssignRolesAdapter {
   entryId(): string
   capture(): { generation: number; entryId: string }
@@ -26,8 +29,11 @@ export interface AssignRolesAdapter {
   read(userId: EntityId): Promise<RoleAssignmentRead>
   assign(userId: EntityId, roleIds: readonly EntityId[]): Promise<AssignResult>
   refreshOperator(): Promise<void>
+  occupancy(): AssignOccupancy
   confirm(message: string, kind: 'leave' | 'end-assignment'): Promise<boolean>
+  dismissConfirm(): void
   notify(message: string, kind: 'success' | 'warning' | 'error'): void
+  replace(path: string): void
 }
 
 type Phase = 'loading' | 'ready' | 'saving' | 'unconfirmed' | 'read-error' | 'saved' | 'closed'
@@ -93,13 +99,15 @@ export interface AssignRolesView {
 
 export interface AssignRolesLease {
   view: DeepReadonly<Ref<AssignRolesView>>
+  released: DeepReadonly<Ref<boolean>>
   ready: Promise<void>
   select(roleIds: readonly EntityId[]): boolean
   save(): Promise<void>
   reload(): Promise<void>
   endAssignment(): Promise<boolean>
-  requestLeave(force?: boolean): Promise<boolean>
-  release(): void
+  requestLeave(): Promise<boolean>
+  environmentChanged(): Promise<void>
+  dispose(): void
 }
 
 export interface AssignRolesModule {
@@ -417,6 +425,8 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
     const state: LeaseState = { active: true, session, leaving: false, ending: false }
     session.lease = state
     const view = shallowRef<AssignRolesView>(projection(session))
+    const released = shallowRef(false)
+    let confirming = false
     const refreshView = () => {
       if (state.active) view.value = projection(session)
     }
@@ -433,14 +443,33 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
 
     function releaseLease(): void {
       state.active = false
+      released.value = true
       session.listeners.delete(refreshView)
       if (session.lease === state) session.lease = undefined
     }
 
-    async function requestLeave(force = false): Promise<boolean> {
+    function dismissPendingConfirm(): void {
+      if (confirming) adapter.dismissConfirm()
+    }
+
+    function discardIfIdle(): void {
+      if (['loading', 'read-error', 'ready'].includes(session.phase)) discard(session)
+    }
+
+    async function ask(message: string, kind: 'leave' | 'end-assignment'): Promise<boolean> {
+      confirming = true
+      try {
+        return await adapter.confirm(message, kind)
+      } finally {
+        confirming = false
+      }
+    }
+
+    async function requestLeave(): Promise<boolean> {
       if (!state.active) return true
-      if (force) {
-        if (['loading', 'read-error', 'ready'].includes(session.phase)) discard(session)
+      if (adapter.occupancy().action === 'redirect') {
+        dismissPendingConfirm()
+        discardIfIdle()
         releaseLease()
         return true
       }
@@ -462,13 +491,32 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
         ) {
           message = '当前有未保存的角色勾选，离开将丢弃本次修改，确认关闭？'
         }
-        if (message && !(await adapter.confirm(message, 'leave'))) return false
+        if (message && !(await ask(message, 'leave'))) return !active()
         if (!state.active) return true
-        if (['loading', 'read-error', 'ready'].includes(session.phase)) discard(session)
+        discardIfIdle()
         releaseLease()
         return true
       } finally {
         state.leaving = false
+      }
+    }
+
+    async function environmentChanged(): Promise<void> {
+      if (!state.active) return
+      const entry = adapter.entryId()
+      if (session.entry !== entry) {
+        dismissPendingConfirm()
+        discardIfIdle()
+        releaseLease()
+        if (entry) adapter.replace(getDefaultPostLoginRoute())
+        return
+      }
+      const occupancy = adapter.occupancy()
+      if (occupancy.action === 'redirect') {
+        dismissPendingConfirm()
+        discardIfIdle()
+        releaseLease()
+        adapter.replace(occupancy.to)
       }
     }
 
@@ -477,7 +525,7 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
       if (state.ending) return false
       state.ending = true
       try {
-        const accepted = await adapter.confirm(
+        const accepted = await ask(
           '原保存仍可能生效，并可能影响后续分配。结束本次分配只清理本地记录，不代表原保存失败，也不恢复原提交内容为可再次保存的勾选。',
           'end-assignment',
         )
@@ -579,6 +627,7 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
 
     const lease: AssignRolesLease = {
       view: readonly(view),
+      released: readonly(released),
       ready: session.preparation || Promise.resolve(),
       select(roleIds) {
         if (!active() || session.phase !== 'ready' || session.reading) return false
@@ -598,7 +647,8 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
       },
       endAssignment,
       requestLeave,
-      release() {
+      environmentChanged,
+      dispose() {
         releaseLease()
       },
     }

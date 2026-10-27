@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createAssignRoles } from '@/config/assign-roles'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 
 function deferred() {
   let resolve, reject
@@ -21,6 +22,7 @@ function harness(overrides = {}) {
   const values = new Map()
   let entry = 'entry-alice'
   let generation = 1
+  let occupancy = { action: 'allow' }
   const storage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => {
@@ -42,8 +44,11 @@ function harness(overrides = {}) {
     })),
     assign: vi.fn(async () => ({ kind: 'saved' })),
     refreshOperator: vi.fn(async () => {}),
+    occupancy: () => occupancy,
     confirm: vi.fn(async () => true),
+    dismissConfirm: vi.fn(),
     notify: (message, kind) => effects.push(['notify', message, kind]),
+    replace: vi.fn(),
     ...overrides,
   }
   return {
@@ -57,6 +62,9 @@ function harness(overrides = {}) {
     },
     setGeneration: (value) => {
       generation = value
+    },
+    occupancy: (value) => {
+      occupancy = value
     },
   }
 }
@@ -126,7 +134,8 @@ describe('分配角色 interface', () => {
       read: vi.fn((userId) => (String(userId) === String(alice.id) ? readA.promise : readB())),
     })
     const a = h.module.open(alice)
-    await a.requestLeave(true)
+    h.occupancy({ action: 'redirect', to: '/work/pending' })
+    await a.requestLeave()
     const b = await open(h, bob)
     expect(b.view.value).toMatchObject({
       userId: 12,
@@ -216,7 +225,7 @@ describe('分配角色 interface', () => {
     page.select([2])
     const pending = page.save()
     expect(JSON.parse([...h.values.values()][0]).phase).toBe('sending')
-    page.release()
+    page.dispose()
 
     const restored = createAssignRoles(h.adapter)
     const reopened = restored.open(alice)
@@ -374,5 +383,94 @@ describe('分配角色 interface', () => {
     await second.save()
     expect(h.adapter.assign).toHaveBeenCalledTimes(2)
     expect(h.module.pendingUserIds.value).toEqual(['11'])
+  })
+
+  it('releases without confirmation and discards the opening when occupancy no longer holds', async () => {
+    const h = harness()
+    const page = await open(h)
+    page.select([2])
+    expect(page.released.value).toBe(false)
+    h.occupancy({ action: 'redirect', to: '/work/pending' })
+
+    expect(await page.requestLeave()).toBe(true)
+    expect(page.released.value).toBe(true)
+    expect(h.adapter.confirm).not.toHaveBeenCalled()
+    expect(h.adapter.replace).not.toHaveBeenCalled()
+
+    const again = await open(h)
+    expect(h.adapter.read).toHaveBeenCalledTimes(2)
+    expect(again.view.value.selectedRoleIds).toEqual([1])
+  })
+
+  it('lets an environment change preempt a pending confirmation without navigating twice', async () => {
+    const confirming = deferred()
+    const h = harness({ confirm: vi.fn(() => confirming.promise) })
+    const page = await open(h)
+    page.select([2])
+    const leaving = page.requestLeave()
+    await vi.waitFor(() => expect(h.adapter.confirm).toHaveBeenCalledTimes(1))
+
+    h.occupancy({ action: 'redirect', to: '/work/pending' })
+    await page.environmentChanged()
+    expect(h.adapter.dismissConfirm).toHaveBeenCalledTimes(1)
+    expect(h.adapter.replace).toHaveBeenCalledWith('/work/pending')
+    expect(page.released.value).toBe(true)
+
+    confirming.resolve(false)
+    expect(await leaving).toBe(true)
+    expect(h.adapter.replace).toHaveBeenCalledTimes(1)
+    expect(h.effects).toEqual([])
+  })
+
+  it('releases on a replaced identity and only releases when the identity is cleared', async () => {
+    const first = harness()
+    const page = await open(first)
+    page.select([2])
+    first.setEntry('entry-bob')
+    first.setGeneration(2)
+    await page.environmentChanged()
+    expect(page.released.value).toBe(true)
+    expect(first.adapter.replace).toHaveBeenCalledWith(getDefaultPostLoginRoute())
+    expect(first.adapter.confirm).not.toHaveBeenCalled()
+
+    const second = harness()
+    const other = await open(second)
+    other.select([2])
+    second.setEntry('')
+    await other.environmentChanged()
+    expect(other.released.value).toBe(true)
+    expect(second.adapter.replace).not.toHaveBeenCalled()
+    expect(second.adapter.confirm).not.toHaveBeenCalled()
+  })
+
+  it('keeps the opening untouched when occupancy still holds and the identity is unchanged', async () => {
+    const h = harness()
+    const page = await open(h)
+    page.select([2])
+    await page.environmentChanged()
+    expect(page.released.value).toBe(false)
+    expect(page.view.value.phase).toBe('ready')
+    expect(page.view.value.selectedRoleIds).toEqual([2])
+    expect(h.adapter.confirm).not.toHaveBeenCalled()
+    expect(h.adapter.replace).not.toHaveBeenCalled()
+  })
+
+  it('forces a saving opening to release but keeps the record and the late operator refresh', async () => {
+    const flight = deferred()
+    const h = harness({ assign: vi.fn(() => flight.promise) })
+    const page = await open(h)
+    const saving = page.save()
+    h.occupancy({ action: 'redirect', to: '/work/pending' })
+    await page.environmentChanged()
+    expect(page.released.value).toBe(true)
+    expect(h.values.size).toBe(1)
+    expect(h.adapter.replace).toHaveBeenCalledWith('/work/pending')
+    expect(h.adapter.confirm).not.toHaveBeenCalled()
+
+    flight.resolve({ kind: 'saved' })
+    await saving
+    expect(h.adapter.refreshOperator).toHaveBeenCalledTimes(1)
+    expect(h.effects).not.toContainEqual(['notify', '分配角色成功', 'success'])
+    expect(h.values.size).toBe(0)
   })
 })

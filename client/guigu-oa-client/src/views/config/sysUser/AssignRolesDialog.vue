@@ -125,19 +125,25 @@ const latestRoleNames = computed(() => {
   return latest.roleIds.map((id) => names.get(String(id)) || String(id))
 })
 
+function close(): void {
+  emit('update:modelValue', false)
+  lease.value?.dispose()
+  lease.value = undefined
+}
+
 watch(
   () => [props.modelValue, props.user ? String(props.user.id) : ''] as const,
   ([open]) => {
     if (open && props.user) {
       if (!lease.value || String(lease.value.view.value.userId) !== String(props.user.id)) {
-        lease.value?.release()
+        lease.value?.dispose()
         lease.value = assignRoles.open({
           id: props.user.id,
           username: props.user.username,
         })
       }
     } else if (!open) {
-      lease.value?.release()
+      lease.value?.dispose()
       lease.value = undefined
     }
   },
@@ -145,13 +151,16 @@ watch(
 )
 
 watch(
+  () => lease.value?.released.value ?? false,
+  (released) => {
+    if (released) close()
+  },
+)
+
+watch(
   () => assignView.value?.phase,
   (phase) => {
-    if (phase === 'saved' || phase === 'closed') {
-      emit('update:modelValue', false)
-      lease.value?.release()
-      lease.value = undefined
-    }
+    if (phase === 'saved' || phase === 'closed') close()
   },
 )
 
@@ -159,19 +168,19 @@ function selectRoles(value: unknown) {
   if (Array.isArray(value)) lease.value?.select(value as EntityId[])
 }
 
-async function requestLeave(force = false): Promise<boolean> {
+async function requestLeave(): Promise<boolean> {
   const current = lease.value
   if (!current) {
-    if (!force) emit('update:modelValue', false)
+    emit('update:modelValue', false)
     return true
   }
-  const allowed = await current.requestLeave(force)
-  if (allowed) {
-    emit('update:modelValue', false)
-    current.release()
-    if (lease.value === current) lease.value = undefined
-  }
+  const allowed = await current.requestLeave()
+  if (allowed) close()
   return allowed
+}
+
+function environmentChanged(): void {
+  void lease.value?.environmentChanged()
 }
 
 function handleUpdate(value: boolean) {
@@ -180,11 +189,11 @@ function handleUpdate(value: boolean) {
 }
 
 onBeforeUnmount(() => {
-  lease.value?.release()
+  lease.value?.dispose()
   lease.value = undefined
 })
 
-defineExpose({ requestLeave })
+defineExpose({ requestLeave, environmentChanged })
 </script>
 
 <style lang="scss" scoped>
