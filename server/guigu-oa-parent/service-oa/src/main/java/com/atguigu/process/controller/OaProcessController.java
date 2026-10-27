@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,7 @@ public class OaProcessController {
     private OaProcessService processService;
 
     //审批管理列表
+    @PreAuthorize("@configurationMenuGate.isGranted('process')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,

@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,12 +29,14 @@ public class OaProcessTypeController {
     private OaProcessTypeService processTypeService;
 
     //查询所有审批分类
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @GetMapping("findAll")
     public Result findAll() {
         List<ProcessType> list = processTypeService.list();
         return Result.ok(list);
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -45,6 +46,7 @@ public class OaProcessTypeController {
         return Result.ok(pageModel);
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -52,6 +54,7 @@ public class OaProcessTypeController {
         return Result.ok(processType);
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@RequestBody ProcessType processType) {
@@ -59,6 +62,7 @@ public class OaProcessTypeController {
         return Result.ok();
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@RequestBody ProcessType processType) {
@@ -66,6 +70,7 @@ public class OaProcessTypeController {
         return Result.ok();
     }
 
+    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {

@@ -1,5 +1,6 @@
 package com.atguigu.process;
 
+import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
@@ -247,7 +248,16 @@ public class ApprovalTemplateContractTest {
         MockMultipartFile upload = new MockMultipartFile(
                 "file", "../../uploadedApproval.zip", "application/zip", zip);
 
-        var result = processTemplateController.uploadProcessDefinition(upload);
+        // The controller is gated; call it as the seeded configuration admin.
+        LoginUserInfoHelper.setUserId(1L);
+        LoginUserInfoHelper.setUsername("admin");
+        Result result;
+        try {
+            result = processTemplateController.uploadProcessDefinition(upload);
+        } finally {
+            LoginUserInfoHelper.removeUserId();
+            LoginUserInfoHelper.removeUsername();
+        }
 
         assertEquals(200, result.getCode());
         assertFalse(Files.exists(classpathWriteTarget));

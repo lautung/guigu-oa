@@ -39,7 +39,5 @@ public interface SysMenuService extends IService<SysMenu> {
     //5 根据用户id获取用户可以操作按钮列表
     List<String> findUserPermsByUserId(Long userId);
 
-    boolean hasCurrentUserMenuAccess(String menuPath);
-
     boolean hasMenuAccess(Long userId, String menuPath);
 }
