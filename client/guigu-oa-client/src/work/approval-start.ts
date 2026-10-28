@@ -1,4 +1,4 @@
-import { readonly, shallowRef, type DeepReadonly, type Ref } from 'vue'
+import { reactive, readonly, shallowRef, watch, type DeepReadonly, type Ref } from 'vue'
 import type { CarbonCopyRecipient } from '@/api/carbon-copy'
 import type { StartProcessRequest } from '@/api/process'
 import type {
@@ -46,8 +46,6 @@ interface SavedStart {
 export interface ApprovalStartView {
   template: StartTemplate | null
   recipients: CarbonCopyRecipient[]
-  formData: FormDataRecord
-  ccUserIds: EntityId[]
   attachments: DraftAttachmentItem[]
   interrupted: InterruptedUpload[]
   loading: boolean
@@ -59,6 +57,11 @@ export interface ApprovalStartView {
   attachmentLocked: boolean
   phase: Phase
   error: string
+}
+/** The designer-facing draft; the module owns it and keeps it equal to the record. */
+export interface ApprovalStartDraft {
+  formData: FormDataRecord
+  ccUserIds: EntityId[]
 }
 export type StartResult =
   { kind: 'started' } | { kind: 'rejected'; message: string } | { kind: 'unconfirmed' }
@@ -96,6 +99,7 @@ interface Session {
 }
 export interface ApprovalStartPage {
   view: DeepReadonly<Ref<ApprovalStartView>>
+  draft: ApprovalStartDraft
   ready: Promise<void>
   edit(formData: FormDataRecord, ccUserIds: readonly EntityId[]): boolean
   reload(): Promise<void>
@@ -297,8 +301,6 @@ export function createApprovalStart(adapter: ApprovalStartAdapter) {
     return copy({
       template: session.template,
       recipients: session.recipients,
-      formData: session.record.formData,
-      ccUserIds: session.record.ccUserIds,
       attachments: session.record.attachments,
       interrupted: session.record.interrupted,
       loading: session.loading,
@@ -448,6 +450,10 @@ export function createApprovalStart(adapter: ApprovalStartAdapter) {
     current.visit = visit
     let active = true
     const isActive = () => active && owns(current) && current.visit === visit
+    const draft = reactive<ApprovalStartDraft>({
+      formData: copy(current.record.formData),
+      ccUserIds: copy([...current.record.ccUserIds]),
+    })
     const view = shallowRef(projection(current))
     const refreshView = () => {
       if (isActive()) view.value = projection(current)
@@ -460,12 +466,30 @@ export function createApprovalStart(adapter: ApprovalStartAdapter) {
       if (!isActive() || !mutable(current)) return false
       return true
     }
+    function draftMatchesRecord(): boolean {
+      return (
+        JSON.stringify(draft.formData) === JSON.stringify(current.record.formData) &&
+        JSON.stringify(draft.ccUserIds) === JSON.stringify(current.record.ccUserIds)
+      )
+    }
+    let reflowing = false
+    function reflowDraft(): void {
+      reflowing = true
+      try {
+        draft.formData = copy(current.record.formData)
+        draft.ccUserIds = copy([...current.record.ccUserIds])
+      } finally {
+        reflowing = false
+      }
+    }
     function changed() {
       persist(current)
       publish(current)
     }
+    let stopDraft = () => {}
     const page: ApprovalStartPage = {
       view: readonly(view),
+      draft,
       ready: Promise.resolve(),
       edit(formData, ccUserIds) {
         if (!editable()) return false
@@ -480,6 +504,7 @@ export function createApprovalStart(adapter: ApprovalStartAdapter) {
             return !current.storageFailed
           current.record.formData = values
           current.record.ccUserIds = users
+          if (draft.formData !== formData) reflowDraft()
           changed()
           return !current.storageFailed
         } catch {
@@ -708,9 +733,22 @@ export function createApprovalStart(adapter: ApprovalStartAdapter) {
       },
       release() {
         active = false
+        stopDraft()
         current.listeners.delete(refreshView)
       },
     }
+    stopDraft = watch(
+      () => [draft.formData, draft.ccUserIds],
+      () => {
+        if (reflowing || !isActive()) return
+        if (editable()) {
+          page.edit(draft.formData, draft.ccUserIds)
+          return
+        }
+        if (!draftMatchesRecord()) reflowDraft()
+      },
+      { deep: true, flush: 'sync' },
+    )
     page.ready = prepare(current)
     publish(current)
     return page

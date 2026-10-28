@@ -203,9 +203,11 @@ describe('发起审批 interface', () => {
     await page.submit({ reason: '原内容' })
     expect(page.view.value).toMatchObject({
       locked: false,
+      attachments: [{ id: 42 }],
+    })
+    expect(page.draft).toMatchObject({
       formData: { reason: '原内容' },
       ccUserIds: [7],
-      attachments: [{ id: 42 }],
     })
     await page.submit({ reason: '修改后' })
     expect(JSON.parse(h.adapter.start.mock.calls[1][0].formValues).formData.reason).toBe('修改后')
@@ -226,6 +228,8 @@ describe('发起审批 interface', () => {
     expect(restored.view.value).toMatchObject({
       phase: 'unconfirmed',
       locked: true,
+    })
+    expect(restored.draft).toMatchObject({
       formData: { reason: '原请求' },
       ccUserIds: [7],
     })
@@ -249,18 +253,21 @@ describe('发起审批 interface', () => {
     expect(h.adapter.start).toHaveBeenCalledTimes(1)
     expect(h.adapter.remove).not.toHaveBeenCalled()
     expect(h.effects).toContainEqual(['navigate', '/work/started'])
-    expect((await restore(h)).view.value.formData).toEqual({})
+    expect((await restore(h)).draft.formData).toEqual({})
   })
   it('restores editable content, CC and registered attachments after route disposal', async () => {
     const h = harness({ listDraft: vi.fn(async () => [attachment]) }),
       page = await open(h)
     page.edit({ reason: '保留', days: 2 }, [7])
     page.release()
-    expect((await open(h)).view.value).toMatchObject({
-      formData: { reason: '保留', days: 2 },
-      ccUserIds: [7],
+    const next = await open(h)
+    expect(next.view.value).toMatchObject({
       attachments: [{ id: 42 }],
       locked: false,
+    })
+    expect(next.draft).toMatchObject({
+      formData: { reason: '保留', days: 2 },
+      ccUserIds: [7],
     })
   })
   it('restores interrupted requests as unconfirmed without replaying POST', async () => {
@@ -271,8 +278,8 @@ describe('发起审批 interface', () => {
     const pending = page.submit({ reason: '刷新', days: 2 })
     page.release()
     const next = await restore(h)
-    expect(next.view.value).toMatchObject({
-      phase: 'unconfirmed',
+    expect(next.view.value).toMatchObject({ phase: 'unconfirmed' })
+    expect(next.draft).toMatchObject({
       formData: { reason: '刷新', days: 2 },
       ccUserIds: [7],
     })
@@ -294,7 +301,7 @@ describe('发起审批 interface', () => {
       const next = await open(h)
       flight.resolve({ kind, message: '迟到错误' })
       await pending
-      expect(next.view.value.formData).toEqual({ reason: '旧页' })
+      expect(next.draft.formData).toEqual({ reason: '旧页' })
       expect(h.effects).toEqual([])
     },
   )
@@ -309,8 +316,9 @@ describe('发起审批 interface', () => {
     next.edit({ reason: 'new' }, [7])
     flight.resolve({ kind: 'started' })
     await pending
-    expect((await restore(h)).view.value).toMatchObject({
-      phase: 'editing',
+    const restored = await restore(h)
+    expect(restored.view.value).toMatchObject({ phase: 'editing' })
+    expect(restored.draft).toMatchObject({
       formData: { reason: 'new' },
       ccUserIds: [7],
     })
@@ -321,11 +329,11 @@ describe('发起审批 interface', () => {
       page = await open(h)
     page.edit({ reason: 'Alice' }, [7])
     page.release()
-    expect((await open(h, 12)).view.value.formData).toEqual({})
+    expect((await open(h, 12)).draft.formData).toEqual({})
     h.setEntry('entry-bob')
-    expect((await open(h)).view.value.formData).toEqual({})
+    expect((await open(h)).draft.formData).toEqual({})
     h.setEntry('entry-alice')
-    expect((await open(h)).view.value.formData).toEqual({ reason: 'Alice' })
+    expect((await open(h)).draft.formData).toEqual({ reason: 'Alice' })
   })
   it('does not complete a transfer or present errors under a different entry', async () => {
     const transfer = deferred(),
@@ -545,5 +553,65 @@ describe('发起审批 interface', () => {
     await page.prepareStartAgain(true)
     expect(page.view.value.phase).toBe('editing')
     expect(h.adapter.start).toHaveBeenCalledTimes(1)
+  })
+  it('treats the module draft as the single owner and persists deep changes', async () => {
+    const h = harness()
+    const page = await open(h)
+    page.draft.formData.reason = '草稿'
+    page.draft.formData.nested = { value: 'deep' }
+    page.draft.ccUserIds.push(7)
+    expect(JSON.parse([...h.values.values()][0]).formData).toEqual({
+      reason: '草稿',
+      nested: { value: 'deep' },
+    })
+    expect(JSON.parse([...h.values.values()][0]).ccUserIds).toEqual([7])
+    expect((await restore(h)).draft).toMatchObject({
+      formData: { reason: '草稿', nested: { value: 'deep' } },
+      ccUserIds: [7],
+    })
+  })
+  it('reflows draft changes while sending or unconfirmed, keeping the submitted content', async () => {
+    const flight = deferred(),
+      h = harness({ start: vi.fn(() => flight.promise) }),
+      page = await open(h)
+    page.draft.formData.reason = '已提交'
+    const pending = page.submit({ reason: '已提交' })
+    expect(page.view.value.phase).toBe('sending')
+    page.draft.formData.reason = '保存中改动'
+    page.draft.ccUserIds.push(7)
+    expect(page.draft.formData.reason).toBe('已提交')
+    expect(page.draft.ccUserIds).toEqual([])
+    flight.resolve({ kind: 'unconfirmed' })
+    await pending
+    expect(page.view.value.phase).toBe('unconfirmed')
+    page.draft.formData.reason = '待确认改动'
+    expect(page.draft.formData.reason).toBe('已提交')
+    expect(JSON.parse(h.adapter.start.mock.calls[0][0].formValues).formData.reason).toBe('已提交')
+  })
+  it('keeps the typed draft and surfaces the error when the record cannot be persisted', async () => {
+    const h = harness(),
+      page = await open(h)
+    h.storage.setItem = () => {
+      throw new Error('存储不可用')
+    }
+    page.draft.formData.reason = '保留输入'
+    expect(page.draft.formData.reason).toBe('保留输入')
+    expect(page.view.value.error).toBe('存储不可用')
+    await page.submit({ reason: '提交被挡住' })
+    expect(h.adapter.start).not.toHaveBeenCalled()
+  })
+  it('keeps the draft in step with programmatic edits', async () => {
+    const h = harness(),
+      page = await open(h)
+    expect(page.edit({ reason: '程序化' }, [7])).toBe(true)
+    expect(page.draft).toMatchObject({ formData: { reason: '程序化' }, ccUserIds: [7] })
+  })
+  it('stops accepting draft changes after the opening is released', async () => {
+    const h = harness(),
+      page = await open(h)
+    page.edit({ reason: '已接受' }, [])
+    page.release()
+    page.draft.formData.reason = '释放后'
+    expect((await restore(h)).draft.formData).toEqual({ reason: '已接受' })
   })
 })

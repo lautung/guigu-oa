@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue'
+import { computed, onScopeDispose, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
@@ -26,6 +26,8 @@ import type {
 
 const modules = new WeakMap<Recognition, ReturnType<typeof createApprovalStart>>()
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const EMPTY_FORM: FormDataRecord = {}
+const EMPTY_CC: EntityId[] = []
 function uuid(): string {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
   const bytes = crypto.getRandomValues(new Uint8Array(16))
@@ -38,8 +40,6 @@ function emptyView(): ApprovalStartView {
   return {
     template: null,
     recipients: [],
-    formData: {},
-    ccUserIds: [],
     attachments: [],
     interrupted: [],
     loading: true,
@@ -143,25 +143,27 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
   }
   const starts = module
   const page = shallowRef<ApprovalStartPage>()
-  const formData = ref<FormDataRecord>({})
-  const ccUserIds = ref<EntityId[]>([])
+  const formData = computed<FormDataRecord>({
+    get: () => page.value?.draft.formData ?? EMPTY_FORM,
+    set: (value) => {
+      if (page.value) page.value.draft.formData = value
+    },
+  })
+  const ccUserIds = computed<EntityId[]>({
+    get: () => page.value?.draft.ccUserIds ?? EMPTY_CC,
+    set: (value) => {
+      if (page.value) page.value.draft.ccUserIds = value
+    },
+  })
   const rule = shallowRef<FormRule[]>([])
-  let syncing = false
   let rulesJson = ''
   const view = computed(() => page.value?.view.value || emptyView())
-  function sync() {
-    syncing = true
-    const state = view.value
-    if (JSON.stringify(formData.value) !== JSON.stringify(state.formData))
-      formData.value = clone(state.formData)
-    if (JSON.stringify(ccUserIds.value) !== JSON.stringify(state.ccUserIds))
-      ccUserIds.value = clone([...state.ccUserIds])
-    const nextRules = JSON.stringify(state.template?.rule || [])
+  function syncRule() {
+    const nextRules = JSON.stringify(view.value.template?.rule || [])
     if (nextRules !== rulesJson) {
       rulesJson = nextRules
       rule.value = JSON.parse(nextRules) as FormRule[]
     }
-    syncing = false
   }
   watch(
     templateId,
@@ -176,16 +178,7 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
     },
     { immediate: true },
   )
-  watch(view, sync, { immediate: true, flush: 'sync' })
-  watch(
-    [formData, ccUserIds],
-    () => {
-      if (syncing) return
-      page.value?.edit(formData.value, ccUserIds.value)
-      if (view.value.locked) sync()
-    },
-    { deep: true, flush: 'sync' },
-  )
+  watch(view, syncRule, { immediate: true, flush: 'sync' })
   onScopeDispose(() => page.value?.release())
   const option = computed<FormDesignerOption>(() => ({
     ...clone(view.value.template?.option || {}),
