@@ -61,6 +61,10 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 - `npm run test:e2e`：Playwright，自动启动 9530 dev server。
 - `npm run build:prod`：类型检查 + 生产构建。
 
+### 仓库检查
+
+`./scripts/verify.sh`：客户端 `npm run verify` + 服务端 `mvn -pl service-oa -am test`。端到端与生产构建仍单独跑（见下）。
+
 ### 后端测试
 
 `cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。
