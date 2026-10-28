@@ -18,6 +18,10 @@ Canonical roles map 1:1 to tracker labels: `needs-triage`, `needs-info`, `ready-
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before exploring the codebase or naming domain concepts, read `docs/agents/domain.md`.
 
+### Module map
+
+`docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam.
+
 ## Cursor Cloud specific instructions
 
 目标产品是**统一客户端** `client/guigu-oa-client`（Vue 3.5 + Vite 8 + Element Plus + Pinia）配合后端 `server/guigu-oa-parent`（Spring Boot 4.1.0、JDK 21、Flowable 8.0.0 Process）。旧的 `管理端`/`员工端`/`其他` 前端不是目标产品。系统依赖（Maven、JDK 21、MySQL 8、Redis）已装入环境镜像；update 脚本只刷新 `npm install` 与 `mvn -DskipTests install`。
@@ -56,8 +60,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 - 一键检查：`npm run verify`（lint + typecheck + format:check + test:unit）。
 - 单元测试：`npm run test:unit`（Vitest，脚本名不变）；端到端：`npm run test:e2e`（Playwright，自动启动 9530 dev server）。
 - 质量检查：`npm run lint`（ESLint）、`npm run typecheck`（vue-tsc）、`npm run format:check`（Prettier，覆盖 `src` 与 `tests`）。
-- 构建：`npm run build:prod`（包含类型检查）；开发：`npm run dev`。
-- Node：`engines.node` `^22.18.0`。
+- 构建：`npm run build:prod`（包含类型检查）。
 
 ### 后端测试
 
