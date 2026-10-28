@@ -1,3 +1,4 @@
+import { expect, it } from 'vitest'
 import axios, { AxiosError } from 'axios'
 import { createRecognition } from '@/recognition'
 import { createRequestScope } from '@/request-scope'

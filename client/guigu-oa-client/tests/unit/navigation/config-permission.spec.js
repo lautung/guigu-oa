@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { buildSidebarTree } from '@/navigation'
 import { DESKTOP_CONFIG_HINT } from '@/navigation/constants'
 

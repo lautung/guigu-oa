@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { constantRoutes } from '@/router'
 
 function collectPaths(routes, prefix = '') {

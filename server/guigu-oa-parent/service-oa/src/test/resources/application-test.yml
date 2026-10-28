@@ -30,3 +30,8 @@ flowable:
 guigu:
   jwt:
     secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000
+
+logging:
+  level:
+    root: WARN
+    com.atguigu: INFO

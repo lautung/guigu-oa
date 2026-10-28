@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { ROUTE_GROUP_ENTRIES, constantRoutes } from '@/router/routes'
 import { createMemoryHistory, createRouter } from 'vue-router'
 

@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { resolveAuthGuard } from '@/navigation'

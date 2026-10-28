@@ -1,3 +1,4 @@
+import { expect, it } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { createTemplateEditor } from '@/config/template-editor'
 
