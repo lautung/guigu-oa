@@ -31,6 +31,8 @@ guigu:
   jwt:
     secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000
 
+# root WARN keeps Flowable/Spring quiet; com.atguigu must stay INFO because
+# ObservabilityContractTest asserts the structured request log from TraceIdFilter.
 logging:
   level:
     root: WARN

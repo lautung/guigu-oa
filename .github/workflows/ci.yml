@@ -50,6 +50,8 @@ jobs:
         run: npm run lint
       - name: Check formatting
         run: npm run format:check
+      - name: Check module map
+        run: npm run check:docs
       - name: Typecheck frontend
         run: npm run typecheck
       - name: Run frontend unit tests

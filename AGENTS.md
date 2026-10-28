@@ -22,7 +22,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 
 `docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam.
 
-## Cursor Cloud specific instructions
+## 项目环境与运行
 
 目标产品是**统一客户端** `client/guigu-oa-client`（Vue 3.5 + Vite 8 + Element Plus + Pinia）配合后端 `server/guigu-oa-parent`（Spring Boot 4.1.0、JDK 21、Flowable 8.0.0 Process）。旧的 `管理端`/`员工端`/`其他` 前端不是目标产品。系统依赖（Maven、JDK 21、MySQL 8、Redis）已装入环境镜像；update 脚本只刷新 `npm install` 与 `mvn -DskipTests install`。
 
@@ -55,13 +55,12 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。不要再手动执行旧的 `guigu-oa-init.sql`；`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`admin` 通过种子角色「配置管理员」获得配置菜单权限，`userId=1` 不再特殊）。配置类接口由服务端 `configurationMenuGate` 按菜单授予统一判定；`user` 种子没有配置角色，只用于办事。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
 
 
-### 前端 lint / test / build
+### 前端检查与构建
 
-- 一键检查：`npm run verify`（lint + typecheck + format:check + test:unit）。
-- 单元测试：`npm run test:unit`（Vitest，脚本名不变）；端到端：`npm run test:e2e`（Playwright，自动启动 9530 dev server）。
-- 质量检查：`npm run lint`（ESLint）、`npm run typecheck`（vue-tsc）、`npm run format:check`（Prettier，覆盖 `src` 与 `tests`）。
-- 构建：`npm run build:prod`（包含类型检查）。
+- `npm run verify`：lint + typecheck + format:check + test:unit + 模块地图路径检查（提交前必跑）。
+- `npm run test:e2e`：Playwright，自动启动 9530 dev server。
+- `npm run build:prod`：类型检查 + 生产构建。
 
 ### 后端测试
 
-`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。
+`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。
