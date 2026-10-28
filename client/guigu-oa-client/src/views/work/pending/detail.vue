@@ -145,7 +145,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import request from '@/utils/request'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import { createApprovalDetail, type ApprovalDetailOpening } from '@/work/approval-detail'
 import { createHttpDetailAdapter } from '@/work/approval-detail-http'
@@ -161,8 +161,8 @@ const recognition = user.recognition
 if (!recognition) throw new Error('认出 module 尚未接入')
 const module = createApprovalDetail(
   createHttpDetailAdapter({
-    recognition,
-    request,
+    openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
+    entryId: () => recognition.capture().entryId,
     storage: {
       getItem: (key) => localStorage.getItem(key),
       setItem: (key, value) => localStorage.setItem(key, value),

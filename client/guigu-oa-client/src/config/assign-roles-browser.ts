@@ -1,9 +1,9 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router'
+import { openRequestScope } from '@/request-scope'
 import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
-import request from '@/utils/request'
 import { classifySubmissionFailure } from '@/submission-outcome'
 import type { Recognition } from '@/recognition'
 import type { RoleAssignmentLists } from './sys-role'
@@ -33,6 +33,7 @@ export function useAssignRoles() {
   if (!recognition) throw new Error('认出 module 尚未接入')
   let module = modules.get(recognition)
   if (!module) {
+    const openScope = () => openRequestScope(recognition, { notifyNormalErrors: false })
     module = createAssignRoles({
       entryId: () => getEntryId() || '',
       capture: () => {
@@ -41,10 +42,9 @@ export function useAssignRoles() {
       },
       storage: storage(),
       read: async (userId) => {
-        const response = await request<RoleAssignmentLists>({
-          ...toAssignRolesRequest(userId),
-          normalErrorNotification: 'caller',
-        })
+        const response = await openScope().request<RoleAssignmentLists>(
+          toAssignRolesRequest(userId),
+        )
         const allRolesList = response.data?.allRolesList || []
         const assginRoleList = response.data?.assginRoleList || []
         return {
@@ -57,10 +57,7 @@ export function useAssignRoles() {
       },
       assign: async (userId, roleIds) => {
         try {
-          await request({
-            ...assignRolesRequest(userId, roleIds),
-            normalErrorNotification: 'caller',
-          })
+          await openScope().request(assignRolesRequest(userId, roleIds))
           return { kind: 'saved' }
         } catch (error) {
           if (classifySubmissionFailure(error, 'assign-roles') === 'refused')

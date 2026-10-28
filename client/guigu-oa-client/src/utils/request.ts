@@ -1,15 +1,22 @@
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { RecognitionFailure, type Recognition, type RequestContext } from '@/recognition'
-import type { ApiClient, ApiResponse, LoginTokens } from '@/types/domain'
+import type { ApiClient, ApiRequestConfig, ApiResponse, LoginTokens } from '@/types/domain'
 
 const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'
 const refreshUrl = `${baseURL.replace(/\/$/, '')}/admin/system/index/refresh`
+
+/** Transport-only scope fields; produce them through request-scope, never from domain code. */
+export interface ScopedRequestConfig extends ApiRequestConfig {
+  _recognition?: RequestContext
+  _isRelevant?: () => boolean
+  _notifyNormalErrors?: boolean
+}
+
 type RefreshableRequestConfig = InternalAxiosRequestConfig & {
   _authRefreshRetried?: boolean
-  _localErrors?: boolean
-  _isRelevant?: () => boolean
   _recognition?: RequestContext
-  normalErrorNotification?: 'global' | 'caller'
+  _isRelevant?: () => boolean
+  _notifyNormalErrors?: boolean
 }
 
 export interface RequestFailureDetail {
@@ -146,11 +153,7 @@ export function createRequestClient(recognition: Recognition): ApiClient {
     error: unknown,
   ) {
     const silent = context.silent || config._isRelevant?.() === false
-    return recognition.reject(
-      { ...context, silent },
-      error,
-      !config._localErrors && config.normalErrorNotification !== 'caller',
-    )
+    return recognition.reject({ ...context, silent }, error, config._notifyNormalErrors !== false)
   }
 
   async function handleResponse(response: AxiosResponse<ApiResponse<unknown>>) {

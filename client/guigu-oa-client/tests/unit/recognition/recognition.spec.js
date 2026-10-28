@@ -319,7 +319,7 @@ describe('recognition interface with real request transport', () => {
 })
 
 describe('caller-owned normal errors preserve request evidence and recognition', () => {
-  const start = { method: 'post', url: '/admin/process/startUp', normalErrorNotification: 'caller', data: {} }
+  const start = { method: 'post', url: '/admin/process/startUp', _notifyNormalErrors: false, data: {} }
   it('retains definitive business rejection evidence without a global ordinary toast', async () => {
     const h = harness(() => ({ code: 201, message: '不能发起' }))
     await expect(h.request(start)).rejects.toMatchObject({ kind: 'retryable', detail: { source: 'business', operation: 'request', businessCode: 201 } })

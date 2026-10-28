@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { createRecognition } from '@/recognition'
+import { createRequestScope } from '@/request-scope'
 import { createRequestClient } from '@/utils/request'
 import { createHttpDetailAdapter } from '@/work/approval-detail-http'
 import { createApprovalDetail } from '@/work/approval-detail'
@@ -48,9 +49,10 @@ function harness(
     return { data, config, status: 200, statusText: 'OK', headers: {} }
   }
   const memory = new Map()
+  const client = createRequestClient(recognition)
   const adapter = createHttpDetailAdapter({
-    recognition,
-    request: createRequestClient(recognition),
+    openScope: () => createRequestScope(recognition, client, { notifyNormalErrors: false }),
+    entryId: () => recognition.capture().entryId,
     storage: {
       getItem: (key) => memory.get(key) ?? null,
       setItem: (key, value) => memory.set(key, value),

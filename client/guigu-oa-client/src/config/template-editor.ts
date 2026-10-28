@@ -1,9 +1,9 @@
 import { markRaw, reactive, readonly } from 'vue'
 import { classifySubmissionFailure } from '@/submission-outcome'
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
-import type { Recognition } from '@/recognition'
+import type { RequestScope } from '@/request-scope'
 import type {
-  ApiClient,
+  ApiRequestConfig,
   EntityId,
   PresentedProcessTemplate,
   ProcessTypeRecord,
@@ -25,8 +25,8 @@ interface Designer {
 }
 type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
 interface EditorOptions {
-  recognition: Pick<Recognition, 'capture'>
-  request: ApiClient
+  openScope: () => RequestScope
+  entryId(): string
   designer(): Promise<Designer>
   occupancy(): Occupancy
   confirm(message: string, kind: 'leave' | 'end-editing'): Promise<boolean>
@@ -89,25 +89,12 @@ export function createTemplateEditor(options: EditorOptions) {
   let releaseCurrent = () => {}
   function open(id?: EntityId) {
     releaseCurrent()
-    const context = options.recognition.capture()
+    const scope = options.openScope()
     let released = false
     let leftIntentionally = false
-    const current = () => {
-      const now = options.recognition.capture()
-      return (
-        !released &&
-        !!context.entryId &&
-        now.entryId === context.entryId &&
-        now.generation === context.generation
-      )
-    }
-    const request: ApiClient = (config) =>
-      options.request({
-        ...config,
-        _recognition: context,
-        _localErrors: true,
-        _isRelevant: () => current() && config._isRelevant?.() !== false,
-      })
+    const current = () => !released && scope.current()
+    const request = <TData = unknown>(config: ApiRequestConfig, isRelevant?: () => boolean) =>
+      scope.request<TData>(config, isRelevant ? () => current() && isRelevant() : () => current())
     const state = reactive({
       phase: 'loading' as Phase,
       step: 0,
@@ -306,12 +293,14 @@ export function createTemplateEditor(options: EditorOptions) {
         const response = await request<{
           processDefinitionPath?: string
           processDefinitionKey?: string
-        }>({
-          method: 'post',
-          url: `${API}/uploadProcessDefinition`,
-          data,
-          _isRelevant: () => number === uploadNumber,
-        })
+        }>(
+          {
+            method: 'post',
+            url: `${API}/uploadProcessDefinition`,
+            data,
+          },
+          () => number === uploadNumber,
+        )
         if (!current() || number !== uploadNumber) return
         const { processDefinitionPath: path, processDefinitionKey: key } = response.data || {}
         if (
@@ -442,9 +431,9 @@ export function createTemplateEditor(options: EditorOptions) {
       if (released) return
       if (!current()) {
         dismissPendingConfirm()
-        const now = options.recognition.capture()
+        const liveEntry = options.entryId()
         release()
-        if (now.entryId) options.replace(getDefaultPostLoginRoute())
+        if (liveEntry) options.replace(getDefaultPostLoginRoute())
         return
       }
       const occupancy = options.occupancy()
@@ -456,11 +445,13 @@ export function createTemplateEditor(options: EditorOptions) {
     }
     async function back() {
       if (!current()) return
-      if ((await requestLeave()) && leftIntentionally && releaseCurrent === release) {
-        const now = options.recognition.capture()
-        if (now.entryId === context.entryId && now.generation === context.generation)
-          options.navigate(LIST)
-      }
+      if (
+        (await requestLeave()) &&
+        leftIntentionally &&
+        releaseCurrent === release &&
+        scope.current()
+      )
+        options.navigate(LIST)
     }
     function openList() {
       if (current() && state.phase === 'uncertain') options.openList(LIST)

@@ -71,9 +71,9 @@ import {
   type ProcessTypeListItem,
 } from '@/config/process-type'
 import { createListRead, type NoListQuery } from '@/list-read'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, ProcessTypeRecord } from '@/types/domain'
-import request from '@/utils/request'
 
 export default defineComponent({
   name: 'ProcessTypeList',
@@ -83,8 +83,7 @@ export default defineComponent({
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
     const opening = createListRead<ProcessTypeRecord, NoListQuery>({
-      recognition,
-      request,
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size }) => listRequest(page, size),
     })
     onBeforeUnmount(() => opening.release())

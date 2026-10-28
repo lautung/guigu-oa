@@ -19,19 +19,19 @@ const ids = (view) => view.records.map((record) => record.id)
 
 function harness(options = {}) {
   const reads = []
-  const captures = []
-  const captured = { generation: 1, entryId: 'entry-1', silent: false }
-  const opening = createListRead({
-    recognition: {
-      capture: () => {
-        captures.push(captured)
-        return captured
-      },
-    },
-    request: (config) => {
+  let scopeOpens = 0
+  const scope = {
+    current: () => true,
+    request: (config, isRelevant) => {
       const pending = deferred()
-      reads.push({ config, ...pending })
+      reads.push({ config, isRelevant, scope, ...pending })
       return pending.promise
+    },
+  }
+  const opening = createListRead({
+    openScope: () => {
+      scopeOpens += 1
+      return scope
     },
     toRequest:
       options.toRequest ??
@@ -43,7 +43,7 @@ function harness(options = {}) {
     size: options.size,
     query: options.query,
   })
-  return { opening, reads, captures, captured }
+  return { opening, reads, scopeOpens: () => scopeOpens, scope }
 }
 
 it('创建后立即自动读取一次，初始 view 是加载中的空页，ready 后提交结果', async () => {
@@ -60,14 +60,12 @@ it('创建后立即自动读取一次，初始 view 是加载中的空页，read
     error: '',
   })
   expect(h.opening.view).not.toHaveProperty('query')
-  expect(h.reads[0].config).toMatchObject({
+  expect(h.reads[0].config).toEqual({
     method: 'get',
     url: '/admin/process/findPending/1/10',
     params: {},
-    _recognition: h.captured,
-    normalErrorNotification: 'caller',
   })
-  expect(h.reads[0].config._isRelevant()).toBe(true)
+  expect(h.reads[0].isRelevant()).toBe(true)
   const records = [{ id: 'A', title: '审批 A' }]
   h.reads[0].resolve({ code: 200, data: { records, total: 1, pages: 1 } })
   await h.opening.ready
@@ -324,18 +322,17 @@ it('原始记录原样交给页面，不做 presenter 化或克隆', async () =>
   expect(Object.keys(h.opening.view.records[0]).sort()).toEqual(['formValues', 'id', 'title'])
 })
 
-it('创建时捕获一次识别上下文，前后读取的相关性与全局提示归属符合合同', async () => {
+it('创建时打开一次作用域，前后读取的相关性仍由本次打开回答', async () => {
   const h = harness()
-  expect(h.captures).toHaveLength(1)
-  expect(h.reads[0].config._recognition).toBe(h.captured)
-  expect(h.reads[0].config.normalErrorNotification).toBe('caller')
-  expect(h.reads[0].config._isRelevant()).toBe(true)
+  expect(h.scopeOpens()).toBe(1)
+  expect(h.reads[0].isRelevant()).toBe(true)
   const next = h.opening.read({ page: 2 })
-  expect(h.captures).toHaveLength(1)
-  expect(h.reads[0].config._isRelevant()).toBe(false)
-  expect(h.reads[1].config._isRelevant()).toBe(true)
+  expect(h.scopeOpens()).toBe(1)
+  expect(h.reads[0].scope).toBe(h.reads[1].scope)
+  expect(h.reads[0].isRelevant()).toBe(false)
+  expect(h.reads[1].isRelevant()).toBe(true)
   h.opening.release()
-  expect(h.reads[1].config._isRelevant()).toBe(false)
+  expect(h.reads[1].isRelevant()).toBe(false)
   h.reads[1].resolve(pageResult([], 0, 0))
   await next
 })

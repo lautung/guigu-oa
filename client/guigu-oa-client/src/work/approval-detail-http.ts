@@ -1,7 +1,7 @@
-import type { Recognition } from '@/recognition'
 import { classifySubmissionFailure } from '@/submission-outcome'
+import type { RequestScope } from '@/request-scope'
 import type {
-  ApiClient,
+  ApiRequestConfig,
   AttachmentRecord,
   ProcessAttachmentList,
   ProcessDetailPayload,
@@ -11,8 +11,8 @@ import type { DetailAdapter } from './approval-detail'
 import { uploadAttachment } from './attachments'
 
 interface HttpDetailOptions {
-  recognition: Recognition
-  request: ApiClient
+  openScope: () => RequestScope
+  entryId(): string
   storage: Pick<Storage, 'getItem' | 'setItem'>
   navigate(path: string): void
   openDownload(url: string, fileName: string): void
@@ -20,12 +20,12 @@ interface HttpDetailOptions {
 
 export function createHttpDetailAdapter(options: HttpDetailOptions): DetailAdapter {
   function scoped(isCurrent: () => boolean): DetailAdapter {
-    const context = options.recognition.capture()
-    const config = { _recognition: context, _localErrors: true, _isRelevant: isCurrent }
-    const request: ApiClient = (input) => options.request({ ...input, ...config })
+    const scope = options.openScope()
+    const request = <TData = unknown>(config: ApiRequestConfig) =>
+      scope.request<TData>(config, isCurrent)
     return {
       forOpening: scoped,
-      entryId: () => options.recognition.capture().entryId,
+      entryId: () => options.entryId(),
       read: async (processId) =>
         (
           await request<ProcessDetailPayload>({

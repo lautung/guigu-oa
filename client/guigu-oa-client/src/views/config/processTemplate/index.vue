@@ -92,6 +92,7 @@ import {
   removeUnpublished,
 } from '@/config/process-template'
 import { createListRead, type NoListQuery } from '@/list-read'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type {
   FormDesignerOption,
@@ -108,8 +109,7 @@ export default defineComponent({
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
     const opening = createListRead<ProcessTemplateRecord, NoListQuery>({
-      recognition,
-      request,
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size }) => listRequest(page, size),
     })
     onBeforeUnmount(() => opening.release())

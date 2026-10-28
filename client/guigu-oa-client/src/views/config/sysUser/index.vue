@@ -99,9 +99,9 @@ import ListLoadError from '@/components/ListLoadError.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
 import { emptyForm, listRequest, presentForm, presentListPage } from '@/config/sys-user'
 import { createListRead } from '@/list-read'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
-import request from '@/utils/request'
 import AssignRolesDialog from './AssignRolesDialog.vue'
 
 interface AssignRolesDialogHandle {
@@ -122,8 +122,7 @@ export default defineComponent({
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
     const opening = createListRead<UserRecord, Record<string, string | number>>({
-      recognition,
-      request,
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
     })
 

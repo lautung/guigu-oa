@@ -140,9 +140,9 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vu
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { createTemplateEditor, type TemplateEditorOpening } from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
+import { openRequestScope } from '@/request-scope'
 import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
-import request from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -156,8 +156,8 @@ const iconList = TEMPLATE_ICONS
 const recognition = userStore.recognition
 if (!recognition) throw new Error('认出 module 尚未接入')
 const editor = createTemplateEditor({
-  recognition,
-  request,
+  openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
+  entryId: () => recognition.capture().entryId,
   occupancy: () =>
     resolveClientSurface({
       path: route.path,

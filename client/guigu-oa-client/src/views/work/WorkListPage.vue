@@ -53,8 +53,8 @@ import { useRoute } from 'vue-router'
 
 import ListLoadError from '@/components/ListLoadError.vue'
 import { createListRead, type ListReadOpening, type NoListQuery } from '@/list-read'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
-import request from '@/utils/request'
 import type { ProcessInstanceRecord, PresentedWorkListRecord } from '@/types/domain'
 import {
   presentWorkList,
@@ -80,8 +80,7 @@ export default defineComponent({
       const recognition = userStore.recognition
       if (!recognition) throw new Error('认出 module 尚未接入')
       return createListRead<ProcessInstanceRecord, NoListQuery>({
-        recognition,
-        request,
+        openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
         toRequest: ({ page, size }) => workListRequest(kind, page, size),
       })
     }

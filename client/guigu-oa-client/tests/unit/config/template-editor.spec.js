@@ -35,22 +35,31 @@ function harness() {
   let designerFailure = ''
   let confirm = true
   let occupancy = { action: 'allow' }
+  function openScope() {
+    const context = { generation: 1, entryId }
+    const scope = {
+      context,
+      current: () => context.entryId === entryId,
+      request: (config, isRelevant) => {
+        if (config.url === '/admin/process/processType/findAll')
+          return Promise.resolve({ code: 200, data: [{ id: 3, name: '请假' }] })
+        const pending = deferred()
+        const group = config.url.includes('/get/')
+          ? reads
+          : config.url.endsWith('/uploadProcessDefinition')
+            ? uploads
+            : saves
+        group.push({ config, isRelevant, scope, ...pending })
+        return pending.promise
+      },
+    }
+    return scope
+  }
   const options = {
-    recognition: { capture: () => ({ generation: 1, entryId, silent: false }) },
+    openScope,
+    entryId: () => entryId,
     occupancy: () => occupancy,
     dismissConfirm: () => dismissals.push('dismiss'),
-    request: (config) => {
-      if (config.url === '/admin/process/processType/findAll')
-        return Promise.resolve({ code: 200, data: [{ id: 3, name: '请假' }] })
-      const pending = deferred()
-      const group = config.url.includes('/get/')
-        ? reads
-        : config.url.endsWith('/uploadProcessDefinition')
-          ? uploads
-          : saves
-      group.push({ config, ...pending })
-      return pending.promise
-    },
     designer: async () => {
       if (designerFailure) throw new Error(designerFailure)
       return {
@@ -555,8 +564,8 @@ it.each(['success', 'failure'])(
     if (outcome === 'success') h.uploads[0].resolve(uploaded())
     else h.uploads[0].reject(new Error('旧身份错误'))
     await upload
-    expect(h.uploads[0].config._recognition.entryId).toBe('entry-1')
-    expect(h.uploads[0].config._isRelevant()).toBe(false)
+    expect(h.uploads[0].scope.context.entryId).toBe('entry-1')
+    expect(h.uploads[0].isRelevant()).toBe(false)
     expect(h.uploads[0].config.headers).toBeUndefined()
     expect(h.uploads[0].config.data.get('file').name).toBe('new.zip')
     expect(next.state.zipStatus).toBe('empty')
@@ -571,8 +580,8 @@ it('上传被新选择替代后其旧认证错误也无呈现资格', async () =
   await edit.ready
   const old = edit.selectZip(zip('old.zip'))
   const fresh = edit.selectZip(zip('fresh.zip'))
-  expect(h.uploads[0].config._isRelevant()).toBe(false)
-  expect(h.uploads[1].config._isRelevant()).toBe(true)
+  expect(h.uploads[0].isRelevant()).toBe(false)
+  expect(h.uploads[1].isRelevant()).toBe(true)
   h.uploads[0].reject(new Error('旧认证错误'))
   h.uploads[1].resolve(uploaded('fresh'))
   await Promise.all([old, fresh])
@@ -612,6 +621,7 @@ it('保存与待确认不能被重读或设计重试解锁；提交只包含现�
 async function transportHarness(respond) {
   const { default: axios } = await import('axios')
   const { createRecognition } = await import('@/recognition')
+  const { createRequestScope } = await import('@/request-scope')
   const { createRequestClient } = await import('@/utils/request')
   const fixture = harness()
   const calls = [],
@@ -649,10 +659,11 @@ async function transportHarness(respond) {
         : await respond(config, calls)
     return { data, config, status: 200, statusText: 'OK', headers: {} }
   }
+  const client = createRequestClient(recognition)
   const module = createTemplateEditor({
     ...fixture.options,
-    recognition,
-    request: createRequestClient(recognition),
+    openScope: () => createRequestScope(recognition, client, { notifyNormalErrors: false }),
+    entryId: () => recognition.capture().entryId,
   })
   return {
     ...fixture,

@@ -1,6 +1,6 @@
 import { reactive, readonly } from 'vue'
-import type { Recognition } from '@/recognition'
-import type { ApiClient, ApiRequestConfig, PageResult } from '@/types/domain'
+import type { RequestScope } from '@/request-scope'
+import type { ApiRequestConfig, PageResult } from '@/types/domain'
 
 export type ListReadStatus = 'loading' | 'ready' | 'failed'
 export interface ListReadQuery {
@@ -22,8 +22,7 @@ export interface ListReadView<TRecord> {
   error: string
 }
 export interface ListReadOptions<TQuery extends ListReadQuery = ListReadQuery> {
-  recognition: Pick<Recognition, 'capture'>
-  request: ApiClient
+  openScope: () => RequestScope
   toRequest: (command: ListReadCommand<TQuery>) => ApiRequestConfig
   size?: number
   query?: TQuery
@@ -67,7 +66,7 @@ function nextCommand<TQuery extends ListReadQuery>(
 export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQuery>(
   options: ListReadOptions<TQuery>,
 ): ListReadOpening<TRecord, TQuery> {
-  const context = options.recognition.capture()
+  const scope = options.openScope()
   // The public contract exposes mutable array shapes; Vue's deep readonly proxy is enforced at runtime.
   const view = reactive<ListReadView<TRecord>>({
     status: 'loading',
@@ -98,12 +97,10 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
     view.page = command.page
     view.size = command.size
     try {
-      const response = await options.request<PageResult<TRecord>>({
-        ...options.toRequest(command),
-        _recognition: context,
-        _isRelevant: () => !released && number === sequence,
-        normalErrorNotification: 'caller',
-      })
+      const response = await scope.request<PageResult<TRecord>>(
+        options.toRequest(command),
+        () => !released && number === sequence,
+      )
       if (released || number !== sequence) return
       const data = response?.data || {}
       view.records = data.records || []

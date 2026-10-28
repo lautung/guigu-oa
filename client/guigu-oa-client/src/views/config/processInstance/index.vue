@@ -78,9 +78,9 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 import ListLoadError from '@/components/ListLoadError.vue'
 import { emptyQuery, listRequest, presentListPage, STATUS_OPTIONS } from '@/config/process-instance'
 import { createListRead } from '@/list-read'
+import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { ProcessInstanceListItem, ProcessInstanceRecord } from '@/types/domain'
-import request from '@/utils/request'
 
 export default defineComponent({
   name: 'ProcessInstanceList',
@@ -90,8 +90,7 @@ export default defineComponent({
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
     const opening = createListRead<ProcessInstanceRecord, Record<string, string | number>>({
-      recognition,
-      request,
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
     })
     onBeforeUnmount(() => opening.release())

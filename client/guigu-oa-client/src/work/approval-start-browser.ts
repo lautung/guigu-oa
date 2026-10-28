@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
-import request from '@/utils/request'
+import { openRequestScope } from '@/request-scope'
 import { classifySubmissionFailure } from '@/submission-outcome'
 import type { Recognition } from '@/recognition'
 import { ROUTES } from '@/navigation/constants'
@@ -60,6 +60,7 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
   if (!recognition) throw new Error('认出 module 尚未接入')
   let module = modules.get(recognition)
   if (!module) {
+    const openScope = () => openRequestScope(recognition, { notifyNormalErrors: false })
     module = createApprovalStart({
       entryId: () => getEntryId() || '',
       storage: {
@@ -70,61 +71,56 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
       id: uuid,
       readTemplate: async (id) =>
         (
-          await request<ProcessTemplateRecord>({
+          await openScope().request<ProcessTemplateRecord>({
             method: 'get',
             url: `/admin/process/processTemplate/get/${id}`,
-            normalErrorNotification: 'caller',
           })
         ).data,
       recipients: async () =>
         (
-          await request<CarbonCopyRecipient[]>({
+          await openScope().request<CarbonCopyRecipient[]>({
             method: 'get',
             url: '/admin/process/carbonCopyRecipients',
-            normalErrorNotification: 'caller',
           })
         ).data,
       listDraft: async (id) =>
         (
-          await request<AttachmentRecord[]>({
+          await openScope().request<AttachmentRecord[]>({
             method: 'get',
             url: `/admin/attachments/drafts/${id}`,
-            normalErrorNotification: 'caller',
           })
         ).data,
       remove: async (id) => {
-        await request({
+        await openScope().request({
           method: 'delete',
           url: `/admin/attachments/pending/${id}`,
-          normalErrorNotification: 'caller',
         })
       },
-      upload: (file, draftId, assertCurrent) =>
-        uploadAttachment(file, {
+      upload: (file, draftId, assertCurrent) => {
+        const scope = openScope()
+        return uploadAttachment(file, {
           draftId,
           assertCurrent,
           createUpload: (data) =>
-            request<AttachmentUploadGrant>({
+            scope.request<AttachmentUploadGrant>({
               method: 'post',
               url: '/admin/attachments/uploads',
               data,
-              normalErrorNotification: 'caller',
             }),
           completeUpload: (id) =>
-            request<AttachmentRecord>({
+            scope.request<AttachmentRecord>({
               method: 'post',
               url: `/admin/attachments/${id}/complete`,
-              normalErrorNotification: 'caller',
             }),
           put: (url, options) => fetch(url, options),
-        }),
+        })
+      },
       start: async (snapshot) => {
         try {
-          await request<void>({
+          await openScope().request<void>({
             method: 'post',
             url: '/admin/process/startUp',
             data: snapshot,
-            normalErrorNotification: 'caller',
           })
           return { kind: 'started' }
         } catch (error: unknown) {
