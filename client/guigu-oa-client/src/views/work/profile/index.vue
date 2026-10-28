@@ -11,8 +11,8 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 
-import { getCurrentUser } from '@/api/process'
-import { presentProfile } from '@/work/profile'
+import request from '@/utils/request'
+import { presentProfile, readProfile } from '@/work/profile'
 
 export default defineComponent({
   name: 'WorkProfile',
@@ -26,15 +26,15 @@ export default defineComponent({
     this.fetchProfile()
   },
   methods: {
-    fetchProfile() {
+    async fetchProfile() {
       this.loading = true
-      getCurrentUser()
-        .then((response) => {
-          this.profile = presentProfile(response.data || {})
-        })
-        .finally(() => {
-          this.loading = false
-        })
+      try {
+        this.profile = await readProfile(request)
+      } catch {
+        /* 请求层已提示 */
+      } finally {
+        this.loading = false
+      }
     },
   },
 })

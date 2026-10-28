@@ -1,6 +1,5 @@
 import { reactive, readonly, shallowRef, watch, type DeepReadonly, type Ref } from 'vue'
 import type { CarbonCopyRecipient } from '@/api/carbon-copy'
-import type { StartProcessRequest } from '@/api/process'
 import type {
   AttachmentRecord,
   EntityId,
@@ -8,6 +7,7 @@ import type {
   FormDesignerOption,
   FormRule,
   ProcessTemplateRecord,
+  StartProcessRequest,
 } from '@/types/domain'
 import { ROUTES } from '@/navigation/constants'
 import { canInitiate } from '@/config/process-template'

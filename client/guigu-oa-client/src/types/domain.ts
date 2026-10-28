@@ -269,6 +269,15 @@ export interface AttachmentUploadRequest {
   sizeBytes: number
 }
 
+export interface StartProcessRequest {
+  processTemplateId: EntityId
+  processTypeId: EntityId
+  formValues: string
+  attachmentDraftId?: string
+  attachmentIds?: EntityId[]
+  ccUserIds?: EntityId[]
+}
+
 export interface LoginCredentials {
   username: string
   password: string

@@ -5,7 +5,6 @@ import {
   listRequest,
   presentListPage,
   publish,
-  read,
   removeUnpublished,
 } from '@/config/process-template'
 
@@ -148,62 +147,6 @@ describe('审批模板', () => {
         method: 'get',
         url: '/admin/process/processTemplate/2/5',
       })
-    })
-  })
-
-  describe('read', () => {
-    it('loads 未发布 with type, name, form and 流程 zip still writable', async () => {
-      const request = async () => ({
-        data: {
-          id: 1,
-          name: '请假申请',
-          iconUrl: 'https://example.com/leave.png',
-          processTypeId: 3,
-          formProps: '[{"type":"input"}]',
-          formOptions: '{"submitBtn":false}',
-          processDefinitionKey: 'qingjia',
-          processDefinitionPath: 'processes/qingjia.zip',
-          description: '员工请假',
-          status: 0,
-          createTime: '2026-08-01 10:00:00',
-        },
-      })
-
-      const template = await read(1, request)
-
-      expect(template).toEqual({
-        id: 1,
-        name: '请假申请',
-        iconUrl: 'https://example.com/leave.png',
-        processTypeId: 3,
-        formProps: '[{"type":"input"}]',
-        formOptions: '{"submitBtn":false}',
-        processDefinitionKey: 'qingjia',
-        processDefinitionPath: 'processes/qingjia.zip',
-        description: '员工请假',
-        status: 0,
-      })
-      expect(canWrite(template)).toBe(true)
-      expect(canInitiate(template)).toBe(false)
-    })
-
-    it('loads 已发布 as readable but not writable', async () => {
-      const request = async () => ({
-        data: {
-          id: 1,
-          name: '请假申请',
-          processTypeId: 1,
-          status: 1,
-          formProps: '[]',
-          formOptions: '{}',
-        },
-      })
-
-      const template = await read(1, request)
-
-      expect(template.name).toBe('请假申请')
-      expect(canWrite(template)).toBe(false)
-      expect(canInitiate(template)).toBe(true)
     })
   })
 

@@ -80,25 +80,6 @@ export function emptyForm(): PresentedProcessTemplate {
   }
 }
 
-function presentForm(record: ProcessTemplateRecord = {}): PresentedProcessTemplate {
-  return {
-    id: record.id || '',
-    name: record.name || '',
-    iconUrl: record.iconUrl || '',
-    processTypeId: record.processTypeId || '',
-    formProps: record.formProps || '',
-    formOptions: record.formOptions || '',
-    processDefinitionKey: record.processDefinitionKey || '',
-    processDefinitionPath: record.processDefinitionPath || '',
-    description: record.description || '',
-    status: record.status == null ? 0 : record.status,
-    ...(record.availableForInitiation == null
-      ? {}
-      : { availableForInitiation: record.availableForInitiation }),
-    ...(record.availabilityMessage ? { availabilityMessage: record.availabilityMessage } : {}),
-  }
-}
-
 function parseJson<T>(value: string | undefined, fallback: T): T {
   try {
     return value ? (JSON.parse(value) as T) : fallback
@@ -152,17 +133,6 @@ function presentStartGroups(types: ProcessTypeRecord[] = []): ProcessTemplateSta
       })),
     }))
     .filter((group) => group.templates.length > 0)
-}
-
-export async function read(
-  id: string | number,
-  request: ApiClient,
-): Promise<PresentedProcessTemplate> {
-  const response = await request<ProcessTemplateRecord>({
-    method: 'get',
-    url: `${PROCESS_TEMPLATE_API}/get/${id}`,
-  })
-  return presentForm(response.data || {})
 }
 
 export async function publish(
