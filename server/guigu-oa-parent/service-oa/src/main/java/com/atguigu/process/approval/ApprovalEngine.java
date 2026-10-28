@@ -1,12 +1,15 @@
 package com.atguigu.process.approval;
 
+import com.atguigu.process.membership.MembershipEvidence;
+
 import java.util.List;
 import java.util.Map;
 
 /**
- * 审批写入对流程引擎的命令。本 interface 不暴露 Flowable 类型；实现负责把引擎任务映射成当前任务快照。
+ * 审批对流程引擎的读写 port。写入命令与读取证据共用同一个实现；本 interface 不暴露 Flowable 类型，
+ * 实现负责把引擎任务映射成 port 记录。{@code CurrentTask} 由父接口定义，全系统只有一份。
  */
-public interface ApprovalEngine {
+public interface ApprovalEngine extends MembershipEvidence {
 
     String start(String processDefinitionId, String businessKey, Map<String, Object> variables);
 
@@ -14,8 +17,17 @@ public interface ApprovalEngine {
 
     void rejectToEnd(String taskId);
 
-    List<CurrentTask> currentTasks(String processInstanceId);
+    List<PendingTask> pendingTasks(String username, int firstResult, int maxResults);
 
-    record CurrentTask(String taskId, String assignee) {
+    long pendingCount(String username);
+
+    List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults);
+
+    long processedCount(String username);
+
+    record PendingTask(String taskId, String processInstanceId, String businessKey) {
+    }
+
+    record ProcessedTask(String processInstanceId) {
     }
 }

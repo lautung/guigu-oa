@@ -7,7 +7,7 @@ import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ProcessApprovalSupport;
-import com.atguigu.process.ProcessEngineApproval;
+import com.atguigu.process.approval.ApprovalEngine;
 import com.atguigu.process.approval.ApprovalWriter;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.membership.ApprovalMembership;
@@ -24,12 +24,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import org.flowable.engine.HistoryService;
-import org.flowable.engine.RuntimeService;
-import org.flowable.engine.TaskService;
-import org.flowable.engine.runtime.ProcessInstance;
-import org.flowable.task.api.Task;
-import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -42,13 +36,7 @@ import java.util.Map;
 public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> implements OaProcessService {
 
     @Autowired
-    private RuntimeService runtimeService;
-
-    @Autowired
-    private TaskService taskService;
-
-    @Autowired
-    private HistoryService historyService;
+    private ApprovalEngine approvalEngine;
 
     @Autowired
     private ApprovalTemplate processTemplateService;
@@ -77,22 +65,20 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         String username = user.getUsername();
         int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
-        List<Task> taskList = ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults);
-        long totalCount = ProcessEngineApproval.pendingCount(taskService, username);
+        List<ApprovalEngine.PendingTask> taskList =
+                approvalEngine.pendingTasks(username, firstResult, maxResults);
+        long totalCount = approvalEngine.pendingCount(username);
 
         List<ProcessVo> processVoList = new ArrayList<>();
-        for (Task task : taskList) {
-            ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
-                    .processInstanceId(task.getProcessInstanceId())
-                    .singleResult();
-            if (processInstance == null || !StringUtils.hasText(processInstance.getBusinessKey())) {
+        for (ApprovalEngine.PendingTask task : taskList) {
+            if (!StringUtils.hasText(task.businessKey())) {
                 continue;
             }
-            Process process = baseMapper.selectById(Long.parseLong(processInstance.getBusinessKey()));
+            Process process = baseMapper.selectById(Long.parseLong(task.businessKey()));
             if (process == null) {
                 continue;
             }
-            processVoList.add(ProcessApprovalSupport.toPendingVo(process, task.getId()));
+            processVoList.add(ProcessApprovalSupport.toPendingVo(process, task.taskId()));
         }
         IPage<ProcessVo> page = new Page<>(pageParam.getCurrent(), pageParam.getSize(), totalCount);
         page.setRecords(processVoList);
@@ -144,14 +130,14 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
         String username = user.getUsername();
         int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
-        List<HistoricTaskInstance> historicTasks =
-                ProcessEngineApproval.processedTasks(historyService, username, firstResult, maxResults);
-        long totalCount = ProcessEngineApproval.processedCount(historyService, username);
+        List<ApprovalEngine.ProcessedTask> historicTasks =
+                approvalEngine.processedTasks(username, firstResult, maxResults);
+        long totalCount = approvalEngine.processedCount(username);
 
         List<ProcessVo> processVoList = new ArrayList<>();
-        for (HistoricTaskInstance historicTask : historicTasks) {
+        for (ApprovalEngine.ProcessedTask historicTask : historicTasks) {
             LambdaQueryWrapper<Process> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Process::getProcessInstanceId, historicTask.getProcessInstanceId());
+            wrapper.eq(Process::getProcessInstanceId, historicTask.processInstanceId());
             Process process = baseMapper.selectOne(wrapper);
             if (process == null) {
                 continue;

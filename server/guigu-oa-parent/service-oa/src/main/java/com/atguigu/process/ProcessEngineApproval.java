@@ -8,6 +8,7 @@ import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.util.CollectionUtils;
@@ -55,6 +56,27 @@ public final class ProcessEngineApproval {
                 .taskAssignee(username)
                 .finished()
                 .count();
+    }
+
+    public static String businessKey(RuntimeService runtimeService, String processInstanceId) {
+        if (!StringUtils.hasText(processInstanceId)) {
+            return null;
+        }
+        ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .singleResult();
+        return processInstance == null ? null : processInstance.getBusinessKey();
+    }
+
+    public static boolean hasHistoricAssignee(
+            HistoryService historyService, String processInstanceId, String username) {
+        if (!StringUtils.hasText(processInstanceId) || !StringUtils.hasText(username)) {
+            return false;
+        }
+        return historyService.createHistoricTaskInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .taskAssignee(username)
+                .count() > 0;
     }
 
     public static String start(

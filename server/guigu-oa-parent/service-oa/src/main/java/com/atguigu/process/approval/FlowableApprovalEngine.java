@@ -1,6 +1,7 @@
 package com.atguigu.process.approval;
 
 import com.atguigu.process.ProcessEngineApproval;
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -10,7 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ApprovalEngine 的 Flowable 适配器。Flowable 调用仍集中在 {@link ProcessEngineApproval}。
+ * ApprovalEngine 的 Flowable 适配器。写入与读取证据都走 {@link ProcessEngineApproval}，
+ * 后者仍是唯一的 Flowable 调用点。
  */
 @Component
 public class FlowableApprovalEngine implements ApprovalEngine {
@@ -18,12 +20,17 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     private final RuntimeService runtimeService;
     private final RepositoryService repositoryService;
     private final TaskService taskService;
+    private final HistoryService historyService;
 
     public FlowableApprovalEngine(
-            RuntimeService runtimeService, RepositoryService repositoryService, TaskService taskService) {
+            RuntimeService runtimeService,
+            RepositoryService repositoryService,
+            TaskService taskService,
+            HistoryService historyService) {
         this.runtimeService = runtimeService;
         this.repositoryService = repositoryService;
         this.taskService = taskService;
+        this.historyService = historyService;
     }
 
     @Override
@@ -46,5 +53,37 @@ public class FlowableApprovalEngine implements ApprovalEngine {
         return ProcessEngineApproval.currentTasks(taskService, processInstanceId).stream()
                 .map(task -> new CurrentTask(task.getId(), task.getAssignee()))
                 .toList();
+    }
+
+    @Override
+    public List<PendingTask> pendingTasks(String username, int firstResult, int maxResults) {
+        return ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults).stream()
+                .map(task -> new PendingTask(
+                        task.getId(),
+                        task.getProcessInstanceId(),
+                        ProcessEngineApproval.businessKey(runtimeService, task.getProcessInstanceId())))
+                .toList();
+    }
+
+    @Override
+    public long pendingCount(String username) {
+        return ProcessEngineApproval.pendingCount(taskService, username);
+    }
+
+    @Override
+    public List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults) {
+        return ProcessEngineApproval.processedTasks(historyService, username, firstResult, maxResults).stream()
+                .map(task -> new ProcessedTask(task.getProcessInstanceId()))
+                .toList();
+    }
+
+    @Override
+    public long processedCount(String username) {
+        return ProcessEngineApproval.processedCount(historyService, username);
+    }
+
+    @Override
+    public boolean hasHistoricAssignee(String processInstanceId, String username) {
+        return ProcessEngineApproval.hasHistoricAssignee(historyService, processInstanceId, username);
     }
 }

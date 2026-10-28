@@ -23,6 +23,7 @@ public class TestApprovalEngine implements ApprovalEngine {
     private boolean checkStartOrder;
     private int expectedAttachmentCount = -1;
     private boolean checkDecisionRecordBeforeCurrentTasks;
+    private boolean skipNextCurrentTasksCheck;
     private Long expectedRecordlessProcessId;
 
     private CountDownLatch bothTransactionsAtComplete;
@@ -39,6 +40,7 @@ public class TestApprovalEngine implements ApprovalEngine {
         checkStartOrder = false;
         expectedAttachmentCount = -1;
         checkDecisionRecordBeforeCurrentTasks = false;
+        skipNextCurrentTasksCheck = false;
         expectedRecordlessProcessId = null;
         bothTransactionsAtComplete = null;
         activeTransactionsAtComplete.set(0);
@@ -59,6 +61,8 @@ public class TestApprovalEngine implements ApprovalEngine {
 
     public void expectDecisionRecordBeforeCurrentTasks() {
         checkDecisionRecordBeforeCurrentTasks = true;
+        // Membership resolves first through the same engine seam; the ordered read is the next-task read.
+        skipNextCurrentTasksCheck = true;
     }
 
     public void expectNoDecisionRecordBeforeComplete(Long processId) {
@@ -154,16 +158,45 @@ public class TestApprovalEngine implements ApprovalEngine {
     @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         if (checkDecisionRecordBeforeCurrentTasks) {
-            Long decisionCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM oa_process_record r "
-                            + "JOIN oa_process p ON p.id = r.process_id "
-                            + "WHERE p.process_instance_id = ? AND r.description IN ('已通过', '驳回')",
-                    Long.class,
-                    processInstanceId);
-            if (decisionCount == null || decisionCount == 0) {
-                throw new AssertionError("读取下一任务前本次处理记录尚未写入");
+            if (skipNextCurrentTasksCheck) {
+                skipNextCurrentTasksCheck = false;
+            } else {
+                Long decisionCount = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM oa_process_record r "
+                                + "JOIN oa_process p ON p.id = r.process_id "
+                                + "WHERE p.process_instance_id = ? AND r.description IN ('已通过', '驳回')",
+                        Long.class,
+                        processInstanceId);
+                if (decisionCount == null || decisionCount == 0) {
+                    throw new AssertionError("读取下一任务前本次处理记录尚未写入");
+                }
             }
         }
         return delegate.currentTasks(processInstanceId);
+    }
+
+    @Override
+    public List<PendingTask> pendingTasks(String username, int firstResult, int maxResults) {
+        return delegate.pendingTasks(username, firstResult, maxResults);
+    }
+
+    @Override
+    public long pendingCount(String username) {
+        return delegate.pendingCount(username);
+    }
+
+    @Override
+    public List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults) {
+        return delegate.processedTasks(username, firstResult, maxResults);
+    }
+
+    @Override
+    public long processedCount(String username) {
+        return delegate.processedCount(username);
+    }
+
+    @Override
+    public boolean hasHistoricAssignee(String processInstanceId, String username) {
+        return delegate.hasHistoricAssignee(processInstanceId, username);
     }
 }

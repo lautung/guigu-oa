@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ProcessEngineApprovalTest {
@@ -118,5 +120,40 @@ public class ProcessEngineApprovalTest {
     public void currentTasksTreatBlankProcessInstanceIdAsEmpty() {
         assertTrue(ProcessEngineApproval.currentTasks(processEngine.getTaskService(), null).isEmpty());
         assertTrue(ProcessEngineApproval.currentTasks(processEngine.getTaskService(), "").isEmpty());
+    }
+
+    @Test
+    public void businessKeyResolvesTheRunningInstanceOnly() {
+        ProcessInstance instance = processEngine.getRuntimeService()
+                .startProcessInstanceByKey("approvalTwoStep", "12");
+
+        assertEquals("12", ProcessEngineApproval.businessKey(
+                processEngine.getRuntimeService(), instance.getId()));
+        assertNull(ProcessEngineApproval.businessKey(processEngine.getRuntimeService(), "missing"));
+        assertNull(ProcessEngineApproval.businessKey(processEngine.getRuntimeService(), null));
+    }
+
+    @Test
+    public void historicAssigneeCountsCurrentAndFinishedTasksButNotOtherUsers() {
+        ProcessInstance instance = processEngine.getRuntimeService()
+                .startProcessInstanceByKey("approvalTwoStep", "13");
+
+        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), instance.getId(), "zhangsan"));
+        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), instance.getId(), "lisi"));
+
+        Task first = ProcessEngineApproval.pendingTasks(
+                processEngine.getTaskService(), "zhangsan", 0, 10).get(0);
+        ProcessEngineApproval.complete(processEngine.getTaskService(), first.getId());
+
+        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), instance.getId(), "zhangsan"));
+        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), instance.getId(), "lisi"));
+        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), null, "zhangsan"));
+        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
+                processEngine.getHistoryService(), instance.getId(), " "));
     }
 }
