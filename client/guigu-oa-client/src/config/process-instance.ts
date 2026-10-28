@@ -14,7 +14,7 @@ interface ProcessInstanceQuery {
   createTimeEnd?: string
 }
 
-function presentListItem(record: ProcessInstanceRecord = {}): ProcessInstanceListItem {
+export function presentListRecord(record: ProcessInstanceRecord = {}): ProcessInstanceListItem {
   return {
     id: record.id || '',
     processCode: record.processCode,
@@ -32,7 +32,7 @@ function presentListItem(record: ProcessInstanceRecord = {}): ProcessInstanceLis
 
 export function presentListPage(page: PageResult<ProcessInstanceRecord> = {}) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(presentListRecord),
     total: page.total || 0,
     pages: page.pages || 0,
   }

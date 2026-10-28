@@ -15,16 +15,16 @@
       </el-form-item>
     </el-form>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
       :data="rows"
-      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      :empty-text="emptyText"
       stripe
       border
     >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
+      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
       <el-table-column prop="username" label="用户名" />
       <el-table-column prop="name" label="姓名" />
       <el-table-column prop="phone" label="手机" />
@@ -51,17 +51,13 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination-wrap">
-      <el-pagination
-        :current-page="view.page"
-        :page-size="view.size"
-        :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="view.total"
-        layout="sizes, prev, pager, next, jumper, ->, total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </div>
+    <ListPagination
+      :page="view.page"
+      :size="view.size"
+      :total="view.total"
+      @page-change="list.handlePageChange"
+      @size-change="list.handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
       <el-form label-width="80px">
@@ -96,9 +92,11 @@ import { onBeforeRouteLeave } from 'vue-router'
 
 import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import ListLoadError from '@/components/ListLoadError.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
-import { emptyForm, listRequest, presentForm, presentListPage } from '@/config/sys-user'
-import { createListRead } from '@/list-read'
+import { emptyForm, listRequest, presentForm, presentListRecord } from '@/config/sys-user'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
@@ -111,7 +109,7 @@ interface AssignRolesDialogHandle {
 
 export default defineComponent({
   name: 'SysUserList',
-  components: { AssignRolesDialog, ListLoadError },
+  components: { AssignRolesDialog, ListLoadError, ListPagination },
   setup() {
     const assignRolesDialog = ref<AssignRolesDialogHandle>()
     const assignRolesVisible = ref(false)
@@ -121,9 +119,11 @@ export default defineComponent({
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<UserRecord, Record<string, string | number>>({
+    const list = createListPage<UserRecord, UserListItem, Record<string, string | number>>({
       openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
+      present: presentListRecord,
+      ...listPageEffects(),
     })
 
     function isPending(id: EntityId): boolean {
@@ -154,7 +154,7 @@ export default defineComponent({
       window.addEventListener('focus', environmentChanged)
     })
     onBeforeUnmount(() => {
-      opening.release()
+      list.release()
       window.removeEventListener('resize', environmentChanged)
       window.removeEventListener('focus', environmentChanged)
     })
@@ -165,7 +165,10 @@ export default defineComponent({
       assignUser,
       isPending,
       openAssignRoles,
-      opening,
+      list,
+      view: list.view,
+      rows: list.rows,
+      emptyText: list.emptyText,
     }
   },
   data() {
@@ -177,80 +180,50 @@ export default defineComponent({
     }
   },
   computed: {
-    view() {
-      return this.opening.view
-    },
-    rows(): UserListItem[] {
-      return presentListPage(this.view).records
-    },
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
     },
   },
   methods: {
-    rowIndex(index: number) {
-      return (this.view.page - 1) * this.view.size + index + 1
-    },
     searchObj(): Record<string, string | number> {
       return this.keyword ? { keyword: this.keyword } : {}
     },
     search() {
-      this.opening.read({ page: 1, query: this.searchObj() })
+      this.list.search(this.searchObj())
     },
     reset() {
       this.keyword = ''
       this.search()
     },
-    retry() {
-      this.opening.read()
-    },
-    handlePageChange(page: number) {
-      this.opening.read({ page })
-    },
-    handleSizeChange(size: number) {
-      this.opening.read({ size })
-    },
     openCreate() {
       this.form = emptyForm()
       this.dialogVisible = true
     },
-    openEdit(id: EntityId) {
-      getById(id).then((response) => {
-        this.form = presentForm(response.data || {})
-        this.dialogVisible = true
-      })
+    async openEdit(id: EntityId) {
+      const response = await this.list.settle(getById(id))
+      if (!response) return
+      this.form = presentForm(response.data || {})
+      this.dialogVisible = true
     },
-    save() {
+    async save() {
       this.saving = true
-      saveOrUpdate(this.form)
-        .then((response) => {
-          this.$message.success(response.message || '操作成功')
+      try {
+        if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))
           this.dialogVisible = false
-          this.opening.read()
-        })
-        .finally(() => {
-          this.saving = false
-        })
+      } finally {
+        this.saving = false
+      }
     },
     remove(id: EntityId) {
-      this.$confirm('此操作将永久删除该用户, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(() => removeById(id))
-        .then((response) => {
-          this.$message.success(response.message || '删除成功')
-          this.opening.read()
-        })
-        .catch(() => {})
+      return this.list.confirmRemove(
+        '此操作将永久删除该用户, 是否继续?',
+        () => removeById(id),
+        '删除成功',
+      )
     },
     toggleStatus(id: EntityId, statusEnabled: boolean) {
       const nextStatus = statusEnabled ? 0 : 1
-      updateStatus(id, nextStatus).then((response) => {
-        this.$message.success(response.message || '操作成功')
-        this.opening.read()
-      })
+      return this.list.runWrite(() => updateStatus(id, nextStatus), '操作成功')
     },
   },
 })
@@ -278,11 +251,6 @@ export default defineComponent({
 
 .filter-form {
   margin-bottom: 12px;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  text-align: center;
 }
 
 .assign-action {

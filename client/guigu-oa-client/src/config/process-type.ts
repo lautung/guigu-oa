@@ -4,7 +4,7 @@ export interface ProcessTypeListItem extends ProcessTypeRecord {
   id: EntityId
 }
 
-function presentListItem(record: ProcessTypeRecord = {}): ProcessTypeListItem {
+export function presentListRecord(record: ProcessTypeRecord = {}): ProcessTypeListItem {
   return {
     id: record.id || '',
     name: record.name,
@@ -18,7 +18,7 @@ export function presentListPage(
   page: { records?: ProcessTypeRecord[]; total?: number; pages?: number } = {},
 ) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(presentListRecord),
     total: page.total || 0,
     pages: page.pages || 0,
   }

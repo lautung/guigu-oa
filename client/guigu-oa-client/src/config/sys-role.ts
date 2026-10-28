@@ -5,7 +5,7 @@ export interface RoleAssignmentLists {
   assginRoleList: RoleListItem[]
 }
 
-function presentListItem(record: RoleRecord = {}): RoleListItem {
+export function presentListRecord(record: RoleRecord = {}): RoleListItem {
   return {
     id: record.id || '',
     roleName: record.roleName,
@@ -18,7 +18,7 @@ export function presentListPage(
   page: { records?: RoleRecord[]; total?: number; pages?: number } = {},
 ) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(presentListRecord),
     total: page.total || 0,
     pages: page.pages || 0,
   }

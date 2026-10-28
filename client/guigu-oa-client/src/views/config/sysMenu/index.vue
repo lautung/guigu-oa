@@ -5,8 +5,12 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate()">新建</el-button>
     </div>
 
+    <ListLoadError :status="treeStatus" :error="treeError" @retry="fetchTree" />
+
     <el-table
+      v-loading="treeStatus === 'loading'"
       :data="menuTree"
+      :empty-text="treeStatus === 'ready' ? '暂无数据' : ''"
       row-key="id"
       border
       default-expand-all
@@ -80,14 +84,21 @@
 import { defineComponent } from 'vue'
 
 import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
+import ListLoadError from '@/components/ListLoadError.vue'
 import { emptyForm, formForCreate, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
+import { listPageEffects } from '@/list-page-browser'
 import type { EntityId, MenuNode } from '@/types/domain'
+
+const effects = listPageEffects()
 
 export default defineComponent({
   name: 'SysMenuList',
+  components: { ListLoadError },
   data() {
     return {
       menuTree: [] as MenuNode[],
+      treeStatus: 'loading' as 'loading' | 'ready' | 'failed',
+      treeError: '',
       dialogVisible: false,
       saving: false,
       typeLocked: false,
@@ -105,9 +116,17 @@ export default defineComponent({
   },
   methods: {
     fetchTree() {
-      findNodes().then((response) => {
-        this.menuTree = presentConfigMenuTree(response.data || [])
-      })
+      this.treeStatus = 'loading'
+      this.treeError = ''
+      findNodes()
+        .then((response) => {
+          this.menuTree = presentConfigMenuTree(response.data || [])
+          this.treeStatus = 'ready'
+        })
+        .catch((error: unknown) => {
+          this.treeStatus = 'failed'
+          this.treeError = error instanceof Error ? error.message : '加载失败'
+        })
     },
     openCreate(parent?: MenuNode) {
       this.form = formForCreate(parent)
@@ -119,31 +138,28 @@ export default defineComponent({
       this.typeLocked = true
       this.dialogVisible = true
     },
-    save() {
+    async save() {
       this.saving = true
-      saveOrUpdate(this.form)
-        .then((response) => {
-          this.$message.success(response.message || '操作成功')
-          this.dialogVisible = false
-          this.fetchTree()
-        })
-        .catch(() => {})
-        .finally(() => {
-          this.saving = false
-        })
+      try {
+        const response = await saveOrUpdate(this.form)
+        effects.notify(response.message || '操作成功', 'success')
+        this.dialogVisible = false
+        this.fetchTree()
+      } catch {
+        /* 请求层已提示 */
+      } finally {
+        this.saving = false
+      }
     },
-    remove(id: EntityId) {
-      this.$confirm('此操作将永久删除该菜单, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(() => removeById(id))
-        .then((response) => {
-          this.$message.success(response.message || '删除成功')
-          this.fetchTree()
-        })
-        .catch(() => {})
+    async remove(id: EntityId) {
+      if (!(await effects.confirm('此操作将永久删除该菜单, 是否继续?'))) return
+      try {
+        const response = await removeById(id)
+        effects.notify(response.message || '删除成功', 'success')
+        this.fetchTree()
+      } catch {
+        /* 请求层已提示 */
+      }
     },
   },
 })

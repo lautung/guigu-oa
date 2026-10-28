@@ -3,7 +3,7 @@
     <h2 class="page-title">{{ definition.title }}</h2>
 
     <div v-loading="view.status === 'loading'" class="list-container">
-      <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+      <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
       <el-empty
         v-if="view.status === 'ready' && rows.length === 0"
@@ -33,16 +33,14 @@
         </div>
       </div>
 
-      <div v-if="rows.length > 0" class="pagination-wrap">
-        <el-pagination
-          background
-          layout="prev, pager, next"
-          :current-page="view.page"
-          :page-size="view.size"
-          :total="view.total"
-          @current-change="handlePageChange"
-        />
-      </div>
+      <ListPagination
+        v-if="rows.length > 0"
+        compact
+        :page="view.page"
+        :size="view.size"
+        :total="view.total"
+        @page-change="list.handlePageChange"
+      />
     </div>
   </div>
 </template>
@@ -52,7 +50,10 @@ import { computed, defineComponent, onBeforeUnmount, shallowRef, watch } from 'v
 import { useRoute } from 'vue-router'
 
 import ListLoadError from '@/components/ListLoadError.vue'
-import { createListRead, type ListReadOpening, type NoListQuery } from '@/list-read'
+import ListPagination from '@/components/ListPagination.vue'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
+import type { NoListQuery } from '@/list-read'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { ProcessInstanceRecord, PresentedWorkListRecord } from '@/types/domain'
@@ -63,11 +64,9 @@ import {
   type WorkListKind,
 } from '@/work/work-list'
 
-type WorkListOpening = ListReadOpening<ProcessInstanceRecord, NoListQuery>
-
 export default defineComponent({
   name: 'WorkListPage',
-  components: { ListLoadError },
+  components: { ListLoadError, ListPagination },
   setup() {
     const route = useRoute()
     const userStore = useUserStore()
@@ -76,38 +75,33 @@ export default defineComponent({
       return route.meta.workListKind as WorkListKind
     }
 
-    function open(kind: WorkListKind): WorkListOpening {
+    function open(kind: WorkListKind) {
       const recognition = userStore.recognition
       if (!recognition) throw new Error('认出 module 尚未接入')
-      return createListRead<ProcessInstanceRecord, NoListQuery>({
+      return createListPage<ProcessInstanceRecord, PresentedWorkListRecord, NoListQuery>({
         openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
         toRequest: ({ page, size }) => workListRequest(kind, page, size),
+        ...listPageEffects(),
       })
     }
 
     const kind = computed(kindFromRoute)
-    const opening = shallowRef<WorkListOpening>(open(kind.value))
-    const view = computed(() => opening.value.view)
+    const list = shallowRef(open(kind.value))
+    const view = computed(() => list.value.view)
     const definition = computed(() => workListDefinition(kind.value))
     const rows = computed<PresentedWorkListRecord[]>(
       () => presentWorkList(kind.value, view.value).records,
     )
 
     watch(kind, (next) => {
-      opening.value.release()
-      opening.value = open(next)
+      list.value.release()
+      list.value = open(next)
     })
-    onBeforeUnmount(() => opening.value.release())
+    onBeforeUnmount(() => list.value.release())
 
-    return { opening, view, definition, rows }
+    return { list, view, definition, rows }
   },
   methods: {
-    handlePageChange(page: number) {
-      void this.opening.read({ page })
-    },
-    retry() {
-      void this.opening.read()
-    },
     openDetail(item: PresentedWorkListRecord) {
       this.$router.push(item.detailPath)
     },
@@ -191,12 +185,6 @@ export default defineComponent({
 
 .item-status {
   margin-top: 8px;
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
 }
 
 @media (max-width: 768px) {

@@ -34,16 +34,16 @@
       </el-form-item>
     </el-form>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
       :data="rows"
-      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      :empty-text="emptyText"
       stripe
       border
     >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
+      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
       <el-table-column prop="processCode" label="审批编号" />
       <el-table-column prop="title" label="标题" />
       <el-table-column prop="name" label="用户" />
@@ -58,17 +58,13 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination-wrap">
-      <el-pagination
-        :current-page="view.page"
-        :page-size="view.size"
-        :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="view.total"
-        layout="sizes, prev, pager, next, jumper, ->, total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </div>
+    <ListPagination
+      :page="view.page"
+      :size="view.size"
+      :total="view.total"
+      @page-change="list.handlePageChange"
+      @size-change="list.handleSizeChange"
+    />
   </div>
 </template>
 
@@ -76,25 +72,43 @@
 import { defineComponent, onBeforeUnmount } from 'vue'
 
 import ListLoadError from '@/components/ListLoadError.vue'
-import { emptyQuery, listRequest, presentListPage, STATUS_OPTIONS } from '@/config/process-instance'
-import { createListRead } from '@/list-read'
+import ListPagination from '@/components/ListPagination.vue'
+import {
+  emptyQuery,
+  listRequest,
+  presentListRecord,
+  STATUS_OPTIONS,
+} from '@/config/process-instance'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { ProcessInstanceListItem, ProcessInstanceRecord } from '@/types/domain'
 
 export default defineComponent({
   name: 'ProcessInstanceList',
-  components: { ListLoadError },
+  components: { ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<ProcessInstanceRecord, Record<string, string | number>>({
+    const list = createListPage<
+      ProcessInstanceRecord,
+      ProcessInstanceListItem,
+      Record<string, string | number>
+    >({
       openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
+      present: presentListRecord,
+      ...listPageEffects(),
     })
-    onBeforeUnmount(() => opening.release())
-    return { opening }
+    onBeforeUnmount(() => list.release())
+    return {
+      list,
+      view: list.view,
+      rows: list.rows,
+      emptyText: list.emptyText,
+    }
   },
   data() {
     return {
@@ -103,18 +117,7 @@ export default defineComponent({
       statusOptions: STATUS_OPTIONS,
     }
   },
-  computed: {
-    view() {
-      return this.opening.view
-    },
-    rows(): ProcessInstanceListItem[] {
-      return presentListPage(this.view).records
-    },
-  },
   methods: {
-    rowIndex(index: number) {
-      return (this.view.page - 1) * this.view.size + index + 1
-    },
     currentQuery(): Record<string, string | number> {
       const query: Record<string, string | number> = { ...this.query }
       if (this.createTimes && this.createTimes.length === 2) {
@@ -127,21 +130,12 @@ export default defineComponent({
       return query
     },
     search() {
-      this.opening.read({ page: 1, query: this.currentQuery() })
+      this.list.search(this.currentQuery())
     },
     reset() {
       this.query = emptyQuery()
       this.createTimes = []
       this.search()
-    },
-    retry() {
-      this.opening.read()
-    },
-    handlePageChange(page: number) {
-      this.opening.read({ page })
-    },
-    handleSizeChange(size: number) {
-      this.opening.read({ size })
     },
     openDetail(detailPath: string) {
       this.$router.push(detailPath)
@@ -169,10 +163,5 @@ export default defineComponent({
 
 .filter-form {
   margin-bottom: 12px;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  text-align: center;
 }
 </style>

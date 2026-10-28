@@ -5,16 +5,16 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
       :data="rows"
-      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      :empty-text="emptyText"
       stripe
       border
     >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
+      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
       <el-table-column prop="name" label="审批名称" />
       <el-table-column label="图标" width="80" align="center">
         <template #default="scope">
@@ -49,17 +49,13 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination-wrap">
-      <el-pagination
-        :current-page="view.page"
-        :page-size="view.size"
-        :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="view.total"
-        layout="sizes, prev, pager, next, jumper, ->, total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </div>
+    <ListPagination
+      :page="view.page"
+      :size="view.size"
+      :total="view.total"
+      @page-change="list.handlePageChange"
+      @size-change="list.handleSizeChange"
+    />
 
     <el-dialog v-model="previewVisible" title="查看审批模板" width="520px">
       <h3>基本信息</h3>
@@ -84,14 +80,17 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 
 import request from '@/utils/request'
 import ListLoadError from '@/components/ListLoadError.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import {
   listRequest,
   presentDesignerState,
-  presentListPage,
+  presentListRecord,
   publish,
   removeUnpublished,
 } from '@/config/process-template'
-import { createListRead, type NoListQuery } from '@/list-read'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
+import type { NoListQuery } from '@/list-read'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type {
@@ -103,17 +102,24 @@ import type {
 
 export default defineComponent({
   name: 'ProcessTemplateList',
-  components: { ListLoadError },
+  components: { ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<ProcessTemplateRecord, NoListQuery>({
+    const list = createListPage<ProcessTemplateRecord, ProcessTemplateListItem, NoListQuery>({
       openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size }) => listRequest(page, size),
+      present: presentListRecord,
+      ...listPageEffects(),
     })
-    onBeforeUnmount(() => opening.release())
-    return { opening }
+    onBeforeUnmount(() => list.release())
+    return {
+      list,
+      view: list.view,
+      rows: list.rows,
+      emptyText: list.emptyText,
+    }
   },
   data() {
     return {
@@ -123,27 +129,7 @@ export default defineComponent({
       previewOption: { submitBtn: false } as FormDesignerOption,
     }
   },
-  computed: {
-    view() {
-      return this.opening.view
-    },
-    rows(): ProcessTemplateListItem[] {
-      return presentListPage(this.view).records
-    },
-  },
   methods: {
-    rowIndex(index: number) {
-      return (this.view.page - 1) * this.view.size + index + 1
-    },
-    retry() {
-      this.opening.read()
-    },
-    handlePageChange(page: number) {
-      this.opening.read({ page })
-    },
-    handleSizeChange(size: number) {
-      this.opening.read({ size })
-    },
     openCreate() {
       this.$router.push('/processSet/templateSet')
     },
@@ -159,23 +145,14 @@ export default defineComponent({
       this.previewVisible = true
     },
     publishTemplate(template: ProcessTemplateRecord) {
-      publish(template, request).then((response) => {
-        this.$message.success(response.message || '发布成功')
-        this.opening.read()
-      })
+      return this.list.runWrite(() => publish(template, request), '发布成功')
     },
     remove(template: ProcessTemplateRecord) {
-      this.$confirm('此操作将永久删除该审批模板, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(() => removeUnpublished(template, request))
-        .then((response) => {
-          this.$message.success(response.message || '删除成功')
-          this.opening.read()
-        })
-        .catch(() => {})
+      return this.list.confirmRemove(
+        '此操作将永久删除该审批模板, 是否继续?',
+        () => removeUnpublished(template, request),
+        '删除成功',
+      )
     },
   },
 })
@@ -209,10 +186,5 @@ export default defineComponent({
 
 .availability-message {
   color: #b88230;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  text-align: center;
 }
 </style>

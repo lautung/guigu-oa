@@ -15,16 +15,16 @@
       </el-form-item>
     </el-form>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
       :data="rows"
-      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      :empty-text="emptyText"
       stripe
       border
     >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
+      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
       <el-table-column prop="roleName" label="角色名称" />
       <el-table-column prop="roleCode" label="角色编码" />
       <el-table-column prop="createTime" label="创建时间" />
@@ -39,17 +39,13 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination-wrap">
-      <el-pagination
-        :current-page="view.page"
-        :page-size="view.size"
-        :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="view.total"
-        layout="sizes, prev, pager, next, jumper, ->, total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </div>
+    <ListPagination
+      :page="view.page"
+      :size="view.size"
+      :total="view.total"
+      @page-change="list.handlePageChange"
+      @size-change="list.handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
       <el-form label-width="80px">
@@ -75,31 +71,40 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 
 import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
 import ListLoadError from '@/components/ListLoadError.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import {
   assignAuthPath,
   emptyForm,
   listRequest,
   presentForm,
-  presentListPage,
+  presentListRecord,
 } from '@/config/sys-role'
-import { createListRead } from '@/list-read'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'
 
 export default defineComponent({
   name: 'SysRoleList',
-  components: { ListLoadError },
+  components: { ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<RoleRecord, Record<string, string | number>>({
+    const list = createListPage<RoleRecord, RoleListItem, Record<string, string | number>>({
       openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => listRequest(page, size, query),
+      present: presentListRecord,
+      ...listPageEffects(),
     })
-    onBeforeUnmount(() => opening.release())
-    return { opening }
+    onBeforeUnmount(() => list.release())
+    return {
+      list,
+      view: list.view,
+      rows: list.rows,
+      emptyText: list.emptyText,
+    }
   },
   data() {
     return {
@@ -110,76 +115,49 @@ export default defineComponent({
     }
   },
   computed: {
-    view() {
-      return this.opening.view
-    },
-    rows(): RoleListItem[] {
-      return presentListPage(this.view).records
-    },
     dialogTitle() {
       return this.form.id ? '编辑角色' : '新建角色'
     },
   },
   methods: {
-    rowIndex(index: number) {
-      return (this.view.page - 1) * this.view.size + index + 1
-    },
     searchObj(): Record<string, string | number> {
       return this.roleName ? { roleName: this.roleName } : {}
     },
     search() {
-      this.opening.read({ page: 1, query: this.searchObj() })
+      this.list.search(this.searchObj())
     },
     reset() {
       this.roleName = ''
       this.search()
     },
-    retry() {
-      this.opening.read()
-    },
-    handlePageChange(page: number) {
-      this.opening.read({ page })
-    },
-    handleSizeChange(size: number) {
-      this.opening.read({ size })
-    },
     openCreate() {
       this.form = emptyForm()
       this.dialogVisible = true
     },
-    openEdit(id: EntityId) {
-      getById(id).then((response) => {
-        this.form = presentForm(response.data || {})
-        this.dialogVisible = true
-      })
+    async openEdit(id: EntityId) {
+      const response = await this.list.settle(getById(id))
+      if (!response) return
+      this.form = presentForm(response.data || {})
+      this.dialogVisible = true
     },
     openAssign(id: EntityId, roleName?: string) {
       this.$router.push(assignAuthPath(id, roleName))
     },
-    save() {
+    async save() {
       this.saving = true
-      saveOrUpdate(this.form)
-        .then((response) => {
-          this.$message.success(response.message || '操作成功')
+      try {
+        if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))
           this.dialogVisible = false
-          this.opening.read()
-        })
-        .finally(() => {
-          this.saving = false
-        })
+      } finally {
+        this.saving = false
+      }
     },
     remove(id: EntityId) {
-      this.$confirm('此操作将永久删除该角色, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(() => removeById(id))
-        .then((response) => {
-          this.$message.success(response.message || '删除成功')
-          this.opening.read()
-        })
-        .catch(() => {})
+      return this.list.confirmRemove(
+        '此操作将永久删除该角色, 是否继续?',
+        () => removeById(id),
+        '删除成功',
+      )
     },
   },
 })
@@ -207,10 +185,5 @@ export default defineComponent({
 
 .filter-form {
   margin-bottom: 12px;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  text-align: center;
 }
 </style>

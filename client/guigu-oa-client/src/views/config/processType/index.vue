@@ -5,16 +5,16 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="retry" />
+    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
 
     <el-table
       v-loading="view.status === 'loading'"
       :data="rows"
-      :empty-text="view.status === 'ready' ? '暂无数据' : ''"
+      :empty-text="emptyText"
       stripe
       border
     >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="rowIndex" />
+      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
       <el-table-column prop="name" label="类型名称" />
       <el-table-column prop="description" label="描述" />
       <el-table-column prop="createTime" label="创建时间" />
@@ -27,17 +27,13 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination-wrap">
-      <el-pagination
-        :current-page="view.page"
-        :page-size="view.size"
-        :page-sizes="[5, 10, 20, 30, 40, 50, 100]"
-        :total="view.total"
-        layout="sizes, prev, pager, next, jumper, ->, total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </div>
+    <ListPagination
+      :page="view.page"
+      :size="view.size"
+      :total="view.total"
+      @page-change="list.handlePageChange"
+      @size-change="list.handleSizeChange"
+    />
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
       <el-form label-width="80px">
@@ -63,31 +59,41 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 
 import { getById, removeById, saveOrUpdate } from '@/api/processType'
 import ListLoadError from '@/components/ListLoadError.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import {
   emptyForm,
   listRequest,
   presentForm,
-  presentListPage,
+  presentListRecord,
   type ProcessTypeListItem,
 } from '@/config/process-type'
-import { createListRead, type NoListQuery } from '@/list-read'
+import { createListPage } from '@/list-page'
+import { listPageEffects } from '@/list-page-browser'
+import type { NoListQuery } from '@/list-read'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, ProcessTypeRecord } from '@/types/domain'
 
 export default defineComponent({
   name: 'ProcessTypeList',
-  components: { ListLoadError },
+  components: { ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
     if (!recognition) throw new Error('认出 module 尚未接入')
-    const opening = createListRead<ProcessTypeRecord, NoListQuery>({
+    const list = createListPage<ProcessTypeRecord, ProcessTypeListItem, NoListQuery>({
       openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size }) => listRequest(page, size),
+      present: presentListRecord,
+      ...listPageEffects(),
     })
-    onBeforeUnmount(() => opening.release())
-    return { opening }
+    onBeforeUnmount(() => list.release())
+    return {
+      list,
+      view: list.view,
+      rows: list.rows,
+      emptyText: list.emptyText,
+    }
   },
   data() {
     return {
@@ -97,63 +103,36 @@ export default defineComponent({
     }
   },
   computed: {
-    view() {
-      return this.opening.view
-    },
-    rows(): ProcessTypeListItem[] {
-      return presentListPage(this.view).records
-    },
     dialogTitle() {
       return this.form.id ? '编辑审批类型' : '新建审批类型'
     },
   },
   methods: {
-    rowIndex(index: number) {
-      return (this.view.page - 1) * this.view.size + index + 1
-    },
-    retry() {
-      this.opening.read()
-    },
-    handlePageChange(page: number) {
-      this.opening.read({ page })
-    },
-    handleSizeChange(size: number) {
-      this.opening.read({ size })
-    },
     openCreate() {
       this.form = emptyForm()
       this.dialogVisible = true
     },
-    openEdit(id: EntityId) {
-      getById(id).then((response) => {
-        this.form = presentForm(response.data || {})
-        this.dialogVisible = true
-      })
+    async openEdit(id: EntityId) {
+      const response = await this.list.settle(getById(id))
+      if (!response) return
+      this.form = presentForm(response.data || {})
+      this.dialogVisible = true
     },
-    save() {
+    async save() {
       this.saving = true
-      saveOrUpdate(this.form)
-        .then((response) => {
-          this.$message.success(response.message || '操作成功')
+      try {
+        if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))
           this.dialogVisible = false
-          this.opening.read()
-        })
-        .finally(() => {
-          this.saving = false
-        })
+      } finally {
+        this.saving = false
+      }
     },
     remove(id: EntityId) {
-      this.$confirm('此操作将永久删除该审批类型, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      })
-        .then(() => removeById(id))
-        .then((response) => {
-          this.$message.success(response.message || '删除成功')
-          this.opening.read()
-        })
-        .catch(() => {})
+      return this.list.confirmRemove(
+        '此操作将永久删除该审批类型, 是否继续?',
+        () => removeById(id),
+        '删除成功',
+      )
     },
   },
 })
@@ -177,10 +156,5 @@ export default defineComponent({
   margin: 0;
   font-size: 20px;
   color: #303133;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  text-align: center;
 }
 </style>

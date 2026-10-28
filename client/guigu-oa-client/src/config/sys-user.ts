@@ -1,6 +1,6 @@
 import type { ApiRequestConfig, EntityId, UserForm, UserListItem, UserRecord } from '@/types/domain'
 
-function presentListItem(record: UserRecord = {}): UserListItem {
+export function presentListRecord(record: UserRecord = {}): UserListItem {
   return {
     id: record.id || '',
     username: record.username,
@@ -16,7 +16,7 @@ export function presentListPage(
   page: { records?: UserRecord[]; total?: number; pages?: number } = {},
 ) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(presentListRecord),
     total: page.total || 0,
     pages: page.pages || 0,
   }

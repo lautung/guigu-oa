@@ -22,7 +22,7 @@ export function canWrite(record: ProcessTemplateRecord | null | undefined): bool
   return !!record && record.status !== 1
 }
 
-function presentListItem(record: ProcessTemplateRecord = {}): ProcessTemplateListItem {
+export function presentListRecord(record: ProcessTemplateRecord = {}): ProcessTemplateListItem {
   const writable = canWrite(record)
 
   return {
@@ -52,7 +52,7 @@ function presentListItem(record: ProcessTemplateRecord = {}): ProcessTemplateLis
 
 export function presentListPage(page: PageResult<ProcessTemplateRecord> = {}) {
   return {
-    records: (page.records || []).map(presentListItem),
+    records: (page.records || []).map(presentListRecord),
     total: page.total || 0,
     pages: page.pages || 0,
   }
