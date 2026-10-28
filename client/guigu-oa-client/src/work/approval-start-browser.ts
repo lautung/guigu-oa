@@ -73,7 +73,8 @@ export function useApprovalStart(templateId: () => EntityId | undefined) {
         (
           await openScope().request<ProcessTemplateRecord>({
             method: 'get',
-            url: `/admin/process/processTemplate/get/${id}`,
+            // 办事发起页读工作侧端点（不要求配置权限）；未发布模板由服务端在这里拦下。
+            url: `/admin/process/getProcessTemplate/${id}`,
           })
         ).data,
       recipients: async () =>

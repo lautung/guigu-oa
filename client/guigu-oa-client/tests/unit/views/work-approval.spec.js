@@ -46,7 +46,7 @@ beforeEach(() => {
   confirmMock.mockReset().mockResolvedValue('confirm')
   http = installHttp((config) => {
     const url = config.url || ''
-    if (/processTemplate\/get\/5$/.test(url)) return ok(template)
+    if (/getProcessTemplate\/5$/.test(url)) return ok(template)
     if (url.includes('/carbonCopyRecipients'))
       return ok([{ id: 9, name: '卡罗尔', username: 'carol' }])
     if (url.includes('/admin/attachments/drafts/')) return ok([])
@@ -124,7 +124,7 @@ describe('Apply page', () => {
     wrapper.vm.start.reload()
     await flushPromises()
     expect(
-      http.calls.filter((call) => String(call.url).includes('/processTemplate/get/5')),
+      http.calls.filter((call) => String(call.url).includes('/admin/process/getProcessTemplate/5')),
     ).toHaveLength(2)
 
     const attachments = wrapper.findComponent(ApprovalStartAttachments)

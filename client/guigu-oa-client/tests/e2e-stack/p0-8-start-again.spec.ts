@@ -22,6 +22,10 @@ test('发起结果不明后核实并重新发起，两条审批都真实存在',
   await expect(page.getByRole('heading', { name: template.name, level: 2 })).toBeVisible()
   await fillDemoForm(page, { reason, days: '1' })
 
+  // 等发起页完全静止（准备请求全部完成、提交按钮可用）再冻结服务端，
+  // 避免 pause 把在途的读取请求冻成「loading 永不结束」。
+  const submit = page.getByRole('button', { name: '提交', exact: true })
+  await expect(submit).toBeEnabled()
   composeService('pause')
   try {
     await page.getByRole('button', { name: '提交', exact: true }).click()
@@ -40,8 +44,12 @@ test('发起结果不明后核实并重新发起，两条审批都真实存在',
   })
   expect(original, '冻结窗口结束后原提交应当已落库').toBeTruthy()
 
-  // 明确重新发起：ADR 0008 允许另产生一条，两次提交都真实存在。
+  // 明确重新发起：UI 要求先过「接受可能重复，继续」确认（ADR 0008），两次提交都真实存在。
   await page.getByRole('button', { name: '仍未找到，重新发起' }).click()
+  await expect(
+    page.locator('.el-message-box').getByRole('button', { name: '接受可能重复，继续' }),
+  ).toBeVisible()
+  await page.locator('.el-message-box').getByRole('button', { name: '接受可能重复，继续' }).click()
   await submitStart(page, reason)
 
   const both = await oracle.findMarkedAll('alice', 'started', reason)

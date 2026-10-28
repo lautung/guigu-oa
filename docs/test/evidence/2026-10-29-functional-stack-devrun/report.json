@@ -126,12 +126,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 520,
+                  "duration": 517,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:19.010Z",
+                  "startTime": "2026-10-28T18:51:42.243Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -160,12 +160,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 529,
+                  "duration": 530,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:19.628Z",
+                  "startTime": "2026-10-28T18:51:42.861Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -194,12 +194,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 941,
+                  "duration": 926,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:20.163Z",
+                  "startTime": "2026-10-28T18:51:43.398Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -233,7 +233,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:21.109Z",
+                  "startTime": "2026-10-28T18:51:44.330Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -262,12 +262,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 234,
+                  "duration": 228,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:21.624Z",
+                  "startTime": "2026-10-28T18:51:44.845Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -296,12 +296,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 604,
+                  "duration": 622,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:21.864Z",
+                  "startTime": "2026-10-28T18:51:45.078Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -338,12 +338,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 510,
+                  "duration": 488,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:22.477Z",
+                  "startTime": "2026-10-28T18:51:45.710Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -372,12 +372,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 484,
+                  "duration": 482,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:22.992Z",
+                  "startTime": "2026-10-28T18:51:46.203Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -406,12 +406,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 620,
+                  "duration": 633,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:23.480Z",
+                  "startTime": "2026-10-28T18:51:46.690Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -440,12 +440,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 629,
+                  "duration": 665,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:24.106Z",
+                  "startTime": "2026-10-28T18:51:47.328Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -468,7 +468,7 @@
       "specs": [
         {
           "title": "alice 发起含附件的审批并出现在已发起",
-          "ok": false,
+          "ok": true,
           "tags": [],
           "tests": [
             {
@@ -481,53 +481,18 @@
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 10742,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-3-start-with-attachment.spec.ts:24:78",
-                    "location": {
-                      "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-3-start-with-attachment.spec.ts",
-                      "column": 78,
-                      "line": 24
-                    },
-                    "snippet": "  22 |   await openWorkList(page, '发起审批')\n  23 |   await page.locator('.template-card', { hasText: template.name }).click()\n> 24 |   await expect(page.getByRole('heading', { name: template.name, level: 2 })).toBeVisible()\n     |                                                                              ^\n  25 |\n  26 |   const body = Buffer.from(`栈测试附件 ${reason}`)\n  27 |   await uploadStartAttachment(page, {"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-3-start-with-attachment.spec.ts",
-                        "column": 78,
-                        "line": 24
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n\n\n  22 |   await openWorkList(page, '发起审批')\n  23 |   await page.locator('.template-card', { hasText: template.name }).click()\n> 24 |   await expect(page.getByRole('heading', { name: template.name, level: 2 })).toBeVisible()\n     |                                                                              ^\n  25 |\n  26 |   const body = Buffer.from(`栈测试附件 ${reason}`)\n  27 |   await uploadStartAttachment(page, {\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-3-start-with-attachment.spec.ts:24:78"
-                    }
-                  ],
+                  "status": "passed",
+                  "duration": 8525,
+                  "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:24.743Z",
+                  "startTime": "2026-10-28T18:51:48.002Z",
                   "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/p0-3-start-with-attachment-alice-发起含附件的审批并出现在已发起-stack-chromium/error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/p0-3-start-with-attachment-alice-发起含附件的审批并出现在已发起-stack-chromium/trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-3-start-with-attachment.spec.ts",
-                    "column": 78,
-                    "line": 24
-                  }
+                  "attachments": []
                 }
               ],
-              "status": "unexpected"
+              "status": "expected"
             }
           ],
           "id": "7e04f783804c225ca749-631eb49109fad14eb237",
@@ -556,15 +521,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1096,
+                  "duration": 981,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:35.794Z",
+                  "startTime": "2026-10-28T18:51:56.535Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -590,15 +555,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 834,
+                  "duration": 842,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:36.987Z",
+                  "startTime": "2026-10-28T18:51:57.521Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -632,15 +597,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 891,
+                  "duration": 965,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:37.832Z",
+                  "startTime": "2026-10-28T18:51:58.371Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -674,15 +639,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1260,
+                  "duration": 1272,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:38.732Z",
+                  "startTime": "2026-10-28T18:51:59.344Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -716,15 +681,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 870,
+                  "duration": 931,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:40.001Z",
+                  "startTime": "2026-10-28T18:52:00.624Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -747,7 +712,7 @@
       "specs": [
         {
           "title": "发起结果不明后核实并重新发起，两条审批都真实存在",
-          "ok": false,
+          "ok": true,
           "tags": [],
           "tests": [
             {
@@ -758,55 +723,20 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 1,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 10771,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-8-start-again.spec.ts:22:78",
-                    "location": {
-                      "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-8-start-again.spec.ts",
-                      "column": 78,
-                      "line": 22
-                    },
-                    "snippet": "  20 |   await openWorkList(page, '发起审批')\n  21 |   await page.locator('.template-card', { hasText: template.name }).click()\n> 22 |   await expect(page.getByRole('heading', { name: template.name, level: 2 })).toBeVisible()\n     |                                                                              ^\n  23 |   await fillDemoForm(page, { reason, days: '1' })\n  24 |\n  25 |   composeService('pause')"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-8-start-again.spec.ts",
-                        "column": 78,
-                        "line": 22
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: '演示请假申请', level: 2 })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: '演示请假申请', level: 2 }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: '演示请假申请', level: 2 })\u001b[22m\n\n\n  20 |   await openWorkList(page, '发起审批')\n  21 |   await page.locator('.template-card', { hasText: template.name }).click()\n> 22 |   await expect(page.getByRole('heading', { name: template.name, level: 2 })).toBeVisible()\n     |                                                                              ^\n  23 |   await fillDemoForm(page, { reason, days: '1' })\n  24 |\n  25 |   composeService('pause')\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-8-start-again.spec.ts:22:78"
-                    }
-                  ],
+                  "status": "passed",
+                  "duration": 24314,
+                  "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:40.879Z",
+                  "startTime": "2026-10-28T18:52:01.564Z",
                   "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/p0-8-start-again-发起结果不明后核实并重新发起，两条审批都真实存在-stack-chromium/error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/p0-8-start-again-发起结果不明后核实并重新发起，两条审批都真实存在-stack-chromium/trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p0-8-start-again.spec.ts",
-                    "column": 78,
-                    "line": 22
-                  }
+                  "attachments": []
                 }
               ],
-              "status": "unexpected"
+              "status": "expected"
             }
           ],
           "id": "c10ba6a6d190ae4b7e90-3364a35d8a82befc516c",
@@ -835,15 +765,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3212,
+                  "duration": 3377,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:51.947Z",
+                  "startTime": "2026-10-28T18:52:25.888Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -877,15 +807,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3292,
+                  "duration": 3306,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:55.271Z",
+                  "startTime": "2026-10-28T18:52:29.274Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -919,15 +849,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3610,
+                  "duration": 3761,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:40:58.573Z",
+                  "startTime": "2026-10-28T18:52:32.589Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -953,15 +883,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2413,
+                  "duration": 2424,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:02.187Z",
+                  "startTime": "2026-10-28T18:52:36.355Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -987,15 +917,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2536,
+                  "duration": 2880,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:04.605Z",
+                  "startTime": "2026-10-28T18:52:38.784Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1021,15 +951,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2477,
+                  "duration": 2486,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:07.147Z",
+                  "startTime": "2026-10-28T18:52:41.670Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1063,15 +993,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 6529,
+                  "duration": 9683,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:09.633Z",
+                  "startTime": "2026-10-28T18:52:44.163Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1099,50 +1029,32 @@
           "tests": [
             {
               "timeout": 90000,
-              "annotations": [
-                {
-                  "type": "fixme",
-                  "location": {
-                    "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p1-5-attachment-lifecycle.spec.ts",
-                    "line": 14,
-                    "column": 6
-                  }
-                }
-              ],
-              "expectedStatus": "skipped",
+              "annotations": [],
+              "expectedStatus": "passed",
               "projectId": "stack-chromium",
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "skipped",
-                  "duration": 0,
+                  "status": "passed",
+                  "duration": 922,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:16.172Z",
-                  "annotations": [
-                    {
-                      "type": "fixme",
-                      "location": {
-                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/p1-5-attachment-lifecycle.spec.ts",
-                        "line": 14,
-                        "column": 6
-                      }
-                    }
-                  ],
+                  "startTime": "2026-10-28T18:52:53.857Z",
+                  "annotations": [],
                   "attachments": []
                 }
               ],
-              "status": "skipped"
+              "status": "expected"
             }
           ],
           "id": "a179c2abb808a26cd59c-3f8a2e2bcf507aee948b",
           "file": "p1-5-attachment-lifecycle.spec.ts",
-          "line": 14,
-          "column": 6
+          "line": 11,
+          "column": 1
         },
         {
           "title": "附件发起后不可删、审批结束保留且可下载",
@@ -1157,15 +1069,15 @@
               "projectName": "stack-chromium",
               "results": [
                 {
-                  "workerIndex": 2,
+                  "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 6653,
+                  "duration": 9535,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-28T17:41:16.172Z",
+                  "startTime": "2026-10-28T18:52:54.785Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1175,7 +1087,7 @@
           ],
           "id": "a179c2abb808a26cd59c-2d239d72281f2f889657",
           "file": "p1-5-attachment-lifecycle.spec.ts",
-          "line": 33,
+          "line": 30,
           "column": 1
         }
       ]
@@ -1183,11 +1095,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-28T17:40:18.742Z",
-    "duration": 64171.956,
-    "expected": 23,
-    "skipped": 1,
-    "unexpected": 2,
+    "startTime": "2026-10-28T18:51:41.977Z",
+    "duration": 82525.943,
+    "expected": 26,
+    "skipped": 0,
+    "unexpected": 0,
     "flaky": 0
   }
 }

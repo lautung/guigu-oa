@@ -6,12 +6,9 @@ import { clickWorkItem, openWorkList, uiLoginExpectWork, uploadStartAttachment }
 /**
  * P1-5（#121）：附件生命周期——发起前可删、发起后不可删、审批结束保留。
  * 对应 GLOSSARY「附件」与 ADR 0002/0011。附件上传走真实 MinIO。
- *
- * 「发起前可删」走发起页 UI，被 #131（发起页读配置侧模板端点被 gate 拒绝）阻塞，
- * 修复合入后把 fixme 去掉即可；后半段用 API 发起，不经过发起页。
  */
 
-test.fixme('附件发起前可在发起页删除', async ({ page, oracle }) => {
+test('附件发起前可在发起页删除', async ({ page, oracle }) => {
   const template = await demoTemplate(oracle)
   const reason = marker('发起前删除')
   await uiLoginExpectWork(page, 'alice')

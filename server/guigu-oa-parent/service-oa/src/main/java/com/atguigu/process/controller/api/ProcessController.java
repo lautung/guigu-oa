@@ -6,6 +6,7 @@ import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.ApprovalTemplateSupport;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.process.cc.CarbonCopyService;
@@ -62,10 +63,14 @@ public class ProcessController {
         return Result.ok();
     }
 
-    //获取审批模板数据
+    //获取审批模板数据（办事发起页专用：只暴露已发布模板，未发布模板仍由配置侧按授予读取）
     @GetMapping("getProcessTemplate/{processTemplateId}")
     public Result getProcessTemplate(@PathVariable Long processTemplateId) {
         ProcessTemplate processTemplate = processTemplateService.read(processTemplateId);
+        if (processTemplate == null
+                || !ApprovalTemplateSupport.canInitiate(processTemplate.getStatus())) {
+            return Result.ok(null);
+        }
         return Result.ok(processTemplate);
     }
 

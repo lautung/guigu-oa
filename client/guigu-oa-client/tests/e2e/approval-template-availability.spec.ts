@@ -68,7 +68,7 @@ async function mockUnavailableTemplate(page: Page) {
         },
       ])
     }
-    if (path === `/admin/process/processTemplate/get/${templateId}` && method === 'GET') {
+    if (path === `/admin/process/getProcessTemplate/${templateId}` && method === 'GET') {
       return json(route, oldTemplate)
     }
     if (path === '/admin/process/processTemplate/1/10' && method === 'GET') {
