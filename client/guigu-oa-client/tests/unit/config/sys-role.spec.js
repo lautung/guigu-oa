@@ -1,5 +1,4 @@
 import {
-  assignAuthPath,
   assignRolesRequest,
   emptyForm,
   getRequest,
@@ -92,12 +91,6 @@ describe('config/sys-role', () => {
         url: '/admin/system/sysRole/doAssign',
         data: { userId: 2, roleIdList: [3] }
       })
-    })
-  })
-
-  describe('菜单授权', () => {
-    it('opens 菜单授权 as a hidden route from 角色管理', () => {
-      expect(assignAuthPath(3, '审批人')).toBe('/system/assignAuth?id=3&roleName=%E5%AE%A1%E6%89%B9%E4%BA%BA')
     })
   })
 

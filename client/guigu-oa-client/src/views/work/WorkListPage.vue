@@ -57,12 +57,8 @@ import type { NoListQuery } from '@/list-read'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { ProcessInstanceRecord, PresentedWorkListRecord } from '@/types/domain'
-import {
-  presentWorkList,
-  workListDefinition,
-  workListRequest,
-  type WorkListKind,
-} from '@/work/work-list'
+import type { WorkListKind } from '@/router/paths'
+import { presentWorkList, workListDefinition, workListRequest } from '@/work/work-list'
 
 export default defineComponent({
   name: 'WorkListPage',

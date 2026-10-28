@@ -140,6 +140,7 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vu
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { createTemplateEditor, type TemplateEditorOpening } from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
+import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request-scope'
 import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
@@ -220,7 +221,7 @@ onBeforeRouteUpdate(async (to, from) => {
 watch(
   () => route.query.id,
   () => {
-    if (route.path === '/processSet/templateSet') open()
+    if (route.path === templateSetPath()) open()
   },
 )
 watch(() => [userStore.token, userStore.menus] as const, environmentChanged, { deep: true })

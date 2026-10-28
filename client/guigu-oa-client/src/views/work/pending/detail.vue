@@ -150,7 +150,6 @@ import { useUserStore } from '@/store/modules/user'
 import { createApprovalDetail, type ApprovalDetailOpening } from '@/work/approval-detail'
 import { createHttpDetailAdapter } from '@/work/approval-detail-http'
 import { workListPerspectiveFromRoute } from '@/work/work-list'
-import { resolveClientSurface } from '@/surface/client-surface'
 
 defineOptions({ name: 'PendingDetail' })
 
@@ -197,9 +196,6 @@ watch(
       return
     }
     const perspective = workListPerspectiveFromRoute(route)
-    if (!perspective.returnPath)
-      perspective.returnPath =
-        resolveClientSurface({ path: route.path }).returnPath || '/work/pending'
     opening.value = module.open({
       processId,
       taskId: typeof route.params.taskId === 'string' ? route.params.taskId : undefined,

@@ -1,6 +1,7 @@
 import { configPermission } from '@/config-permission'
 import type { MenuGroup } from '@/config-permission'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
+import { returnPathOfRoute } from '@/router/paths'
 import type { ConfigMenuEntry } from '@/types/domain'
 
 export const MENU_GROUPS = {
@@ -80,7 +81,7 @@ export function resolveClientSurface({
       ? { action: 'allow' }
       : { action: 'redirect', to: getDefaultPostLoginRoute() },
     hasWorkListPerspective: WORK_LIST_ENTRY_PATHS.includes(entry.path),
-    returnPath: entry.path,
+    returnPath: returnPathOfRoute(path),
   }
 }
 

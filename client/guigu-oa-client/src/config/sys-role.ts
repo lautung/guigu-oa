@@ -74,10 +74,6 @@ export function writeRequest(form: RoleForm | RoleRecord): ApiRequestConfig {
   }
 }
 
-export function assignAuthPath(id: EntityId, roleName = ''): string {
-  return `/system/assignAuth?id=${id}&roleName=${encodeURIComponent(roleName)}`
-}
-
 export function toAssignRolesRequest(userId: EntityId): ApiRequestConfig {
   return {
     method: 'get',

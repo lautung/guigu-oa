@@ -29,7 +29,7 @@ import { defineComponent } from 'vue'
 
 import { findStartable } from '@/config/process-template'
 import request from '@/utils/request'
-import { applyPath } from '@/work/start-flow'
+import { startApplyPath } from '@/router/paths'
 import type { EntityId, ProcessTemplateStartGroup } from '@/types/domain'
 
 export default defineComponent({
@@ -55,7 +55,7 @@ export default defineComponent({
         })
     },
     openApply(templateId: EntityId | undefined) {
-      if (templateId != null) this.$router.push(applyPath(templateId))
+      if (templateId != null) this.$router.push(startApplyPath(templateId))
     },
   },
 })

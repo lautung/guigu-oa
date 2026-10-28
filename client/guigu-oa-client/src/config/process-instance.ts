@@ -1,7 +1,7 @@
+import { processInstanceDetailPath } from '@/router/paths'
 import { statusLabel } from '@/work/work-list'
 import type {
   ApiRequestConfig,
-  EntityId,
   PageResult,
   ProcessInstanceListItem,
   ProcessInstanceRecord,
@@ -26,7 +26,7 @@ export function presentListRecord(record: ProcessInstanceRecord = {}): ProcessIn
     status: record.status,
     statusLabel: statusLabel(record.status),
     createTime: record.createTime,
-    detailPath: instanceDetailPath(record.id),
+    detailPath: processInstanceDetailPath(record.id),
   }
 }
 
@@ -74,10 +74,6 @@ export function listRequest(
     url: `/admin/process/${page}/${limit}`,
     params: presentQuery(query),
   }
-}
-
-export function instanceDetailPath(id: EntityId | undefined): string {
-  return `/processMgr/process/${id}`
 }
 
 export const STATUS_OPTIONS = [

@@ -72,15 +72,10 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
-import {
-  assignAuthPath,
-  emptyForm,
-  listRequest,
-  presentForm,
-  presentListRecord,
-} from '@/config/sys-role'
+import { emptyForm, listRequest, presentForm, presentListRecord } from '@/config/sys-role'
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
+import { assignAuthPath } from '@/router/paths'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'

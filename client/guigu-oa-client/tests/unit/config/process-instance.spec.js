@@ -1,6 +1,5 @@
 import {
   emptyQuery,
-  instanceDetailPath,
   listRequest,
   presentListPage,
   presentQuery
@@ -79,12 +78,6 @@ describe('config/process-instance', () => {
         url: '/admin/process/1/10',
         params: { keyword: '张三', status: 1 }
       })
-    })
-  })
-
-  describe('instanceDetailPath', () => {
-    it('opens a read-only instance detail under 配置', () => {
-      expect(instanceDetailPath(12)).toBe('/processMgr/process/12')
     })
   })
 })

@@ -1,0 +1,151 @@
+import type { EntityId, ProcessInstanceRecord } from '@/types/domain'
+
+/**
+ * 统一客户端的路径原子。路由表、列表、详情、surface 都从这里取；字符串只在这里出现一次。
+ */
+export const PATHS = {
+  LOGIN: '/login',
+  WORK: '/work',
+  WORK_START: '/work/start',
+  WORK_START_APPLY: '/work/start/:processTemplateId',
+  WORK_PENDING: '/work/pending',
+  WORK_PENDING_DETAIL: '/work/pending/:id/:taskId',
+  WORK_PROCESSED: '/work/processed',
+  WORK_PROCESSED_DETAIL: '/work/processed/:id',
+  WORK_STARTED: '/work/started',
+  WORK_STARTED_DETAIL: '/work/started/:id',
+  WORK_COPIED: '/work/copied',
+  WORK_COPIED_DETAIL: '/work/copied/:id',
+  WORK_PROFILE: '/work/profile',
+  SYSTEM: '/system',
+  SYSTEM_SYS_USER: '/system/sysUser',
+  SYSTEM_SYS_ROLE: '/system/sysRole',
+  SYSTEM_SYS_MENU: '/system/sysMenu',
+  SYSTEM_ASSIGN_AUTH: '/system/assignAuth',
+  PROCESS_SET: '/processSet',
+  PROCESS_SET_PROCESS_TYPE: '/processSet/processType',
+  PROCESS_SET_PROCESS_TEMPLATE: '/processSet/processTemplate',
+  PROCESS_SET_TEMPLATE_SET: '/processSet/templateSet',
+  PROCESS_MGR: '/processMgr',
+  PROCESS_MGR_PROCESS: '/processMgr/process',
+  PROCESS_MGR_PROCESS_DETAIL: '/processMgr/process/:id',
+} as const
+
+/** 办事列表的静态路径，保留既有 ROUTES 形状供导航与 surface 使用。 */
+export const ROUTES = {
+  LOGIN: PATHS.LOGIN,
+  START: PATHS.WORK_START,
+  PENDING: PATHS.WORK_PENDING,
+  PROCESSED: PATHS.WORK_PROCESSED,
+  STARTED: PATHS.WORK_STARTED,
+  COPIED: PATHS.WORK_COPIED,
+  PROFILE: PATHS.WORK_PROFILE,
+} as const
+
+export const WORK_LIST_KINDS = {
+  PENDING: 'pending',
+  PROCESSED: 'processed',
+  STARTED: 'started',
+  COPIED: 'copied',
+} as const
+
+export type WorkListKind = (typeof WORK_LIST_KINDS)[keyof typeof WORK_LIST_KINDS]
+
+const WORK_LIST_PATHS: Record<WorkListKind, string> = {
+  [WORK_LIST_KINDS.PENDING]: PATHS.WORK_PENDING,
+  [WORK_LIST_KINDS.PROCESSED]: PATHS.WORK_PROCESSED,
+  [WORK_LIST_KINDS.STARTED]: PATHS.WORK_STARTED,
+  [WORK_LIST_KINDS.COPIED]: PATHS.WORK_COPIED,
+}
+
+export function workListPath(kind: WorkListKind): string {
+  return WORK_LIST_PATHS[kind]
+}
+
+export function workDetailPath(
+  kind: WorkListKind,
+  record: Pick<ProcessInstanceRecord, 'id' | 'taskId'>,
+): string {
+  const list = workListPath(kind)
+  return kind === WORK_LIST_KINDS.PENDING
+    ? `${list}/${record.id}/${record.taskId}`
+    : `${list}/${record.id}`
+}
+
+export function workListKindOf(meta: unknown): WorkListKind | null {
+  if (!meta || typeof meta !== 'object') return null
+  const kind = (meta as { workListKind?: unknown }).workListKind
+  return typeof kind === 'string' && Object.hasOwn(WORK_LIST_PATHS, kind)
+    ? (kind as WorkListKind)
+    : null
+}
+
+export function startApplyPath(templateId: EntityId): string {
+  return `${PATHS.WORK_START}/${templateId}`
+}
+
+export function processTemplateListPath(): string {
+  return PATHS.PROCESS_SET_PROCESS_TEMPLATE
+}
+
+export function templateSetPath(id?: EntityId): string {
+  return id == null ? PATHS.PROCESS_SET_TEMPLATE_SET : `${PATHS.PROCESS_SET_TEMPLATE_SET}?id=${id}`
+}
+
+export function assignAuthPath(id: EntityId, roleName = ''): string {
+  return `${PATHS.SYSTEM_ASSIGN_AUTH}?id=${id}&roleName=${encodeURIComponent(roleName)}`
+}
+
+export function processInstanceDetailPath(id: EntityId | undefined): string {
+  return `${PATHS.PROCESS_MGR_PROCESS}/${id}`
+}
+
+export function sysRolePath(): string {
+  return PATHS.SYSTEM_SYS_ROLE
+}
+
+const RETURN_PATH_BY_PATH: Record<string, string> = {
+  [PATHS.LOGIN]: PATHS.LOGIN,
+  [PATHS.WORK_START]: PATHS.WORK_START,
+  [PATHS.WORK_PENDING]: PATHS.WORK_PENDING,
+  [PATHS.WORK_PROCESSED]: PATHS.WORK_PROCESSED,
+  [PATHS.WORK_STARTED]: PATHS.WORK_STARTED,
+  [PATHS.WORK_COPIED]: PATHS.WORK_COPIED,
+  [PATHS.WORK_PROFILE]: PATHS.WORK_PROFILE,
+  [PATHS.SYSTEM_SYS_USER]: PATHS.SYSTEM_SYS_USER,
+  [PATHS.SYSTEM_SYS_ROLE]: PATHS.SYSTEM_SYS_ROLE,
+  [PATHS.SYSTEM_SYS_MENU]: PATHS.SYSTEM_SYS_MENU,
+  [PATHS.SYSTEM_ASSIGN_AUTH]: PATHS.SYSTEM_SYS_ROLE,
+  [PATHS.PROCESS_SET_PROCESS_TYPE]: PATHS.PROCESS_SET_PROCESS_TYPE,
+  [PATHS.PROCESS_SET_PROCESS_TEMPLATE]: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
+  [PATHS.PROCESS_SET_TEMPLATE_SET]: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
+  [PATHS.PROCESS_MGR_PROCESS]: PATHS.PROCESS_MGR_PROCESS,
+}
+
+const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = [
+  { prefix: `${PATHS.WORK_START}/`, returnPath: PATHS.WORK_START },
+  { prefix: `${PATHS.WORK_PENDING}/`, returnPath: PATHS.WORK_PENDING },
+  { prefix: `${PATHS.WORK_PROCESSED}/`, returnPath: PATHS.WORK_PROCESSED },
+  { prefix: `${PATHS.WORK_STARTED}/`, returnPath: PATHS.WORK_STARTED },
+  { prefix: `${PATHS.WORK_COPIED}/`, returnPath: PATHS.WORK_COPIED },
+  { prefix: `${PATHS.PROCESS_MGR_PROCESS}/`, returnPath: PATHS.PROCESS_MGR_PROCESS },
+]
+
+function normalize(path: string | undefined): string {
+  const value = (path || '').split('?')[0].split('#')[0]
+  const withLeadingSlash = value.startsWith('/') ? value : `/${value}`
+  return withLeadingSlash.replace(/\/+$/, '') || '/'
+}
+
+/**
+ * 页面返回哪里：列表与静态页回自身，详情回它所属的列表，隐藏页回可见父级，未知路径回待处理。
+ */
+export function returnPathOfRoute(path: string | undefined): string {
+  const normalized = normalize(path)
+  const exact = RETURN_PATH_BY_PATH[normalized]
+  if (exact) return exact
+  const match = RETURN_PATH_PREFIXES.filter((entry) => normalized.startsWith(entry.prefix)).sort(
+    (left, right) => right.prefix.length - left.prefix.length,
+  )[0]
+  return match ? match.returnPath : PATHS.WORK_PENDING
+}

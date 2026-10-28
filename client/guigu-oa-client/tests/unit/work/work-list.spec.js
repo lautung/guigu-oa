@@ -1,5 +1,5 @@
+import { WORK_LIST_KINDS } from '@/router/paths'
 import {
-  WORK_LIST_KINDS,
   presentWorkList,
   statusLabel,
   workListDefinition,
@@ -397,11 +397,13 @@ describe('work/work-list', () => {
       })
     })
 
-    it('treats a route without 办事列表种类 as a read-only 视角 with no return path', () => {
-      expect(workListPerspectiveFromRoute({ name: 'ProcessMgrDetail', meta: {} })).toEqual({
+    it('treats a config detail route as a read-only 视角 returning to its list', () => {
+      expect(
+        workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })
+      ).toEqual({
         kind: null,
         title: '',
-        returnPath: '',
+        returnPath: '/processMgr/process',
         readOnly: true,
         emphasis: ''
       })

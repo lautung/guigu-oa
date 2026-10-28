@@ -1,6 +1,7 @@
 import { markRaw, reactive, readonly } from 'vue'
 import { classifySubmissionFailure } from '@/submission-outcome'
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
+import { processTemplateListPath } from '@/router/paths'
 import type { RequestScope } from '@/request-scope'
 import type {
   ApiRequestConfig,
@@ -12,7 +13,7 @@ import type {
 import { emptyForm, zipUploadError } from './process-template'
 
 const API = '/admin/process/processTemplate'
-const LIST = '/processSet/processTemplate'
+const LIST = processTemplateListPath()
 interface Design {
   rule: unknown[]
   option: Record<string, unknown>

@@ -91,6 +91,7 @@ import {
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
 import type { NoListQuery } from '@/list-read'
+import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type {
@@ -131,11 +132,11 @@ export default defineComponent({
   },
   methods: {
     openCreate() {
-      this.$router.push('/processSet/templateSet')
+      this.$router.push(templateSetPath())
     },
     openEdit(id: string | number | undefined) {
       if (id == null) return
-      this.$router.push({ path: '/processSet/templateSet', query: { id } })
+      this.$router.push(templateSetPath(id))
     },
     show(row: ProcessTemplateRecord) {
       this.preview = row

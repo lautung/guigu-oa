@@ -16,7 +16,7 @@
 
     <div class="actions">
       <el-button type="primary" :loading="saving" @click="save">保存</el-button>
-      <el-button @click="$router.push('/system/sysRole')">返回</el-button>
+      <el-button @click="$router.push(sysRolePath())">返回</el-button>
     </div>
   </div>
 </template>
@@ -30,6 +30,7 @@ import {
   mergeAssignMenuIds,
   presentAssignableConfigMenus,
 } from '@/config/sys-menu'
+import { sysRolePath } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, MenuNode } from '@/types/domain'
 
@@ -64,6 +65,7 @@ export default defineComponent({
     this.fetchTree()
   },
   methods: {
+    sysRolePath,
     fetchTree() {
       const roleId = queryValue(this.$route.query.id)
       if (!roleId) return
@@ -87,7 +89,7 @@ export default defineComponent({
       doAssign(roleId, menuIdList)
         .then((response) => {
           this.$message.success(response.message || '保存成功')
-          return useUserStore().recognition?.resume('/system/sysRole')
+          return useUserStore().recognition?.resume(sysRolePath())
         })
         .catch(() => {})
         .finally(() => {

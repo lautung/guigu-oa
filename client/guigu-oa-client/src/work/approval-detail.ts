@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { WORK_LIST_KINDS, workListPath } from '@/router/paths'
 import { presentDetail, type ProcessDetailViewModel } from './pending-flow'
 import type { WorkListPerspective } from './work-list'
 import type {
@@ -241,7 +242,7 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       state.submitting = false
       if (result.kind === 'success' && settled) {
         release()
-        adapter.navigate('/work/processed')
+        adapter.navigate(workListPath(WORK_LIST_KINDS.PROCESSED))
         return
       }
       state.actionError =
@@ -335,8 +336,8 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       }
     }
     const back = () => navigate(target.perspective.returnPath)
-    const viewProcessed = () => navigate('/work/processed')
-    const returnPending = () => navigate('/work/pending')
+    const viewProcessed = () => navigate(workListPath(WORK_LIST_KINDS.PROCESSED))
+    const returnPending = () => navigate(workListPath(WORK_LIST_KINDS.PENDING))
     const ready = reload()
     return {
       state,

@@ -1,4 +1,11 @@
-import { ROUTES } from '@/navigation/constants'
+import {
+  WORK_LIST_KINDS,
+  returnPathOfRoute,
+  workDetailPath,
+  workListKindOf,
+  workListPath,
+  type WorkListKind,
+} from '@/router/paths'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type {
   ApiRequestConfig,
@@ -8,15 +15,6 @@ import type {
   ProcessInstanceRecord,
   PresentedWorkListRecord,
 } from '@/types/domain'
-
-export const WORK_LIST_KINDS = {
-  PENDING: 'pending',
-  PROCESSED: 'processed',
-  STARTED: 'started',
-  COPIED: 'copied',
-} as const
-
-export type WorkListKind = (typeof WORK_LIST_KINDS)[keyof typeof WORK_LIST_KINDS]
 
 const LIST_HIDDEN_FIELD_KEYS = ['图片']
 
@@ -30,49 +28,39 @@ const LIST_ENDPOINTS: Record<WorkListKind, string> = {
 export interface WorkListDefinition {
   title: string
   emptyDescription: string
-  returnPath: string
   readOnly: boolean
   emphasis: string
   relationLabel: string
-  detailPath: (record: ProcessInstanceRecord) => string
 }
 
 const LIST_PAGES: Record<WorkListKind, WorkListDefinition> = {
   [WORK_LIST_KINDS.PENDING]: {
     title: '待处理',
     emptyDescription: '暂无待处理审批',
-    returnPath: ROUTES.PENDING,
     readOnly: false,
     emphasis: '审批动作',
     relationLabel: '等待我处理',
-    detailPath: (record) => `${ROUTES.PENDING}/${record.id}/${record.taskId}`,
   },
   [WORK_LIST_KINDS.PROCESSED]: {
     title: '已处理',
     emptyDescription: '暂无已处理审批',
-    returnPath: ROUTES.PROCESSED,
     readOnly: true,
     emphasis: '回看',
     relationLabel: '我已处理',
-    detailPath: (record) => `${ROUTES.PROCESSED}/${record.id}`,
   },
   [WORK_LIST_KINDS.STARTED]: {
     title: '已发起',
     emptyDescription: '暂无已发起审批',
-    returnPath: ROUTES.STARTED,
     readOnly: true,
     emphasis: '整体进度',
     relationLabel: '我发起的审批',
-    detailPath: (record) => `${ROUTES.STARTED}/${record.id}`,
   },
   [WORK_LIST_KINDS.COPIED]: {
     title: '抄送我的',
     emptyDescription: '暂无抄送审批',
-    returnPath: ROUTES.COPIED,
     readOnly: true,
     emphasis: '知情',
     relationLabel: '抄送给我',
-    detailPath: (record) => `${ROUTES.COPIED}/${record.id}`,
   },
 }
 
@@ -165,7 +153,7 @@ function presentWorkListItem(
     statusLabel: statusLabel(record.status),
     statusTagType: statusTagType(record.status),
     summaryFields: summaryFields(formShowData),
-    detailPath: page.detailPath(record),
+    detailPath: workDetailPath(kind, record),
     kind,
     relationLabel: page.relationLabel,
     progressLabel: kind === WORK_LIST_KINDS.STARTED ? record.description || '' : '',
@@ -193,25 +181,21 @@ export function workListPerspective(kind: WorkListKind): WorkListPerspective {
   return {
     kind,
     title: definition.title,
-    returnPath: definition.returnPath,
+    returnPath: workListPath(kind),
     readOnly: definition.readOnly,
     emphasis: definition.emphasis,
   }
 }
 
-function isWorkListKind(value: unknown): value is WorkListKind {
-  return typeof value === 'string' && Object.hasOwn(LIST_PAGES, value)
-}
-
 export function workListPerspectiveFromRoute(
-  route: Pick<RouteLocationNormalizedLoaded, 'meta'>,
+  route: Pick<RouteLocationNormalizedLoaded, 'meta' | 'path'>,
 ): WorkListPerspective {
-  const kind = route.meta?.workListKind
-  if (!isWorkListKind(kind)) {
+  const kind = workListKindOf(route.meta)
+  if (!kind) {
     return {
       kind: null,
       title: '',
-      returnPath: '',
+      returnPath: returnPathOfRoute(route.path),
       readOnly: true,
       emphasis: '',
     }

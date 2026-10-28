@@ -1,5 +1,5 @@
-import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
-import { WORK_LIST_KINDS } from '@/work/work-list'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
+import { PATHS, WORK_LIST_KINDS } from './paths'
 
 export type RouteMenuGroup = 'work' | 'config'
 
@@ -28,69 +28,74 @@ interface AppRoute {
 
 const ClientSurfaceHost = () => import('@/surface/ClientSurfaceHost.vue')
 
+/** 子路由路径从 paths 的绝对路径派生，避免第二份路径字符串。 */
+function childPath(parent: string, absolute: string): string {
+  return absolute.startsWith(`${parent}/`) ? absolute.slice(parent.length + 1) : absolute
+}
+
 const workChildren: AppRoute[] = [
   {
-    path: 'start',
+    path: childPath(PATHS.WORK, PATHS.WORK_START),
     name: 'WorkStart',
     component: () => import('@/views/work/start/index.vue'),
     meta: { title: '发起审批', menuGroup: 'work' },
   },
   {
-    path: 'start/:processTemplateId',
+    path: childPath(PATHS.WORK, PATHS.WORK_START_APPLY),
     name: 'WorkStartApply',
     component: () => import('@/views/work/start/apply.vue'),
     meta: { title: '发起审批', menuGroup: 'work' },
   },
   {
-    path: 'pending',
+    path: childPath(PATHS.WORK, PATHS.WORK_PENDING),
     name: 'Pending',
     component: () => import('@/views/work/WorkListPage.vue'),
     meta: { title: '待处理', menuGroup: 'work', workListKind: WORK_LIST_KINDS.PENDING },
   },
   {
-    path: 'pending/:id/:taskId',
+    path: childPath(PATHS.WORK, PATHS.WORK_PENDING_DETAIL),
     name: 'PendingDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.PENDING },
   },
   {
-    path: 'processed',
+    path: childPath(PATHS.WORK, PATHS.WORK_PROCESSED),
     name: 'WorkProcessed',
     component: () => import('@/views/work/WorkListPage.vue'),
     meta: { title: '已处理', menuGroup: 'work', workListKind: WORK_LIST_KINDS.PROCESSED },
   },
   {
-    path: 'processed/:id',
+    path: childPath(PATHS.WORK, PATHS.WORK_PROCESSED_DETAIL),
     name: 'ProcessedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.PROCESSED },
   },
   {
-    path: 'started',
+    path: childPath(PATHS.WORK, PATHS.WORK_STARTED),
     name: 'WorkStarted',
     component: () => import('@/views/work/WorkListPage.vue'),
     meta: { title: '已发起', menuGroup: 'work', workListKind: WORK_LIST_KINDS.STARTED },
   },
   {
-    path: 'started/:id',
+    path: childPath(PATHS.WORK, PATHS.WORK_STARTED_DETAIL),
     name: 'StartedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.STARTED },
   },
   {
-    path: 'copied',
+    path: childPath(PATHS.WORK, PATHS.WORK_COPIED),
     name: 'WorkCopied',
     component: () => import('@/views/work/WorkListPage.vue'),
     meta: { title: '抄送我的', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
   },
   {
-    path: 'copied/:id',
+    path: childPath(PATHS.WORK, PATHS.WORK_COPIED_DETAIL),
     name: 'CopiedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
   },
   {
-    path: 'profile',
+    path: childPath(PATHS.WORK, PATHS.WORK_PROFILE),
     name: 'WorkProfile',
     component: () => import('@/views/work/profile/index.vue'),
     meta: { title: '基本信息', menuGroup: 'work' },
@@ -99,53 +104,53 @@ const workChildren: AppRoute[] = [
 
 const configChildren: AppRoute[] = [
   {
-    path: 'sysUser',
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_USER),
     name: 'SysUser',
     component: () => import('@/views/config/sysUser/index.vue'),
     meta: { title: '用户管理', menuGroup: 'config' },
   },
   {
-    path: 'sysRole',
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_ROLE),
     name: 'SysRole',
     component: () => import('@/views/config/sysRole/index.vue'),
     meta: { title: '角色管理', menuGroup: 'config' },
   },
   {
-    path: 'sysMenu',
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_MENU),
     name: 'SysMenu',
     component: () => import('@/views/config/sysMenu/index.vue'),
     meta: { title: '菜单管理', menuGroup: 'config' },
   },
   {
-    path: 'assignAuth',
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_ASSIGN_AUTH),
     name: 'AssignAuth',
     component: () => import('@/views/config/sysRole/assignAuth.vue'),
-    meta: { title: '菜单授权', menuGroup: 'config', hiddenParentPath: '/system/sysRole' },
+    meta: { title: '菜单授权', menuGroup: 'config', hiddenParentPath: PATHS.SYSTEM_SYS_ROLE },
     hidden: true,
   },
 ]
 
 const processSetChildren: AppRoute[] = [
   {
-    path: 'processType',
+    path: childPath(PATHS.PROCESS_SET, PATHS.PROCESS_SET_PROCESS_TYPE),
     name: 'ProcessType',
     component: () => import('@/views/config/processType/index.vue'),
     meta: { title: '审批类型', menuGroup: 'config' },
   },
   {
-    path: 'processTemplate',
+    path: childPath(PATHS.PROCESS_SET, PATHS.PROCESS_SET_PROCESS_TEMPLATE),
     name: 'ProcessTemplate',
     component: () => import('@/views/config/processTemplate/index.vue'),
     meta: { title: '审批模板', menuGroup: 'config' },
   },
   {
-    path: 'templateSet',
+    path: childPath(PATHS.PROCESS_SET, PATHS.PROCESS_SET_TEMPLATE_SET),
     name: 'TemplateSet',
     component: () => import('@/views/config/processTemplate/templateSet.vue'),
     meta: {
       title: '审批模板设置',
       menuGroup: 'config',
-      hiddenParentPath: '/processSet/processTemplate',
+      hiddenParentPath: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
     },
     hidden: true,
   },
@@ -153,7 +158,7 @@ const processSetChildren: AppRoute[] = [
 
 export const constantRoutes: AppRoute[] = [
   {
-    path: ROUTES.LOGIN,
+    path: PATHS.LOGIN,
     component: () => import('@/views/login/index.vue'),
     hidden: true,
   },
@@ -162,40 +167,40 @@ export const constantRoutes: AppRoute[] = [
     redirect: getDefaultPostLoginRoute(),
   },
   {
-    path: '/work',
+    path: PATHS.WORK,
     component: ClientSurfaceHost,
     redirect: getDefaultPostLoginRoute(),
     meta: { menuGroup: 'work' },
     children: workChildren,
   },
   {
-    path: '/system',
+    path: PATHS.SYSTEM,
     component: ClientSurfaceHost,
-    redirect: '/system/sysUser',
+    redirect: PATHS.SYSTEM_SYS_USER,
     meta: { menuGroup: 'config' },
     children: configChildren,
   },
   {
-    path: '/processSet',
+    path: PATHS.PROCESS_SET,
     component: ClientSurfaceHost,
-    redirect: '/processSet/processType',
+    redirect: PATHS.PROCESS_SET_PROCESS_TYPE,
     meta: { menuGroup: 'config' },
     children: processSetChildren,
   },
   {
-    path: '/processMgr',
+    path: PATHS.PROCESS_MGR,
     component: ClientSurfaceHost,
-    redirect: '/processMgr/process',
+    redirect: PATHS.PROCESS_MGR_PROCESS,
     meta: { menuGroup: 'config' },
     children: [
       {
-        path: 'process',
+        path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS),
         name: 'ProcessMgr',
         component: () => import('@/views/config/processInstance/index.vue'),
         meta: { title: '审批实例查询', menuGroup: 'config' },
       },
       {
-        path: 'process/:id',
+        path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS_DETAIL),
         name: 'ProcessMgrDetail',
         component: () => import('@/views/work/pending/detail.vue'),
         meta: { title: '审批详情', menuGroup: 'config' },

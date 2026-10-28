@@ -1,16 +1,10 @@
+import { ROUTES } from '@/router/paths'
+
+export { ROUTES }
+
 export const MOBILE_BREAKPOINT = 768
 
 export const DESKTOP_CONFIG_HINT = '请在电脑浏览器使用'
-
-export const ROUTES = {
-  LOGIN: '/login',
-  START: '/work/start',
-  PENDING: '/work/pending',
-  PROCESSED: '/work/processed',
-  STARTED: '/work/started',
-  COPIED: '/work/copied',
-  PROFILE: '/work/profile',
-} as const
 
 export const AUTH_WHITELIST = [ROUTES.LOGIN] as const
 
