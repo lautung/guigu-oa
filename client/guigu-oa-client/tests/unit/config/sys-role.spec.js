@@ -7,30 +7,36 @@ import {
   presentListPage,
   removeRequest,
   toAssignRolesRequest,
-  writeRequest
+  writeRequest,
 } from '@/config/sys-role'
 
 describe('config/sys-role', () => {
   describe('presentListPage', () => {
     it('presents a paginated 角色 list with name, code, and time', () => {
-      expect(presentListPage({
-        records: [{
-          id: 3,
-          roleName: '审批人',
-          roleCode: 'approver',
-          createTime: '2026-08-01 10:00:00'
-        }],
+      expect(
+        presentListPage({
+          records: [
+            {
+              id: 3,
+              roleName: '审批人',
+              roleCode: 'approver',
+              createTime: '2026-08-01 10:00:00',
+            },
+          ],
+          total: 1,
+          pages: 1,
+        }),
+      ).toEqual({
+        records: [
+          {
+            id: 3,
+            roleName: '审批人',
+            roleCode: 'approver',
+            createTime: '2026-08-01 10:00:00',
+          },
+        ],
         total: 1,
-        pages: 1
-      })).toEqual({
-        records: [{
-          id: 3,
-          roleName: '审批人',
-          roleCode: 'approver',
-          createTime: '2026-08-01 10:00:00'
-        }],
-        total: 1,
-        pages: 1
+        pages: 1,
       })
     })
   })
@@ -40,7 +46,7 @@ describe('config/sys-role', () => {
       expect(listRequest(1, 10, { roleName: '审批' })).toEqual({
         method: 'get',
         url: '/admin/system/sysRole/1/10',
-        params: { roleName: '审批' }
+        params: { roleName: '审批' },
       })
     })
 
@@ -48,40 +54,42 @@ describe('config/sys-role', () => {
       expect(writeRequest({ roleName: '审批人', roleCode: 'approver' })).toEqual({
         method: 'post',
         url: '/admin/system/sysRole/save',
-        data: { roleName: '审批人', roleCode: 'approver' }
+        data: { roleName: '审批人', roleCode: 'approver' },
       })
     })
 
     it('updates a 角色 with PUT /admin/system/sysRole/update', () => {
-      expect(writeRequest({
-        id: 3,
-        roleName: '审批人',
-        roleCode: 'approver'
-      })).toEqual({
+      expect(
+        writeRequest({
+          id: 3,
+          roleName: '审批人',
+          roleCode: 'approver',
+        }),
+      ).toEqual({
         method: 'put',
         url: '/admin/system/sysRole/update',
-        data: { id: 3, roleName: '审批人', roleCode: 'approver' }
+        data: { id: 3, roleName: '审批人', roleCode: 'approver' },
       })
     })
 
     it('loads one 角色 with GET /admin/system/sysRole/get/{id}', () => {
       expect(getRequest(3)).toEqual({
         method: 'get',
-        url: '/admin/system/sysRole/get/3'
+        url: '/admin/system/sysRole/get/3',
       })
     })
 
     it('deletes a 角色 with DELETE /admin/system/sysRole/remove/{id}', () => {
       expect(removeRequest(3)).toEqual({
         method: 'delete',
-        url: '/admin/system/sysRole/remove/3'
+        url: '/admin/system/sysRole/remove/3',
       })
     })
 
     it('loads a 用户的角色 with GET /admin/system/sysRole/toAssign/{userId}', () => {
       expect(toAssignRolesRequest(2)).toEqual({
         method: 'get',
-        url: '/admin/system/sysRole/toAssign/2'
+        url: '/admin/system/sysRole/toAssign/2',
       })
     })
 
@@ -89,7 +97,7 @@ describe('config/sys-role', () => {
       expect(assignRolesRequest(2, [3])).toEqual({
         method: 'post',
         url: '/admin/system/sysRole/doAssign',
-        data: { userId: 2, roleIdList: [3] }
+        data: { userId: 2, roleIdList: [3] },
       })
     })
   })
@@ -99,19 +107,21 @@ describe('config/sys-role', () => {
       expect(emptyForm()).toEqual({
         id: '',
         roleName: '',
-        roleCode: ''
+        roleCode: '',
       })
     })
 
     it('loads an existing 角色 into the form', () => {
-      expect(presentForm({
+      expect(
+        presentForm({
+          id: 3,
+          roleName: '审批人',
+          roleCode: 'approver',
+        }),
+      ).toEqual({
         id: 3,
         roleName: '审批人',
-        roleCode: 'approver'
-      })).toEqual({
-        id: 3,
-        roleName: '审批人',
-        roleCode: 'approver'
+        roleCode: 'approver',
       })
     })
   })

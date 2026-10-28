@@ -6,37 +6,41 @@ import {
   presentListPage,
   removeRequest,
   updateStatusRequest,
-  writeRequest
+  writeRequest,
 } from '@/config/sys-user'
 
 describe('config/sys-user', () => {
   describe('presentListPage', () => {
     it('presents a paginated 用户 list with username, name, phone, and status', () => {
       const page = presentListPage({
-        records: [{
-          id: 2,
-          username: 'zhangsan',
-          name: '张三',
-          phone: '13800001111',
-          status: 1,
-          createTime: '2026-08-01 10:00:00'
-        }],
+        records: [
+          {
+            id: 2,
+            username: 'zhangsan',
+            name: '张三',
+            phone: '13800001111',
+            status: 1,
+            createTime: '2026-08-01 10:00:00',
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page).toEqual({
-        records: [{
-          id: 2,
-          username: 'zhangsan',
-          name: '张三',
-          phone: '13800001111',
-          status: 1,
-          statusEnabled: true,
-          createTime: '2026-08-01 10:00:00'
-        }],
+        records: [
+          {
+            id: 2,
+            username: 'zhangsan',
+            name: '张三',
+            phone: '13800001111',
+            status: 1,
+            statusEnabled: true,
+            createTime: '2026-08-01 10:00:00',
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
     })
 
@@ -44,7 +48,7 @@ describe('config/sys-user', () => {
       expect(presentListPage()).toEqual({
         records: [],
         total: 0,
-        pages: 0
+        pages: 0,
       })
     })
   })
@@ -54,24 +58,26 @@ describe('config/sys-user', () => {
       expect(listRequest(1, 10, { keyword: '张三' })).toEqual({
         method: 'get',
         url: '/admin/system/sysUser/1/10',
-        params: { keyword: '张三' }
+        params: { keyword: '张三' },
       })
     })
 
     it('loads one 用户 with GET /admin/system/sysUser/get/{id}', () => {
       expect(getRequest(2)).toEqual({
         method: 'get',
-        url: '/admin/system/sysUser/get/2'
+        url: '/admin/system/sysUser/get/2',
       })
     })
 
     it('creates a 用户 with POST /admin/system/sysUser/save', () => {
-      expect(writeRequest({
-        username: 'lisi',
-        password: '123456',
-        name: '李四',
-        phone: '13900002222'
-      })).toEqual({
+      expect(
+        writeRequest({
+          username: 'lisi',
+          password: '123456',
+          name: '李四',
+          phone: '13900002222',
+        }),
+      ).toEqual({
         method: 'post',
         url: '/admin/system/sysUser/save',
         data: {
@@ -79,20 +85,22 @@ describe('config/sys-user', () => {
           password: '123456',
           name: '李四',
           phone: '13900002222',
-          status: 1
-        }
+          status: 1,
+        },
       })
     })
 
     it('updates a 用户 with PUT /admin/system/sysUser/update and omits password', () => {
-      expect(writeRequest({
-        id: 2,
-        username: 'zhangsan',
-        password: 'should-not-send',
-        name: '张三',
-        phone: '13800001111',
-        status: 1
-      })).toEqual({
+      expect(
+        writeRequest({
+          id: 2,
+          username: 'zhangsan',
+          password: 'should-not-send',
+          name: '张三',
+          phone: '13800001111',
+          status: 1,
+        }),
+      ).toEqual({
         method: 'put',
         url: '/admin/system/sysUser/update',
         data: {
@@ -100,22 +108,22 @@ describe('config/sys-user', () => {
           username: 'zhangsan',
           name: '张三',
           phone: '13800001111',
-          status: 1
-        }
+          status: 1,
+        },
       })
     })
 
     it('deletes a 用户 with DELETE /admin/system/sysUser/remove/{id}', () => {
       expect(removeRequest(2)).toEqual({
         method: 'delete',
-        url: '/admin/system/sysUser/remove/2'
+        url: '/admin/system/sysUser/remove/2',
       })
     })
 
     it('enables or disables a 用户 with GET /admin/system/sysUser/updateStatus/{id}/{status}', () => {
       expect(updateStatusRequest(2, 0)).toEqual({
         method: 'get',
-        url: '/admin/system/sysUser/updateStatus/2/0'
+        url: '/admin/system/sysUser/updateStatus/2/0',
       })
     })
   })
@@ -128,25 +136,27 @@ describe('config/sys-user', () => {
         password: '',
         name: '',
         phone: '',
-        status: 1
+        status: 1,
       })
     })
 
     it('loads an existing 用户 without echoing the password', () => {
-      expect(presentForm({
-        id: 2,
-        username: 'zhangsan',
-        password: 'hashed',
-        name: '张三',
-        phone: '13800001111',
-        status: 1
-      })).toEqual({
+      expect(
+        presentForm({
+          id: 2,
+          username: 'zhangsan',
+          password: 'hashed',
+          name: '张三',
+          phone: '13800001111',
+          status: 1,
+        }),
+      ).toEqual({
         id: 2,
         username: 'zhangsan',
         password: '',
         name: '张三',
         phone: '13800001111',
-        status: 1
+        status: 1,
       })
     })
   })

@@ -16,16 +16,22 @@ const SAMPLE_CONFIG_MENUS = [
     title: '菜单授权',
     type: 1,
     hidden: true,
-    sort: 3
+    sort: 3,
   },
   { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
-  { path: '/processSet/processType', parentPath: '/processSet', title: '审批类型', type: 1, sort: 1 },
+  {
+    path: '/processSet/processType',
+    parentPath: '/processSet',
+    title: '审批类型',
+    type: 1,
+    sort: 1,
+  },
   {
     path: '/processSet/processTemplate',
     parentPath: '/processSet',
     title: '审批模板',
     type: 1,
-    sort: 2
+    sort: 2,
   },
   {
     path: '/processSet/templateSet',
@@ -33,7 +39,7 @@ const SAMPLE_CONFIG_MENUS = [
     title: '审批模板设置',
     type: 1,
     hidden: true,
-    sort: 3
+    sort: 3,
   },
   { path: '/processMgr', title: '审批查询', type: 0, sort: 3 },
   {
@@ -41,19 +47,19 @@ const SAMPLE_CONFIG_MENUS = [
     parentPath: '/processMgr',
     title: '审批实例查询',
     type: 1,
-    sort: 1
-  }
+    sort: 1,
+  },
 ]
 
 const ONLY_USER_MENUS = [
   { path: '/system', title: '组织与权限', type: 0, sort: 1 },
-  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 }
+  { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 },
 ]
 
 const HOST_ROUTES = [
   { path: '/work/pending', component: { template: '<div />' } },
   { path: '/system/sysUser', component: { template: '<div />' } },
-  { path: '/system/sysRole', component: { template: '<div />' } }
+  { path: '/system/sysRole', component: { template: '<div />' } },
 ]
 
 async function mountSurfaceHost({ initialPath, menus = [] }) {
@@ -61,7 +67,7 @@ async function mountSurfaceHost({ initialPath, menus = [] }) {
   setActivePinia(pinia)
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: HOST_ROUTES
+    routes: HOST_ROUTES,
   })
   const store = useUserStore(pinia)
   store.token = 'jwt'
@@ -72,8 +78,8 @@ async function mountSurfaceHost({ initialPath, menus = [] }) {
   const wrapper = mount(ClientSurfaceHost, {
     global: {
       plugins: [pinia, router],
-      stubs: { TopBar: true, AppSidebar: true, RouterView: true }
-    }
+      stubs: { TopBar: true, AppSidebar: true, RouterView: true },
+    },
   })
 
   return { wrapper, router }
@@ -85,13 +91,13 @@ describe('统一客户端表面', () => {
       path: '/login',
       viewportWidth: 1200,
       hasToken: false,
-      menus: []
+      menus: [],
     })
     const trailingSlash = resolveClientSurface({
       path: '/login/',
       viewportWidth: 1200,
       hasToken: false,
-      menus: []
+      menus: [],
     })
 
     expect(surface.showSurface).toBe(false)
@@ -106,7 +112,7 @@ describe('统一客户端表面', () => {
       path: '/system/sysUser',
       viewportWidth: 1200,
       hasToken: false,
-      menus: []
+      menus: [],
     })
 
     expect(surface.showSurface).toBe(false)
@@ -119,7 +125,7 @@ describe('统一客户端表面', () => {
       path: '/work/pending',
       viewportWidth: 375,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     expect(surface.showSurface).toBe(true)
@@ -133,7 +139,7 @@ describe('统一客户端表面', () => {
       path: '/system/sysUser',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     expect(surface.showSurface).toBe(true)
@@ -147,13 +153,13 @@ describe('统一客户端表面', () => {
       path: '/system/assignAuth',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
     const templateSet = resolveClientSurface({
       path: '/processSet/templateSet',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     expect(assignAuth.menuGroup).toBe('config')
@@ -167,13 +173,13 @@ describe('统一客户端表面', () => {
       path: '/work/pending/9/task-1',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
     const fromConfig = resolveClientSurface({
       path: '/processMgr/process/9',
       viewportWidth: 1200,
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     expect(fromWork.menuGroup).toBe('work')
@@ -191,16 +197,16 @@ describe('统一客户端表面', () => {
     const surfaceInput = {
       path: '/system/sysUser',
       hasToken: true,
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     }
     const entering = resolveClientSurface({
       ...surfaceInput,
-      viewportWidth: 375
+      viewportWidth: 375,
     }).occupancy
     const goTo = vi.fn()
     const handleViewportWidth = createViewportOccupancyHandler({
       getSurfaceInput: () => surfaceInput,
-      goTo
+      goTo,
     })
 
     handleViewportWidth(1200)
@@ -218,18 +224,18 @@ describe('统一客户端表面', () => {
       getSurfaceInput: () => ({
         path: '/work/pending',
         hasToken: true,
-        menus: SAMPLE_CONFIG_MENUS
+        menus: SAMPLE_CONFIG_MENUS,
       }),
-      goTo
+      goTo,
     })(375)
 
     expect(goTo).not.toHaveBeenCalled()
   })
 
   it('办事入口 and 配置入口 hang on the same surface host', () => {
-    const hosted = constantRoutes.filter(route => route.children && route.children.length)
+    const hosted = constantRoutes.filter((route) => route.children && route.children.length)
     expect(hosted.length).toBeGreaterThan(1)
-    hosted.forEach(route => {
+    hosted.forEach((route) => {
       expect(route.component).toBe(hosted[0].component)
     })
   })
@@ -239,7 +245,7 @@ describe('表面宿主', () => {
   it('direct entry to an ungranted 配置 page lands on 待处理', async () => {
     const { wrapper, router } = await mountSurfaceHost({
       initialPath: '/system/sysRole',
-      menus: ONLY_USER_MENUS
+      menus: ONLY_USER_MENUS,
     })
 
     await flushPromises()
@@ -253,7 +259,7 @@ describe('表面宿主', () => {
 
     const { wrapper, router } = await mountSurfaceHost({
       initialPath: '/system/sysUser',
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     await flushPromises()
@@ -265,7 +271,7 @@ describe('表面宿主', () => {
   it('a route change into an ungranted 配置 page lands on 待处理', async () => {
     const { wrapper, router } = await mountSurfaceHost({
       initialPath: '/system/sysUser',
-      menus: ONLY_USER_MENUS
+      menus: ONLY_USER_MENUS,
     })
 
     await flushPromises()
@@ -280,7 +286,7 @@ describe('表面宿主', () => {
   it('a route change into a granted 配置 page on desktop stays', async () => {
     const { wrapper, router } = await mountSurfaceHost({
       initialPath: '/work/pending',
-      menus: SAMPLE_CONFIG_MENUS
+      menus: SAMPLE_CONFIG_MENUS,
     })
 
     await flushPromises()

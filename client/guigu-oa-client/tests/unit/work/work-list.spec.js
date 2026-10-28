@@ -5,15 +5,15 @@ import {
   workListDefinition,
   workListPerspective,
   workListPerspectiveFromRoute,
-  workListRequest
+  workListRequest,
 } from '@/work/work-list'
 
 const FORM_VALUES = JSON.stringify({
   formShowData: {
     请假天数: '3',
     请假原因: '家中有事',
-    图片: '<img src="https://example.com/a.png" />'
-  }
+    图片: '<img src="https://example.com/a.png" />',
+  },
 })
 
 describe('work/work-list', () => {
@@ -29,28 +29,28 @@ describe('work/work-list', () => {
     it('loads 待处理 with GET /admin/process/findPending/{page}/{limit}', () => {
       expect(workListRequest(WORK_LIST_KINDS.PENDING, 1, 10)).toEqual({
         method: 'get',
-        url: '/admin/process/findPending/1/10'
+        url: '/admin/process/findPending/1/10',
       })
     })
 
     it('loads 已处理 with GET /admin/process/findProcessed/{page}/{limit}', () => {
       expect(workListRequest(WORK_LIST_KINDS.PROCESSED, 2, 5)).toEqual({
         method: 'get',
-        url: '/admin/process/findProcessed/2/5'
+        url: '/admin/process/findProcessed/2/5',
       })
     })
 
     it('loads 已发起 with GET /admin/process/findStarted/{page}/{limit}', () => {
       expect(workListRequest(WORK_LIST_KINDS.STARTED, 1, 10)).toEqual({
         method: 'get',
-        url: '/admin/process/findStarted/1/10'
+        url: '/admin/process/findStarted/1/10',
       })
     })
 
     it('loads 抄送我的 with GET /admin/process/findCarbonCopied/{page}/{limit}', () => {
       expect(workListRequest(WORK_LIST_KINDS.COPIED, 1, 10)).toEqual({
         method: 'get',
-        url: '/admin/process/findCarbonCopied/1/10'
+        url: '/admin/process/findCarbonCopied/1/10',
       })
     })
   })
@@ -60,7 +60,7 @@ describe('work/work-list', () => {
       [WORK_LIST_KINDS.PENDING, '待处理', '暂无待处理审批'],
       [WORK_LIST_KINDS.PROCESSED, '已处理', '暂无已处理审批'],
       [WORK_LIST_KINDS.STARTED, '已发起', '暂无已发起审批'],
-      [WORK_LIST_KINDS.COPIED, '抄送我的', '暂无抄送审批']
+      [WORK_LIST_KINDS.COPIED, '抄送我的', '暂无抄送审批'],
     ])('provides the %s list title and empty description', (kind, title, emptyDescription) => {
       expect(workListDefinition(kind)).toMatchObject({ title, emptyDescription })
     })
@@ -69,18 +69,20 @@ describe('work/work-list', () => {
   describe('presentWorkList', () => {
     it('presents a 待处理 page with unified 审批 rows and a pending detail path', () => {
       const page = presentWorkList(WORK_LIST_KINDS.PENDING, {
-        records: [{
-          id: 12,
-          taskId: 'task-9',
-          title: '张三提交的请假申请',
-          name: '张三',
-          processTypeName: '请假',
-          createTime: '2026-08-18 10:00:00',
-          status: 1,
-          formValues: FORM_VALUES
-        }],
+        records: [
+          {
+            id: 12,
+            taskId: 'task-9',
+            title: '张三提交的请假申请',
+            name: '张三',
+            processTypeName: '请假',
+            createTime: '2026-08-18 10:00:00',
+            status: 1,
+            formValues: FORM_VALUES,
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page).toEqual({
@@ -89,42 +91,46 @@ describe('work/work-list', () => {
         emptyDescription: '暂无待处理审批',
         total: 1,
         pages: 1,
-        records: [{
-          id: 12,
-          taskId: 'task-9',
-          title: '张三提交的请假申请',
-          name: '张三',
-          processTypeName: '请假',
-          createTime: '2026-08-18 10:00:00',
-          status: 1,
-          statusLabel: '审批中',
-          statusTagType: 'warning',
-          summaryFields: [
-            { key: '请假天数', value: '3' },
-            { key: '请假原因', value: '家中有事' }
-          ],
-          detailPath: '/work/pending/12/task-9',
-          kind: WORK_LIST_KINDS.PENDING,
-          relationLabel: '等待我处理',
-          progressLabel: '',
-          rowKey: '12-task-9'
-        }]
+        records: [
+          {
+            id: 12,
+            taskId: 'task-9',
+            title: '张三提交的请假申请',
+            name: '张三',
+            processTypeName: '请假',
+            createTime: '2026-08-18 10:00:00',
+            status: 1,
+            statusLabel: '审批中',
+            statusTagType: 'warning',
+            summaryFields: [
+              { key: '请假天数', value: '3' },
+              { key: '请假原因', value: '家中有事' },
+            ],
+            detailPath: '/work/pending/12/task-9',
+            kind: WORK_LIST_KINDS.PENDING,
+            relationLabel: '等待我处理',
+            progressLabel: '',
+            rowKey: '12-task-9',
+          },
+        ],
       })
     })
 
     it('presents a 已处理 page with the same 审批 skeleton and a processed detail path', () => {
       const page = presentWorkList(WORK_LIST_KINDS.PROCESSED, {
-        records: [{
-          id: 12,
-          title: '张三提交的请假申请',
-          name: '张三',
-          processTypeName: '请假',
-          createTime: '2026-08-18 10:00:00',
-          status: 2,
-          formValues: FORM_VALUES
-        }],
+        records: [
+          {
+            id: 12,
+            title: '张三提交的请假申请',
+            name: '张三',
+            processTypeName: '请假',
+            createTime: '2026-08-18 10:00:00',
+            status: 2,
+            formValues: FORM_VALUES,
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page.title).toBe('已处理')
@@ -139,38 +145,42 @@ describe('work/work-list', () => {
         statusTagType: 'success',
         summaryFields: [
           { key: '请假天数', value: '3' },
-          { key: '请假原因', value: '家中有事' }
+          { key: '请假原因', value: '家中有事' },
         ],
         detailPath: '/work/processed/12',
         kind: WORK_LIST_KINDS.PROCESSED,
         relationLabel: '我已处理',
-        rowKey: '12'
+        rowKey: '12',
       })
     })
 
     it('presents a read-only 抄送我的 row linking to its full approval detail', () => {
       const page = presentWorkList(WORK_LIST_KINDS.COPIED, {
-        records: [{
-          id: 23,
-          title: '小艾发起请假申请',
-          name: '小艾',
-          processTypeName: '请假',
-          status: 1,
-          formValues: FORM_VALUES
-        }],
+        records: [
+          {
+            id: 23,
+            title: '小艾发起请假申请',
+            name: '小艾',
+            processTypeName: '请假',
+            status: 1,
+            formValues: FORM_VALUES,
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page).toMatchObject({
         kind: WORK_LIST_KINDS.COPIED,
         title: '抄送我的',
         emptyDescription: '暂无抄送审批',
-        records: [{
-          detailPath: '/work/copied/23',
-          relationLabel: '抄送给我',
-          kind: WORK_LIST_KINDS.COPIED
-        }]
+        records: [
+          {
+            detailPath: '/work/copied/23',
+            relationLabel: '抄送给我',
+            kind: WORK_LIST_KINDS.COPIED,
+          },
+        ],
       })
     })
 
@@ -182,60 +192,62 @@ describe('work/work-list', () => {
         processTypeName: '请假',
         createTime: '2026-08-18 10:00:00',
         status: 1,
-        formValues: FORM_VALUES
+        formValues: FORM_VALUES,
       }
 
       const pending = presentWorkList(WORK_LIST_KINDS.PENDING, {
-        records: [{ ...record, taskId: 'task-9' }]
+        records: [{ ...record, taskId: 'task-9' }],
       }).records[0]
       const processed = presentWorkList(WORK_LIST_KINDS.PROCESSED, {
-        records: [{ ...record, status: 2 }]
+        records: [{ ...record, status: 2 }],
       }).records[0]
       const started = presentWorkList(WORK_LIST_KINDS.STARTED, {
-        records: [{ ...record, description: '等待李四审批' }]
+        records: [{ ...record, description: '等待李四审批' }],
       }).records[0]
 
       const skeleton = {
         title: '张三提交的请假申请',
         name: '张三',
         processTypeName: '请假',
-        createTime: '2026-08-18 10:00:00'
+        createTime: '2026-08-18 10:00:00',
       }
       expect(pending).toMatchObject({
         ...skeleton,
         statusLabel: '审批中',
         relationLabel: '等待我处理',
-        progressLabel: ''
+        progressLabel: '',
       })
       expect(processed).toMatchObject({
         ...skeleton,
         statusLabel: '审批通过',
         relationLabel: '我已处理',
-        progressLabel: ''
+        progressLabel: '',
       })
       expect(started).toMatchObject({
         ...skeleton,
         statusLabel: '审批中',
         relationLabel: '我发起的审批',
-        progressLabel: '等待李四审批'
+        progressLabel: '等待李四审批',
       })
       expect(processed).not.toHaveProperty('processedTime')
     })
 
     it('presents a 已发起 page with the same 审批 skeleton and a started detail path', () => {
       const page = presentWorkList(WORK_LIST_KINDS.STARTED, {
-        records: [{
-          id: 12,
-          title: '我提交的请假申请',
-          name: '张三',
-          processTypeName: '请假',
-          createTime: '2026-08-18 10:00:00',
-          status: 1,
-          description: '等待李四审批',
-          formValues: FORM_VALUES
-        }],
+        records: [
+          {
+            id: 12,
+            title: '我提交的请假申请',
+            name: '张三',
+            processTypeName: '请假',
+            createTime: '2026-08-18 10:00:00',
+            status: 1,
+            description: '等待李四审批',
+            formValues: FORM_VALUES,
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page.title).toBe('已发起')
@@ -249,13 +261,13 @@ describe('work/work-list', () => {
         statusLabel: '审批中',
         summaryFields: [
           { key: '请假天数', value: '3' },
-          { key: '请假原因', value: '家中有事' }
+          { key: '请假原因', value: '家中有事' },
         ],
         detailPath: '/work/started/12',
         kind: WORK_LIST_KINDS.STARTED,
         relationLabel: '我发起的审批',
         progressLabel: '等待李四审批',
-        rowKey: '12'
+        rowKey: '12',
       })
     })
 
@@ -268,20 +280,20 @@ describe('work/work-list', () => {
         createTime: '2026-08-18 10:00:00',
         status: 1,
         description: '等待我审批',
-        formValues: FORM_VALUES
+        formValues: FORM_VALUES,
       }
 
       const pending = presentWorkList(WORK_LIST_KINDS.PENDING, {
-        records: [{ ...record, taskId: 'task-9' }]
+        records: [{ ...record, taskId: 'task-9' }],
       }).records[0]
       const startedWhilePending = presentWorkList(WORK_LIST_KINDS.STARTED, {
-        records: [record]
+        records: [record],
       }).records[0]
       const processed = presentWorkList(WORK_LIST_KINDS.PROCESSED, {
-        records: [{ ...record, status: 2, description: '审批完成（通过）' }]
+        records: [{ ...record, status: 2, description: '审批完成（通过）' }],
       }).records[0]
       const startedAfterProcessed = presentWorkList(WORK_LIST_KINDS.STARTED, {
-        records: [{ ...record, status: 2, description: '审批完成（通过）' }]
+        records: [{ ...record, status: 2, description: '审批完成（通过）' }],
       }).records[0]
 
       expect(pending.id).toBe(12)
@@ -304,7 +316,7 @@ describe('work/work-list', () => {
         emptyDescription: '暂无待处理审批',
         records: [],
         total: 0,
-        pages: 0
+        pages: 0,
       })
     })
 
@@ -313,13 +325,13 @@ describe('work/work-list', () => {
         records: [],
         total: 0,
         pages: 0,
-        emptyDescription: '暂无已处理审批'
+        emptyDescription: '暂无已处理审批',
       })
       expect(presentWorkList(WORK_LIST_KINDS.STARTED)).toMatchObject({
         records: [],
         total: 0,
         pages: 0,
-        emptyDescription: '暂无已发起审批'
+        emptyDescription: '暂无已发起审批',
       })
     })
   })
@@ -331,7 +343,7 @@ describe('work/work-list', () => {
         title: '待处理',
         returnPath: '/work/pending',
         readOnly: false,
-        emphasis: '审批动作'
+        emphasis: '审批动作',
       })
     })
 
@@ -341,7 +353,7 @@ describe('work/work-list', () => {
         title: '已处理',
         returnPath: '/work/processed',
         readOnly: true,
-        emphasis: '回看'
+        emphasis: '回看',
       })
     })
 
@@ -351,7 +363,7 @@ describe('work/work-list', () => {
         title: '已发起',
         returnPath: '/work/started',
         readOnly: true,
-        emphasis: '整体进度'
+        emphasis: '整体进度',
       })
     })
 
@@ -361,53 +373,56 @@ describe('work/work-list', () => {
         title: '抄送我的',
         returnPath: '/work/copied',
         readOnly: true,
-        emphasis: '知情'
+        emphasis: '知情',
       })
     })
 
     it('reads the current 视角 from the route workListKind', () => {
-      expect(workListPerspectiveFromRoute({
-        meta: { workListKind: WORK_LIST_KINDS.PENDING }
-      })).toEqual({
+      expect(
+        workListPerspectiveFromRoute({
+          meta: { workListKind: WORK_LIST_KINDS.PENDING },
+        }),
+      ).toEqual({
         kind: WORK_LIST_KINDS.PENDING,
         title: '待处理',
         returnPath: '/work/pending',
         readOnly: false,
-        emphasis: '审批动作'
+        emphasis: '审批动作',
       })
 
-      expect(workListPerspectiveFromRoute({
-        meta: { workListKind: WORK_LIST_KINDS.PROCESSED }
-      })).toEqual({
+      expect(
+        workListPerspectiveFromRoute({
+          meta: { workListKind: WORK_LIST_KINDS.PROCESSED },
+        }),
+      ).toEqual({
         kind: WORK_LIST_KINDS.PROCESSED,
         title: '已处理',
         returnPath: '/work/processed',
         readOnly: true,
-        emphasis: '回看'
+        emphasis: '回看',
       })
 
-      expect(workListPerspectiveFromRoute({
-        meta: { workListKind: WORK_LIST_KINDS.STARTED }
-      })).toEqual({
+      expect(
+        workListPerspectiveFromRoute({
+          meta: { workListKind: WORK_LIST_KINDS.STARTED },
+        }),
+      ).toEqual({
         kind: WORK_LIST_KINDS.STARTED,
         title: '已发起',
         returnPath: '/work/started',
         readOnly: true,
-        emphasis: '整体进度'
+        emphasis: '整体进度',
       })
     })
 
     it('treats a config detail route as a read-only 视角 returning to its list', () => {
-      expect(
-        workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })
-      ).toEqual({
+      expect(workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })).toEqual({
         kind: null,
         title: '',
         returnPath: '/processMgr/process',
         readOnly: true,
-        emphasis: ''
+        emphasis: '',
       })
     })
   })
-
 })

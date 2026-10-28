@@ -73,25 +73,25 @@ async function restore(h) {
 }
 
 describe('发起审批 interface', () => {
-  it.each([
-    '暂不可发起，需核实原审批内容',
-    '审批步骤原版本无法确认，请联系配置人员',
-  ])('blocks unavailable published templates before loading CC or attachments: %s', async (message) => {
-    const h = harness({
-      readTemplate: vi.fn(async () => ({
-        ...template,
-        availableForInitiation: false,
-        availabilityMessage: message,
-      })),
-    })
-    const page = await open(h)
-    expect(page.view.value.template).toBeNull()
-    expect(page.view.value.error).toBe(message)
-    await page.submit({ reason: '不能发起' })
-    expect(h.adapter.recipients).not.toHaveBeenCalled()
-    expect(h.adapter.listDraft).not.toHaveBeenCalled()
-    expect(h.adapter.start).not.toHaveBeenCalled()
-  })
+  it.each(['暂不可发起，需核实原审批内容', '审批步骤原版本无法确认，请联系配置人员'])(
+    'blocks unavailable published templates before loading CC or attachments: %s',
+    async (message) => {
+      const h = harness({
+        readTemplate: vi.fn(async () => ({
+          ...template,
+          availableForInitiation: false,
+          availabilityMessage: message,
+        })),
+      })
+      const page = await open(h)
+      expect(page.view.value.template).toBeNull()
+      expect(page.view.value.error).toBe(message)
+      await page.submit({ reason: '不能发起' })
+      expect(h.adapter.recipients).not.toHaveBeenCalled()
+      expect(h.adapter.listDraft).not.toHaveBeenCalled()
+      expect(h.adapter.start).not.toHaveBeenCalled()
+    },
+  )
   it('submits a fixed form/CC/attachment snapshot and locks all mutations and duplicate clicks', async () => {
     const flight = deferred(),
       h = harness({

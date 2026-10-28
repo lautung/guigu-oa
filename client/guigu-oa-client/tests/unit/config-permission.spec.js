@@ -24,7 +24,13 @@ const ROLE_PAGE = [
 
 const PROCESS_TYPE_PAGE = [
   { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
-  { path: '/processSet/processType', parentPath: '/processSet', title: '审批类型', type: 1, sort: 1 },
+  {
+    path: '/processSet/processType',
+    parentPath: '/processSet',
+    title: '审批类型',
+    type: 1,
+    sort: 1,
+  },
 ]
 
 const TEMPLATE_PAGE = [

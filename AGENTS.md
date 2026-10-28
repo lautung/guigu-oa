@@ -53,11 +53,12 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 ### 前端 lint / test / build
 
-- 单元测试：`npm run test:unit`（Vitest，脚本名不变）。
-- 质量检查：`npm run lint`（ESLint）、`npm run typecheck`（vue-tsc）、`npm run format:check`（Prettier）。
+- 一键检查：`npm run verify`（lint + typecheck + format:check + test:unit）。
+- 单元测试：`npm run test:unit`（Vitest，脚本名不变）；端到端：`npm run test:e2e`（Playwright，自动启动 9530 dev server）。
+- 质量检查：`npm run lint`（ESLint）、`npm run typecheck`（vue-tsc）、`npm run format:check`（Prettier，覆盖 `src` 与 `tests`）。
 - 构建：`npm run build:prod`（包含类型检查）；开发：`npm run dev`。
 - Node：`engines.node` `^22.18.0`。
 
-### 已知应用缺陷（非环境问题）
+### 后端测试
 
-`已发起` 列表接口 `/admin/process/findStarted` 的既有 MyBatis 绑定问题不在本次升级范围（升级规格明确不顺手修）。`findPending`/`findProcessed` 正常。登录、`待处理`、`已处理` 均可用。
+`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。

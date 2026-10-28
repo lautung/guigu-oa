@@ -371,7 +371,9 @@ describe('分配角色 interface', () => {
 
   it('keeps pending assignments scoped to their user while another user assigns normally', async () => {
     const h = harness({
-      assign: vi.fn(async (userId) => ({ kind: String(userId) === '11' ? 'unconfirmed' : 'saved' })),
+      assign: vi.fn(async (userId) => ({
+        kind: String(userId) === '11' ? 'unconfirmed' : 'saved',
+      })),
     })
     const first = await open(h)
     await first.save()

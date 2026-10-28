@@ -10,24 +10,24 @@ describe('认证守卫', () => {
       resolveAuthGuard({
         path: ROUTES.PENDING,
         fullPath: '/work/pending?page=2',
-        hasToken: false
-      })
+        hasToken: false,
+      }),
     ).toEqual({
       action: 'redirect',
-      to: `${ROUTES.LOGIN}?redirect=${encodeURIComponent('/work/pending?page=2')}`
+      to: `${ROUTES.LOGIN}?redirect=${encodeURIComponent('/work/pending?page=2')}`,
     })
   })
 
   it('allows the login page without a token', () => {
     expect(resolveAuthGuard({ path: ROUTES.LOGIN, hasToken: false })).toEqual({
-      action: 'allow'
+      action: 'allow',
     })
   })
 
   it('redirects authenticated users away from login to 待处理', () => {
     expect(resolveAuthGuard({ path: ROUTES.LOGIN, hasToken: true })).toEqual({
       action: 'redirect',
-      to: ROUTES.PENDING
+      to: ROUTES.PENDING,
     })
   })
 
@@ -42,8 +42,8 @@ function createTestRouter() {
     routes: [
       { path: ROUTES.LOGIN, component: { render: () => null } },
       { path: ROUTES.PENDING, component: { render: () => null } },
-      { path: '/system/sysUser', component: { render: () => null } }
-    ]
+      { path: '/system/sysUser', component: { render: () => null } },
+    ],
   })
 }
 
@@ -51,7 +51,7 @@ function setupAppNavigation(credentials) {
   const router = createTestRouter()
   setupNavigation(router, createPinia(), {
     credentials: () => credentials,
-    recognize: async () => {}
+    recognize: async () => {},
   })
   return router
 }

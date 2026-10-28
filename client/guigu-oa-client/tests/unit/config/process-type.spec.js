@@ -6,34 +6,38 @@ import {
   presentForm,
   presentListPage,
   removeRequest,
-  writeRequest
+  writeRequest,
 } from '@/config/process-type'
 
 describe('config/process-type', () => {
   describe('presentListPage', () => {
     it('presents a paginated 审批类型 list with name, description, and times', () => {
       const page = presentListPage({
-        records: [{
-          id: 1,
-          name: '请假',
-          description: '员工请假',
-          createTime: '2026-08-01 10:00:00',
-          updateTime: '2026-08-02 11:00:00'
-        }],
+        records: [
+          {
+            id: 1,
+            name: '请假',
+            description: '员工请假',
+            createTime: '2026-08-01 10:00:00',
+            updateTime: '2026-08-02 11:00:00',
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
 
       expect(page).toEqual({
-        records: [{
-          id: 1,
-          name: '请假',
-          description: '员工请假',
-          createTime: '2026-08-01 10:00:00',
-          updateTime: '2026-08-02 11:00:00'
-        }],
+        records: [
+          {
+            id: 1,
+            name: '请假',
+            description: '员工请假',
+            createTime: '2026-08-01 10:00:00',
+            updateTime: '2026-08-02 11:00:00',
+          },
+        ],
         total: 1,
-        pages: 1
+        pages: 1,
       })
     })
 
@@ -41,7 +45,7 @@ describe('config/process-type', () => {
       expect(presentListPage()).toEqual({
         records: [],
         total: 0,
-        pages: 0
+        pages: 0,
       })
     })
   })
@@ -51,7 +55,7 @@ describe('config/process-type', () => {
       expect(writeRequest({ name: '请假', description: '员工请假' })).toEqual({
         method: 'post',
         url: '/admin/process/processType/save',
-        data: { name: '请假', description: '员工请假' }
+        data: { name: '请假', description: '员工请假' },
       })
     })
 
@@ -59,7 +63,7 @@ describe('config/process-type', () => {
       expect(writeRequest({ id: 1, name: '加班', description: '加班申请' })).toEqual({
         method: 'put',
         url: '/admin/process/processType/update',
-        data: { id: 1, name: '加班', description: '加班申请' }
+        data: { id: 1, name: '加班', description: '加班申请' },
       })
     })
 
@@ -72,28 +76,28 @@ describe('config/process-type', () => {
     it('pages 审批类型 with GET /admin/process/processType/{page}/{limit}', () => {
       expect(listRequest(1, 10)).toEqual({
         method: 'get',
-        url: '/admin/process/processType/1/10'
+        url: '/admin/process/processType/1/10',
       })
     })
 
     it('loads one 审批类型 with GET /admin/process/processType/get/{id}', () => {
       expect(getRequest(1)).toEqual({
         method: 'get',
-        url: '/admin/process/processType/get/1'
+        url: '/admin/process/processType/get/1',
       })
     })
 
     it('deletes a 审批类型 with DELETE /admin/process/processType/remove/{id}', () => {
       expect(removeRequest(1)).toEqual({
         method: 'delete',
-        url: '/admin/process/processType/remove/1'
+        url: '/admin/process/processType/remove/1',
       })
     })
 
     it('lists all 审批类型 with GET /admin/process/processType/findAll', () => {
       expect(findAllRequest()).toEqual({
         method: 'get',
-        url: '/admin/process/processType/findAll'
+        url: '/admin/process/processType/findAll',
       })
     })
   })
@@ -103,20 +107,22 @@ describe('config/process-type', () => {
       expect(emptyForm()).toEqual({
         id: '',
         name: '',
-        description: ''
+        description: '',
       })
     })
 
     it('loads 编辑 from a getById payload', () => {
-      expect(presentForm({
+      expect(
+        presentForm({
+          id: 1,
+          name: '请假',
+          description: '员工请假',
+          createTime: '2026-08-01 10:00:00',
+        }),
+      ).toEqual({
         id: 1,
         name: '请假',
         description: '员工请假',
-        createTime: '2026-08-01 10:00:00'
-      })).toEqual({
-        id: 1,
-        name: '请假',
-        description: '员工请假'
       })
     })
   })
