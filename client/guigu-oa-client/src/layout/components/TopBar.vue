@@ -4,7 +4,7 @@
     <div class="user-area">
       <img :src="avatarSrc" class="avatar" alt="" />
       <span class="username">{{ userStore.name }}</span>
-      <el-button type="text" class="logout-btn" @click="handleLogout">退出</el-button>
+      <el-button link class="logout-btn" @click="handleLogout">退出</el-button>
     </div>
   </header>
 </template>

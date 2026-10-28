@@ -68,3 +68,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 ### 后端测试
 
 `cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。
+
+### 测试覆盖率
+
+覆盖率只报告、不卡红，不属于 `npm run verify` 或 `scripts/verify.sh` 的一部分。客户端跑 `npm run coverage`；服务端在父目录跑 `mvn test`，聚合报告落在 `coverage-report/target/site/jacoco-aggregate/`。`./scripts/coverage.sh` 一次跑两端并打印汇总。分母口径与排除项见 README「测试与覆盖率」；测试分层、共享 harness 与服务端单元测试坑见 `docs/agents/testing.md`。

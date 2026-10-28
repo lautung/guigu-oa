@@ -87,7 +87,7 @@ flowchart LR
 ## 工程化
 
 - 后端合同测试覆盖 API、Flowable 和持久层边界；前端使用 Vitest 与 Playwright 冒烟检查。
-- CI 检查前端 lint、类型、单测和 Playwright，运行 Maven 测试，并构建前后端容器镜像；不自动部署。
+- CI 检查前端 lint、类型、单测和 Playwright，运行 Maven 测试，并构建前后端容器镜像；不自动部署。覆盖率报告写入 Actions summary 并上传 artifact，不卡红。
 - 统一客户端使用 TypeScript、ESLint 和 Prettier；业务表由 Flyway 管理，Flowable 引擎表由引擎创建。
 
 ## 快速开始
@@ -141,6 +141,28 @@ npm run test:unit
 npm run test:e2e
 npm run build:prod
 ```
+
+### 测试与覆盖率
+
+覆盖率是**可报告、不卡红**的指标（见[面试作品化改造规格](docs/spec/面试作品化改造规格.md)）：不设阈值，不影响构建结果，只写进 CI 的 job summary 并上传 HTML artifact。当前基线：客户端行 91.3% / 分支 83.6%，服务端行 93.4% / 分支 81.8%。
+
+```bash
+# 客户端：Vitest 覆盖率，报告在 coverage/
+npm run coverage
+
+# 服务端：JaCoCo 聚合报告，报告在 coverage-report/target/site/jacoco-aggregate/
+mvn -f server/guigu-oa-parent/pom.xml test
+
+# 两端一起跑并打印汇总
+./scripts/coverage.sh
+```
+
+口径与排除项：
+
+- 客户端统计全量 `src/**/*.{ts,vue}`，只排除没有运行时语义的 `src/main.ts`、`src/env.d.ts` 和 `src/types/**`；`src/api/**` 留在分母内。
+- 服务端聚合 `service-oa`、`common-util`、`service-util` 和 `spring-security`，排除 Lombok 数据类 `com.atguigu.model.*` 与演示数据播种 `com.atguigu.demo.*`。
+- 指标以行和分支为准；方法/类覆盖只在 HTML 明细里参考。
+- `src/views/**` 用挂载测试覆盖主要交互；`npm run test:e2e` 的 Playwright 用例仍负责整链路行为，两者的覆盖不合并统计。
 
 ## 文档
 

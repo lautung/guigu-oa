@@ -6,7 +6,7 @@
     :closable="false"
     :title="error || '加载失败'"
   >
-    <el-button type="text" @click="$emit('retry')">重试</el-button>
+    <el-button link @click="$emit('retry')">重试</el-button>
   </el-alert>
 </template>
 

@@ -60,4 +60,17 @@ public class JwtHelperTest {
     public void signingSecretMustBeAtLeast64Bytes() {
         assertThrows(IllegalArgumentException.class, () -> new JwtHelper("too-short"));
     }
+
+    @Test
+    public void refreshLookupRejectsMissingBlankAndTamperedTokens() {
+        assertNull(jwtHelper.getRefreshUserId(null));
+        assertNull(jwtHelper.getRefreshUserId(""));
+        assertNull(jwtHelper.getRefreshUsername(null));
+        assertNull(jwtHelper.getRefreshUsername(""));
+
+        String refreshToken = jwtHelper.createTokenPair(1L, "admin").refreshToken();
+        String tampered = refreshToken.substring(0, refreshToken.length() - 4) + "xxxx";
+        assertNull(jwtHelper.getRefreshUserId(tampered));
+        assertNull(jwtHelper.getRefreshUsername(tampered));
+    }
 }

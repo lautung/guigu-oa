@@ -22,12 +22,12 @@
       <el-table-column prop="sortValue" label="排序" width="80" />
       <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
-          <el-button v-if="scope.row.type === 0" type="text" @click="openCreate(scope.row)"
+          <el-button v-if="scope.row.type === 0" link @click="openCreate(scope.row)"
             >添加下级</el-button
           >
-          <el-button type="text" @click="openEdit(scope.row)">编辑</el-button>
+          <el-button link @click="openEdit(scope.row)">编辑</el-button>
           <el-button
-            type="text"
+            link
             :disabled="scope.row.children && scope.row.children.length > 0"
             @click="remove(scope.row.id)"
           >
@@ -44,8 +44,8 @@
         </el-form-item>
         <el-form-item label="菜单类型">
           <el-radio-group v-model="form.type" :disabled="typeLocked">
-            <el-radio :label="0">目录</el-radio>
-            <el-radio :label="1">菜单</el-radio>
+            <el-radio :value="0">目录</el-radio>
+            <el-radio :value="1">菜单</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="菜单名称">
@@ -65,8 +65,8 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
-            <el-radio :label="1">正常</el-radio>
-            <el-radio :label="0">停用</el-radio>
+            <el-radio :value="1">正常</el-radio>
+            <el-radio :value="0">停用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>

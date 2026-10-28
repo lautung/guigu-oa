@@ -29,6 +29,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['tests/unit/**/*.spec.{js,ts}'],
+    setupFiles: ['tests/unit/setup.js'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary', 'html'],
+      include: ['src/**/*.{ts,vue}'],
+      exclude: ['src/main.ts', 'src/env.d.ts', 'src/types/**'],
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

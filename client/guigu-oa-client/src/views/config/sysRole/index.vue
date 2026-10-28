@@ -30,11 +30,9 @@
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
-          <el-button type="text" @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button type="text" @click="openAssign(scope.row.id, scope.row.roleName)"
-            >菜单授权</el-button
-          >
-          <el-button type="text" @click="remove(scope.row.id)">删除</el-button>
+          <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
+          <el-button link @click="openAssign(scope.row.id, scope.row.roleName)">菜单授权</el-button>
+          <el-button link @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

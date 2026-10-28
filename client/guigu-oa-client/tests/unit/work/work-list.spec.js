@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { WORK_LIST_KINDS } from '@/router/paths'
 import {
+  parseFormValues,
   presentWorkList,
   statusLabel,
+  statusTagType,
+  summaryFields,
   workListDefinition,
   workListPerspective,
   workListPerspectiveFromRoute,
@@ -23,6 +26,47 @@ describe('work/work-list', () => {
       expect(statusLabel(1)).toBe('审批中')
       expect(statusLabel(2)).toBe('审批通过')
       expect(statusLabel(-1)).toBe('审批拒绝')
+    })
+
+    it('renders an empty label for unknown or missing statuses', () => {
+      expect(statusLabel(undefined)).toBe('')
+      expect(statusLabel(0)).toBe('')
+      expect(statusLabel(7)).toBe('')
+    })
+  })
+
+  describe('statusTagType', () => {
+    it('maps known statuses and falls back to info', () => {
+      expect(statusTagType(1)).toBe('warning')
+      expect(statusTagType(2)).toBe('success')
+      expect(statusTagType(-1)).toBe('danger')
+      expect(statusTagType(0)).toBe('info')
+      expect(statusTagType(undefined)).toBe('info')
+    })
+  })
+
+  describe('parseFormValues', () => {
+    it('normalizes missing, primitive, and unparseable payloads to an empty form', () => {
+      expect(parseFormValues(undefined)).toEqual({ formShowData: {} })
+      expect(parseFormValues(null)).toEqual({ formShowData: {} })
+      expect(parseFormValues(0)).toEqual({ formShowData: {} })
+      expect(parseFormValues(42)).toEqual({ formShowData: {} })
+      expect(parseFormValues('not json')).toEqual({ formShowData: {} })
+      expect(parseFormValues('null')).toEqual({ formShowData: {} })
+      expect(parseFormValues('"text"')).toEqual({ formShowData: {} })
+    })
+
+    it('passes through objects and parsed JSON objects', () => {
+      const values = { formShowData: { 请假天数: '3' } }
+      expect(parseFormValues(values)).toBe(values)
+      expect(parseFormValues('{"formShowData":{"请假天数":"3"}}')).toEqual(values)
+    })
+  })
+
+  describe('summaryFields', () => {
+    it('drops hidden system fields and keeps business fields', () => {
+      expect(summaryFields()).toEqual([])
+      expect(summaryFields({ 请假天数: '3' })).toEqual([{ key: '请假天数', value: '3' }])
     })
   })
 

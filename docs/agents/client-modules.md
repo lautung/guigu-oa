@@ -34,5 +34,7 @@
 
 ## 约定
 
-- 页面只做绑定与文案；迟到归属、phase、强制离开、写后刷新都在 module 里，测试也打在 module interface 上。
+- 页面只做绑定与文案；迟到归属、phase、强制离开、写后刷新都在 module 里。
+- 测试分两层：module 测试是主，规则打在 interface 上；view 挂载测试只覆盖模板状态分支与命令式接线，状态由 seam mock 驱动，不靠 view 测试重新断言 module 内部规则。
+- 共享挂载工具在 `tests/unit/support/harness.js`（假 recognition、pinia 会话、axios adapter、Element Plus stub）；全局 setup 在 `tests/unit/setup.js`（auto-unmount、nprogress stub）。新测试直接复用，不要各写一份。
 - 每个模块的决策理由看对应 ADR（0011–0021），不要从页面反推 interface。

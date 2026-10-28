@@ -25,7 +25,23 @@ jobs:
             server/guigu-oa-parent/pom.xml
             server/guigu-oa-parent/**/pom.xml
       - name: Run backend tests
+        id: backend-tests
         run: mvn -B -f server/guigu-oa-parent/pom.xml test
+      - name: Report backend coverage
+        if: always()
+        continue-on-error: true
+        run: node scripts/coverage-summary.mjs --backend --markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload backend coverage
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: server/guigu-oa-parent/coverage-report/target/site/jacoco-aggregate
+          retention-days: 14
+      - name: Assert backend coverage report
+        if: always() && steps.backend-tests.outcome == 'success'
+        run: test -s server/guigu-oa-parent/coverage-report/target/site/jacoco-aggregate/jacoco.csv
       - name: Package backend image artifact
         run: mvn -B -f server/guigu-oa-parent/pom.xml -DskipTests package
       - name: Build backend image
@@ -47,7 +63,27 @@ jobs:
           cache-dependency-path: client/guigu-oa-client/package-lock.json
       - run: npm ci
       - name: Verify frontend
+        id: frontend-verify
         run: npm run verify
+      - name: Collect frontend coverage
+        if: always()
+        continue-on-error: true
+        run: npm run coverage
+      - name: Report frontend coverage
+        if: always()
+        continue-on-error: true
+        run: node ../../scripts/coverage-summary.mjs --frontend --markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload frontend coverage
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: client/guigu-oa-client/coverage
+          retention-days: 14
+      - name: Assert frontend coverage report
+        if: always() && steps.frontend-verify.outcome == 'success'
+        run: test -s coverage/coverage-summary.json
       - run: npx playwright install --with-deps chromium
       - name: Run Playwright smoke tests
         run: npm run test:e2e

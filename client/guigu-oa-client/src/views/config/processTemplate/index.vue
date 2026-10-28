@@ -35,14 +35,10 @@
       <el-table-column prop="updateTime" label="更新时间" />
       <el-table-column label="操作" width="260" align="center">
         <template #default="scope">
-          <el-button type="text" @click="show(scope.row)">查看</el-button>
-          <el-button v-if="scope.row.canEdit" type="text" @click="openEdit(scope.row.id)"
-            >编辑</el-button
-          >
-          <el-button v-if="scope.row.canDelete" type="text" @click="remove(scope.row)"
-            >删除</el-button
-          >
-          <el-button v-if="scope.row.canPublish" type="text" @click="publishTemplate(scope.row)"
+          <el-button link @click="show(scope.row)">查看</el-button>
+          <el-button v-if="scope.row.canEdit" link @click="openEdit(scope.row.id)">编辑</el-button>
+          <el-button v-if="scope.row.canDelete" link @click="remove(scope.row)">删除</el-button>
+          <el-button v-if="scope.row.canPublish" link @click="publishTemplate(scope.row)"
             >发布</el-button
           >
         </template>

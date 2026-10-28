@@ -39,14 +39,14 @@
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="250" align="center">
         <template #default="scope">
-          <el-button type="text" @click="openEdit(scope.row.id)">编辑</el-button>
+          <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
           <span class="assign-action">
-            <el-button type="text" @click="openAssignRoles(scope.row.id, scope.row.username)"
+            <el-button link @click="openAssignRoles(scope.row.id, scope.row.username)"
               >分配角色</el-button
             >
             <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
           </span>
-          <el-button type="text" @click="remove(scope.row.id)">删除</el-button>
+          <el-button link @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
