@@ -46,16 +46,8 @@ jobs:
           cache: npm
           cache-dependency-path: client/guigu-oa-client/package-lock.json
       - run: npm ci
-      - name: Lint frontend
-        run: npm run lint
-      - name: Check formatting
-        run: npm run format:check
-      - name: Check module map
-        run: npm run check:docs
-      - name: Typecheck frontend
-        run: npm run typecheck
-      - name: Run frontend unit tests
-        run: npm run test:unit
+      - name: Verify frontend
+        run: npm run verify
       - run: npx playwright install --with-deps chromium
       - name: Run Playwright smoke tests
         run: npm run test:e2e

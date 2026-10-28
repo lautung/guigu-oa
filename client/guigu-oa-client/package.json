@@ -9,15 +9,15 @@
   "scripts": {
     "dev": "vite --port 9530",
     "build:prod": "npm run typecheck && vite build",
-    "lint": "eslint \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts,vue}\" playwright.config.ts vite.config.js",
+    "lint": "eslint \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts,vue}\" \"scripts/**/*.mjs\" playwright.config.ts vite.config.js",
     "typecheck": "vue-tsc --noEmit",
     "verify": "npm run lint && npm run typecheck && npm run format:check && npm run check:docs && npm run test:unit",
-    "format:check": "prettier --check \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" playwright.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml",
-    "format": "prettier --write \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" playwright.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml",
+    "format:check": "prettier --check \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" \"scripts/**/*.mjs\" playwright.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml",
+    "format": "prettier --write \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" \"scripts/**/*.mjs\" playwright.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:unit:watch": "vitest",
-    "check:docs": "node ../../scripts/check-module-map.mjs"
+    "check:docs": "node scripts/check-module-map.mjs"
   },
   "dependencies": {
     "@form-create/designer": "3.5.0",
