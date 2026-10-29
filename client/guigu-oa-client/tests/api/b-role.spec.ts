@@ -41,10 +41,14 @@ test.describe('B 角色管理', () => {
     }
   })
 
-  test('B8 doAssign：全量覆写生效；已知缺陷 #144 不存在的 roleId 也被接受', async ({ request }) => {
+  test('B8 doAssign：全量覆写生效；不存在/已删除的 roleId 返回 201 且不写行（#144）', async ({
+    request,
+  }) => {
     const api = new Api(request)
     const temp = await createUser(api, unique('api-dorole'))
     const role = await createRole(api, unique('api-dorole-role'))
+    const removed = await createRole(api, unique('api-dorole-gone'))
+    await deleteRole(api, removed.id)
     try {
       await assignRoles(api, temp.id, [role.id])
       const assigned = await api.call<{ assginRoleList: RoleRecord[] }>(
@@ -58,7 +62,23 @@ test.describe('B 角色管理', () => {
         userId: temp.id,
         roleIdList: [999999],
       })
-      expectCode(ghost.body, 200, '已知缺陷 #144：不存在的 roleId 被接受（修复后应变 201）')
+      expectCode(ghost.body, 201, '不存在的 roleId 拒绝整个分配（#144）')
+
+      const deleted = await api.envelope(ADMIN, 'post', '/admin/system/sysRole/doAssign', {
+        userId: temp.id,
+        roleIdList: [removed.id],
+      })
+      expectCode(deleted.body, 201, '已删除的 roleId 同样拒绝（#144）')
+
+      const after = await api.call<{ assginRoleList: RoleRecord[] }>(
+        ADMIN,
+        'get',
+        `/admin/system/sysRole/toAssign/${temp.id}`,
+      )
+      expect(after.assginRoleList.map((item) => item.id)).toEqual(
+        [role.id],
+        '被拒绝的分配不得改动既有角色（#144 不写任何行）',
+      )
     } finally {
       await assignRoles(api, temp.id, [])
       await deleteRole(api, role.id)

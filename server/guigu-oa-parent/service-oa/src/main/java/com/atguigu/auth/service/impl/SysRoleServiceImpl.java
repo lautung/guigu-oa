@@ -4,6 +4,7 @@ import com.atguigu.auth.mapper.SysRoleMapper;
 import com.atguigu.auth.service.SysRoleService;
 import com.atguigu.auth.service.SysUserRoleService;
 import com.atguigu.auth.service.PermissionCacheInvalidator;
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.model.system.SysUserRole;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -115,13 +116,27 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional
     public void doAssign(AssginRoleVo assginRoleVo) {
+        //校验必须在删除既有分配之前：任何非法 id 都拒绝整个分配，不改动用户既有角色（#144）。
+        //已删除角色走 @TableLogic 逻辑删除，selectById 读不到，与不存在的 id 一并拒绝。
+        List<Long> requestedRoleIds = assginRoleVo.getRoleIdList();
+        if (requestedRoleIds != null) {
+            for (Long roleId : requestedRoleIds) {
+                if (roleId == null) {
+                    continue;
+                }
+                if (baseMapper.selectById(roleId) == null) {
+                    throw new GuiguException(201, "只能分配已存在的角色");
+                }
+            }
+        }
+
         //把用户之前分配角色数据删除，用户角色关系表里面，根据userid删除
         LambdaQueryWrapper<SysUserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysUserRole::getUserId,assginRoleVo.getUserId());
         sysUserRoleService.remove(wrapper);
 
         //重新进行分配
-        List<Long> roleIdList = assginRoleVo.getRoleIdList();
+        List<Long> roleIdList = requestedRoleIds == null ? List.of() : requestedRoleIds;
         for(Long roleId:roleIdList) {
             if(StringUtils.isEmpty(roleId)) {
                 continue;

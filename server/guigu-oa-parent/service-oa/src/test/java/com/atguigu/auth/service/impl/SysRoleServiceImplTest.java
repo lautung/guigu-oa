@@ -3,6 +3,7 @@ package com.atguigu.auth.service.impl;
 import com.atguigu.auth.mapper.SysRoleMapper;
 import com.atguigu.auth.service.PermissionCacheInvalidator;
 import com.atguigu.auth.service.SysUserRoleService;
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.model.system.SysUserRole;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -21,6 +22,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -114,6 +116,8 @@ class SysRoleServiceImplTest {
 
     @Test
     void doAssignRewritesRolesAndInvalidatesTheUser() {
+        when(roleMapper.selectById(1L)).thenReturn(role(1L));
+        when(roleMapper.selectById(2L)).thenReturn(role(2L));
         AssginRoleVo request = new AssginRoleVo();
         request.setUserId(7L);
         request.setRoleIdList(Arrays.asList(1L, null, 2L));
@@ -122,6 +126,34 @@ class SysRoleServiceImplTest {
 
         verify(userRoleService).remove(any());
         verify(userRoleService, org.mockito.Mockito.times(2)).save(any(SysUserRole.class));
+        verify(cacheInvalidator).invalidateUserAfterCommit(7L);
+    }
+
+    @Test
+    void doAssignRejectsAnUnknownRoleWithoutTouchingAssignments() {
+        when(roleMapper.selectById(1L)).thenReturn(role(1L));
+        AssginRoleVo request = new AssginRoleVo();
+        request.setUserId(7L);
+        request.setRoleIdList(Arrays.asList(1L, 999999L));
+
+        GuiguException error = assertThrows(GuiguException.class, () -> service.doAssign(request));
+
+        assertEquals(201, error.getCode());
+        assertTrue(error.getMessage().contains("只能分配已存在的角色"));
+        verify(userRoleService, never()).remove(any());
+        verify(userRoleService, never()).save(any(SysUserRole.class));
+        verify(cacheInvalidator, never()).invalidateUserAfterCommit(any());
+    }
+
+    @Test
+    void doAssignTreatsAMissingRoleListAsClearingAssignments() {
+        AssginRoleVo request = new AssginRoleVo();
+        request.setUserId(7L);
+
+        service.doAssign(request);
+
+        verify(userRoleService).remove(any());
+        verify(userRoleService, never()).save(any(SysUserRole.class));
         verify(cacheInvalidator).invalidateUserAfterCommit(7L);
     }
 
