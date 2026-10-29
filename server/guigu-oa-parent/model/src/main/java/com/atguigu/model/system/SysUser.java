@@ -4,9 +4,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import com.atguigu.model.base.BaseEntity;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.List;
 
@@ -21,6 +22,8 @@ public class SysUser extends BaseEntity {
 	@TableField("username")
 	private String username;
 
+	@ToString.Exclude
+	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
 	@Schema(description = "密码")
 	@TableField("password")
 	private String password;

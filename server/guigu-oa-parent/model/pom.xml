@@ -27,6 +27,12 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- 序列化注解：password 只接受写入，不出现在任何响应里 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
