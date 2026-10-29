@@ -1,0 +1,59 @@
+{
+  "environment": {
+    "date": "2026-10-29T10:52:04.647Z",
+    "commit": "80edbc2dbc1db07149ac2cbd186930bff7068b13",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvtfbpup",
+    "compose": "client Up 11 minutes\nminio Up 7 hours\nmysql Up 7 hours (healthy)\nredis Up 7 hours (healthy)\nservice-oa Up 11 minutes (healthy)",
+    "startedAt": "2026-10-29T10:52:02.593Z"
+  },
+  "results": [
+    {
+      "id": "SEC-LEAK-03",
+      "family": "SEC-LEAK",
+      "title": "OpenAPI 文档匿名可读",
+      "severity": "S4",
+      "expected": "不应匿名暴露",
+      "actual": "未暴露",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": {
+        "status": 200,
+        "hasOpenapi": false,
+        "paths": 0
+      }
+    },
+    {
+      "id": "SEC-LEAK-04",
+      "family": "SEC-LEAK",
+      "title": "Swagger UI 匿名可读",
+      "severity": "S4",
+      "expected": "不应匿名暴露",
+      "actual": "未暴露",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 7,
+      "evidence": {
+        "status": 200,
+        "length": 48
+      }
+    },
+    {
+      "id": "SEC-LEAK-09",
+      "family": "SEC-LEAK",
+      "title": "客户端响应头暴露 nginx 版本",
+      "severity": "S4",
+      "expected": "不应暴露精确版本",
+      "actual": "Server=nginx",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 2,
+      "evidence": {
+        "server": "nginx"
+      }
+    }
+  ]
+}
