@@ -1,7 +1,6 @@
 package com.atguigu.auth.controller;
 
 import com.atguigu.auth.service.SysRoleService;
-import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -53,13 +51,16 @@ class SysRoleControllerTest {
     }
 
     @Test
-    void findAllSurfacesTheConfiguredException() {
-        when(service.list()).thenReturn(List.of(new SysRole()));
+    void findAllReturnsRoles() {
+        SysRole role = new SysRole();
+        role.setId(1L);
+        role.setRoleName("配置管理员");
+        when(service.list()).thenReturn(List.of(role));
 
-        GuiguException error = assertThrows(GuiguException.class, controller::findAll);
+        Result result = controller.findAll();
 
-        assertEquals(20001, error.getCode());
-        assertEquals("执行了自定义异常处理..", error.getMessage());
+        assertEquals(200, result.getCode());
+        assertEquals(List.of(role), result.getData());
     }
 
     @Test
