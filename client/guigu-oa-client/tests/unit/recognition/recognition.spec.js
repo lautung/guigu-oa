@@ -8,6 +8,15 @@ const infoUrl = '/admin/system/index/info'
 const businessUrl = '/admin/process/findPending/1/10'
 const ok = (data) => ({ code: 200, data })
 const expired = { code: 208, message: '认证失败' }
+/** #145 修复后认证失败（401）与容器级 404/405 带真实状态码：错误体仍是业务信封。 */
+function httpError(status, data, config) {
+  return new AxiosError('http ' + status, 'ERR_BAD_REQUEST', config, null, {
+    status,
+    data,
+    headers: {},
+    config,
+  })
+}
 function deferred() {
   let resolve, reject
   const promise = new Promise((yes, no) => {
@@ -212,6 +221,42 @@ describe('recognition interface with real request transport', () => {
     expect(h.state.tokens).toEqual({ token: 'old-access', refreshToken: 'refresh' })
     expect(h.destinations).toEqual([])
     expect(h.notifications).toEqual(['timeout'])
+  })
+
+  it('runs the refresh dance for a 401 envelope response (#145)', async () => {
+    const h = harness((config) => {
+      if (config.url.endsWith('/refresh'))
+        return ok({ token: 'new-access', refreshToken: 'refresh' })
+      if (config.headers.get('token') === 'new-access') return ok('done')
+      throw httpError(401, expired, config)
+    })
+    await expect(h.request({ method: 'get', url: businessUrl })).resolves.toEqual(ok('done'))
+    expect(h.state.tokens.token).toBe('new-access')
+    expect(h.notifications).toEqual([])
+    expect(h.destinations).toEqual([])
+  })
+
+  it('maps a 404 envelope to a business failure instead of transport loss (#145)', async () => {
+    const h = harness((config) => {
+      throw httpError(404, { code: 201, message: '请求的资源不存在' }, config)
+    })
+    await expect(h.request({ method: 'get', url: businessUrl })).rejects.toMatchObject({
+      kind: 'retryable',
+      detail: { source: 'business', businessCode: 201 },
+    })
+    expect(h.notifications).toEqual(['请求的资源不存在'])
+  })
+
+  it('maps a 401 envelope with 209 to the disabled branch (#145)', async () => {
+    const h = harness((config) => {
+      throw httpError(401, { code: 209, message: '账号已停用' }, config)
+    })
+    await expect(h.request({ method: 'get', url: businessUrl })).rejects.toMatchObject({
+      kind: 'disabled',
+      detail: { source: 'business', businessCode: 209 },
+    })
+    // disabled 的既有约定：清身份并送回登录页。
+    expect(h.destinations).toHaveLength(1)
   })
 
   it.each([208, 209])('clears confirmed refresh failure %s only once', async (code) => {

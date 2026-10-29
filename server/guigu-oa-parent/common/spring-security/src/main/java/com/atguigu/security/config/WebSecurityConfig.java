@@ -2,6 +2,8 @@ package com.atguigu.security.config;
 
 import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.security.custom.BcryptPasswordEncoderWithLegacyMd5;
+import com.atguigu.security.custom.RestAccessDeniedHandler;
+import com.atguigu.security.custom.RestAuthenticationEntryPoint;
 import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
 import com.atguigu.security.filter.TokenLoginFilter;
@@ -98,6 +100,11 @@ public class WebSecurityConfig {
                         .requestMatchers(PublicApiPaths.REQUEST_MATCHERS).permitAll()
                         .anyRequest().authenticated()
                 )
+                // #145：未认证一律 401 + code 208（含匿名路径上的错误方法，不再 403 空体），
+                // 已认证但被安全层拒绝一律 403 + code 205。
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(new RestAuthenticationEntryPoint())
+                        .accessDeniedHandler(new RestAccessDeniedHandler()))
                 .addFilterBefore(
                         new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService, tokenRevocation),
                         UsernamePasswordAuthenticationFilter.class)

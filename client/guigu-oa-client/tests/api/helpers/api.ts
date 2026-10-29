@@ -7,7 +7,8 @@ import { apiBaseURL } from './env'
  * 接口套件的共享 HTTP harness（#120 §1）：登录、带 token 调用、业务码断言与造数助手。
  *
  * `body.code` 是权威契约（#120 §4）：成功 200；业务失败 201 / 205 / 208 / 209 / 403。
- * HTTP 状态码只在 f-http-semantics.spec.ts 里单独断言（已知缺陷 #145）。
+ * HTTP 状态码按 #145 修复后的约定：认证失败 401，容器级 404/405；业务失败仍是 HTTP 200，
+ * 状态码只在 f-http-semantics.spec.ts 里单独断言。
  */
 
 export const PASSWORD = '111111'

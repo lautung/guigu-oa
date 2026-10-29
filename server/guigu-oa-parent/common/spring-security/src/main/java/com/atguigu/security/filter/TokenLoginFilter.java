@@ -90,12 +90,13 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         String sourceAddress = ClientAddress.of(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // A concurrent request may have locked the account while this password was checked.
-            ResponseUtil.out(response, tooFrequent());
+            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED, tooFrequent());
             return;
         }
         CustomUser customUser = (CustomUser) auth.getPrincipal();
         if (!AccountStatus.isEnabled(customUser.getSysUser().getStatus())) {
-            ResponseUtil.out(response, Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
+            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
+                    Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
             return;
         }
         loginAttemptLimiter.recordSuccess(username, sourceAddress);
@@ -116,10 +117,11 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                               AuthenticationException failed)
             throws IOException, ServletException {
         if (failed instanceof LockedException) {
-            ResponseUtil.out(response, tooFrequent());
+            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED, tooFrequent());
             return;
         }
-        ResponseUtil.out(response, Result.build(null, ResultCodeEnum.LOGIN_ERROR));
+        ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
+                Result.build(null, ResultCodeEnum.LOGIN_ERROR));
     }
 
     private static Result<Object> tooFrequent() {

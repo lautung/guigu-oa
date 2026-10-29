@@ -109,6 +109,7 @@ public class TokenLoginFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
 
+        assertEquals(401, response.getStatus());
         JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
         assertEquals(208, body.get("code").asInt());
         assertTrue(body.get("message").asString().contains("频繁"));
@@ -125,6 +126,7 @@ public class TokenLoginFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
 
+        assertEquals(401, response.getStatus());
         JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
         assertEquals(209, body.get("code").asInt());
         assertEquals("账号已停用", body.get("message").asString());
@@ -139,6 +141,7 @@ public class TokenLoginFilterTest {
         filter.unsuccessfulAuthentication(
                 loginRequest("alice", "111111"), response, new LockedException("too many attempts"));
 
+        assertEquals(401, response.getStatus());
         JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
         assertEquals(208, body.get("code").asInt());
         assertTrue(body.get("message").asString().contains("频繁"));

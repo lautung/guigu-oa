@@ -132,7 +132,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"admin\",\"password\":\"wrong-password\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
 
         assertEquals(legacyHash, sysUserService.getById(1L).getPassword());
@@ -196,7 +196,7 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/system/index/info").header("token", oldAccessToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
         assertRefreshRejected(oldRefreshToken);
 
@@ -245,7 +245,7 @@ public class LoginAuthContractTest {
 
         mockMvc.perform(get("/admin/system/index/info")
                         .header("token", refreshToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
 
         mockMvc.perform(post("/admin/system/index/refresh")
@@ -266,7 +266,7 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/system/index/info").header("token", accessToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
 
         mockMvc.perform(post("/admin/system/index/refresh")
@@ -318,7 +318,7 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200));
 
         mockMvc.perform(get("/admin/system/index/info").header("token", refreshedAccessToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
 
         mockMvc.perform(post("/admin/system/index/refresh")
@@ -360,7 +360,7 @@ public class LoginAuthContractTest {
         assertRefreshRejected(identityInconsistent);
 
         mockMvc.perform(get("/admin/system/index/info").header("token", identityInconsistentAccess))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
     }
 
@@ -379,7 +379,7 @@ public class LoginAuthContractTest {
 
         mockMvc.perform(get("/admin/system/index/info")
                         .header("token", accessToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(209));
     }
 
@@ -408,7 +408,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"disabled_user\",\"password\":\"111111\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(209))
                 .andExpect(jsonPath("$.message").value("账号已停用"));
     }
@@ -418,7 +418,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"admin\",\"password\":\"wrong-password\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208))
                 .andExpect(jsonPath("$.message").value("认证失败"))
                 .andExpect(jsonPath("$.data.token").doesNotExist());
@@ -429,7 +429,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"no-such-user\",\"password\":\"111111\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208))
                 .andExpect(jsonPath("$.message").value("认证失败"))
                 .andExpect(jsonPath("$.data.token").doesNotExist());
@@ -440,7 +440,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"disabled_user\",\"password\":\"wrong-password\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208))
                 .andExpect(jsonPath("$.message").value("认证失败"))
                 .andExpect(jsonPath("$.data.token").doesNotExist());
@@ -514,10 +514,20 @@ public class LoginAuthContractTest {
     }
 
     @Test
-    public void protectedEndpointWithoutTokenReturns208() throws Exception {
+    public void protectedEndpointWithoutTokenReturnsUnified401() throws Exception {
         mockMvc.perform(get("/admin/system/index/info"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void anonymousWrongMethodOnTheLoginPathReturnsTheUnified401() throws Exception {
+        // GET 打到 POST-only 的登录路径：过去由 Spring Security 默认拒绝成 403 + 空体，
+        // 现在走统一入口点（#145）——与其它未认证请求同一套 401 + code 208 响应体。
+        mockMvc.perform(get("/admin/system/index/login"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
     }
 
     @Test
@@ -568,11 +578,11 @@ public class LoginAuthContractTest {
     }
 
     private String loginBody(String username, String password, String source) throws Exception {
+        // #145 后登录失败是 401、成功是 200，状态断言交给各用例，这里只取响应体。
         return mockMvc.perform(post("/admin/system/index/login")
                         .header("X-Forwarded-For", source)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"))
-                .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

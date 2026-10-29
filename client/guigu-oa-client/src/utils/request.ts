@@ -159,8 +159,20 @@ export function createRequestClient(recognition: Recognition): ApiClient {
   async function handleResponse(response: AxiosResponse<ApiResponse<unknown>>) {
     const config = response.config as RefreshableRequestConfig
     const context = config._recognition || recognition.capture(isInfo(config.url))
+    return processEnvelope(config, context, response.data)
+  }
+
+  /**
+   * 业务信封的统一处理（#145 后两个入口共用）：HTTP 200 响应体与 401/404/405 等
+   * 错误响应体都是 {code,message,data} 信封。成功 200 直通；208 触发一次刷新重试；
+   * 其余按业务码拒绝。只有没有信封体的传输错误才走 transportFailure。
+   */
+  async function processEnvelope(
+    config: RefreshableRequestConfig,
+    context: RequestContext,
+    res: ApiResponse<unknown> | undefined,
+  ) {
     recognition.assertCurrent(context)
-    const res = response.data
     if (res?.code === 200) return res
     if (
       res?.code === 208 &&
@@ -202,6 +214,26 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       const config = axios.isAxiosError(error)
         ? (error.config as RefreshableRequestConfig)
         : undefined
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined
+      const body = axios.isAxiosError(error) ? error.response?.data : undefined
+      // #145：认证失败 401 + code 208/209、容器级 404/405 + code 201 仍带业务信封，
+      // 按 body.code 走业务分支，不降级成传输错误。5xx（网关/服务器故障）即使碰巧
+      // 带了 JSON 体也保持传输失败语义，由上层保留待确认。
+      if (
+        config &&
+        status !== undefined &&
+        status >= 400 &&
+        status < 500 &&
+        body &&
+        typeof (body as ApiResponse<unknown>).code === 'number'
+      ) {
+        const context = config._recognition || recognition.capture(isInfo(config.url))
+        return processEnvelope(
+          config,
+          context,
+          body as ApiResponse<unknown>,
+        ) as unknown as AxiosResponse
+      }
       throw rejectRequest(
         config || ({} as RefreshableRequestConfig),
         config?._recognition || recognition.capture(),

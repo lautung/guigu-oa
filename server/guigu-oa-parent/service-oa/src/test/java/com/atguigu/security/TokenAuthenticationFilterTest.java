@@ -144,6 +144,7 @@ public class TokenAuthenticationFilterTest {
     }
 
     private void assertLoginError(MockHttpServletResponse response) throws Exception {
+        assertEquals(401, response.getStatus());
         JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
         assertEquals(208, body.get("code").asInt());
         assertTrue(body.get("message").asString().contains("认证失败"));
