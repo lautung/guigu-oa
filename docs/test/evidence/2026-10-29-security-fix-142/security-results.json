@@ -1,0 +1,29 @@
+{
+  "environment": {
+    "date": "2026-10-29T12:54:00.291Z",
+    "commit": "aabb4ad043a39e5d39098a3297beb02cc2287549",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvtjof6f",
+    "compose": "client Up About a minute\nminio Up 9 hours\nmysql Up 9 hours (healthy)\nredis Up 9 hours (healthy)\nservice-oa Up About a minute (healthy)",
+    "startedAt": "2026-10-29T12:53:53.751Z"
+  },
+  "results": [
+    {
+      "id": "SEC-XSS-01",
+      "family": "SEC-XSS",
+      "title": "审批表单字段存储型 XSS 不执行",
+      "severity": "S1",
+      "expected": "脚本不执行（window.__secXss 为空）",
+      "actual": "Playwright：未执行",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5117,
+      "evidence": {
+        "outputTail": "> guigu-oa-client@0.1.0 test:security\n> playwright test --config tests/security/playwright.security.config.ts --grep XSS\nRunning 1 test using 1 worker\n  ✓  1 [security-chromium] › tests/security/security-xss.spec.ts:85:1 › 审批表单字段的存储型 XSS 不执行 (4.0s)\n  1 passed (4.6s)",
+        "reportDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/test-results"
+      }
+    }
+  ]
+}
