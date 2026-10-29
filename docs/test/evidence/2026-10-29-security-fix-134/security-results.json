@@ -1,0 +1,138 @@
+{
+  "environment": {
+    "date": "2026-10-29T04:51:44.825Z",
+    "commit": "6349d8026d5f2d134ea39249e4d09e11d88d9485",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvt2gcd0",
+    "compose": "client Up 5 minutes\nminio Up 57 minutes\nmysql Up 57 minutes (healthy)\nredis Up 56 minutes (healthy)\nservice-oa Up 5 minutes (healthy)",
+    "startedAt": "2026-10-29T04:51:43.380Z"
+  },
+  "results": [
+    {
+      "id": "SEC-JWT-01",
+      "family": "SEC-JWT",
+      "title": "无 token 访问受保护接口被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 4,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-02",
+      "family": "SEC-JWT",
+      "title": "伪造 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-03",
+      "family": "SEC-JWT",
+      "title": "篡改 payload（userId→admin）但保留签名被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 2,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-04",
+      "family": "SEC-JWT",
+      "title": "alg=none 无签名令牌被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-05",
+      "family": "SEC-JWT",
+      "title": "refresh token 当作 access token 使用被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 97,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-06",
+      "family": "SEC-JWT",
+      "title": "access token 当作 refresh token 使用被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 87,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-07",
+      "family": "SEC-JWT",
+      "title": "登出后 access token 仍可访问（令牌未吊销）",
+      "severity": "S3",
+      "expected": "body.code=208（登出即失效）",
+      "actual": "code=208，登出后令牌失效",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 91,
+      "evidence": {
+        "logoutCode": 200,
+        "replayCode": 208,
+        "token": "eyJhbGci…(315)"
+      }
+    },
+    {
+      "id": "SEC-JWT-08",
+      "family": "SEC-JWT",
+      "title": "停用账号的存量 token 被拒",
+      "severity": "S2",
+      "expected": "body.code=209",
+      "actual": "code=209",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 26,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-09",
+      "family": "SEC-JWT",
+      "title": "过期 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-10",
+      "family": "SEC-JWT",
+      "title": "其他密钥签名的 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    }
+  ]
+}
