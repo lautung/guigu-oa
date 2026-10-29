@@ -31,7 +31,7 @@ test('alice 发起含附件的审批并出现在已发起', async ({ page, oracl
   })
 
   await fillDemoForm(page, { reason, days: '2' })
-  await submitStart(page, reason)
+  await submitStart(page)
 
   const record = await oracle.findMarked('alice', 'started', reason)
   expect(record, 'oracle：已发起列表应能按标记找到这条审批').toBeTruthy()

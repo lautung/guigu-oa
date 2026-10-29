@@ -28,8 +28,8 @@ Playwright 汇总：**23 通过 / 2 失败 / 1 按设计跳过**，用时 64 s�
 
 | 缺陷 | 严重级 | 说明 |
 |---|---|---|
-| [发起页读配置侧模板端点，无配置权限用户无法发起审批](https://github.com/lautung/guigu-oa/issues/131) | S1 | 办事主链路对全部非配置用户不可用；mock e2e 与 MockMvc 各自都没暴露。P0-3/P0-8/P1-5 前半段阻塞于此。 |
-| [sysRole findAll 内置演示异常，永远返回 20001](https://github.com/lautung/guigu-oa/issues/132) | S3 | 课程遗留「模拟异常效果」；客户端无调用方，接口已发布 OpenAPI。 |
+| [发起页读配置侧模板端点，无配置权限用户无法发起审批](https://github.com/lautung/guigu-oa/issues/131) | S1 | 办事主链路对全部非配置用户不可用；mock e2e 与 MockMvc 各自都没暴露。P0-3/P0-8/P1-5 前半段阻塞于此。**已修复**（`88c4e10`，closed=verified）。 |
+| [sysRole findAll 内置演示异常，永远返回 20001](https://github.com/lautung/guigu-oa/issues/132) | S3 | 课程遗留「模拟异常效果」；客户端无调用方，接口已发布 OpenAPI。**已修复**（删除演示异常，admin 200 + 角色列表，无授予用户仍被 gate 拒 205）。 |
 
 ## 套件自测期间修掉的问题（套件自身，非产品缺陷）
 

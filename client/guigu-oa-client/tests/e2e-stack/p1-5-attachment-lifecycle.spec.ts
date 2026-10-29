@@ -1,7 +1,7 @@
 import { test, expect } from './helpers/fixtures'
 import { demoTemplate } from './helpers/oracle'
 import { marker } from './helpers/stack'
-import { clickWorkItem, openWorkList, uiLoginExpectWork, uploadStartAttachment } from './helpers/ui'
+import { openWorkList, uiLoginExpectWork, uploadStartAttachment } from './helpers/ui'
 
 /**
  * P1-5（#121）：附件生命周期——发起前可删、发起后不可删、审批结束保留。
@@ -39,10 +39,9 @@ test('附件发起后不可删、审批结束保留且可下载', async ({ page,
     attachmentDraftId: uploaded.draftId,
   })
 
-  // 发起后不可删：详情页没有删除动作，API 也拒绝。
+  // 发起后不可删：详情页没有删除动作，API 也拒绝（已发起列表无排序、随轮次增长，直接按 id 打开详情）。
   await uiLoginExpectWork(page, 'alice')
-  await openWorkList(page, '已发起')
-  await clickWorkItem(page, reason)
+  await page.goto(`/work/started/${processId}`)
   await expect(page.getByRole('heading', { name: '附件' })).toBeVisible()
   await expect(page.getByText(fileName)).toBeVisible()
   await expect(

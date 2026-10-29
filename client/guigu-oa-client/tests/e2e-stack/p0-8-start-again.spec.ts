@@ -50,7 +50,7 @@ test('发起结果不明后核实并重新发起，两条审批都真实存在',
     page.locator('.el-message-box').getByRole('button', { name: '接受可能重复，继续' }),
   ).toBeVisible()
   await page.locator('.el-message-box').getByRole('button', { name: '接受可能重复，继续' }).click()
-  await submitStart(page, reason)
+  await submitStart(page)
 
   const both = await oracle.findMarkedAll('alice', 'started', reason)
   expect(both, '原提交与重新发起的审批都应真实存在').toHaveLength(2)

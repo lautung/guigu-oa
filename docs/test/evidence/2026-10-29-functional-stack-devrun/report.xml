@@ -1,80 +1,80 @@
-<testsuites id="" name="" tests="26" failures="0" skipped="0" errors="0" time="82.525943">
-<testsuite name="p0-1-auth.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="6" failures="0" skipped="0" time="3.333" errors="0">
-<testcase name="登录成功落到待处理" classname="p0-1-auth.spec.ts" time="0.517">
+<testsuites id="" name="" tests="26" failures="0" skipped="0" errors="0" time="63.832426">
+<testsuite name="p0-1-auth.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="6" failures="0" skipped="0" time="3.589" errors="0">
+<testcase name="登录成功落到待处理" classname="p0-1-auth.spec.ts" time="0.558">
 </testcase>
-<testcase name="密码错误与用户不存在都提示认证失败（不区分）" classname="p0-1-auth.spec.ts" time="0.53">
+<testcase name="密码错误与用户不存在都提示认证失败（不区分）" classname="p0-1-auth.spec.ts" time="0.572">
 </testcase>
-<testcase name="停用的用户不能登录，恢复后可以" classname="p0-1-auth.spec.ts" time="0.926">
+<testcase name="停用的用户不能登录，恢复后可以" classname="p0-1-auth.spec.ts" time="1.023">
 </testcase>
-<testcase name="退出后回到登录页" classname="p0-1-auth.spec.ts" time="0.51">
+<testcase name="退出后回到登录页" classname="p0-1-auth.spec.ts" time="0.547">
 </testcase>
-<testcase name="未登录直达办事 URL 被拦回登录页" classname="p0-1-auth.spec.ts" time="0.228">
+<testcase name="未登录直达办事 URL 被拦回登录页" classname="p0-1-auth.spec.ts" time="0.249">
 </testcase>
-<testcase name="退出后直达办事 URL 同样被拦" classname="p0-1-auth.spec.ts" time="0.622">
+<testcase name="退出后直达办事 URL 同样被拦" classname="p0-1-auth.spec.ts" time="0.64">
 </testcase>
 </testsuite>
-<testsuite name="p0-2-sidebar-occupancy.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="2.268" errors="0">
-<testcase name="admin 侧栏有办事与配置两组" classname="p0-2-sidebar-occupancy.spec.ts" time="0.488">
+<testsuite name="p0-2-sidebar-occupancy.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="2.348" errors="0">
+<testcase name="admin 侧栏有办事与配置两组" classname="p0-2-sidebar-occupancy.spec.ts" time="0.517">
 </testcase>
-<testcase name="user 侧栏只有办事组" classname="p0-2-sidebar-occupancy.spec.ts" time="0.482">
+<testcase name="user 侧栏只有办事组" classname="p0-2-sidebar-occupancy.spec.ts" time="0.509">
 </testcase>
-<testcase name="user 直达配置 URL 落到待处理" classname="p0-2-sidebar-occupancy.spec.ts" time="0.633">
+<testcase name="user 直达配置 URL 落到待处理" classname="p0-2-sidebar-occupancy.spec.ts" time="0.657">
 </testcase>
 <testcase name="admin 可以进入用户管理" classname="p0-2-sidebar-occupancy.spec.ts" time="0.665">
 </testcase>
 </testsuite>
-<testsuite name="p0-3-start-with-attachment.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="8.525" errors="0">
-<testcase name="alice 发起含附件的审批并出现在已发起" classname="p0-3-start-with-attachment.spec.ts" time="8.525">
+<testsuite name="p0-3-start-with-attachment.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.049" errors="0">
+<testcase name="alice 发起含附件的审批并出现在已发起" classname="p0-3-start-with-attachment.spec.ts" time="1.049">
 </testcase>
 </testsuite>
-<testsuite name="p0-4-approve.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="1.823" errors="0">
-<testcase name="bob 通过一条审批，双视角状态一致" classname="p0-4-approve.spec.ts" time="0.981">
+<testsuite name="p0-4-approve.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="2.057" errors="0">
+<testcase name="bob 通过一条审批，双视角状态一致" classname="p0-4-approve.spec.ts" time="1.093">
 </testcase>
-<testcase name="bob 已处理列表出现刚通过的审批" classname="p0-4-approve.spec.ts" time="0.842">
-</testcase>
-</testsuite>
-<testsuite name="p0-5-reject.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="0.965" errors="0">
-<testcase name="bob 拒绝一条审批，双视角状态一致" classname="p0-5-reject.spec.ts" time="0.965">
+<testcase name="bob 已处理列表出现刚通过的审批" classname="p0-4-approve.spec.ts" time="0.964">
 </testcase>
 </testsuite>
-<testsuite name="p0-6-carbon-copy.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.272" errors="0">
-<testcase name="carol 能看到抄送的完整内容并下载附件，但不能处理与补传" classname="p0-6-carbon-copy.spec.ts" time="1.272">
+<testsuite name="p0-5-reject.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.058" errors="0">
+<testcase name="bob 拒绝一条审批，双视角状态一致" classname="p0-5-reject.spec.ts" time="1.058">
 </testcase>
 </testsuite>
-<testsuite name="p0-7-mobile-approval.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="0.931" errors="0">
-<testcase name="手机视口完成登录到通过的全链路" classname="p0-7-mobile-approval.spec.ts" time="0.931">
+<testsuite name="p0-6-carbon-copy.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.04" errors="0">
+<testcase name="carol 能看到抄送的完整内容并下载附件，但不能处理与补传" classname="p0-6-carbon-copy.spec.ts" time="1.04">
 </testcase>
 </testsuite>
-<testsuite name="p0-8-start-again.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="24.314" errors="0">
-<testcase name="发起结果不明后核实并重新发起，两条审批都真实存在" classname="p0-8-start-again.spec.ts" time="24.314">
+<testsuite name="p0-7-mobile-approval.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.055" errors="0">
+<testcase name="手机视口完成登录到通过的全链路" classname="p0-7-mobile-approval.spec.ts" time="1.055">
 </testcase>
 </testsuite>
-<testsuite name="p1-1-template-publish.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.377" errors="0">
-<testcase name="未发布模板可改可删，发布后冻结" classname="p1-1-template-publish.spec.ts" time="3.377">
+<testsuite name="p0-8-start-again.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="17.142" errors="0">
+<testcase name="发起结果不明后核实并重新发起，两条审批都真实存在" classname="p0-8-start-again.spec.ts" time="17.142">
 </testcase>
 </testsuite>
-<testsuite name="p1-2-assign-roles.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.306" errors="0">
-<testcase name="分配配置角色后 user 的配置菜单生效，撤销后消失" classname="p1-2-assign-roles.spec.ts" time="3.306">
+<testsuite name="p1-1-template-publish.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.656" errors="0">
+<testcase name="未发布模板可改可删，发布后冻结" classname="p1-1-template-publish.spec.ts" time="3.656">
 </testcase>
 </testsuite>
-<testsuite name="p1-3-config-crud.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="11.551" errors="0">
-<testcase name="审批类型：建、改、删" classname="p1-3-config-crud.spec.ts" time="3.761">
-</testcase>
-<testcase name="角色：建、删" classname="p1-3-config-crud.spec.ts" time="2.424">
-</testcase>
-<testcase name="用户：建、删" classname="p1-3-config-crud.spec.ts" time="2.88">
-</testcase>
-<testcase name="菜单：建（停用）、删" classname="p1-3-config-crud.spec.ts" time="2.486">
+<testsuite name="p1-2-assign-roles.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.421" errors="0">
+<testcase name="分配配置角色后 user 的配置菜单生效，撤销后消失" classname="p1-2-assign-roles.spec.ts" time="3.421">
 </testcase>
 </testsuite>
-<testsuite name="p1-4-pagination.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="9.683" errors="0">
-<testcase name="25 条真实数据翻页：末页不满、下一页禁用、越界为空" classname="p1-4-pagination.spec.ts" time="9.683">
+<testsuite name="p1-3-config-crud.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="11.244" errors="0">
+<testcase name="审批类型：建、改、删" classname="p1-3-config-crud.spec.ts" time="3.705">
+</testcase>
+<testcase name="角色：建、删" classname="p1-3-config-crud.spec.ts" time="2.48">
+</testcase>
+<testcase name="用户：建、删" classname="p1-3-config-crud.spec.ts" time="2.55">
+</testcase>
+<testcase name="菜单：建（停用）、删" classname="p1-3-config-crud.spec.ts" time="2.509">
 </testcase>
 </testsuite>
-<testsuite name="p1-5-attachment-lifecycle.spec.ts" timestamp="2026-10-28T18:51:42.024Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="10.457" errors="0">
-<testcase name="附件发起前可在发起页删除" classname="p1-5-attachment-lifecycle.spec.ts" time="0.922">
+<testsuite name="p1-4-pagination.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="13.073" errors="0">
+<testcase name="25 条真实数据翻页：末页不满、下一页禁用、越界为空" classname="p1-4-pagination.spec.ts" time="13.073">
 </testcase>
-<testcase name="附件发起后不可删、审批结束保留且可下载" classname="p1-5-attachment-lifecycle.spec.ts" time="9.535">
+</testsuite>
+<testsuite name="p1-5-attachment-lifecycle.spec.ts" timestamp="2026-10-29T02:06:21.185Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="2.277" errors="0">
+<testcase name="附件发起前可在发起页删除" classname="p1-5-attachment-lifecycle.spec.ts" time="1.209">
+</testcase>
+<testcase name="附件发起后不可删、审批结束保留且可下载" classname="p1-5-attachment-lifecycle.spec.ts" time="1.068">
 </testcase>
 </testsuite>
 </testsuites>

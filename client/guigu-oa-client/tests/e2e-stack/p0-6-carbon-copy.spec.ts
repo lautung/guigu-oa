@@ -1,7 +1,7 @@
 import { test, expect } from './helpers/fixtures'
 import { demoTemplate } from './helpers/oracle'
 import { marker } from './helpers/stack'
-import { clickWorkItem, openWorkList, uiLoginExpectWork } from './helpers/ui'
+import { uiLoginExpectWork } from './helpers/ui'
 
 /**
  * P0-6（#121）：carol 抄送我的——完整表单/流转记录可见、附件可下载、只读（不能补传、不能处理）。
@@ -23,9 +23,10 @@ test('carol 能看到抄送的完整内容并下载附件，但不能处理与�
     attachmentDraftId: attachment.draftId,
   })
 
+  // 抄送列表的成员资格由 oracle 核对；抄送列表无排序且随轮次增长，详情直接按 id 打开。
+  expect(await oracle.findMarked('carol', 'copied', reason)).toBeTruthy()
   await uiLoginExpectWork(page, 'carol')
-  await openWorkList(page, '抄送我的')
-  await clickWorkItem(page, reason)
+  await page.goto(`/work/copied/${processId}`)
   await expect(page.getByRole('heading', { name: '表单信息' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '审批流转记录' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '附件' })).toBeVisible()
