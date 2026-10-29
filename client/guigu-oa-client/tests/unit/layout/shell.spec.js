@@ -95,7 +95,7 @@ describe('TopBar', () => {
     const wrapper = mount(TopBar, mountOptions(pinia, router()))
 
     expect(wrapper.find('.username').text()).toBe('Alice')
-    expect(wrapper.find('.avatar').attributes('src')).toContain('dingtalk')
+    expect(wrapper.find('.avatar').attributes('src')).toBe('/avatar.svg')
 
     await wrapper.vm.handleLogout()
     expect(recognition.exit).toHaveBeenCalledTimes(1)

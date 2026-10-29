@@ -100,6 +100,10 @@ services:
       dockerfile: Dockerfile
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-}
+    environment:
+      # 安全响应头（#139）：CSP 的 connect-src 需要放行浏览器直连的 MinIO 预签名上传源，
+      # 与 service-oa 的 S3_PUBLIC_ENDPOINT 成对配置。
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-http://localhost:9000}
     ports:
       - "9530:80"
     depends_on:

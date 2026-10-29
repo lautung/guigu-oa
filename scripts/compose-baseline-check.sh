@@ -38,6 +38,24 @@ else
   bad "客户端登录页异常（HTTP $code）"
 fi
 
+echo "== 安全响应头 =="
+headers=$(curl -sSI -m 10 "$CLIENT/login" 2>/dev/null)
+if printf '%s' "$headers" | grep -qi "^content-security-policy:.*frame-ancestors 'none'"; then
+  ok "客户端 CSP 含 frame-ancestors 'none'"
+else
+  bad "客户端缺 CSP 或 frame-ancestors"
+fi
+if printf '%s' "$headers" | grep -qi '^x-frame-options: *DENY'; then
+  ok "客户端 X-Frame-Options: DENY"
+else
+  bad "客户端缺 X-Frame-Options: DENY"
+fi
+if printf '%s' "$headers" | grep -qi '^x-content-type-options: *nosniff'; then
+  ok "客户端 X-Content-Type-Options: nosniff"
+else
+  bad "客户端缺 X-Content-Type-Options: nosniff"
+fi
+
 echo "== 种子账号 =="
 for user in admin user alice bob carol; do
   body=$(curl -sS -m 15 -X POST "$API/admin/system/index/login" \

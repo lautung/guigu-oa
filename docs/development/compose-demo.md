@@ -93,8 +93,26 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 node scripts/compose-demo-smoke.mjs     # 登录页、Bob 待处理/已处理、Carol 抄送与附件授权
 ```
 
-`compose-baseline-check.sh` 全部通过时输出 `结果：20 通过，0 失败`；冒烟脚本成功时输出
+`compose-baseline-check.sh` 全部通过时输出 `结果：23 通过，0 失败`；冒烟脚本成功时输出
 `Compose demo OK: Bob pending=1, ended=1, Carol copied=2, attachments=1`。
+
+## 安全响应头
+
+`client` 的 nginx 对每个响应加 `Content-Security-Policy`、`X-Frame-Options: DENY` 和
+`X-Content-Type-Options: nosniff`（#139）。CSP 里的 `connect-src` 除了 `'self'` 还要放行浏览器
+直连的对象存储源——附件上传是浏览器拿着预签名 URL 直接 `fetch PUT` 到 MinIO，不在同源路径下。
+这个源由 `client` 的 `CSP_CONNECT_SRC` 提供，默认 `http://localhost:9000`，必须与 `service-oa`
+的 `S3_PUBLIC_ENDPOINT` 成对配置：
+
+```bash
+export S3_PUBLIC_ENDPOINT=https://files.example.com
+export CSP_CONNECT_SRC=$S3_PUBLIC_ENDPOINT
+docker compose up -d --build client
+```
+
+配置文件本体是 `client/guigu-oa-client/nginx.conf.template`，官方 nginx 镜像启动时用 envsubst
+展开 `${CSP_CONNECT_SRC}`；nginx 自己的 `$host`、`$uri` 等变量保持不变。改了模板要重建
+`client` 镜像，容器重启不会重新生成。
 
 ## 重置
 

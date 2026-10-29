@@ -1,0 +1,33 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # 安全响应头（#139）。CSP 由容器启动时的 envsubst 展开，其他 nginx 变量原样保留。
+    # CSP_CONNECT_SRC 放行浏览器直连的对象存储源（预签名上传走 fetch PUT），
+    # 必须与 service-oa 的 S3_PUBLIC_ENDPOINT 成对配置，留空时只允许同源。
+    # style-src 允许 inline：Element Plus 的浮层与 Vue 过渡都写内联 style。
+    # img-src 的 gw.alicdn.com 是审批模板图标地址（process-template.ts TEMPLATE_ICONS）。
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://gw.alicdn.com; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_SRC}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    location = /dev-api {
+        return 301 /dev-api/;
+    }
+
+    location /dev-api/ {
+        proxy_pass http://service-oa:8800/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

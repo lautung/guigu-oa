@@ -77,7 +77,8 @@ public class IndexController {
         Map<String, Object> map = new HashMap<>();
         map.put("roles", "[admin]");
         map.put("name", sysUser.getName());
-        map.put("avatar", "https://oss.aliyuncs.com/aliyun_id_photo_bucket/default_handsome.jpg");
+        // 字段保留，空串由客户端同源默认图兜底：不再下发第三方占位图（#139 CSP）。
+        map.put("avatar", "");
         map.put("configMenus", configMenus);
         map.put("buttons", permsList);
         return Result.ok(map);

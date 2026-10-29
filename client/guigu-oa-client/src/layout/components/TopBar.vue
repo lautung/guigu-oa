@@ -15,8 +15,7 @@ import { useUserStore } from '@/store/modules/user'
 
 const userStore = useUserStore()
 
-const DEFAULT_AVATAR =
-  'https://static.dingtalk.com/media/lALOnahFD80CgM0CgA_640_640.png_450x10000q90.jpg'
+const DEFAULT_AVATAR = '/avatar.svg'
 
 const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
 
