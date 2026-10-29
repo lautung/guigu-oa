@@ -216,7 +216,7 @@ function isInfo(url = ''): boolean {
   return /\/admin\/system\/index\/info(?:[/?]|$)/.test(url)
 }
 function isAuthentication(url = ''): boolean {
-  return /\/admin\/system\/index\/(login|refresh)(?:[/?]|$)/.test(url)
+  return /\/admin\/system\/index\/(login|refresh|logout)(?:[/?]|$)/.test(url)
 }
 function setRequestToken(config: InternalAxiosRequestConfig, token: string): void {
   if (typeof config.headers.set === 'function') config.headers.set('token', token)

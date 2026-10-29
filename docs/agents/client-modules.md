@@ -22,6 +22,13 @@
 | `src/submission-outcome.ts` | `classifySubmissionFailure(error, action)` | 明确拒绝 vs 待确认的分类 |
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
 
+## 服务端鉴权
+
+| module | interface | 职责 |
+|---|---|---|
+| `common.jwt.JwtHelper` | `createTokenPair` / `createAccessToken` / `readAccessToken` / `readRefreshToken` → `TokenClaims(userId, username, sessionId, expiresAt)` | 一次登录的一对 access/refresh 共享 sessionId；无 sessionId 的令牌不可鉴权 |
+| `security.revocation.TokenRevocation` | `isRevoked(sessionId)` / `revoke(sessionId)` | 退出的吊销表；`RedisTokenRevocation` 是唯一实现，标记 TTL 与 refresh 同寿，过滤器与 refresh 共用 |
+
 ## 服务端审批
 
 | module | interface | 职责 |
@@ -37,4 +44,4 @@
 - 页面只做绑定与文案；迟到归属、phase、强制离开、写后刷新都在 module 里。
 - 测试分两层：module 测试是主，规则打在 interface 上；view 挂载测试只覆盖模板状态分支与命令式接线，状态由 seam mock 驱动，不靠 view 测试重新断言 module 内部规则。
 - 共享挂载工具在 `tests/unit/support/harness.js`（假 recognition、pinia 会话、axios adapter、Element Plus stub）；全局 setup 在 `tests/unit/setup.js`（auto-unmount、nprogress stub）。新测试直接复用，不要各写一份。
-- 每个模块的决策理由看对应 ADR（0011–0021），不要从页面反推 interface。
+- 每个模块的决策理由看对应 ADR（0011–0022），不要从页面反推 interface。

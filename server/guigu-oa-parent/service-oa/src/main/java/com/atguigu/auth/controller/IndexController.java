@@ -8,6 +8,7 @@ import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.security.custom.AccountStatus;
+import com.atguigu.security.revocation.TokenRevocation;
 import com.atguigu.vo.system.ConfigMenuVo;
 import com.atguigu.vo.system.RefreshTokenVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,12 +44,18 @@ public class IndexController {
     @Autowired
     private JwtHelper jwtHelper;
 
+    @Autowired
+    private TokenRevocation tokenRevocation;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping("info")
     public Result info(HttpServletRequest request) {
-        String token = request.getHeader("token");
-        Long userId = jwtHelper.getUserId(token);
+        JwtHelper.TokenClaims claims = jwtHelper.readAccessToken(request.getHeader("token"));
+        if (claims == null) {
+            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
+        }
+        Long userId = claims.userId();
 
         SysUser sysUser = sysUserService.getById(userId);
         ConfigurationGrant.GrantedConfiguration grant = configurationGrant.snapshot(userId);
@@ -76,19 +83,36 @@ public class IndexController {
         return Result.ok(map);
     }
 
+    /**
+     * Anonymous on purpose: an idle client's access token may already be expired, and refusing
+     * that request would leave its still-valid refresh token usable. The client turns in both,
+     * and any token that parses revokes the session it belongs to.
+     */
     @PostMapping("logout")
-    public Result logout() {
+    public Result logout(
+            HttpServletRequest request,
+            @RequestBody(required = false) RefreshTokenVo refreshTokenVo) {
+        revoke(jwtHelper.readAccessToken(request.getHeader("token")));
+        revoke(jwtHelper.readRefreshToken(
+                refreshTokenVo == null ? null : refreshTokenVo.getRefreshToken()));
         return Result.ok();
+    }
+
+    private void revoke(JwtHelper.TokenClaims claims) {
+        if (claims != null) {
+            tokenRevocation.revoke(claims.sessionId());
+        }
     }
 
     @PostMapping("refresh")
     public Result refresh(@RequestBody RefreshTokenVo refreshTokenVo) {
         String refreshToken = refreshTokenVo == null ? null : refreshTokenVo.getRefreshToken();
-        Long userId = jwtHelper.getRefreshUserId(refreshToken);
-        String username = jwtHelper.getRefreshUsername(refreshToken);
-        if (userId == null || !StringUtils.hasText(username)) {
+        JwtHelper.TokenClaims claims = jwtHelper.readRefreshToken(refreshToken);
+        if (claims == null || tokenRevocation.isRevoked(claims.sessionId())) {
             return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
         }
+        Long userId = claims.userId();
+        String username = claims.username();
 
         SysUser user = sysUserService.getById(userId);
         if (user == null || !username.equals(user.getUsername())) {
@@ -98,7 +122,7 @@ public class IndexController {
             return Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED);
         }
 
-        String accessToken = jwtHelper.createAccessToken(userId, username);
+        String accessToken = jwtHelper.createAccessToken(userId, username, claims.sessionId());
         Map<String, Object> tokenMap = new HashMap<>();
         tokenMap.put("token", accessToken);
         // Keep the refresh token's original 7-day expiry instead of extending it on each refresh.

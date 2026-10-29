@@ -6,6 +6,7 @@ public final class PublicApiPaths {
     private static final String ACTUATOR_HEALTH_PREFIX = ACTUATOR_HEALTH_PATH + "/";
 
     public static final String[] REQUEST_MATCHERS = {
+            "/admin/system/index/logout",
             "/admin/system/index/refresh",
             "/v3/api-docs",
             "/v3/api-docs/**",
@@ -29,6 +30,7 @@ public final class PublicApiPaths {
             return true;
         }
         return "/admin/system/index/refresh".equals(uri)
+                || "/admin/system/index/logout".equals(uri)
                 || "/v3/api-docs".equals(uri)
                 || uri.startsWith("/v3/api-docs/")
                 || ACTUATOR_HEALTH_PATH.equals(uri)

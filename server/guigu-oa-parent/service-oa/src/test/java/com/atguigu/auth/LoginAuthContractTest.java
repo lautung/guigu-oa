@@ -190,6 +190,99 @@ public class LoginAuthContractTest {
     }
 
     @Test
+    public void logoutRevokesTheAccessAndRefreshTokensIssuedByThatLogin() throws Exception {
+        String loginBody = loginAndReturnBody();
+        String accessToken = JsonPath.read(loginBody, "$.data.token");
+        String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+
+        mockMvc.perform(post("/admin/system/index/logout").header("token", accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void logoutOnlyRevokesTheLoginThatTurnedItsCredentialsIn() throws Exception {
+        String firstLogin = loginAndReturnBody();
+        String secondLogin = loginAndReturnBody();
+        String firstAccessToken = JsonPath.read(firstLogin, "$.data.token");
+        String secondAccessToken = JsonPath.read(secondLogin, "$.data.token");
+        String secondRefreshToken = JsonPath.read(secondLogin, "$.data.refreshToken");
+
+        mockMvc.perform(post("/admin/system/index/logout").header("token", firstAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", secondAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + secondRefreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test
+    public void refreshedAccessTokenStillBelongsToTheLogoutSession() throws Exception {
+        String loginBody = loginAndReturnBody();
+        String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+        String refreshedBody = mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String refreshedAccessToken = JsonPath.read(refreshedBody, "$.data.token");
+
+        mockMvc.perform(post("/admin/system/index/logout").header("token", refreshedAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", refreshedAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void logoutStillRevokesTheSessionWhenTheAccessTokenHasExpired() throws Exception {
+        String loginBody = loginAndReturnBody();
+        String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+        String sessionId = jwtHelper.readRefreshToken(refreshToken).sessionId();
+
+        mockMvc.perform(post("/admin/system/index/logout")
+                        .header("token", expiredToken("access", sessionId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
     public void malformedExpiredWrongTypeAndIdentityInconsistentRefreshTokensAreRejected() throws Exception {
         String accessToken = jwtHelper.createTokenPair(1L, "admin").token();
         String identityInconsistent = jwtHelper.createTokenPair(1L, "disabled_user").refreshToken();
@@ -325,6 +418,17 @@ public class LoginAuthContractTest {
         return JsonPath.read(response, "$.data.token");
     }
 
+    private String loginAndReturnBody() throws Exception {
+        return mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"111111\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+    }
+
     private void assertRefreshRejected(String token) throws Exception {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -334,6 +438,10 @@ public class LoginAuthContractTest {
     }
 
     private String expiredRefreshToken() {
+        return expiredToken("refresh", "expired-session");
+    }
+
+    private String expiredToken(String tokenType, String sessionId) {
         byte[] secret = "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000"
                 .getBytes(StandardCharsets.UTF_8);
         SecretKey key = Keys.hmacShaKeyFor(secret);
@@ -344,7 +452,8 @@ public class LoginAuthContractTest {
                 .expiration(new Date(now - 60_000))
                 .claim("userId", 1L)
                 .claim("username", "admin")
-                .claim("tokenType", "refresh")
+                .claim("tokenType", tokenType)
+                .claim("sessionId", sessionId)
                 .signWith(key)
                 .compact();
     }

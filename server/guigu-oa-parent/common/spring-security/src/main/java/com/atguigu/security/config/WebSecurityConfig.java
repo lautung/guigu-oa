@@ -5,6 +5,8 @@ import com.atguigu.security.custom.BcryptPasswordEncoderWithLegacyMd5;
 import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
 import com.atguigu.security.filter.TokenLoginFilter;
+import com.atguigu.security.revocation.RedisTokenRevocation;
+import com.atguigu.security.revocation.TokenRevocation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +40,11 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public TokenRevocation tokenRevocation(RedisTemplate<String, String> redisTemplate) {
+        return new RedisTokenRevocation(redisTemplate);
+    }
+
+    @Bean
     public AuthenticationManager authenticationManager(
             UserDetailsService userDetailsService,
             UserDetailsPasswordService userDetailsPasswordService,
@@ -55,7 +62,8 @@ public class WebSecurityConfig {
             RedisTemplate<String, String> redisTemplate,
             JwtHelper jwtHelper,
             UserDetailsService userDetailsService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            TokenRevocation tokenRevocation
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -64,7 +72,8 @@ public class WebSecurityConfig {
                         .requestMatchers(PublicApiPaths.REQUEST_MATCHERS).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService),
+                .addFilterBefore(
+                        new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService, tokenRevocation),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper))
                 .sessionManagement(session ->

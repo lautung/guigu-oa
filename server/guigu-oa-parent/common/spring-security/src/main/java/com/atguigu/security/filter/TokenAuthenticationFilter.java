@@ -9,6 +9,7 @@ import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.atguigu.security.custom.UserDetailsService;
+import com.atguigu.security.revocation.TokenRevocation;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -34,16 +35,19 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtHelper jwtHelper;
     private final UserDetailsService userDetailsService;
+    private final TokenRevocation tokenRevocation;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TokenAuthenticationFilter(
             RedisTemplate<String, String> redisTemplate,
             JwtHelper jwtHelper,
-            UserDetailsService userDetailsService
+            UserDetailsService userDetailsService,
+            TokenRevocation tokenRevocation
     ) {
         this.redisTemplate = redisTemplate;
         this.jwtHelper = jwtHelper;
         this.userDetailsService = userDetailsService;
+        this.tokenRevocation = tokenRevocation;
     }
 
     @Override
@@ -78,8 +82,10 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         String token = request.getHeader("token");
         if (!StringUtils.hasText(token)) return null;
 
-        String username = jwtHelper.getUsername(token);
-        Long userId = jwtHelper.getUserId(token);
+        JwtHelper.TokenClaims claims = jwtHelper.readAccessToken(token);
+        if (claims == null || tokenRevocation.isRevoked(claims.sessionId())) return null;
+        String username = claims.username();
+        Long userId = claims.userId();
         if (!StringUtils.hasText(username) || userId == null) return null;
 
         CustomUser currentUser;

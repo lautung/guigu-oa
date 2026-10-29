@@ -153,17 +153,17 @@ class FlywayMigrationContractTest {
                 "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (104, 101, 1000, 0)");
 
         mockMvc.perform(get("/admin/system/sysRole/1/10")
-                        .header("token", jwtHelper.createAccessToken(1L, "admin")))
+                        .header("token", jwtHelper.createTokenPair(1L, "admin").token()))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/admin/system/sysRole/1/10")
-                        .header("token", jwtHelper.createAccessToken(2L, "user")))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token()))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/admin/system/sysMenu/toAssign/1")
-                        .header("token", jwtHelper.createAccessToken(2L, "user")))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
-                        .header("token", jwtHelper.createAccessToken(2L, "user"))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
                 .andExpect(status().isOk())
@@ -172,7 +172,7 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 1000 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
-                        .header("token", jwtHelper.createAccessToken(2L, "user"))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
                 .andExpect(status().isOk())
@@ -180,7 +180,7 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
-                        .header("token", jwtHelper.createAccessToken(2L, "user"))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",901]}"))
                 .andExpect(status().isOk())
@@ -188,50 +188,50 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         mockMvc.perform(get("/admin/system/sysMenu/toAssign/1")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager")))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager"))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysMenu/toAssign/1")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config")))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config"))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         mockMvc.perform(get("/admin/system/sysMenu/findNodes")
-                        .header("token", jwtHelper.createAccessToken(2L, "user")))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysMenu/findNodes")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager")))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(put("/admin/system/sysMenu/update")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager"))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
                                 + ",\"type\":1,\"path\":\"sysRole\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201));
         mockMvc.perform(put("/admin/system/sysMenu/update")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager"))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + systemRootId + ",\"parentId\":0,\"type\":0,\"path\":\"/work\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
         mockMvc.perform(put("/admin/system/sysMenu/update")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager"))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + systemRootId
                                 + ",\"parentId\":0,\"type\":0,\"path\":\"/system\",\"status\":0}"))
@@ -239,7 +239,7 @@ class FlywayMigrationContractTest {
                 .andExpect(jsonPath("$.code").value(201));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND status = 1 AND is_deleted = 0"));
         mockMvc.perform(put("/admin/system/sysMenu/update")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager"))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
                                 + ",\"type\":1,\"path\":\"sysMenu\",\"status\":0}"))
@@ -247,71 +247,71 @@ class FlywayMigrationContractTest {
                 .andExpect(jsonPath("$.code").value(201));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND status = 1 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/save")
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager"))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"sysRole\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201));
         mockMvc.perform(delete("/admin/system/sysMenu/remove/" + menuAdminMenuId)
-                        .header("token", jwtHelper.createAccessToken(6L, "menu-manager")))
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/save")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config"))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(put("/admin/system/sysMenu/update")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config"))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(delete("/admin/system/sysMenu/remove/999")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config")))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysRole/toAssign/4")
-                        .header("token", jwtHelper.createAccessToken(2L, "user")))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(post("/admin/system/sysRole/doAssign")
-                        .header("token", jwtHelper.createAccessToken(2L, "user"))
+                        .header("token", jwtHelper.createTokenPair(2L, "user").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":4,\"roleIdList\":[101]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
 
         mockMvc.perform(get("/admin/system/sysRole/1/10")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager")))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysRole/toAssign/4")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager")))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(post("/admin/system/sysRole/doAssign")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager"))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":4,\"roleIdList\":[101]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(get("/admin/system/sysRole/findAll")
-                        .header("token", jwtHelper.createAccessToken(3L, "user-manager")))
+                        .header("token", jwtHelper.createTokenPair(3L, "user-manager").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysRole/1/10")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config")))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(get("/admin/system/sysRole/toAssign/4")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config")))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(post("/admin/system/sysRole/doAssign")
-                        .header("token", jwtHelper.createAccessToken(5L, "no-config"))
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config").token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":4,\"roleIdList\":[101]}"))
                 .andExpect(status().isOk())
@@ -319,7 +319,7 @@ class FlywayMigrationContractTest {
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user_role WHERE user_id = 5"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user_role WHERE user_id = 4 AND role_id = 101"));
         mockMvc.perform(get("/admin/system/sysRole/1/10")
-                        .header("token", jwtHelper.createAccessToken(4L, "ordinary")))
+                        .header("token", jwtHelper.createTokenPair(4L, "ordinary").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901)");

@@ -55,7 +55,11 @@ describe('browser adapter with real Pinia and navigation', () => {
   it('keeps login, recognition and local exit distinct', async () => {
     const calls = []
     const h = setup((config) => {
-      calls.push(config.url)
+      calls.push({
+        url: config.url,
+        token: config.headers.get('token'),
+        body: config.data ? JSON.parse(config.data) : null,
+      })
       return config.url.endsWith('/login')
         ? ok({ token: 'jwt-alice', refreshToken: 'refresh-alice' })
         : ok({
@@ -79,7 +83,33 @@ describe('browser adapter with real Pinia and navigation', () => {
     expect(getToken()).toBeUndefined()
     expect(getRefreshToken()).toBeUndefined()
     expect(h.router.currentRoute.value.path).toBe('/login')
-    expect(calls).toEqual(['/admin/system/index/login', '/admin/system/index/info'])
+    expect(calls.map((call) => call.url)).toEqual([
+      '/admin/system/index/login',
+      '/admin/system/index/info',
+      '/admin/system/index/logout',
+    ])
+    expect(calls[2].token).toBe('jwt-alice')
+    expect(calls[2].body).toEqual({ refreshToken: 'refresh-alice' })
+  })
+
+  it('clears the local entry even when the server cannot revoke the tokens', async () => {
+    const h = setup((config) => {
+      if (config.url.endsWith('/logout')) throw new AxiosError('offline', 'ERR_NETWORK', config)
+      if (config.url.endsWith('/login'))
+        return ok({ token: 'jwt-alice', refreshToken: 'refresh-alice' })
+      return ok({ name: 'Alice' })
+    })
+    await h.router.push('/login')
+    await h.store.login({ username: 'alice', password: '111111' })
+    await h.router.push('/work/pending')
+
+    await h.store.logout()
+    await flushPromises()
+
+    expect(getToken()).toBeUndefined()
+    expect(getRefreshToken()).toBeUndefined()
+    expect(h.store.recognized).toBe(false)
+    expect(h.router.currentRoute.value.path).toBe('/login')
   })
 
   it('renders first-failure recovery and resumes the bookmarked target', async () => {
@@ -107,6 +137,7 @@ describe('browser adapter with real Pinia and navigation', () => {
     })
     let infoCount = 0
     const h = setup((config) => {
+      if (config.url.endsWith('/logout')) return ok(null)
       if (config.url.endsWith('/login')) return ok({ token: 'bob-only' })
       if (++infoCount === 1) {
         oldConfig = config

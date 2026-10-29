@@ -15,3 +15,11 @@ export function getInfo(): Promise<ApiResponse<UserInfo>> {
     method: 'get',
   })
 }
+
+export function logout(refreshToken: string): Promise<ApiResponse<void>> {
+  return request({
+    url: '/admin/system/index/logout',
+    method: 'post',
+    data: { refreshToken },
+  })
+}

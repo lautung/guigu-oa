@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getToken, getRefreshToken } from '@/utils/auth'
-import { login } from '@/api/user'
+import { login, logout as logoutRequest } from '@/api/user'
 import type { Recognition, RecoveryState } from '@/recognition'
 import type { ConfigMenuEntry, LoginCredentials, UserInfo } from '@/types/domain'
 
@@ -40,7 +40,16 @@ export const useUserStore = defineStore('user', {
       return this.recognition.recognize()
     },
     async logout() {
-      this.recognition?.exit()
+      const recognition = this.recognition
+      if (recognition) {
+        try {
+          // 让服务端作废这台客户端手里的凭证；失败也要离开。
+          await logoutRequest(recognition.credentials().refreshToken || '')
+        } catch {
+          // 本地退出优先：网络或服务端拒绝都不留在已进入状态。
+        }
+      }
+      recognition?.exit()
     },
     resetToken() {
       this.recognition?.forget()

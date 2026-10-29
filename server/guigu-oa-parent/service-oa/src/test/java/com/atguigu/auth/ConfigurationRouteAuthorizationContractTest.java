@@ -161,7 +161,7 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/process/1/10", 101L, "route-user", 205);
 
         mockMvc.perform(get("/admin/system/index/info")
-                        .header("token", jwtHelper.createAccessToken(101L, "route-user")))
+                        .header("token", jwtHelper.createTokenPair(101L, "route-user").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configMenus[*].path", hasItems("/system", "/system/sysUser")))
                 .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/system/sysRole"))));
@@ -176,7 +176,7 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/process/processType/1/10", 102L, "route-template", 205);
 
         mockMvc.perform(get("/admin/system/index/info")
-                        .header("token", jwtHelper.createAccessToken(102L, "route-template")))
+                        .header("token", jwtHelper.createTokenPair(102L, "route-template").token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
                         "/processSet", "/processSet/processTemplate", "/processSet/templateSet")))
@@ -193,7 +193,7 @@ class ConfigurationRouteAuthorizationContractTest {
     }
 
     private void assertCode(String path, long userId, String username, int code) throws Exception {
-        mockMvc.perform(get(path).header("token", jwtHelper.createAccessToken(userId, username)))
+        mockMvc.perform(get(path).header("token", jwtHelper.createTokenPair(userId, username).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(code));
     }

@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 public class JwtHelper {
 
@@ -31,79 +32,71 @@ public class JwtHelper {
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
+    /** Both tokens of one login share a session id so 退出 can revoke exactly that login. */
     public TokenPair createTokenPair(Long userId, String username) {
+        String sessionId = newSessionId();
         return new TokenPair(
-                createAccessToken(userId, username),
-                createToken(userId, username, REFRESH_TOKEN_TYPE, REFRESH_TOKEN_LIFETIME_MILLIS));
+                createAccessToken(userId, username, sessionId),
+                createToken(userId, username, REFRESH_TOKEN_TYPE, REFRESH_TOKEN_LIFETIME_MILLIS, sessionId));
     }
 
-    public String createAccessToken(Long userId, String username) {
-        return createToken(userId, username, ACCESS_TOKEN_TYPE, ACCESS_TOKEN_LIFETIME_MILLIS);
+    public String createAccessToken(Long userId, String username, String sessionId) {
+        return createToken(userId, username, ACCESS_TOKEN_TYPE, ACCESS_TOKEN_LIFETIME_MILLIS, sessionId);
     }
 
-    public Long getUserId(String token) {
-        return getLongClaim(token, ACCESS_TOKEN_TYPE, "userId");
+    public TokenClaims readAccessToken(String token) {
+        return readClaims(token, ACCESS_TOKEN_TYPE);
     }
 
-    public String getUsername(String token) {
-        if (!StringUtils.hasText(token)) {
-            return "";
-        }
-        return getStringClaim(token, ACCESS_TOKEN_TYPE, "username");
+    public TokenClaims readRefreshToken(String token) {
+        return readClaims(token, REFRESH_TOKEN_TYPE);
     }
 
-    public Long getRefreshUserId(String token) {
-        return getLongClaim(token, REFRESH_TOKEN_TYPE, "userId");
+    private String newSessionId() {
+        return UUID.randomUUID().toString();
     }
 
-    public String getRefreshUsername(String token) {
-        return getStringClaim(token, REFRESH_TOKEN_TYPE, "username");
-    }
-
-    public Date getExpiration(String token) {
-        Claims claims = readClaims(token);
-        return claims == null ? null : claims.getExpiration();
-    }
-
-    private String createToken(Long userId, String username, String type, long lifetimeMillis) {
+    private String createToken(Long userId, String username, String type, long lifetimeMillis, String sessionId) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(SUBJECT)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + lifetimeMillis))
-                .claims(Map.of("userId", userId, "username", username, "tokenType", type))
+                .claims(Map.of(
+                        "userId", userId,
+                        "username", username,
+                        "tokenType", type,
+                        "sessionId", sessionId))
                 .signWith(secretKey)
                 .compact();
     }
 
-    private Long getLongClaim(String token, String expectedType, String name) {
+    private TokenClaims readClaims(String token, String expectedType) {
         Claims claims = readTypedClaims(token, expectedType);
         if (claims == null) {
             return null;
         }
-        Object value = claims.get(name);
-        return value instanceof Number number ? number.longValue() : null;
-    }
-
-    private String getStringClaim(String token, String expectedType, String name) {
-        Claims claims = readTypedClaims(token, expectedType);
-        if (claims == null) {
+        Object userId = claims.get("userId");
+        Object username = claims.get("username");
+        String sessionId = claims.get("sessionId", String.class);
+        if (!(userId instanceof Number number) || !(username instanceof String name)) {
             return null;
         }
-        Object value = claims.get(name);
-        return value instanceof String string ? string : null;
+        return new TokenClaims(number.longValue(), name, sessionId, claims.getExpiration());
     }
 
     private Claims readTypedClaims(String token, String expectedType) {
-        Claims claims = readClaims(token);
+        Claims claims = readSignedClaims(token);
         if (claims == null || !SUBJECT.equals(claims.getSubject())
-                || !expectedType.equals(claims.get("tokenType", String.class))) {
+                || !expectedType.equals(claims.get("tokenType", String.class))
+                // Tokens without a session id predate revocation and must not authenticate.
+                || !StringUtils.hasText(claims.get("sessionId", String.class))) {
             return null;
         }
         return claims;
     }
 
-    private Claims readClaims(String token) {
+    private Claims readSignedClaims(String token) {
         if (!StringUtils.hasText(token)) {
             return null;
         }
@@ -116,6 +109,9 @@ public class JwtHelper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public record TokenClaims(Long userId, String username, String sessionId, Date expiresAt) {
     }
 
     public record TokenPair(String token, String refreshToken) {

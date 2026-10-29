@@ -1,28 +1,41 @@
 package com.atguigu.auth;
 
 import com.atguigu.common.jwt.JwtHelper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JwtHelperTest {
 
-    private static final JwtHelper jwtHelper = new JwtHelper(
-            "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000");
+    private static final String SECRET =
+            "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000";
+    private static final JwtHelper jwtHelper = new JwtHelper(SECRET);
 
     @Test
-    public void createAccessAndRefreshTokensRoundTripOnlyForTheirOwnPurpose() {
+    public void bothTokensOfOneLoginShareTheSessionIdAndOnlyReadForTheirOwnPurpose() {
         JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin");
 
-        assertEquals(1L, jwtHelper.getUserId(pair.token()));
-        assertEquals("admin", jwtHelper.getUsername(pair.token()));
-        assertNull(jwtHelper.getRefreshUserId(pair.token()));
-        assertEquals(1L, jwtHelper.getRefreshUserId(pair.refreshToken()));
-        assertEquals("admin", jwtHelper.getRefreshUsername(pair.refreshToken()));
-        assertNull(jwtHelper.getUserId(pair.refreshToken()));
+        JwtHelper.TokenClaims access = jwtHelper.readAccessToken(pair.token());
+        JwtHelper.TokenClaims refresh = jwtHelper.readRefreshToken(pair.refreshToken());
+
+        assertEquals(1L, access.userId());
+        assertEquals("admin", access.username());
+        assertNotNull(access.sessionId());
+        assertEquals(access.sessionId(), refresh.sessionId());
+        assertEquals(1L, refresh.userId());
+        assertEquals("admin", refresh.username());
+        assertNull(jwtHelper.readRefreshToken(pair.token()));
+        assertNull(jwtHelper.readAccessToken(pair.refreshToken()));
     }
 
     @Test
@@ -31,8 +44,8 @@ public class JwtHelperTest {
         JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin");
         long afterCreation = System.currentTimeMillis();
 
-        long accessExpiration = jwtHelper.getExpiration(pair.token()).getTime();
-        long refreshExpiration = jwtHelper.getExpiration(pair.refreshToken()).getTime();
+        long accessExpiration = jwtHelper.readAccessToken(pair.token()).expiresAt().getTime();
+        long refreshExpiration = jwtHelper.readRefreshToken(pair.refreshToken()).expiresAt().getTime();
         assertTrue(accessExpiration >= beforeCreation + JwtHelper.ACCESS_TOKEN_LIFETIME_MILLIS - 1000);
         assertTrue(accessExpiration <= afterCreation + JwtHelper.ACCESS_TOKEN_LIFETIME_MILLIS);
         assertTrue(refreshExpiration >= beforeCreation + JwtHelper.REFRESH_TOKEN_LIFETIME_MILLIS - 1000);
@@ -41,10 +54,10 @@ public class JwtHelperTest {
 
     @Test
     public void missingOrBlankTokenDoesNotAuthenticate() {
-        assertNull(jwtHelper.getUserId(null));
-        assertNull(jwtHelper.getUserId(""));
-        assertEquals("", jwtHelper.getUsername(null));
-        assertEquals("", jwtHelper.getUsername(""));
+        assertNull(jwtHelper.readAccessToken(null));
+        assertNull(jwtHelper.readAccessToken(""));
+        assertNull(jwtHelper.readRefreshToken(null));
+        assertNull(jwtHelper.readRefreshToken(""));
     }
 
     @Test
@@ -52,8 +65,8 @@ public class JwtHelperTest {
         String token = jwtHelper.createTokenPair(1L, "admin").token();
         String tampered = token.substring(0, token.length() - 4) + "xxxx";
 
-        assertNull(jwtHelper.getUserId(tampered));
-        assertNull(jwtHelper.getUsername(tampered));
+        assertNull(jwtHelper.readAccessToken(tampered));
+        assertNull(jwtHelper.readRefreshToken(tampered));
     }
 
     @Test
@@ -62,15 +75,29 @@ public class JwtHelperTest {
     }
 
     @Test
-    public void refreshLookupRejectsMissingBlankAndTamperedTokens() {
-        assertNull(jwtHelper.getRefreshUserId(null));
-        assertNull(jwtHelper.getRefreshUserId(""));
-        assertNull(jwtHelper.getRefreshUsername(null));
-        assertNull(jwtHelper.getRefreshUsername(""));
+    public void accessTokenMintedForARefreshKeepsThatSessionsIdentity() {
+        JwtHelper.TokenClaims refresh = jwtHelper.readRefreshToken(jwtHelper.createTokenPair(1L, "admin").refreshToken());
 
-        String refreshToken = jwtHelper.createTokenPair(1L, "admin").refreshToken();
-        String tampered = refreshToken.substring(0, refreshToken.length() - 4) + "xxxx";
-        assertNull(jwtHelper.getRefreshUserId(tampered));
-        assertNull(jwtHelper.getRefreshUsername(tampered));
+        String refreshed = jwtHelper.createAccessToken(refresh.userId(), refresh.username(), refresh.sessionId());
+
+        assertEquals(refresh.sessionId(), jwtHelper.readAccessToken(refreshed).sessionId());
+    }
+
+    @Test
+    public void tokenWithoutASessionIdIsRejectedBecauseItCannotBeRevoked() {
+        byte[] secret = SECRET.getBytes(StandardCharsets.UTF_8);
+        SecretKey key = Keys.hmacShaKeyFor(secret);
+        long now = System.currentTimeMillis();
+        String token = Jwts.builder()
+                .subject("AUTH-USER")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + 60_000))
+                .claim("userId", 1L)
+                .claim("username", "admin")
+                .claim("tokenType", "access")
+                .signWith(key)
+                .compact();
+
+        assertNull(jwtHelper.readAccessToken(token));
     }
 }
