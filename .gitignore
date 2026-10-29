@@ -46,3 +46,8 @@ coverage/
 # Maven
 .mvn/wrapper/maven-wrapper.jar
 hs_err_pid*
+
+# Performance harness artifacts (perf #124): run outputs and the snapshot are not committed
+perf/results/
+perf/snapshot/
+compose.override.yaml

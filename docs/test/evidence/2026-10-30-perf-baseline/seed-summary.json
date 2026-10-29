@@ -1,0 +1,27 @@
+{
+  "base": "http://host.docker.internal:8800",
+  "target": 10000,
+  "finished": 4000,
+  "concurrency": 20,
+  "phases": {
+    "startUp": {
+      "created": 9999,
+      "totalNow": 10001,
+      "seconds": 27.122
+    },
+    "approve": {
+      "approved": 4000,
+      "processedNow": 4001,
+      "seconds": 10.674
+    },
+    "attachments": {
+      "count": 110,
+      "seconds": 3.268
+    }
+  },
+  "template": {
+    "id": 3,
+    "name": "演示请假申请"
+  },
+  "totalSeconds": 41.362
+}

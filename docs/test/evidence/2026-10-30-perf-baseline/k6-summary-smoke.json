@@ -1,0 +1,161 @@
+{
+ "name": "smoke.json",
+ "scenarios": {},
+ "metrics": {
+  "http_reqs": {
+   "values": {
+    "count": 73,
+    "rate": 9.65
+   }
+  },
+  "http_req_failed": {
+   "values": {
+    "rate": 0,
+    "passes": 0,
+    "fails": 73
+   },
+   "thresholds": {
+    "rate<0.01": true
+   }
+  },
+  "http_req_blocked": {
+   "values": {
+    "med": 0.0,
+    "max": 4.29,
+    "p(90)": 0.83,
+    "p(95)": 1.16,
+    "avg": 0.19,
+    "min": 0.0
+   }
+  },
+  "http_req_connecting": {
+   "values": {
+    "avg": 0.13,
+    "min": 0,
+    "med": 0,
+    "max": 1.6,
+    "p(90)": 0.77,
+    "p(95)": 1.03
+   }
+  },
+  "http_req_duration": {
+   "values": {
+    "med": 93.29,
+    "max": 333.78,
+    "p(90)": 175.67,
+    "p(95)": 204.05,
+    "avg": 110.52,
+    "min": 19.83
+   }
+  },
+  "http_req_tls_handshaking": {
+   "values": {
+    "avg": 0,
+    "min": 0,
+    "med": 0,
+    "max": 0,
+    "p(90)": 0,
+    "p(95)": 0
+   }
+  },
+  "http_req_waiting": {
+   "values": {
+    "max": 330.7,
+    "p(90)": 175.25,
+    "p(95)": 202.77,
+    "avg": 109.8,
+    "min": 19.75,
+    "med": 92.52
+   }
+  },
+  "checks": {
+   "values": {
+    "passes": 8,
+    "fails": 0,
+    "rate": 1
+   }
+  },
+  "http_req_sending": {
+   "values": {
+    "max": 0.09,
+    "p(90)": 0.03,
+    "p(95)": 0.04,
+    "avg": 0.02,
+    "min": 0.01,
+    "med": 0.02
+   }
+  },
+  "iterations": {
+   "values": {
+    "count": 8,
+    "rate": 1.06
+   }
+  },
+  "vus_max": {
+   "values": {
+    "value": 8,
+    "min": 8,
+    "max": 8
+   }
+  },
+  "iteration_duration": {
+   "values": {
+    "avg": 99.01,
+    "min": 39.05,
+    "med": 96.79,
+    "max": 185.67,
+    "p(90)": 180.17,
+    "p(95)": 182.92
+   }
+  },
+  "http_req_duration{expected_response:true}": {
+   "values": {
+    "min": 19.83,
+    "med": 93.29,
+    "max": 333.78,
+    "p(90)": 175.67,
+    "p(95)": 204.05,
+    "avg": 110.52
+   }
+  },
+  "vus": {
+   "values": {
+    "value": 0,
+    "min": 0,
+    "max": 0
+   }
+  },
+  "data_sent": {
+   "values": {
+    "count": 33014,
+    "rate": 4365.25
+   }
+  },
+  "data_received": {
+   "values": {
+    "count": 3499874,
+    "rate": 462767.89
+   }
+  },
+  "http_req_receiving": {
+   "values": {
+    "min": 0.04,
+    "med": 0.61,
+    "max": 4.24,
+    "p(90)": 1.09,
+    "p(95)": 1.38,
+    "avg": 0.7
+   }
+  },
+  "business_error_rate": {
+   "values": {
+    "rate": 0,
+    "passes": 0,
+    "fails": 8
+   },
+   "thresholds": {
+    "rate<0.01": true
+   }
+  }
+ }
+}
