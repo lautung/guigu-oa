@@ -1,6 +1,7 @@
 package com.atguigu.process;
 
 import com.atguigu.common.result.Result;
+import com.atguigu.demo.DemoApprovalArtifact;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
@@ -129,6 +130,7 @@ public class ApprovalTemplateContractTest {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
         clearEngineDefinitions("uploadedApproval");
+        clearEngineDefinitions("demoApproval");
     }
 
     @Test
@@ -237,6 +239,32 @@ public class ApprovalTemplateContractTest {
         assertEquals(审批中, approval.findStarted(alice, new Page<>(1, 10)).getRecords().get(0).getStatus());
         assertTrue(approvalTemplate.canInitiate(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
+    }
+
+    @Test
+    public void demoApprovalArtifactPublishesAndStartsTheDemoFlow() throws Exception {
+        ApprovalTemplate.UploadedProcessDefinition uploaded = approvalTemplate.uploadProcessDefinition(
+                new MockMultipartFile("file", DemoApprovalArtifact.ARCHIVE_NAME, "application/zip",
+                        DemoApprovalArtifact.zip()));
+        assertEquals("demoApproval", uploaded.processDefinitionKey());
+
+        ProcessTemplate template = new ProcessTemplate();
+        template.setName("演示请假申请");
+        template.setProcessTypeId(1L);
+        template.setProcessDefinitionKey(uploaded.processDefinitionKey());
+        template.setProcessDefinitionPath(uploaded.processDefinitionPath());
+        approvalTemplate.saveUnpublished(template);
+        approvalTemplate.publish(template.getId());
+
+        assertTrue(approvalTemplate.canInitiate(template.getId()));
+        SysUser alice = user(2L, "alice", "小艾");
+        ProcessFormVo form = publishedLeaveForm();
+        form.setProcessTemplateId(template.getId());
+        approval.startUp(alice, form);
+
+        Task task = taskService.createTaskQuery().taskAssignee("bob").singleResult();
+        assertNotNull(task);
+        assertEquals("鲍勃审批", task.getName());
     }
 
     @Test

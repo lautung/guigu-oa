@@ -72,45 +72,17 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 已结束场景由 Bob 处理。演示数据包含一条 Bob 待处理的审批、一条已结束审批、Carol 的节点抄送，
 以及一条保存在 MinIO 的附件和对应元数据。
 
-### 首次启动后：发布演示审批（当前缺陷的临时步骤）
+### 演示审批的发布
 
-演示迁移把「演示请假申请」直接写成 `status=1`，但**没有创建发布记录，也没有把流程 zip 放进
-`process-definitions` 卷**。结果是 `DemoScenarioSeeder` 打印
-`Compose 演示审批模板不可发起…跳过演示审批写入`，Bob 没有待处理任务，`compose-demo-smoke.mjs` 会失败。
+演示迁移只把「演示请假申请」种成**未发布**（`status=0`）。`service-oa` 以 `dev,demo` 启动时，
+`DemoApprovalPublisher` 先读 classpath 的 `processes/demo-approval.bpmn20.xml` 现打一个流程 zip
+写入 `process-definitions`，再走正常发布流程，把发布记录、Flowable 部署和 `status=1` 一次性补齐；
+随后 `DemoScenarioSeeder` 才生成待处理、已结束、抄送和附件场景。整个过程没有手工步骤。
 
-在修复落地前，按下面的步骤补齐（用 admin 调公开接口）：
-
-```bash
-# 1. 从仓库里的 BPMN 打包 zip（仓库只有 .bpmn20.xml，没有 zip）
-mkdir -p /tmp/demo-approval && cd /tmp/demo-approval
-cp <repo>/server/guigu-oa-parent/service-oa/src/main/resources/processes/demo-approval.bpmn20.xml .
-zip -q demo-approval.zip demo-approval.bpmn20.xml
-
-# 2. 登录拿 token
-TOKEN=$(curl -s -X POST http://localhost:8800/admin/system/index/login \
-  -H 'Content-Type: application/json' -d '{"username":"admin","password":"111111"}' \
-  | python3 -c "import json,sys;print(json.load(sys.stdin)['data']['token'])")
-
-# 3. 上传 zip，返回 processDefinitionPath
-curl -s -X POST http://localhost:8800/admin/process/processTemplate/uploadProcessDefinition \
-  -H "token: $TOKEN" -F "file=@demo-approval.zip"
-```
-
-把返回的 `processDefinitionPath` 写进模板 3，再发布：
-
-```sql
--- 发布需要模板处于未发布状态；种子写成已发布但没有发布记录，接口会拒绝保存和发布
-UPDATE oa_process_template SET status = 0 WHERE id = 3 AND is_deleted = 0;
-```
-
-```bash
-curl -s -X PUT http://localhost:8800/admin/process/processTemplate/update \
-  -H "token: $TOKEN" -H 'Content-Type: application/json' -d @tpl3.json   # 含新的 processDefinitionPath
-curl -s "http://localhost:8800/admin/process/processTemplate/publish/3" -H "token: $TOKEN"
-docker compose restart service-oa     # 让 DemoScenarioSeeder 重新生成演示场景
-```
-
-成功时 `service-oa` 日志出现 `Compose 演示数据就绪 pending=1 processed=1 carolCopied=2`。
+重复启动只读不写：模板已发布且发布证据可用时直接复用，不会再次部署或改状态。
+日志出现 `Compose 演示数据就绪 pending=1 processed=1 carolCopied=2` 即为就绪。
+早于本次修复创建的演示卷由 demo 迁移 `V101` 把「已发布但没有发布记录」的演示模板退回未发布，
+同样在启动时自动补发布；已有发布记录的模板不受影响。
 
 ## 验收
 
@@ -123,12 +95,11 @@ node scripts/compose-demo-smoke.mjs     # 登录页、Bob 待处理/已处理、
 
 `compose-baseline-check.sh` 全部通过时输出 `结果：20 通过，0 失败`；冒烟脚本成功时输出
 `Compose demo OK: Bob pending=1, ended=1, Carol copied=2, attachments=1`。
-基线检查里「演示审批」四项失败即为上面「首次启动后」尚未执行。
 
 ## 重置
 
 下面的命令删除当前 Compose 项目的所有持久数据，再由 Flyway、Flowable 和演示初始化器重建。
-重置后演示审批需要重新执行一次「首次启动后」的发布步骤。
+重置后演示审批由启动流程自动重新发布，无需额外操作。
 
 ```bash
 docker compose down --volumes --remove-orphans

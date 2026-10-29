@@ -38,6 +38,25 @@ class ProcessDefinitionStorageTest {
     }
 
     @Test
+    void storesInMemoryArchivesWithTheSameContentAddressedRules() throws IOException {
+        ProcessDefinitionStorage storage = new ProcessDefinitionStorage(directory);
+        byte[] archive = {1, 2, 3};
+
+        ProcessDefinitionStorage.UploadedProcessDefinition first = storage.store("demoApproval.zip", archive);
+        ProcessDefinitionStorage.UploadedProcessDefinition second = storage.store("demoApproval.zip", archive);
+
+        assertEquals("demoApproval", first.processDefinitionKey());
+        assertEquals(first.processDefinitionPath(), second.processDefinitionPath());
+        assertEquals(first.sha256(), second.sha256());
+        assertTrue(storage.isContentAddressedPath(first.processDefinitionPath(), first.sha256()));
+        assertArrayEquals(archive, Files.readAllBytes(storage.resolve(first.processDefinitionPath())));
+        assertThrows(IllegalArgumentException.class, () -> storage.store("demoApproval.zip", new byte[0]));
+        assertThrows(IllegalArgumentException.class, () -> storage.store("demoApproval.txt", archive));
+        assertThrows(IllegalArgumentException.class, () -> storage.store(".zip", archive));
+        assertThrows(IllegalArgumentException.class, () -> storage.store(null, archive));
+    }
+
+    @Test
     void storesContentAddressedArchivesAndDeduplicates() throws IOException {
         ProcessDefinitionStorage storage = new ProcessDefinitionStorage(directory);
         MultipartFile file = new MockMultipartFile(

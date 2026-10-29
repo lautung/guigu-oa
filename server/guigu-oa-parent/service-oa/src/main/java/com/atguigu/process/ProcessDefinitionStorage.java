@@ -43,32 +43,58 @@ public class ProcessDefinitionStorage {
             throw new IllegalArgumentException("流程 zip 不能为空");
         }
 
-        String filename = safeFilename(file.getOriginalFilename());
-        if (!filename.toLowerCase(Locale.ROOT).endsWith(".zip")) {
-            throw new IllegalArgumentException("流程文件必须是 zip");
-        }
-        int extensionIndex = filename.lastIndexOf('.');
-        if (extensionIndex == 0) {
-            throw new IllegalArgumentException("流程 zip 文件名无效");
-        }
-
-        Path artifactDirectory = directory.resolve("processes/sha256");
-        Files.createDirectories(artifactDirectory);
-        Path temporaryFile = Files.createTempFile(artifactDirectory, "upload-", ".tmp");
-        String sha256;
+        String filename = archiveFilename(file.getOriginalFilename());
+        Path temporaryFile = createTemporaryArchive();
         try {
             try (InputStream input = file.getInputStream()) {
                 Files.copy(input, temporaryFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
-            sha256 = sha256(temporaryFile);
-            String relativePath = "processes/sha256/" + sha256 + ".zip";
-            Path destination = resolve(relativePath);
-            createOrReuseWithoutReplacement(temporaryFile, destination);
-            String processDefinitionKey = filename.substring(0, extensionIndex);
-            return new UploadedProcessDefinition(relativePath, processDefinitionKey, sha256);
+            return storeTemporaryArchive(filename, temporaryFile);
         } finally {
             Files.deleteIfExists(temporaryFile);
         }
+    }
+
+    /** Stores an in-memory archive under the same content-addressed rules as an upload. */
+    public UploadedProcessDefinition store(String filename, byte[] content) throws IOException {
+        if (content == null || content.length == 0) {
+            throw new IllegalArgumentException("流程 zip 不能为空");
+        }
+
+        String safeName = archiveFilename(filename);
+        Path temporaryFile = createTemporaryArchive();
+        try {
+            Files.write(temporaryFile, content, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+            return storeTemporaryArchive(safeName, temporaryFile);
+        } finally {
+            Files.deleteIfExists(temporaryFile);
+        }
+    }
+
+    private Path createTemporaryArchive() throws IOException {
+        Path artifactDirectory = directory.resolve("processes/sha256");
+        Files.createDirectories(artifactDirectory);
+        return Files.createTempFile(artifactDirectory, "upload-", ".tmp");
+    }
+
+    private UploadedProcessDefinition storeTemporaryArchive(String filename, Path temporaryFile) throws IOException {
+        String sha256 = sha256(temporaryFile);
+        String relativePath = "processes/sha256/" + sha256 + ".zip";
+        Path destination = resolve(relativePath);
+        createOrReuseWithoutReplacement(temporaryFile, destination);
+        String processDefinitionKey = filename.substring(0, filename.lastIndexOf('.'));
+        return new UploadedProcessDefinition(relativePath, processDefinitionKey, sha256);
+    }
+
+    private static String archiveFilename(String originalFilename) {
+        String filename = safeFilename(originalFilename);
+        if (!filename.toLowerCase(Locale.ROOT).endsWith(".zip")) {
+            throw new IllegalArgumentException("流程文件必须是 zip");
+        }
+        if (filename.lastIndexOf('.') == 0) {
+            throw new IllegalArgumentException("流程 zip 文件名无效");
+        }
+        return filename;
     }
 
     public InputStream open(String relativePath) throws IOException {

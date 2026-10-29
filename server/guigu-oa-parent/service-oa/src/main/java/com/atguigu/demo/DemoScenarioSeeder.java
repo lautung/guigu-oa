@@ -7,7 +7,6 @@ import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.attachment.AttachmentMapper;
 import com.atguigu.process.service.Approval;
-import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
 import com.atguigu.vo.process.ProcessVo;
@@ -33,11 +32,10 @@ import java.util.List;
 public class DemoScenarioSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoScenarioSeeder.class);
-    private static final String PROCESS_DEFINITION_KEY = "demoApproval";
     private static final String ATTACHMENT_CONTENT = "Compose 演示附件：请假申请说明。\n";
 
     private final Approval approval;
-    private final OaProcessTemplateService templateService;
+    private final DemoApprovalPublisher demoApprovalPublisher;
     private final SysUserService userService;
     private final AttachmentMapper attachmentMapper;
     private final JdbcTemplate jdbcTemplate;
@@ -46,14 +44,14 @@ public class DemoScenarioSeeder implements ApplicationRunner {
 
     public DemoScenarioSeeder(
             Approval approval,
-            OaProcessTemplateService templateService,
+            DemoApprovalPublisher demoApprovalPublisher,
             SysUserService userService,
             AttachmentMapper attachmentMapper,
             JdbcTemplate jdbcTemplate,
             S3Client attachmentS3Client,
             AttachmentS3Properties s3Properties) {
         this.approval = approval;
-        this.templateService = templateService;
+        this.demoApprovalPublisher = demoApprovalPublisher;
         this.userService = userService;
         this.attachmentMapper = attachmentMapper;
         this.jdbcTemplate = jdbcTemplate;
@@ -63,14 +61,8 @@ public class DemoScenarioSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        ProcessTemplate template = templateService.findUniquePublishedByProcessDefinitionKey(PROCESS_DEFINITION_KEY);
+        ProcessTemplate template = demoApprovalPublisher.ensurePublished();
         if (template == null) {
-            log.warn("Compose 演示审批模板不唯一或不存在，跳过演示审批写入");
-            return;
-        }
-        if (!Boolean.TRUE.equals(template.getAvailableForInitiation())) {
-            log.warn("Compose 演示审批模板不可发起，保留只读状态并跳过演示审批写入: {}",
-                    template.getAvailabilityMessage());
             return;
         }
         SysUser alice = requireUser("alice");
