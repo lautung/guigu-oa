@@ -1147,6 +1147,11 @@ public class ApprovalContractTest {
                 }
 
                 @Override
+                public Boolean delete(String key) {
+                    return store.remove(key) != null;
+                }
+
+                @Override
                 public void afterPropertiesSet() {
                 }
             };

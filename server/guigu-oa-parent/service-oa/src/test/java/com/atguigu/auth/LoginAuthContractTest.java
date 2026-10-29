@@ -1,10 +1,14 @@
 package com.atguigu.auth;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -27,6 +31,11 @@ import com.jayway.jsonpath.JsonPath;
 import javax.crypto.SecretKey;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,6 +45,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_login_contract;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @AutoConfigureMockMvc
@@ -58,9 +68,18 @@ public class LoginAuthContractTest {
     @Autowired
     private JwtHelper jwtHelper;
 
+    @Autowired
+    private MutableLoginClock loginClock;
+
+    @BeforeEach
+    public void resetLoginClock() {
+        loginClock.useSystemTime();
+    }
+
     @AfterEach
     public void removeContractUser() {
-        jdbcTemplate.update("DELETE FROM sys_user WHERE username = ?", "new-contract-user");
+        jdbcTemplate.update("DELETE FROM sys_user WHERE username IN (?, ?, ?)",
+                "new-contract-user", "lock-contract-user", "reset-contract-user");
     }
 
     @Test
@@ -381,6 +400,73 @@ public class LoginAuthContractTest {
     }
 
     @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    public void repeatedFailuresLockTheAccountEvenWhenTheCorrectPasswordArrivesLater(CapturedOutput output)
+            throws Exception {
+        String adminToken = loginToken("admin", "111111");
+        saveContractUser(adminToken, "lock-contract-user", "111111");
+        String source = "203.0.113.10";
+
+        loginClock.useFixed(Instant.parse("2026-10-29T00:00:00Z"));
+        for (int failure = 1; failure <= 5; failure += 1) {
+            assertLoginCode("lock-contract-user", "wrong-" + failure, source, 208);
+        }
+        for (long waitSeconds : new long[]{1, 2, 4, 8, 16}) {
+            loginClock.advance(Duration.ofSeconds(waitSeconds));
+            assertLoginCode("lock-contract-user", "wrong-again", source, 208);
+        }
+
+        // Backoff alone would be over after thirty seconds; the fifteen minute lock must outlast it.
+        loginClock.advance(Duration.ofSeconds(31));
+        String locked = loginBody("lock-contract-user", "111111", source);
+        assertEquals(208, JsonPath.<Integer>read(locked, "$.code").intValue());
+        assertTrue(JsonPath.<String>read(locked, "$.message").contains("频繁"));
+
+        loginClock.advance(Duration.ofMinutes(15).minusSeconds(31));
+        assertLoginCode("lock-contract-user", "111111", source, 200);
+
+        assertTrue(output.getOut().contains("login audit event=locked"));
+        assertTrue(output.getOut().contains("login audit event=unlocked"));
+    }
+
+    @Test
+    public void aSuccessfulLoginClearsTheFailuresRecordedBeforeIt() throws Exception {
+        String adminToken = loginToken("admin", "111111");
+        saveContractUser(adminToken, "reset-contract-user", "111111");
+        String source = "203.0.113.11";
+
+        for (int failure = 1; failure <= 4; failure += 1) {
+            assertLoginCode("reset-contract-user", "wrong-" + failure, source, 208);
+        }
+        assertLoginCode("reset-contract-user", "111111", source, 200);
+
+        // Without the reset these four would cross the backoff threshold and refuse the password.
+        for (int failure = 1; failure <= 4; failure += 1) {
+            assertLoginCode("reset-contract-user", "wrong-again-" + failure, source, 208);
+        }
+        assertLoginCode("reset-contract-user", "111111", source, 200);
+    }
+
+    @Test
+    public void anUnknownUsernameIsThrottledWithTheSameThresholds() throws Exception {
+        String source = "203.0.113.12";
+
+        loginClock.useFixed(Instant.parse("2026-10-29T00:00:00Z"));
+        for (int failure = 1; failure <= 5; failure += 1) {
+            assertLoginCode("no-such-lock-user", "wrong-" + failure, source, 208);
+        }
+        for (long waitSeconds : new long[]{1, 2, 4, 8, 16}) {
+            loginClock.advance(Duration.ofSeconds(waitSeconds));
+            assertLoginCode("no-such-lock-user", "wrong-again", source, 208);
+        }
+
+        loginClock.advance(Duration.ofSeconds(31));
+        String locked = loginBody("no-such-lock-user", "111111", source);
+        assertEquals(208, JsonPath.<Integer>read(locked, "$.code").intValue());
+        assertTrue(JsonPath.<String>read(locked, "$.message").contains("频繁"));
+    }
+
+    @Test
     public void protectedEndpointWithoutTokenReturns208() throws Exception {
         mockMvc.perform(get("/admin/system/index/info"))
                 .andExpect(status().isOk())
@@ -416,6 +502,33 @@ public class LoginAuthContractTest {
                 .getResponse()
                 .getContentAsString();
         return JsonPath.read(response, "$.data.token");
+    }
+
+    private void saveContractUser(String adminToken, String username, String password) throws Exception {
+        mockMvc.perform(post("/admin/system/sysUser/save")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\","
+                                + "\"name\":\"锁定测试用户\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    private void assertLoginCode(String username, String password, String source, int expectedCode)
+            throws Exception {
+        String body = loginBody(username, password, source);
+        assertEquals(expectedCode, JsonPath.<Integer>read(body, "$.code").intValue(), body);
+    }
+
+    private String loginBody(String username, String password, String source) throws Exception {
+        return mockMvc.perform(post("/admin/system/index/login")
+                        .header("X-Forwarded-For", source)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
     }
 
     private String loginAndReturnBody() throws Exception {
@@ -479,6 +592,12 @@ public class LoginAuthContractTest {
                                 if ("get".equals(method.getName()) && args != null && args.length >= 1) {
                                     return store.get(args[0]);
                                 }
+                                if ("increment".equals(method.getName()) && args != null && args.length >= 1) {
+                                    String key = String.valueOf(args[0]);
+                                    return Long.valueOf(store.merge(
+                                            key, "1",
+                                            (current, ignored) -> String.valueOf(Long.parseLong(current) + 1)));
+                                }
                                 if ("toString".equals(method.getName())) {
                                     return "InMemoryValueOperations";
                                 }
@@ -492,10 +611,54 @@ public class LoginAuthContractTest {
                 }
 
                 @Override
+                public Boolean expire(String key, long timeout, java.util.concurrent.TimeUnit unit) {
+                    return store.containsKey(key);
+                }
+
+                @Override
                 public void afterPropertiesSet() {
                 }
             };
             return template;
+        }
+
+        @Bean
+        @Primary
+        public MutableLoginClock loginAttemptTestClock() {
+            return new MutableLoginClock();
+        }
+    }
+
+    /** The limiter reads the clock, so contract tests can walk through backoff and lock windows. */
+    static final class MutableLoginClock extends Clock {
+
+        private volatile Clock delegate = Clock.systemUTC();
+
+        void useFixed(Instant instant) {
+            delegate = Clock.fixed(instant, ZoneOffset.UTC);
+        }
+
+        void advance(Duration duration) {
+            delegate = Clock.fixed(delegate.instant().plus(duration), ZoneOffset.UTC);
+        }
+
+        void useSystemTime() {
+            delegate = Clock.systemUTC();
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return delegate.getZone();
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return delegate.withZone(zone);
+        }
+
+        @Override
+        public Instant instant() {
+            return delegate.instant();
         }
     }
 }

@@ -28,6 +28,8 @@
 |---|---|---|
 | `common.jwt.JwtHelper` | `createTokenPair` / `createAccessToken` / `readAccessToken` / `readRefreshToken` → `TokenClaims(userId, username, sessionId, expiresAt)` | 一次登录的一对 access/refresh 共享 sessionId；无 sessionId 的令牌不可鉴权 |
 | `security.revocation.TokenRevocation` | `isRevoked(sessionId)` / `revoke(sessionId)` | 退出的吊销表；`RedisTokenRevocation` 是唯一实现，标记 TTL 与 refresh 同寿，过滤器与 refresh 共用 |
+| `security.login.LoginAttemptLimiter` | `isBlocked(username, source)` / `recordFailure` / `recordSuccess` | 登录失败的两个计数维度（提交的账号、来源地址）；`RedisLoginAttemptLimiter` 是唯一实现，策略在 `LoginAttemptPolicy` |
+| `security.login.LoginAudit` | `loginFailed` / `loginLocked` / `loginUnlocked` | 失败、锁定、解锁的审计轨迹；`Slf4jLoginAudit` 写结构化应用日志，字段脱敏且不含密码或令牌 |
 
 ## 服务端审批
 

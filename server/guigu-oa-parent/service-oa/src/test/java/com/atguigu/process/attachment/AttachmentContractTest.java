@@ -446,6 +446,11 @@ class AttachmentContractTest {
                 }
 
                 @Override
+                public Boolean delete(String key) {
+                    return store.remove(key) != null;
+                }
+
+                @Override
                 public void afterPropertiesSet() {
                 }
             };

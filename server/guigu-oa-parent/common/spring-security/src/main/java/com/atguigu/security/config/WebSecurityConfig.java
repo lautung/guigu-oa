@@ -5,6 +5,10 @@ import com.atguigu.security.custom.BcryptPasswordEncoderWithLegacyMd5;
 import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
 import com.atguigu.security.filter.TokenLoginFilter;
+import com.atguigu.security.login.LoginAttemptLimiter;
+import com.atguigu.security.login.LoginAttemptPolicy;
+import com.atguigu.security.login.RedisLoginAttemptLimiter;
+import com.atguigu.security.login.Slf4jLoginAudit;
 import com.atguigu.security.revocation.RedisTokenRevocation;
 import com.atguigu.security.revocation.TokenRevocation;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +27,8 @@ import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.time.Clock;
 
 @Configuration
 @EnableWebSecurity
@@ -45,6 +51,24 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public Clock loginAttemptClock() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    public LoginAttemptLimiter loginAttemptLimiter(
+            RedisTemplate<String, String> redisTemplate,
+            Clock loginAttemptClock
+    ) {
+        return new RedisLoginAttemptLimiter(
+                redisTemplate,
+                LoginAttemptPolicy.account(),
+                LoginAttemptPolicy.source(),
+                new Slf4jLoginAudit(),
+                loginAttemptClock);
+    }
+
+    @Bean
     public AuthenticationManager authenticationManager(
             UserDetailsService userDetailsService,
             UserDetailsPasswordService userDetailsPasswordService,
@@ -63,7 +87,8 @@ public class WebSecurityConfig {
             JwtHelper jwtHelper,
             UserDetailsService userDetailsService,
             AuthenticationManager authenticationManager,
-            TokenRevocation tokenRevocation
+            TokenRevocation tokenRevocation,
+            LoginAttemptLimiter loginAttemptLimiter
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -75,7 +100,7 @@ public class WebSecurityConfig {
                 .addFilterBefore(
                         new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService, tokenRevocation),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper))
+                .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper, loginAttemptLimiter))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
