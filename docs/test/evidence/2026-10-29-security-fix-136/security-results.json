@@ -1,0 +1,33 @@
+{
+  "environment": {
+    "date": "2026-10-29T05:52:24.865Z",
+    "commit": "adb9c92a11762bbd667350f22d4e22032e5e873c",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvt4md5d",
+    "compose": "client Up About an hour\nminio Up 2 hours\nmysql Up 2 hours (healthy)\nredis Up 2 hours (healthy)\nservice-oa Up About a minute (healthy)",
+    "startedAt": "2026-10-29T05:52:23.569Z"
+  },
+  "results": [
+    {
+      "id": "SEC-LEAK-06",
+      "family": "SEC-LEAK",
+      "title": "抄送人选项接口不向普通用户暴露账号名",
+      "severity": "S3",
+      "expected": "每条只含 id 与显示名",
+      "actual": "只含 id/name（5 个）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 9,
+      "evidence": {
+        "code": 200,
+        "count": 5,
+        "fields": [
+          "id",
+          "name"
+        ]
+      }
+    }
+  ]
+}
