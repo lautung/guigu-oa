@@ -29,10 +29,20 @@ class PublicApiPathsTest {
     }
 
     @Test
+    void permitsEveryActuatorHealthGroupWithoutOpeningTheRestOfActuator() {
+        assertTrue(PublicApiPaths.permitsAnonymous("/actuator/health/readiness"));
+        assertTrue(PublicApiPaths.permitsAnonymous("/actuator/health/liveness"));
+        assertTrue(PublicApiPaths.permitsAnonymous("/actuator/health/startup"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/actuator"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/actuator/healthz"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/actuator/env"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/actuator/health/../env"));
+    }
+
+    @Test
     void keepsBusinessEndpointsBehindAuthentication() {
         assertFalse(PublicApiPaths.permitsAnonymous("/admin/system/sysUser/1/10"));
         assertFalse(PublicApiPaths.permitsAnonymous("/admin/process/findPending/1/10"));
-        assertFalse(PublicApiPaths.permitsAnonymous("/actuator/health/readiness"));
         assertFalse(PublicApiPaths.permitsAnonymous("/swagger-ui"));
         assertFalse(PublicApiPaths.permitsAnonymous("/v3/api-docs-other"));
     }

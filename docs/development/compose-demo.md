@@ -53,7 +53,7 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 |---|---|
 | 统一客户端 | `http://localhost:9530` |
 | 后端 API | `http://localhost:8800` |
-| 后端健康检查 | `http://localhost:8800/actuator/health` |
+| 后端健康检查 | `http://localhost:8800/actuator/health`（聚合）、`/actuator/health/readiness`（就绪探针） |
 | MinIO Console | `http://localhost:9001` |
 | MinIO S3 | `http://localhost:9000` |
 
@@ -119,6 +119,10 @@ Maven / npm 依赖的全量下载；使用上面的镜像源时，首次构建�
   `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:9530` 放行；实测 `OPTIONS` 预检返回 204 且带
   `Access-Control-Allow-Origin: http://localhost:9530`。
 - Compose 中的密码和 MinIO 凭据只用于本地演示，不要用于部署环境。
-- `service-oa` 的健康检查用 `/actuator/health/readiness`，该路径目前在匿名白名单之外，
-  未登录访问返回 `{"code":208,"message":"认证失败"}` 且 HTTP 200，`curl --fail` 因此判定通过。
-  容器健康状态**不能**当作后端就绪的证据，验收请用 `/actuator/health` 或基线脚本。
+- `service-oa` 的健康检查探测 `/actuator/health/readiness`，该路径与 `/actuator/health` 一样在匿名白名单内
+  （只放行 health 端点及其分组，不开放其他 actuator 端点，且 `show-details: never` 不返回明细）。
+  就绪分组由 Spring Boot 的 `readinessState` 决定：只有 `ApplicationReadyEvent` 之后才返回
+  `{"status":"UP"}`，因此 Flyway 迁移、Flowable 建表和演示审批播种（`DemoScenarioSeeder` 等
+  `ApplicationRunner`）完成后容器才会变 healthy；未就绪时返回 503，`curl --fail` 判定失败。
+  `docker compose up --wait` 因此会等到后端真正可用再返回，`client` 的 `service_healthy` 依赖也才有意义。
+  基线验收仍可用聚合健康端点 `/actuator/health`。

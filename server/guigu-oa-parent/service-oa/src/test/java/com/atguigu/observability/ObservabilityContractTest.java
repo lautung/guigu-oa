@@ -39,6 +39,14 @@ class ObservabilityContractTest {
     }
 
     @Test
+    void readinessProbeIsAvailableWithoutBusinessTokenAndHidesDetails() throws Exception {
+        mockMvc.perform(get("/actuator/health/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
     @ExtendWith(OutputCaptureExtension.class)
     void suppliedTraceIdIsReturnedAndWrittenToStructuredRequestLog(CapturedOutput output) throws Exception {
         String traceId = "request-83-correlation";
