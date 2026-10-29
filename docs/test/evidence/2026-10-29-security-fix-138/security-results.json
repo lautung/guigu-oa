@@ -1,0 +1,117 @@
+{
+  "environment": {
+    "date": "2026-10-29T08:39:46.074Z",
+    "commit": "09799e995c59f6a188cb9e3acab2a1df6db22f83",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvtalkml",
+    "compose": "client Up 12 minutes\nminio Up 5 hours\nmysql Up 5 hours (healthy)\nredis Up 5 hours (healthy)\nservice-oa Up 12 minutes (healthy)",
+    "startedAt": "2026-10-29T08:39:44.301Z"
+  },
+  "results": [
+    {
+      "id": "SEC-JWT-08",
+      "family": "SEC-JWT",
+      "title": "停用账号的存量 token 被拒",
+      "severity": "S2",
+      "expected": "body.code=209",
+      "actual": "code=209",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 26,
+      "evidence": null
+    },
+    {
+      "id": "SEC-GATE-01",
+      "family": "SEC-GATE",
+      "title": "35 个配置端点对无配置权限账号返回 205",
+      "severity": "S1",
+      "expected": "每个端点 body.code=205",
+      "actual": "35/35 端点 code=205",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 307,
+      "evidence": null
+    },
+    {
+      "id": "SEC-CSRF-01",
+      "family": "SEC-CSRF",
+      "title": "普通接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "无 ACAO 头",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": null
+    },
+    {
+      "id": "SEC-CSRF-02",
+      "family": "SEC-CSRF",
+      "title": "审批接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "ACAO=*",
+      "pass": false,
+      "skipped": false,
+      "durationMs": 22,
+      "evidence": {
+        "allowOrigin": "*"
+      }
+    },
+    {
+      "id": "SEC-CSRF-03",
+      "family": "SEC-CSRF",
+      "title": "跨源预检不授予带 token 头的写请求",
+      "severity": "S4",
+      "expected": "预检不返回允许 token 头的 ACAO",
+      "actual": "{\"status\":200,\"allowOrigin\":\"*\",\"allowHeaders\":\"token, content-type\"}",
+      "pass": false,
+      "skipped": false,
+      "durationMs": 4,
+      "evidence": {
+        "status": 200,
+        "allowOrigin": "*",
+        "allowHeaders": "token, content-type"
+      }
+    },
+    {
+      "id": "SEC-CSRF-04",
+      "family": "SEC-CSRF",
+      "title": "GET updateStatus 不产生写副作用",
+      "severity": "S3",
+      "expected": "GET 不修改状态，写只由 POST/PUT 触发",
+      "actual": "{\"beforeStatus\":1,\"getCode\":201,\"afterStatus\":1,\"putCode\":200,\"writtenStatus\":0}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 57,
+      "evidence": {
+        "beforeStatus": 1,
+        "getCode": 201,
+        "afterStatus": 1,
+        "putCode": 200,
+        "writtenStatus": 0
+      }
+    },
+    {
+      "id": "SEC-CSRF-05",
+      "family": "SEC-CSRF",
+      "title": "GET publish 不再是写操作（源码事实）",
+      "severity": "S3",
+      "expected": "publish 只注册 POST，updateStatus 只注册 PUT",
+      "actual": "{\"publishMappings\":[\"Post\"],\"updateStatusMappings\":[\"Put\"]}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 1,
+      "evidence": {
+        "publishMappings": [
+          "Post"
+        ],
+        "updateStatusMappings": [
+          "Put"
+        ]
+      }
+    }
+  ]
+}
