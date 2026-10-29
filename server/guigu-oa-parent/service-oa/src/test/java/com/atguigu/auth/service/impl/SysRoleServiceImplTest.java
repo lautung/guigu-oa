@@ -2,6 +2,7 @@ package com.atguigu.auth.service.impl;
 
 import com.atguigu.auth.mapper.SysRoleMapper;
 import com.atguigu.auth.service.PermissionCacheInvalidator;
+import com.atguigu.auth.service.SysRoleMenuService;
 import com.atguigu.auth.service.SysUserRoleService;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysRole;
@@ -19,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,6 +36,7 @@ class SysRoleServiceImplTest {
 
     private final SysRoleMapper roleMapper = mock(SysRoleMapper.class);
     private final SysUserRoleService userRoleService = mock(SysUserRoleService.class);
+    private final SysRoleMenuService roleMenuService = mock(SysRoleMenuService.class);
     private final PermissionCacheInvalidator cacheInvalidator = mock(PermissionCacheInvalidator.class);
     private final SysRoleServiceImpl service = new SysRoleServiceImpl();
 
@@ -47,6 +50,7 @@ class SysRoleServiceImplTest {
     void injectCollaborators() {
         ReflectionTestUtils.setField(service, "baseMapper", roleMapper);
         ReflectionTestUtils.setField(service, "sysUserRoleService", userRoleService);
+        ReflectionTestUtils.setField(service, "sysRoleMenuService", roleMenuService);
         ReflectionTestUtils.setField(service, "permissionCacheInvalidator", cacheInvalidator);
     }
 
@@ -62,13 +66,22 @@ class SysRoleServiceImplTest {
     }
 
     @Test
-    void removeByIdInvalidatesOnlyOnSuccess() {
+    void removeByIdClearsGrantRowsAndInvalidatesPreEnumeratedMembers() {
+        when(cacheInvalidator.membersOfRole(3L)).thenReturn(Set.of(7L, 8L));
         when(roleMapper.deleteById(3L)).thenReturn(1);
         assertTrue(service.removeById((java.io.Serializable) 3L));
-        verify(cacheInvalidator).invalidateRoleMembersAfterCommit(3L);
+
+        verify(userRoleService).remove(any());
+        verify(roleMenuService).remove(any());
+        verify(cacheInvalidator).invalidateUsersAfterCommit(Set.of(7L, 8L));
+        verify(cacheInvalidator, never()).invalidateRoleMembersAfterCommit(any());
 
         when(roleMapper.deleteById(4L)).thenReturn(0);
         assertFalse(service.removeById((java.io.Serializable) 4L));
+        // 删行失败时不回收关系、不清缓存：成员仍挂在角色上。
+        verify(userRoleService, org.mockito.Mockito.times(1)).remove(any());
+        verify(roleMenuService, org.mockito.Mockito.times(1)).remove(any());
+        verify(cacheInvalidator, org.mockito.Mockito.times(1)).invalidateUsersAfterCommit(any());
     }
 
     @Test
@@ -77,22 +90,24 @@ class SysRoleServiceImplTest {
 
         when(roleMapper.deleteById(5L)).thenReturn(1);
         assertTrue(service.removeById(role(5L)));
+        verify(roleMenuService).remove(any());
     }
 
     @Test
-    void batchRemoveInvalidatesEveryNonNullId() {
+    void batchRemoveClearsGrantRowsAndInvalidatesTheMemberUnion() {
         assertFalse(service.removeByIds(null));
         assertFalse(service.removeByIds(List.of()));
 
-        when(roleMapper.deleteByIds(Arrays.asList(3L, null, 4L))).thenReturn(2);
+        when(cacheInvalidator.membersOfRole(3L)).thenReturn(Set.of(7L));
+        when(cacheInvalidator.membersOfRole(4L)).thenReturn(Set.of(7L, 9L));
+        when(roleMapper.deleteByIds(Arrays.asList(3L, 4L))).thenReturn(2);
         assertTrue(service.removeByIds(Arrays.asList(3L, null, 4L)));
 
-        verify(cacheInvalidator).invalidateRoleMembersAfterCommit(3L);
-        verify(cacheInvalidator).invalidateRoleMembersAfterCommit(4L);
-    }
+        verify(roleMapper).deleteByIds(Arrays.asList(3L, 4L));
+        verify(userRoleService, org.mockito.Mockito.times(2)).remove(any());
+        verify(roleMenuService, org.mockito.Mockito.times(2)).remove(any());
+        verify(cacheInvalidator).invalidateUsersAfterCommit(new java.util.LinkedHashSet<>(Arrays.asList(7L, 9L)));
 
-    @Test
-    void batchRemoveReportsNothingRemoved() {
         when(roleMapper.deleteByIds(List.of(3L))).thenReturn(0);
         assertFalse(service.removeByIds(List.of(3L)));
         verify(cacheInvalidator, never()).invalidateRoleMembersAfterCommit(any());

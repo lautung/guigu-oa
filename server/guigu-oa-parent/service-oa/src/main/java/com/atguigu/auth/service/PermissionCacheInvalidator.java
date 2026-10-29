@@ -46,6 +46,17 @@ public class PermissionCacheInvalidator {
         invalidateUsersAfterCommit(userIdsInRole(roleId));
     }
 
+    /**
+     * 仍在该角色里的成员（#146）。删除角色时关系行会先被清掉，调用方必须在删行之前
+     * 用本方法枚举成员，删行后再交给 {@link #invalidateUsersAfterCommit}。
+     */
+    public Set<Long> membersOfRole(Long roleId) {
+        if (roleId == null) {
+            return Set.of();
+        }
+        return userIdsInRole(roleId);
+    }
+
     public void invalidateMenuMembersAfterCommit(Long menuId) {
         if (menuId == null) {
             return;
@@ -73,7 +84,7 @@ public class PermissionCacheInvalidator {
         return userIds;
     }
 
-    private void invalidateUsersAfterCommit(Collection<Long> userIds) {
+    public void invalidateUsersAfterCommit(Collection<Long> userIds) {
         if (userIds.isEmpty()) {
             return;
         }

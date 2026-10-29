@@ -1,11 +1,13 @@
 package com.atguigu.auth.service.impl;
 
 import com.atguigu.auth.mapper.SysRoleMapper;
+import com.atguigu.auth.service.SysRoleMenuService;
 import com.atguigu.auth.service.SysRoleService;
 import com.atguigu.auth.service.SysUserRoleService;
 import com.atguigu.auth.service.PermissionCacheInvalidator;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysRole;
+import com.atguigu.model.system.SysRoleMenu;
 import com.atguigu.model.system.SysUserRole;
 import com.atguigu.vo.system.AssginRoleVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +31,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private SysRoleMenuService sysRoleMenuService;
 
     @Autowired
     private PermissionCacheInvalidator permissionCacheInvalidator;
@@ -45,9 +51,13 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional
     public boolean removeById(Serializable roleId) {
+        Long id = Long.valueOf(roleId.toString());
+        // 成员必须在关系行被清掉之前枚举（#146）：删行后 list 读不到，提交后的缓存失效就清不到人。
+        Set<Long> members = permissionCacheInvalidator.membersOfRole(id);
         boolean removed = baseMapper.deleteById(roleId) > 0;
         if (removed) {
-            permissionCacheInvalidator.invalidateRoleMembersAfterCommit(Long.valueOf(roleId.toString()));
+            deleteRoleRelations(id);
+            permissionCacheInvalidator.invalidateUsersAfterCommit(members);
         }
         return removed;
     }
@@ -63,14 +73,30 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         if (roleIds == null || roleIds.isEmpty()) {
             return false;
         }
-        boolean removed = baseMapper.deleteByIds(roleIds) > 0;
+        List<Long> ids = roleIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(roleId -> Long.valueOf(roleId.toString()))
+                .toList();
+        // 同 removeById：成员枚举先于关系行删除（#146）。
+        java.util.Set<Long> members = new java.util.LinkedHashSet<>();
+        ids.forEach(id -> members.addAll(permissionCacheInvalidator.membersOfRole(id)));
+        boolean removed = !ids.isEmpty() && baseMapper.deleteByIds(ids) > 0;
         if (removed) {
-            roleIds.stream()
-                    .filter(java.util.Objects::nonNull)
-                    .map(roleId -> Long.valueOf(roleId.toString()))
-                    .forEach(permissionCacheInvalidator::invalidateRoleMembersAfterCommit);
+            ids.forEach(this::deleteRoleRelations);
+            permissionCacheInvalidator.invalidateUsersAfterCommit(members);
         }
         return removed;
+    }
+
+    /** 删角色时同步回收授予关系行：用户-角色与角色-菜单（#146，逻辑删除）。 */
+    private void deleteRoleRelations(Long roleId) {
+        LambdaQueryWrapper<SysUserRole> userRoleWrapper = new LambdaQueryWrapper<>();
+        userRoleWrapper.eq(SysUserRole::getRoleId, roleId);
+        sysUserRoleService.remove(userRoleWrapper);
+
+        LambdaQueryWrapper<SysRoleMenu> roleMenuWrapper = new LambdaQueryWrapper<>();
+        roleMenuWrapper.eq(SysRoleMenu::getRoleId, roleId);
+        sysRoleMenuService.remove(roleMenuWrapper);
     }
     
     //1 查询所有角色 和 当前用户所属角色

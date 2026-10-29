@@ -12,7 +12,9 @@
         from sys_menu m
         inner join sys_role_menu rm on rm.menu_id = m.id
         inner join sys_user_role ur on ur.role_id = rm.role_id
+        inner join sys_role r on r.id = rm.role_id
         where ur.user_id=#{userId}
+          and r.is_deleted = 0
           and m.status = 1
           and rm.is_deleted = 0
           and ur.is_deleted = 0

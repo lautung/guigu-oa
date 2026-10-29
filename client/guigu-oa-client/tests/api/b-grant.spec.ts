@@ -19,7 +19,7 @@ import {
  * 权限分支：单页授予只开该页（#120 §3）。
  *
  * 用 API 现场构造「只授予 sysUser 页」的角色与账号，不用 admin 冒充。
- * 删除角色后的授予回收是已知缺陷 #146 的活证据（修复后第二例翻红）。
+ * 第二例是 #146 修复的回归：删除角色后成员授予即时回收（关系行清理 + 查询过滤双重保障）。
  */
 
 test.describe('B 配置授予分支', () => {
@@ -58,7 +58,7 @@ test.describe('B 配置授予分支', () => {
     }
   })
 
-  test('已知缺陷 #146：删除角色后成员授予不回收（修复后应变 205）', async ({ request }) => {
+  test('删除角色后成员授予即时回收（#146 修复）', async ({ request }) => {
     const api = new Api(request)
     const role = await createRole(api, unique('api-revoke-role'))
     const temp = await createUser(api, unique('api-revoke-user'))
@@ -77,10 +77,13 @@ test.describe('B 配置授予分支', () => {
 
       await deleteRole(api, role.id)
 
+      // 已删除角色的成员立即失去该角色的配置页（#146：关系行清理 + 查询过滤）。
       expect(
         await api.code(temp.username, 'get', '/admin/system/sysUser/1/5'),
-        '已知缺陷 #146：角色删除后授予仍在（修复后应 205）',
-      ).toBe(200)
+        '角色删除后原授予页应立即 205',
+      ).toBe(205)
+      const info = await api.call<InfoPayload>(temp.username, 'get', '/admin/system/index/info')
+      expect(info.configMenus).toEqual([])
     } finally {
       await assignRoles(api, temp.id, []).catch(() => {})
       await deleteRole(api, role.id).catch(() => {})
