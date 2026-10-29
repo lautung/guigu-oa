@@ -1,0 +1,45 @@
+{
+  "environment": {
+    "date": "2026-10-29T05:27:08.113Z",
+    "commit": "6144f7ed2813794339326f6ea8fbd6b896219dbf",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvt3ptd4",
+    "compose": "client Up 40 minutes\nminio Up 2 hours\nmysql Up 2 hours (healthy)\nredis Up 2 hours (healthy)\nservice-oa Up About a minute (healthy)",
+    "startedAt": "2026-10-29T05:27:04.936Z"
+  },
+  "results": [
+    {
+      "id": "SEC-BRUTE-01",
+      "family": "SEC-BRUTE",
+      "title": "不存在用户与密码错误返回同一错误码与文案",
+      "severity": "S3",
+      "expected": "两者均 code=208 且 message 相同",
+      "actual": "{\"missingCode\":208,\"wrongCode\":208,\"sameMessage\":true}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 186,
+      "evidence": {
+        "missingCode": 208,
+        "wrongCode": 208,
+        "sameMessage": true
+      }
+    },
+    {
+      "id": "SEC-BRUTE-02",
+      "family": "SEC-BRUTE",
+      "title": "30 次失败后正确密码仍可登录（无限流/锁定）",
+      "severity": "S3",
+      "expected": "应有锁定或限流；无则记缺陷",
+      "actual": "{\"failedLogins\":30,\"correctLoginCode\":208}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 617,
+      "evidence": {
+        "failedLogins": 30,
+        "correctLoginCode": 208
+      }
+    }
+  ]
+}
