@@ -1,0 +1,93 @@
+{
+  "environment": {
+    "date": "2026-10-29T12:33:08.616Z",
+    "commit": "cddd90dca734f416cb427de1511e35e36475c7ba",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvtixoqd",
+    "compose": "client Up 17 seconds\nminio Up 9 hours\nmysql Up 9 hours (healthy)\nredis Up 9 hours (healthy)\nservice-oa Up 27 seconds (healthy)",
+    "startedAt": "2026-10-29T12:33:06.421Z"
+  },
+  "results": [
+    {
+      "id": "SEC-CSRF-01",
+      "family": "SEC-CSRF",
+      "title": "普通接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "无 ACAO 头",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 14,
+      "evidence": null
+    },
+    {
+      "id": "SEC-CSRF-02",
+      "family": "SEC-CSRF",
+      "title": "审批接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "无 ACAO 头",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 30,
+      "evidence": {
+        "allowOrigin": null
+      }
+    },
+    {
+      "id": "SEC-CSRF-03",
+      "family": "SEC-CSRF",
+      "title": "跨源预检不授予带 token 头的写请求",
+      "severity": "S4",
+      "expected": "预检不返回允许 token 头的 ACAO",
+      "actual": "{\"status\":200,\"allowOrigin\":null,\"allowHeaders\":null}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 3,
+      "evidence": {
+        "status": 200,
+        "allowOrigin": null,
+        "allowHeaders": null
+      }
+    },
+    {
+      "id": "SEC-CSRF-04",
+      "family": "SEC-CSRF",
+      "title": "GET updateStatus 不产生写副作用",
+      "severity": "S3",
+      "expected": "GET 不修改状态，写只由 POST/PUT 触发",
+      "actual": "{\"beforeStatus\":1,\"getCode\":201,\"afterStatus\":1,\"putCode\":200,\"writtenStatus\":0}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 82,
+      "evidence": {
+        "beforeStatus": 1,
+        "getCode": 201,
+        "afterStatus": 1,
+        "putCode": 200,
+        "writtenStatus": 0
+      }
+    },
+    {
+      "id": "SEC-CSRF-05",
+      "family": "SEC-CSRF",
+      "title": "GET publish 不再是写操作（源码事实）",
+      "severity": "S3",
+      "expected": "publish 只注册 POST，updateStatus 只注册 PUT",
+      "actual": "{\"publishMappings\":[\"Post\"],\"updateStatusMappings\":[\"Put\"]}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 1,
+      "evidence": {
+        "publishMappings": [
+          "Post"
+        ],
+        "updateStatusMappings": [
+          "Put"
+        ]
+      }
+    }
+  ]
+}
