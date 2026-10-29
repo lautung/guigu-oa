@@ -1,0 +1,11 @@
+{
+  "project": "desktop-1440-chromium",
+  "page": "config-template-edit",
+  "state": "basic-info",
+  "errors": [],
+  "warnings": [],
+  "allowedExternalAssetErrors": [
+    "Failed to load resource: the server responded with a status of 400 () (https://gw.alicdn.com/tfs/TB1U9iBCSzqK1RjSZPcXXbTepXa-112-112.png)",
+    "Failed to load resource: the server responded with a status of 400 () (https://gw.alicdn.com/tfs/TB13f_aCQzoK1RjSZFlXXai4VXa-112-112.png)"
+  ]
+}

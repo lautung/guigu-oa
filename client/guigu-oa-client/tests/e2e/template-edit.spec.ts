@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { e2eCookieURL } from './helpers/base-url'
+import { isKnownBrowserNoise } from './helpers/known-noise'
 
 function deferred() {
   let resolve!: () => void
@@ -39,16 +41,17 @@ async function setup(
   const errors: string[] = []
   const saved: Record<string, unknown>[] = []
   const uploads: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isKnownBrowserNoise(error.message)) errors.push(error.message)
+  })
   await page.context().addCookies([
-    { name: 'guigu_oa_client_token', value: 'edit-token', domain: '127.0.0.1', path: '/' },
+    { name: 'guigu_oa_client_token', value: 'edit-token', url: e2eCookieURL() },
     {
       name: 'guigu_oa_client_refresh_token',
       value: 'edit-refresh',
-      domain: '127.0.0.1',
-      path: '/',
+      url: e2eCookieURL(),
     },
-    { name: 'guigu_oa_client_entry', value: 'edit-opening', domain: '127.0.0.1', path: '/' },
+    { name: 'guigu_oa_client_entry', value: 'edit-opening', url: e2eCookieURL() },
   ])
   await page.context().route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')

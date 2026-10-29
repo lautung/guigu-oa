@@ -107,6 +107,21 @@ node scripts/compose-demo-smoke.mjs     # 登录页、Bob 待处理/已处理、
 `compose-baseline-check.sh` 全部通过时输出 `结果：26 通过，0 失败`；冒烟脚本成功时输出
 `Compose demo OK: Bob pending=1, ended=1, Carol copied=2, attachments=1`。
 
+### 兼容性矩阵
+
+矩阵与判定口径见 `docs/test/plan/compatibility-matrix.md`（#114/#117）。栈运行时：
+
+```bash
+cd client/guigu-oa-client
+npx playwright install chromium webkit
+E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e   # 四格 + 1440 关键页扫描
+npm run test:e2e:stack                                 # 真实栈套件（含 WebKit 手机审批 smoke）
+```
+
+`E2E_BASE_URL` 指向 nginx 生产构建时不再启动 Vite dev server；不设该变量时保持原行为。
+生产构建的 CSP 要求 mock 的附件直传源落在 `connect-src` 里，e2e 统一使用默认的
+`http://localhost:9000`。截图与逐页控制台日志写到 `test-results/compatibility/`。
+
 ## 安全响应头
 
 `client` 的 nginx 对每个响应加 `Content-Security-Policy`、`X-Frame-Options: DENY` 和

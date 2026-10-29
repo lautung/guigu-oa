@@ -35,5 +35,12 @@ export default defineConfig({
       name: 'stack-chromium',
       use: { browserName: 'chromium', viewport: { width: 1280, height: 900 } },
     },
+    {
+      // 兼容性矩阵（#114/#117）：真实后端 + 真实数据的手机审批链在 WebKit 上补一条 smoke。
+      // 其余功能用例只在 Chromium 上跑，避免整条功能基线翻倍。
+      name: 'stack-webkit-mobile',
+      testMatch: /p0-7-mobile-approval\.spec\.ts/,
+      use: { browserName: 'webkit' },
+    },
   ],
 })

@@ -1,10 +1,14 @@
 import { expect, test, type Route, type BrowserContext, type Page } from '@playwright/test'
+import { e2eCookieURL } from './helpers/base-url'
+import { isKnownBrowserNoise } from './helpers/known-noise'
 
 const pageErrors = new WeakMap<Page, string[]>()
 test.beforeEach(({ page }) => {
   const errors: string[] = []
   pageErrors.set(page, errors)
-  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isKnownBrowserNoise(error.message)) errors.push(error.message)
+  })
 })
 test.afterEach(({ page }) => {
   expect(pageErrors.get(page)).toEqual([])
@@ -15,8 +19,8 @@ const json = (route: Route, data: unknown) =>
 
 async function seedEntry(context: BrowserContext) {
   await context.addCookies([
-    { name: 'guigu_oa_client_token', value: 'access-alice', url: 'http://127.0.0.1:9530' },
-    { name: 'guigu_oa_client_refresh_token', value: 'refresh-alice', url: 'http://127.0.0.1:9530' },
+    { name: 'guigu_oa_client_token', value: 'access-alice', url: e2eCookieURL() },
+    { name: 'guigu_oa_client_refresh_token', value: 'refresh-alice', url: e2eCookieURL() },
   ])
 }
 

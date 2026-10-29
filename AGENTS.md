@@ -58,7 +58,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 ### 前端检查与构建
 
 - `npm run verify`：lint + typecheck + format:check + test:unit + 模块地图路径检查（提交前必跑）。
-- `npm run test:e2e`：Playwright，自动启动 9530 dev server。
+- `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动（兼容性矩阵）。
 - `npm run build:prod`：类型检查 + 生产构建。
 
 ### 仓库检查

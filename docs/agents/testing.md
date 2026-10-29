@@ -17,6 +17,13 @@
 - 状态机 view（编辑器、分配角色、详情、发起页）优先 mock 模块接缝（`vi.mock('@/config/template-editor', ...)`），用 `reactive` state + spy 驱动各 phase，不启动真实模块。
 - mock 工厂里不要引用顶层 `const`（TDZ）：先 `vi.hoisted(() => ({ holder: {} }))`，再在 `beforeEach` 里给 `holder.x` 赋值。
 
+## e2e
+
+- 默认 `npm run test:e2e` 起 9530 的 Vite dev server；设置 `E2E_BASE_URL` 时指向已构建客户端并跳过 dev server（兼容性矩阵，见 `docs/test/plan/compatibility-matrix.md`）。
+- project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
+- 生产构建有 CSP（#139）：mock 预签名上传使用 `http://localhost:9000`（`connect-src` 默认放行源），不要再用 `objects.test` 之类的外部主机。
+- WebKit 会把 ResizeObserver 循环上报成 `pageerror`；用 `tests/e2e/helpers/known-noise.ts` 只过滤这一条，其他错误仍失败。
+
 ## 服务端
 
 - 服务/控制器用纯 Mockito，不启动 Spring：`mock(Mapper.class)` + `ReflectionTestUtils.setField(service, "baseMapper", mapper)` 注入字段。

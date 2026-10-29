@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { e2eCookieURL } from './helpers/base-url'
+import { isKnownBrowserNoise } from './helpers/known-noise'
 
 function deferred() {
   let resolve!: () => void
@@ -29,10 +31,12 @@ async function setup(
   completionGate?: Promise<void>,
 ) {
   const errors: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isKnownBrowserNoise(error.message)) errors.push(error.message)
+  })
   await page.context().addCookies([
-    { name: 'guigu_oa_client_token', value: 'token', domain: '127.0.0.1', path: '/' },
-    { name: 'guigu_oa_client_entry', value: 'login-detail-test', domain: '127.0.0.1', path: '/' },
+    { name: 'guigu_oa_client_token', value: 'token', url: e2eCookieURL() },
+    { name: 'guigu_oa_client_entry', value: 'login-detail-test', url: e2eCookieURL() },
   ])
   let approvals = 0,
     completions = 0
@@ -59,7 +63,7 @@ async function setup(
         pages: 1,
       })
     if (path.startsWith('/admin/attachments/processes/') && path.endsWith('/download-url'))
-      return json(route, { downloadUrl: 'https://object-storage.test/download' })
+      return json(route, { downloadUrl: 'http://localhost:9000/download' })
     if (path.startsWith('/admin/attachments/processes/'))
       return json(route, {
         attachments: [{ id: 9, fileName: '原附件.txt', sizeBytes: 2 }],
@@ -69,7 +73,7 @@ async function setup(
       const data = route.request().postDataJSON() as { fileName: string }
       return json(route, {
         attachmentId: data.fileName,
-        uploadUrl: `https://object-storage.test/${data.fileName}`,
+        uploadUrl: `http://localhost:9000/${data.fileName}`,
         headers: {},
       })
     }
@@ -80,7 +84,8 @@ async function setup(
     }
     throw new Error(`Unexpected request ${path}`)
   })
-  await page.route('https://object-storage.test/**', async (route) => {
+  // 生产构建的 CSP 只放行 connect-src 里的对象存储源（#139），mock 必须使用同一来源。
+  await page.route('http://localhost:9000/**', async (route) => {
     if (uploadGate) await uploadGate
     await route.fulfill({ status: 200, body: '' })
   })

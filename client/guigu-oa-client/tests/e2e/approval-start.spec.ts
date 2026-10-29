@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { isKnownBrowserNoise } from './helpers/known-noise'
 function deferred() {
   let resolve!: () => void
   const promise = new Promise<void>((yes) => {
@@ -20,7 +21,9 @@ interface State {
 }
 async function setup(page: Page): Promise<State> {
   const state: State = { starts: [], pending: false, created: false, errors: [], warnings: [] }
-  page.on('pageerror', (error) => state.errors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isKnownBrowserNoise(error.message)) state.errors.push(error.message)
+  })
   page.on('console', (message) => {
     const text = message.text()
     const existingDeprecation = text.includes(
@@ -81,7 +84,7 @@ async function setup(page: Page): Promise<State> {
       attachment = { id: nextAttachmentId++, fileName: data.fileName, sizeBytes: data.sizeBytes }
       return json(route, {
         attachmentId: attachment.id,
-        uploadUrl: 'https://objects.test/proof',
+        uploadUrl: 'http://localhost:9000/proof',
         headers: {},
       })
     }
@@ -103,7 +106,8 @@ async function setup(page: Page): Promise<State> {
     }
     throw new Error(`Unexpected request ${path}`)
   })
-  await page.route('https://objects.test/**', (route) => route.fulfill({ status: 200, body: '' }))
+  // 生产构建的 CSP 只放行 connect-src 里的对象存储源（#139），mock 必须使用同一来源。
+  await page.route('http://localhost:9000/**', (route) => route.fulfill({ status: 200, body: '' }))
   await page.goto('/login')
   await page.getByPlaceholder('用户名').fill('alice')
   await page.getByPlaceholder('密码').fill('111111')

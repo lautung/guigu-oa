@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { e2eCookieURL } from './helpers/base-url'
+import { isKnownBrowserNoise } from './helpers/known-noise'
 
 function deferred() {
   let resolve!: () => void
@@ -62,7 +64,9 @@ interface Options {
 
 async function setup(page: Page, options: Options = {}): Promise<State> {
   const state: State = { reads: 0, assignments: [], infoCalls: 0, errors: [], warnings: [] }
-  page.on('pageerror', (error) => state.errors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isKnownBrowserNoise(error.message)) state.errors.push(error.message)
+  })
   page.on('console', (message) => {
     const text = message.text()
     const deprecation = text.includes('is about to be deprecated')
@@ -73,14 +77,13 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
     if (message.type() === 'error' && !expectedServerError && !deprecation) state.errors.push(text)
   })
   await page.context().addCookies([
-    { name: 'guigu_oa_client_token', value: 'assign-token', domain: '127.0.0.1', path: '/' },
+    { name: 'guigu_oa_client_token', value: 'assign-token', url: e2eCookieURL() },
     {
       name: 'guigu_oa_client_refresh_token',
       value: 'assign-refresh',
-      domain: '127.0.0.1',
-      path: '/',
+      url: e2eCookieURL(),
     },
-    { name: 'guigu_oa_client_entry', value: 'assign-entry', domain: '127.0.0.1', path: '/' },
+    { name: 'guigu_oa_client_entry', value: 'assign-entry', url: e2eCookieURL() },
   ])
   await page.context().route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')

@@ -92,7 +92,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
       state.uploadRequest = request.postDataJSON() as Record<string, unknown>
       return json(route, {
         attachmentId: attachment.id,
-        uploadUrl: 'https://object-storage.test/upload/smoke-attachment-1',
+        uploadUrl: 'http://localhost:9000/upload/smoke-attachment-1',
         headers: {},
       })
     }
@@ -150,9 +150,8 @@ async function mockApi(page: Page): Promise<SmokeState> {
     return json(route, { message: `Unexpected API request: ${method} ${path}` }, 500)
   })
 
-  await page.route('https://object-storage.test/**', (route) =>
-    route.fulfill({ status: 200, body: '' }),
-  )
+  // 生产构建的 CSP 只放行 connect-src 里的对象存储源（#139），mock 必须使用同一来源。
+  await page.route('http://localhost:9000/**', (route) => route.fulfill({ status: 200, body: '' }))
 
   return state
 }
