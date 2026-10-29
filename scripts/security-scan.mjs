@@ -130,11 +130,17 @@ async function findStartableTemplate(token) {
 }
 
 async function findStarted(token, marker) {
-  for (let page = 1; page <= 5; page += 1) {
+  const first = await call('get', '/admin/process/findStarted/1/50', { token })
+  const firstRecords = dataOf(first)?.records || []
+  const found = firstRecords.find((record) => JSON.stringify(record).includes(marker))
+  if (found) return found
+  // 已发起按创建顺序升序；演示库累积后新审批落在末页，从末页往回找。
+  const pages = Math.ceil((dataOf(first)?.total || firstRecords.length) / 50)
+  for (let page = pages; page >= 2; page -= 1) {
     const response = await call('get', `/admin/process/findStarted/${page}/50`, { token })
     const records = dataOf(response)?.records || []
-    const found = records.find((record) => JSON.stringify(record).includes(marker))
-    if (found) return found
+    const hit = records.find((record) => JSON.stringify(record).includes(marker))
+    if (hit) return hit
   }
   return null
 }
