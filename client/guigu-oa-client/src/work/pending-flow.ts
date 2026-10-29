@@ -1,3 +1,4 @@
+import { formFields } from '@/work/form-values'
 import {
   parseFormValues,
   statusLabel,
@@ -11,10 +12,6 @@ import type {
   WorkRecordEntry,
   WorkSummaryField,
 } from '@/types/domain'
-
-function fieldsFromShowData(formShowData: Record<string, unknown> = {}): WorkSummaryField[] {
-  return Object.keys(formShowData).map((key) => ({ key, value: formShowData[key] }))
-}
 
 export interface ProcessDetailViewModel {
   id?: EntityId
@@ -50,7 +47,7 @@ export function presentDetail(
     statusTagType: statusTagType(process.status),
     progressLabel: emphasizeProgress ? process.description || '' : '',
     recordsFirst: emphasizeProgress,
-    formFields: fieldsFromShowData(formShowData),
+    formFields: formFields(formShowData),
     records: (payload.processRecordList || []).map((record) => ({
       operateUser: record.operateUser,
       description: record.description,

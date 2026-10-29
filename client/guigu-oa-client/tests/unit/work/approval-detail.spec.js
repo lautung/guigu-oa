@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { createApprovalDetail } from '@/work/approval-detail'
 import { workListPerspective } from '@/work/work-list'
+import { XSS_PAYLOAD } from '../support/harness'
 
 function deferred() {
   let resolve, reject
@@ -69,6 +70,30 @@ function harness(overrides = {}) {
     },
   }
 }
+
+it('把表单值呈现为文本，数组按顿号连接，HTML 原样保留为字符', async () => {
+  const h = harness()
+  const opened = h.module.open(target())
+  h.reads[0].resolve({
+    process: {
+      id: 'A',
+      title: '审批 A',
+      status: 1,
+      formValues: {
+        formShowData: {
+          请假原因: XSS_PAYLOAD,
+          同行人: ['张三', '李四'],
+        },
+      },
+    },
+    processRecordList: [],
+  })
+  await opened.ready
+  expect(opened.state.detail.formFields).toEqual([
+    { key: '请假原因', value: XSS_PAYLOAD },
+    { key: '同行人', value: '张三、李四' },
+  ])
+})
 
 it('读取 A 时打开 B，A 迟到的成功不改变 B 的内容和加载状态', async () => {
   const h = harness()

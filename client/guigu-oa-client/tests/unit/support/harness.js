@@ -5,6 +5,9 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { configureRequest } from '@/utils/request'
 
+/** 审批表单值的存储型 XSS 载荷（#142）：页面必须把它显示成字符，不能生成元素。 */
+export const XSS_PAYLOAD = '<img src=x onerror="window.__secXss=1">'
+
 /** jsdom lacks ResizeObserver; Element Plus components expect it when mounted for real. */
 export function ensureDomApis() {
   if (typeof globalThis.ResizeObserver === 'undefined') {

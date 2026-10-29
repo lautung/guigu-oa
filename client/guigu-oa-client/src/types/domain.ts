@@ -209,7 +209,7 @@ export interface WorkListRecord extends ProcessInstanceRecord {
 
 export interface WorkSummaryField {
   key: string
-  value: unknown
+  value: string
 }
 
 export interface PresentedWorkListRecord {

@@ -21,6 +21,8 @@ export default typescriptEslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      // 审批表单值只按文本呈现（#142 / ADR 0028）：v-html 会把存储的用户输入注入 DOM。
+      'vue/no-v-html': 'error',
     },
   },
   {

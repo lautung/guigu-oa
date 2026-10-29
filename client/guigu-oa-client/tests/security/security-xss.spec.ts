@@ -99,12 +99,14 @@ test('审批表单字段的存储型 XSS 不执行', async ({ page, request }, t
     contentType: 'application/json',
   })
   expect.soft(listFlag, '列表页 v-html 执行了脚本').toBeNull()
+  await expect(item as Locator).toContainText(PAYLOAD)
 
   await page.evaluate(() => {
     ;(window as { __secXss?: number }).__secXss = undefined
   })
   await (item as Locator).click()
   await expect(page.locator('.form-field p').first()).toBeVisible()
+  await expect(page.locator('.form-field', { hasText: PAYLOAD })).toHaveCount(1)
   await page.waitForTimeout(1_500)
 
   const detailFlag = await page.evaluate(() => (window as { __secXss?: number }).__secXss ?? null)

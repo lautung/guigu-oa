@@ -20,6 +20,7 @@ import WorkListPage from '@/views/work/WorkListPage.vue'
 import Profile from '@/views/work/profile/index.vue'
 import WorkStart from '@/views/work/start/index.vue'
 import {
+  XSS_PAYLOAD,
   createTestRouter,
   fakeRecognition,
   installHttp,
@@ -111,6 +112,31 @@ describe('WorkListPage', () => {
     wrapper.vm.openDetail(wrapper.vm.rows[0])
     await flushPromises()
     expect(push).toHaveBeenCalledWith('/work/pending/p-1/t-1')
+  })
+
+  it('shows a summary field that looks like HTML as text, never as markup', async () => {
+    http.restore()
+    http = installHttp((config) => {
+      const url = config.url || ''
+      if (/findPending/.test(url)) {
+        return paged([
+          {
+            ...workRecord,
+            formValues: JSON.stringify({ formShowData: { 请假原因: XSS_PAYLOAD } }),
+          },
+        ])
+      }
+      return ok(null)
+    })
+    const { pinia } = setupSession()
+    const router = workRouter()
+    await router.push(PATHS.WORK_PENDING)
+    await router.isReady()
+    const wrapper = mount(WorkListPage, mountOptions(pinia, router))
+    await flushPromises()
+
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.text()).toContain(XSS_PAYLOAD)
   })
 
   it('reopens the list when the route kind changes', async () => {

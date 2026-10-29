@@ -94,7 +94,7 @@
           <div v-if="detail.formFields.length === 0" class="empty-hint">暂无表单字段</div>
           <div v-for="field in detail.formFields" :key="field.key" class="form-field">
             <h4>{{ field.key }}</h4>
-            <p v-html="field.value" />
+            <p>{{ field.value }}</p>
           </div>
         </template>
       </section>
@@ -324,11 +324,7 @@ function addFiles(event: Event) {
     color: #303133;
     line-height: 1.5;
     word-break: break-word;
-  }
-
-  :deep(img) {
-    max-width: 100%;
-    height: auto;
+    white-space: pre-wrap;
   }
 }
 

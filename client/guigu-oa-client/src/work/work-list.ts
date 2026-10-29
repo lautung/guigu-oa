@@ -6,6 +6,7 @@ import {
   workListPath,
   type WorkListKind,
 } from '@/router/paths'
+import { formFields } from '@/work/form-values'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type {
   ApiRequestConfig,
@@ -118,9 +119,7 @@ export function parseFormValues(formValues: unknown): ProcessFormValues {
 }
 
 export function summaryFields(formShowData: FormDataRecord = {}) {
-  return Object.keys(formShowData)
-    .filter((key) => !LIST_HIDDEN_FIELD_KEYS.includes(key))
-    .map((key) => ({ key, value: formShowData[key] }))
+  return formFields(formShowData).filter((field) => !LIST_HIDDEN_FIELD_KEYS.includes(field.key))
 }
 
 export function workListDefinition(kind: WorkListKind): WorkListDefinition {

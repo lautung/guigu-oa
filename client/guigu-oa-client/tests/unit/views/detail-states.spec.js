@@ -9,7 +9,7 @@ vi.mock('@/work/approval-detail-http', () => ({ createHttpDetailAdapter: () => (
 
 import { PATHS, WORK_LIST_KINDS } from '@/router/paths'
 import PendingDetail from '@/views/work/pending/detail.vue'
-import { createTestRouter, mountOptions, setupSession } from '../support/harness'
+import { XSS_PAYLOAD, createTestRouter, mountOptions, setupSession } from '../support/harness'
 
 const buttonStub = {
   name: 'ElButton',
@@ -116,6 +116,14 @@ describe('PendingDetail states', () => {
     expect(wrapper.text()).toContain('流转中')
     expect(wrapper.text()).toContain('张三')
     expect(wrapper.vm.detail.records[0].description).toBe('提交申请')
+  })
+
+  it('shows a form field value that looks like HTML as text, never as markup', async () => {
+    holder.opening.state.detail.formFields = [{ key: '请假原因', value: XSS_PAYLOAD }]
+    const wrapper = await mountDetail()
+
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.text()).toContain(XSS_PAYLOAD)
   })
 
   it('renders loading and disables the refresh button', async () => {

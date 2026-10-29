@@ -23,7 +23,7 @@
         <p v-if="item.progressLabel" class="item-progress">{{ item.progressLabel }}</p>
         <div v-if="item.summaryFields.length" class="item-fields">
           <p v-for="field in item.summaryFields" :key="field.key">
-            {{ field.key }}：<span v-html="field.value" />
+            {{ field.key }}：{{ field.value }}
           </p>
         </div>
         <div class="item-status">
@@ -171,11 +171,6 @@ export default defineComponent({
   p {
     margin: 4px 0;
     line-height: 1.5;
-  }
-
-  ::v-deep img {
-    max-width: 100%;
-    height: auto;
   }
 }
 
