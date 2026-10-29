@@ -27,11 +27,18 @@ services:
       retries: 20
 
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    command: server /data --console-address ":9001"
+    # minio/minio 与 minio/mc 已从 Docker Hub 和 quay.io 撤下匿名可拉取的镜像，
+    # 这里改用同一条上游 MinIO 二进制线的 Bitnami 存档构建。
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    user: "0:0"
+    entrypoint: ["/opt/bitnami/minio/bin/minio"]
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: local-access-key
       MINIO_ROOT_PASSWORD: local-secret-key
+      # MinIO 不实现 PutBucketCors（mc cors set 会返回 NotImplemented），
+      # 浏览器直传所需的跨域只能在服务端按来源放行。
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:9530
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -39,17 +46,16 @@ services:
       - minio-data:/data
 
   minio-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: bitnamilegacy/minio-client:2025.7.21-debian-12-r3
     depends_on:
       minio:
         condition: service_started
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
-        until mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do sleep 2; done;
-        mc mb --ignore-existing local/guigu-oa-attachments;
-        printf '%s' '<CORSConfiguration><CORSRule><AllowedOrigin>http://localhost:9530</AllowedOrigin><AllowedMethod>GET</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedMethod>HEAD</AllowedMethod><AllowedHeader>*</AllowedHeader><ExposeHeader>ETag</ExposeHeader><MaxAgeSeconds>3000</MaxAgeSeconds></CORSRule></CORSConfiguration>' > /tmp/attachments-cors.xml;
-        mc cors set local/guigu-oa-attachments /tmp/attachments-cors.xml
+        MC=/opt/bitnami/minio-client/bin/mc;
+        until $$MC alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do sleep 2; done;
+        $$MC mb --ignore-existing local/guigu-oa-attachments
     environment:
       MINIO_ROOT_USER: local-access-key
       MINIO_ROOT_PASSWORD: local-secret-key
@@ -59,6 +65,8 @@ services:
     build:
       context: ./server/guigu-oa-parent
       dockerfile: service-oa/Dockerfile
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-}
     environment:
       SPRING_PROFILES_ACTIVE: dev,demo
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true
@@ -90,6 +98,8 @@ services:
     build:
       context: ./client/guigu-oa-client
       dockerfile: Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
     ports:
       - "9530:80"
     depends_on:
