@@ -7,3 +7,11 @@ management:
     health:
       probes:
         enabled: true
+
+# 演示栈以 SPRING_PROFILES_ACTIVE=dev,demo 启动（compose.yaml），后加载的 demo 覆盖 dev：
+# 匿名演示面不提供 Swagger / OpenAPI（#140）。本地要看接口文档就只跑 dev profile。
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

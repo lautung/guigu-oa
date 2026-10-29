@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 校验 Compose 演示栈是否达到可复现测试基线：容器、健康、种子账号、引擎表、演示审批。
+# 校验 Compose 演示栈是否达到可复现测试基线：容器、健康、安全响应头、匿名暴露面、
+# 种子账号、引擎表、演示审批。
 # 用法：在仓库根目录执行 ./scripts/compose-baseline-check.sh
 set -uo pipefail
 
@@ -21,7 +22,7 @@ sql() {
 echo "== 容器 =="
 for svc in mysql redis minio service-oa client; do
   state=$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$svc" '$1==s {print $2}')
-  [ "$state" = "running" ] && ok "$svc running" || bad "$svc 未运行（$state）"
+  [ "$state" = "running" ] && ok "$svc running" || bad "$svc 未运行（${state}）"
 done
 
 echo "== 健康 =="
@@ -29,13 +30,13 @@ code=$(curl -sS -m 10 -o /tmp/baseline-health.json -w '%{http_code}' "$API/actua
 if [ "$code" = "200" ] && grep -q '"status":"UP"' /tmp/baseline-health.json; then
   ok "后端 /actuator/health UP"
 else
-  bad "后端 /actuator/health 异常（HTTP $code）"
+  bad "后端 /actuator/health 异常（HTTP ${code}）"
 fi
 code=$(curl -sS -m 10 -o /tmp/baseline-login.html -w '%{http_code}' "$CLIENT/login" 2>/dev/null)
 if [ "$code" = "200" ] && grep -q '<div id="app">' /tmp/baseline-login.html; then
   ok "客户端登录页可访问"
 else
-  bad "客户端登录页异常（HTTP $code）"
+  bad "客户端登录页异常（HTTP ${code}）"
 fi
 
 echo "== 安全响应头 =="
@@ -54,6 +55,35 @@ if printf '%s' "$headers" | grep -qi '^x-content-type-options: *nosniff'; then
   ok "客户端 X-Content-Type-Options: nosniff"
 else
   bad "客户端缺 X-Content-Type-Options: nosniff"
+fi
+
+echo "== 匿名暴露面 =="
+code=$(curl -sS -m 10 -o /tmp/baseline-apidocs.json -w '%{http_code}' "$API/v3/api-docs" 2>/dev/null)
+if [ -z "$code" ] || [ "$code" = "000" ]; then
+  bad "后端不可达，无法确认 /v3/api-docs（HTTP ${code:-无}）"
+elif [ "$code" = "200" ] && grep -q '"openapi"' /tmp/baseline-apidocs.json; then
+  bad "后端 /v3/api-docs 匿名可读"
+else
+  ok "后端 /v3/api-docs 未匿名暴露（HTTP ${code}）"
+fi
+code=$(curl -sS -m 10 -o /tmp/baseline-swagger.html -w '%{http_code}' "$API/swagger-ui/index.html" 2>/dev/null)
+if [ -z "$code" ] || [ "$code" = "000" ]; then
+  bad "后端不可达，无法确认 /swagger-ui/index.html（HTTP ${code:-无}）"
+elif [ "$code" = "200" ] && grep -qi 'swagger' /tmp/baseline-swagger.html; then
+  bad "后端 /swagger-ui/index.html 匿名可读"
+elif [ "${code#5}" != "$code" ]; then
+  bad "后端 /swagger-ui/index.html 返回 5xx（HTTP ${code}）"
+else
+  ok "后端 /swagger-ui/index.html 未匿名暴露（HTTP ${code}）"
+fi
+headers=$(curl -sSI -m 10 "$CLIENT/" 2>/dev/null)
+server_header=$(printf '%s' "$headers" | grep -i '^server:' | head -1)
+if ! printf '%s' "$headers" | grep -q '^HTTP/'; then
+  bad "客户端不可达，无法确认 Server 头"
+elif printf '%s' "$server_header" | grep -Eq '[0-9]+\.[0-9]+'; then
+  bad "客户端 Server 头暴露版本（${server_header}）"
+else
+  ok "客户端 Server 头不含版本（${server_header:-未返回}）"
 fi
 
 echo "== 种子账号 =="

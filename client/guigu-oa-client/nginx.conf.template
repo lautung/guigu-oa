@@ -2,6 +2,9 @@ server {
     listen 80;
     server_name _;
 
+    # 只回 "Server: nginx"，不暴露精确版本号（#140）。
+    server_tokens off;
+
     root /usr/share/nginx/html;
     index index.html;
 

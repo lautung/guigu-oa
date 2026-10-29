@@ -44,7 +44,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
    `java -jar target/service-oa.jar`
    若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
 3. Flowable 的 `ACT_*` 表由引擎在空库上首启动时自动建（`application-dev.yml`: `flowable.database-schema-update: true`，`flowable.history-level: full`）。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
-4. OpenAPI / Swagger UI：`/v3/api-docs` 与 `/swagger-ui.html` 无需登录。业务接口仍用请求头 `token`。
+4. OpenAPI / Swagger UI：只在 `dev` profile 下无需登录可读（`/v3/api-docs`、`/swagger-ui.html`）。Compose 演示栈（`dev,demo`）与 `prod` 都关闭这两个端点（#140）。业务接口仍用请求头 `token`。
 
 ### 数据库初始化
 

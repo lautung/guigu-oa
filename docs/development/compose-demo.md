@@ -72,6 +72,17 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 已结束场景由 Bob 处理。演示数据包含一条 Bob 待处理的审批、一条已结束审批、Carol 的节点抄送，
 以及一条保存在 MinIO 的附件和对应元数据。
 
+### 接口文档
+
+演示栈以 `dev,demo` 启动，后加载的 `application-demo.yml` 覆盖了 `dev` 的接口文档开关：
+匿名面**不提供** `/v3/api-docs` 与 `/swagger-ui/index.html`（#140）。这是有意的——演示栈的
+8800 端口直接对外开放，保留文档等于把全部端点、参数与数据模型交给未登录访问者。
+
+本地需要看接口文档时只跑 `dev`：用 `java -jar target/service-oa.jar` 起后端（`application.yml`
+的默认 profile 就是 `dev`）。前端 `npm run dev` 只是 9530 的 Vite 开发服务器，接口文档由 8800
+后端提供，和前端是否运行无关。前端 nginx 同时设置了 `server_tokens off`，`Server` 头只回
+`nginx`，不带版本号。
+
 ### 演示审批的发布
 
 演示迁移只把「演示请假申请」种成**未发布**（`status=0`）。`service-oa` 以 `dev,demo` 启动时，
@@ -89,11 +100,11 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 环境运行后，先跑基线检查，再跑公开接口冒烟：
 
 ```bash
-./scripts/compose-baseline-check.sh     # 容器、健康、5 个种子账号、ACT_*/FLW_* 表、演示审批
+./scripts/compose-baseline-check.sh     # 容器、健康、安全头、匿名暴露面、种子账号、引擎表、演示审批
 node scripts/compose-demo-smoke.mjs     # 登录页、Bob 待处理/已处理、Carol 抄送与附件授权
 ```
 
-`compose-baseline-check.sh` 全部通过时输出 `结果：23 通过，0 失败`；冒烟脚本成功时输出
+`compose-baseline-check.sh` 全部通过时输出 `结果：26 通过，0 失败`；冒烟脚本成功时输出
 `Compose demo OK: Bob pending=1, ended=1, Carol copied=2, attachments=1`。
 
 ## 安全响应头
