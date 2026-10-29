@@ -32,7 +32,13 @@ export default typescriptEslint.config(
     },
   },
   {
-    files: ['playwright.config.ts', 'tests/e2e/**/*.ts', 'tests/e2e-stack/**/*.ts'],
+    files: [
+      'playwright.config.ts',
+      'playwright.api.config.ts',
+      'tests/e2e/**/*.ts',
+      'tests/e2e-stack/**/*.ts',
+      'tests/api/**/*.ts',
+    ],
     languageOptions: {
       globals: globals.node,
     },

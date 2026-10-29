@@ -1,0 +1,194 @@
+<testsuites id="" name="" tests="65" failures="0" skipped="0" errors="0" time="14.286607">
+<testsuite name="a-auth.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="4" failures="0" skipped="0" time="1.905" errors="0">
+<testcase name="A 认证与认出 › A1 登录：正例 / 错密码 / 不存在用户 / 停用用户" classname="a-auth.spec.ts" time="0.901">
+</testcase>
+<testcase name="A 认证与认出 › A2 刷新：正例 / access 当 refresh / 篡改 refresh / 停用用户" classname="a-auth.spec.ts" time="0.462">
+</testcase>
+<testcase name="A 认证与认出 › A3 info：admin 有配置菜单 / user 为空 / 无 token 208" classname="a-auth.spec.ts" time="0.22">
+</testcase>
+<testcase name="A 认证与认出 › A4 登出：有 token 作废会话 / 无 token 幂等 200" classname="a-auth.spec.ts" time="0.322">
+</testcase>
+</testsuite>
+<testsuite name="b-grant.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="2" failures="0" skipped="0" time="0.971" errors="0">
+<testcase name="B 配置授予分支 › 单页授予只开 sysUser，其余配置页仍 205" classname="b-grant.spec.ts" time="0.506">
+</testcase>
+<testcase name="B 配置授予分支 › 已知缺陷 #146：删除角色后成员授予不回收（修复后应变 205）" classname="b-grant.spec.ts" time="0.465">
+</testcase>
+</testsuite>
+<testsuite name="b-menu.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="6" failures="0" skipped="0" time="1.32" errors="0">
+<testcase name="B 菜单管理 › B16 toAssign：可授树 + 已勾选 / 无授予 205" classname="b-menu.spec.ts" time="0.246">
+</testcase>
+<testcase name="B 菜单管理 › B17 doAssign：合法授予生效 / 新非法 id 201" classname="b-menu.spec.ts" time="0.186">
+</testcase>
+<testcase name="B 菜单管理 › B18 findNodes：配置树 / 无授予 205" classname="b-menu.spec.ts" time="0.2">
+</testcase>
+<testcase name="B 菜单管理 › B19 save：正例 / 受保护 path 201 / 非配置菜单 201" classname="b-menu.spec.ts" time="0.187">
+</testcase>
+<testcase name="B 菜单管理 › B20 update：正例 / 受保护 type 与 status 变更 201" classname="b-menu.spec.ts" time="0.201">
+</testcase>
+<testcase name="B 菜单管理 › B21 remove：正例 / 有子节点 201 / 受保护入口 201" classname="b-menu.spec.ts" time="0.3">
+</testcase>
+</testsuite>
+<testsuite name="b-role.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="9" failures="0" skipped="0" time="2.285" errors="0">
+<testcase name="B 角色管理 › B7 toAssign：正例（全量 + 已授）/ 无授予 205" classname="b-role.spec.ts" time="0.341">
+</testcase>
+<testcase name="B 角色管理 › B8 doAssign：全量覆写生效；已知缺陷 #144 不存在的 roleId 也被接受" classname="b-role.spec.ts" time="0.298">
+</testcase>
+<testcase name="B 角色管理 › B9 findAll：有授予 200 / 无授予 205" classname="b-role.spec.ts" time="0.199">
+</testcase>
+<testcase name="B 角色管理 › B10 分页：正例 / 无授予 205" classname="b-role.spec.ts" time="0.196">
+</testcase>
+<testcase name="B 角色管理 › B11 save：正例 / 无授予 205" classname="b-role.spec.ts" time="0.234">
+</testcase>
+<testcase name="B 角色管理 › B12 get：正例 / 无授予 205 / 不存在的 id 返回 200 null" classname="b-role.spec.ts" time="0.252">
+</testcase>
+<testcase name="B 角色管理 › B13 update：正例 / 无授予 205" classname="b-role.spec.ts" time="0.248">
+</testcase>
+<testcase name="B 角色管理 › B14 remove：正例（get 返回 null）/ 无授予 205" classname="b-role.spec.ts" time="0.223">
+</testcase>
+<testcase name="B 角色管理 › B15 batchRemove：正例（List&lt;Long&gt; 体）/ 无授予 205" classname="b-role.spec.ts" time="0.294">
+</testcase>
+</testsuite>
+<testsuite name="b-user.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="6" failures="0" skipped="0" time="2.292" errors="0">
+<testcase name="B 用户管理 › B1 updateStatus：停用后下一次请求 209 / 无授予 205" classname="b-user.spec.ts" time="0.412">
+</testcase>
+<testcase name="B 用户管理 › B2 分页：正例 / 无授予 205 / limit 超上限 201 / 不返回密码" classname="b-user.spec.ts" time="0.207">
+</testcase>
+<testcase name="B 用户管理 › B3 get：正例 / 无授予 205 / 不存在的 id 返回 200 null" classname="b-user.spec.ts" time="0.309">
+</testcase>
+<testcase name="B 用户管理 › B4 save：正例（BCrypt 落库）/ 无授予 205" classname="b-user.spec.ts" time="0.379">
+</testcase>
+<testcase name="B 用户管理 › B5 update：空密码保留原 hash / 改密生效；已知缺陷 #143 旧 token 仍可用" classname="b-user.spec.ts" time="0.65">
+</testcase>
+<testcase name="B 用户管理 › B6 remove：逻辑删除后列表不含 / 无授予 205" classname="b-user.spec.ts" time="0.335">
+</testcase>
+</testsuite>
+<testsuite name="c-process-config.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="14" failures="0" skipped="0" time="0.816" errors="0">
+<testcase name="C 审批配置 › C1 审批列表：正例 / 无授予 205" classname="c-process-config.spec.ts" time="0.112">
+</testcase>
+<testcase name="C 审批配置 › C2 模板分页：含未发布 / 无授予 205" classname="c-process-config.spec.ts" time="0.075">
+</testcase>
+<testcase name="C 审批配置 › C3 模板详情：正例 / 无授予 205 / 不存在 200 null" classname="c-process-config.spec.ts" time="0.03">
+</testcase>
+<testcase name="C 审批配置 › C4 save：新建即未发布 / 无授予 205" classname="c-process-config.spec.ts" time="0.073">
+</testcase>
+<testcase name="C 审批配置 › C5 update：未发布正例 / 已发布 201" classname="c-process-config.spec.ts" time="0.096">
+</testcase>
+<testcase name="C 审批配置 › C6 remove：未发布正例 / 已发布 201" classname="c-process-config.spec.ts" time="0.064">
+</testcase>
+<testcase name="C 审批配置 › C7 uploadProcessDefinition：zip 正例 / 非 zip 201 / 空文件 201" classname="c-process-config.spec.ts" time="0.031">
+</testcase>
+<testcase name="C 审批配置 › C8 publish：未发布正例 / 再发布 201" classname="c-process-config.spec.ts" time="0.128">
+</testcase>
+<testcase name="C 审批配置 › C9 processType findAll：正例 / 无授予 205" classname="c-process-config.spec.ts" time="0.017">
+</testcase>
+<testcase name="C 审批配置 › C10 processType 分页：正例 / 无授予 205" classname="c-process-config.spec.ts" time="0.018">
+</testcase>
+<testcase name="C 审批配置 › C11 processType get：正例 / 无授予 205 / 不存在 200 null" classname="c-process-config.spec.ts" time="0.04">
+</testcase>
+<testcase name="C 审批配置 › C12 processType save：正例 / 无授予 205" classname="c-process-config.spec.ts" time="0.039">
+</testcase>
+<testcase name="C 审批配置 › C13 processType update：正例 / 无授予 205" classname="c-process-config.spec.ts" time="0.059">
+</testcase>
+<testcase name="C 审批配置 › C14 processType remove：逻辑删除后 get 返回 null" classname="c-process-config.spec.ts" time="0.034">
+</testcase>
+</testsuite>
+<testsuite name="d-work.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="11" failures="0" skipped="0" time="0.933" errors="0">
+<testcase name="D 办事 › D1 findPending：bob 有记录 / alice 空" classname="d-work.spec.ts" time="0.108">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D2 startUp：正例已发起 / 未发布模板 201 / 抄送人无效 201" classname="d-work.spec.ts" time="0.329">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D3 getProcessTemplate：已发布可读 / 未发布返回 null" classname="d-work.spec.ts" time="0.17">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D4 findStartable：只含已发布且可用" classname="d-work.spec.ts" time="0.02">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D5 show：申请人/处理人/抄送人可读，非成员 403" classname="d-work.spec.ts" time="0.159">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D6 approve：当前处理人通过 / 非当前处理人 403" classname="d-work.spec.ts" time="0.08">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D7 findProcessed：bob 正例" classname="d-work.spec.ts" time="0.009">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D8 findCarbonCopied：carol 正例" classname="d-work.spec.ts" time="0.011">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D9 carbonCopyRecipients：普通用户可读，只含 id 与 name" classname="d-work.spec.ts" time="0.009">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D10 findStarted：alice 只看到本人，userId 参数被忽略" classname="d-work.spec.ts" time="0.031">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="D 办事 › D11 getCurrentUser：只含 name 与 phone" classname="d-work.spec.ts" time="0.007">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+</testsuite>
+<testsuite name="e-attachments.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="7" failures="0" skipped="0" time="2.26" errors="0">
+<testcase name="E 附件 › E1 uploads：草稿正例 / 超过 50 MiB 201 / 非成员 205" classname="e-attachments.spec.ts" time="0.341">
+</testcase>
+<testcase name="E 附件 › E2 complete：正例 / 对象缺失 201 / 大小不符 201 / 非 owner 205" classname="e-attachments.spec.ts" time="0.371">
+</testcase>
+<testcase name="E 附件 › E3 drafts：owner 正例 / 他人空 / 非法 draftId 201" classname="e-attachments.spec.ts" time="0.243">
+</testcase>
+<testcase name="E 附件 › E4 deletePending：PENDING 正例 / 已绑定 205 / 非 owner 205" classname="e-attachments.spec.ts" time="0.255">
+</testcase>
+<testcase name="E 附件 › E5 processes：成员可读（canUpload）/ 非成员 205" classname="e-attachments.spec.ts" time="0.494">
+</testcase>
+<testcase name="E 附件 › E6 download-url：成员正例 / 非成员 205 / 附件不属于该 process 205" classname="e-attachments.spec.ts" time="0.419">
+</testcase>
+<testcase name="E 附件 › E 附：附件生命周期正例（登记→PUT→complete→删除）" classname="e-attachments.spec.ts" time="0.137">
+</testcase>
+</testsuite>
+<testsuite name="f-http-semantics.spec.ts" timestamp="2026-10-29T14:16:33.955Z" hostname="" tests="6" failures="0" skipped="0" time="0.402" errors="0">
+<testcase name="F HTTP 语义（已知缺陷 #145） › F1 业务失败返回 HTTP 200 + code 208" classname="f-http-semantics.spec.ts" time="0.088">
+</testcase>
+<testcase name="F HTTP 语义（已知缺陷 #145） › F2 未知路径返回 HTTP 200 + code 201" classname="f-http-semantics.spec.ts" time="0.1">
+</testcase>
+<testcase name="F HTTP 语义（已知缺陷 #145） › F3 方法不匹配（GET publish）返回 HTTP 200 + code 201" classname="f-http-semantics.spec.ts" time="0.101">
+</testcase>
+<testcase name="F HTTP 语义（已知缺陷 #145） › F4 方法不匹配（GET updateStatus）返回 HTTP 200 + code 201" classname="f-http-semantics.spec.ts" time="0.096">
+</testcase>
+<testcase name="F HTTP 语义（已知缺陷 #145） › F5 无 token 受保护请求：HTTP 200 + code 208" classname="f-http-semantics.spec.ts" time="0.006">
+</testcase>
+<testcase name="F HTTP 语义（已知缺陷 #145） › F6 匿名路径上的错误方法：HTTP 403 + 空体（另一套错误约定）" classname="f-http-semantics.spec.ts" time="0.011">
+</testcase>
+</testsuite>
+</testsuites>
