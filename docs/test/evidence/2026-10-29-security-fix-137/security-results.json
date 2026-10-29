@@ -1,0 +1,71 @@
+{
+  "environment": {
+    "date": "2026-10-29T08:07:47.031Z",
+    "commit": "61f91a5e267df934c544c5fb5f1865dc77fdf04a",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvt9gfca",
+    "compose": "client Up 42 seconds\nminio Up 4 hours\nmysql Up 4 hours (healthy)\nredis Up 4 hours (healthy)\nservice-oa Up 53 seconds (healthy)",
+    "startedAt": "2026-10-29T08:07:44.554Z"
+  },
+  "results": [
+    {
+      "id": "SEC-PAGE-01",
+      "family": "SEC-PAGE",
+      "title": "用户分页接受无上限 limit",
+      "severity": "S3",
+      "expected": "服务端应设 maxLimit 或拒绝超大 limit",
+      "actual": "{\"code\":201,\"size\":null,\"records\":null,\"total\":null,\"ms\":18}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 18,
+      "evidence": {
+        "code": 201,
+        "size": null,
+        "records": null,
+        "total": null,
+        "ms": 18
+      }
+    },
+    {
+      "id": "SEC-PAGE-02",
+      "family": "SEC-PAGE",
+      "title": "审批待处理分页接受无上限 limit",
+      "severity": "S3",
+      "expected": "服务端应设 maxLimit 或拒绝超大 limit",
+      "actual": "{\"code\":201,\"size\":null,\"records\":null,\"total\":null,\"ms\":11}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 11,
+      "evidence": {
+        "code": 201,
+        "size": null,
+        "records": null,
+        "total": null,
+        "ms": 11
+      }
+    },
+    {
+      "id": "SEC-PAGE-03",
+      "family": "SEC-PAGE",
+      "title": "负数/零分页参数被安全处理",
+      "severity": "S4",
+      "expected": "不返回 5xx 或异常数据",
+      "actual": "{\"negative\":{\"status\":200,\"code\":201},\"zero\":{\"status\":200,\"code\":201}}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 30,
+      "evidence": {
+        "negative": {
+          "status": 200,
+          "code": 201
+        },
+        "zero": {
+          "status": 200,
+          "code": 201
+        }
+      }
+    }
+  ]
+}
