@@ -32,16 +32,22 @@ public class JwtHelper {
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    /** Both tokens of one login share a session id so 退出 can revoke exactly that login. */
-    public TokenPair createTokenPair(Long userId, String username) {
+    /**
+     * Both tokens of one login share a session id so 退出 can revoke exactly that login, and carry
+     * the user's token version so a password change retires every login.
+     */
+    public TokenPair createTokenPair(Long userId, String username, long tokenVersion) {
         String sessionId = newSessionId();
         return new TokenPair(
-                createAccessToken(userId, username, sessionId),
-                createToken(userId, username, REFRESH_TOKEN_TYPE, REFRESH_TOKEN_LIFETIME_MILLIS, sessionId));
+                createAccessToken(userId, username, sessionId, tokenVersion),
+                createToken(userId, username, REFRESH_TOKEN_TYPE, REFRESH_TOKEN_LIFETIME_MILLIS,
+                        sessionId, tokenVersion));
     }
 
-    public String createAccessToken(Long userId, String username, String sessionId) {
-        return createToken(userId, username, ACCESS_TOKEN_TYPE, ACCESS_TOKEN_LIFETIME_MILLIS, sessionId);
+    public String createAccessToken(
+            Long userId, String username, String sessionId, long tokenVersion) {
+        return createToken(userId, username, ACCESS_TOKEN_TYPE, ACCESS_TOKEN_LIFETIME_MILLIS,
+                sessionId, tokenVersion);
     }
 
     public TokenClaims readAccessToken(String token) {
@@ -56,7 +62,9 @@ public class JwtHelper {
         return UUID.randomUUID().toString();
     }
 
-    private String createToken(Long userId, String username, String type, long lifetimeMillis, String sessionId) {
+    private String createToken(
+            Long userId, String username, String type, long lifetimeMillis,
+            String sessionId, long tokenVersion) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(SUBJECT)
@@ -66,7 +74,8 @@ public class JwtHelper {
                         "userId", userId,
                         "username", username,
                         "tokenType", type,
-                        "sessionId", sessionId))
+                        "sessionId", sessionId,
+                        "tokenVersion", tokenVersion))
                 .signWith(secretKey)
                 .compact();
     }
@@ -79,10 +88,14 @@ public class JwtHelper {
         Object userId = claims.get("userId");
         Object username = claims.get("username");
         String sessionId = claims.get("sessionId", String.class);
+        Object tokenVersion = claims.get("tokenVersion");
         if (!(userId instanceof Number number) || !(username instanceof String name)) {
             return null;
         }
-        return new TokenClaims(number.longValue(), name, sessionId, claims.getExpiration());
+        // Tokens minted before token versions exist authenticate as version zero.
+        long version = tokenVersion instanceof Number value ? value.longValue() : 0L;
+        return new TokenClaims(
+                number.longValue(), name, sessionId, version, claims.getExpiration());
     }
 
     private Claims readTypedClaims(String token, String expectedType) {
@@ -111,7 +124,9 @@ public class JwtHelper {
         }
     }
 
-    public record TokenClaims(Long userId, String username, String sessionId, Date expiresAt) {
+    public record TokenClaims(
+            Long userId, String username, String sessionId,
+            long tokenVersion, Date expiresAt) {
     }
 
     public record TokenPair(String token, String refreshToken) {

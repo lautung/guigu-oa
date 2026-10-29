@@ -120,7 +120,7 @@ class ConfigurationRouteAuthorizationContractTest {
         assertOnlyMethod(SysUserController.class, "updateStatus", RequestMethod.PUT);
         assertOnlyMethod(OaProcessTemplateController.class, "publish", RequestMethod.POST);
 
-        String token = jwtHelper.createTokenPair(1L, "admin").token();
+        String token = jwtHelper.createTokenPair(1L, "admin", 0L).token();
         Integer statusBefore = userStatus(1L);
 
         // 旧 GET 路径没有处理器：DispatcherServlet 抛方法不支持，由 GlobalExceptionHandler 收成失败信封。
@@ -181,7 +181,7 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/process/1/10", 101L, "route-user", 205);
 
         mockMvc.perform(get("/admin/system/index/info")
-                        .header("token", jwtHelper.createTokenPair(101L, "route-user").token()))
+                        .header("token", jwtHelper.createTokenPair(101L, "route-user", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configMenus[*].path", hasItems("/system", "/system/sysUser")))
                 .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/system/sysRole"))));
@@ -196,7 +196,7 @@ class ConfigurationRouteAuthorizationContractTest {
         assertCode("/admin/process/processType/1/10", 102L, "route-template", 205);
 
         mockMvc.perform(get("/admin/system/index/info")
-                        .header("token", jwtHelper.createTokenPair(102L, "route-template").token()))
+                        .header("token", jwtHelper.createTokenPair(102L, "route-template", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
                         "/processSet", "/processSet/processTemplate", "/processSet/templateSet")))
@@ -213,7 +213,7 @@ class ConfigurationRouteAuthorizationContractTest {
     }
 
     private void assertCode(String path, long userId, String username, int code) throws Exception {
-        mockMvc.perform(get(path).header("token", jwtHelper.createTokenPair(userId, username).token()))
+        mockMvc.perform(get(path).header("token", jwtHelper.createTokenPair(userId, username, 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(code));
     }

@@ -111,13 +111,12 @@ test.describe('B 用户管理', () => {
     }
   })
 
-  test('B5 update：空密码保留原 hash / 改密生效；已知缺陷 #143 旧 token 仍可用', async ({
-    request,
-  }) => {
+  test('B5 update：空密码保留原 hash / 改密生效且旧会话立即失效（#143）', async ({ request }) => {
     const api = new Api(request)
     const temp = await createUser(api, unique('api-update'))
     try {
-      const oldToken = await api.token(temp.username)
+      const old = await api.login(temp.username)
+      expectCode(old, 200, 'B5 改密前登录')
 
       await api.call(ADMIN, 'put', '/admin/system/sysUser/update', {
         id: temp.id,
@@ -126,6 +125,11 @@ test.describe('B 用户管理', () => {
         status: 1,
       })
       expectCode(await api.login(temp.username), 200, 'B5 空密码保留原口令')
+      expectCode(
+        (await api.raw('get', '/admin/system/index/info', { token: old.data.token })).body,
+        200,
+        'B5 未改密不吊销会话',
+      )
 
       await api.call(ADMIN, 'put', '/admin/system/sysUser/update', {
         id: temp.id,
@@ -137,8 +141,13 @@ test.describe('B 用户管理', () => {
       expectCode(await api.login(temp.username, '222222'), 200, 'B5 新口令可登录')
       expectCode(await api.login(temp.username), 208, 'B5 旧口令被拒')
 
-      const stale = await api.raw('get', '/admin/system/index/info', { token: oldToken })
-      expectCode(stale.body, 200, '已知缺陷 #143：改密后旧 access token 仍可用（修复后应变 208）')
+      const stale = await api.raw('get', '/admin/system/index/info', { token: old.data.token })
+      expectCode(stale.body, 208, 'B5 改密后旧 access token 失效')
+
+      const staleRefresh = await api.anonymous('post', '/admin/system/index/refresh', {
+        refreshToken: old.data.refreshToken,
+      })
+      expectCode(staleRefresh.body, 208, 'B5 改密后旧 refresh token 失效')
     } finally {
       await deleteUser(api, temp.id)
     }

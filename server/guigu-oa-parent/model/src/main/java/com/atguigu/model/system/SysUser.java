@@ -1,9 +1,11 @@
 package com.atguigu.model.system;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import com.atguigu.model.base.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -59,6 +61,23 @@ public class SysUser extends BaseEntity {
 	@Schema(description = "状态（1：正常 0：停用）")
 	@TableField("status")
 	private Integer status;
+
+	@JsonIgnore
+	@Schema(description = "令牌版本；改密递增，旧版本的令牌不再鉴权", hidden = true)
+	// Only the password-change statement writes this column; a general entity update must not
+	// bring back a stale value read before a concurrent change.
+	@TableField(value = "token_version", updateStrategy = FieldStrategy.NEVER)
+	private Long tokenVersion;
+
+	/** Tokens must carry this version to authenticate; rows from before the column read as zero. */
+	public long tokenVersionOrDefault() {
+		return tokenVersion == null ? 0L : tokenVersion;
+	}
+
+	/** Whether a token carrying this version still matches the row's credentials. */
+	public boolean acceptsTokenVersion(long tokenVersion) {
+		return tokenVersion == tokenVersionOrDefault();
+	}
 
 	@TableField(exist = false)
 	private List<SysRole> roleList;

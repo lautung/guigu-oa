@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS sys_user (
   status TINYINT DEFAULT 1,
   create_time TIMESTAMP,
   update_time TIMESTAMP,
-  is_deleted TINYINT NOT NULL DEFAULT 0
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  token_version BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sys_menu (

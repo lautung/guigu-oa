@@ -23,7 +23,7 @@ public class JwtHelperTest {
 
     @Test
     public void bothTokensOfOneLoginShareTheSessionIdAndOnlyReadForTheirOwnPurpose() {
-        JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin");
+        JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin", 7L);
 
         JwtHelper.TokenClaims access = jwtHelper.readAccessToken(pair.token());
         JwtHelper.TokenClaims refresh = jwtHelper.readRefreshToken(pair.refreshToken());
@@ -32,6 +32,8 @@ public class JwtHelperTest {
         assertEquals("admin", access.username());
         assertNotNull(access.sessionId());
         assertEquals(access.sessionId(), refresh.sessionId());
+        assertEquals(7L, access.tokenVersion());
+        assertEquals(7L, refresh.tokenVersion());
         assertEquals(1L, refresh.userId());
         assertEquals("admin", refresh.username());
         assertNull(jwtHelper.readRefreshToken(pair.token()));
@@ -41,7 +43,7 @@ public class JwtHelperTest {
     @Test
     public void accessAndRefreshTokensUseTheirSpecifiedLifetimes() {
         long beforeCreation = System.currentTimeMillis();
-        JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin");
+        JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin", 0L);
         long afterCreation = System.currentTimeMillis();
 
         long accessExpiration = jwtHelper.readAccessToken(pair.token()).expiresAt().getTime();
@@ -62,7 +64,7 @@ public class JwtHelperTest {
 
     @Test
     public void tamperedTokenDoesNotAuthenticate() {
-        String token = jwtHelper.createTokenPair(1L, "admin").token();
+        String token = jwtHelper.createTokenPair(1L, "admin", 0L).token();
         String tampered = token.substring(0, token.length() - 4) + "xxxx";
 
         assertNull(jwtHelper.readAccessToken(tampered));
@@ -76,11 +78,37 @@ public class JwtHelperTest {
 
     @Test
     public void accessTokenMintedForARefreshKeepsThatSessionsIdentity() {
-        JwtHelper.TokenClaims refresh = jwtHelper.readRefreshToken(jwtHelper.createTokenPair(1L, "admin").refreshToken());
+        JwtHelper.TokenPair pair = jwtHelper.createTokenPair(1L, "admin", 7L);
+        JwtHelper.TokenClaims refresh = jwtHelper.readRefreshToken(pair.refreshToken());
 
-        String refreshed = jwtHelper.createAccessToken(refresh.userId(), refresh.username(), refresh.sessionId());
+        String refreshed = jwtHelper.createAccessToken(
+                refresh.userId(), refresh.username(), refresh.sessionId(),
+                refresh.tokenVersion());
 
         assertEquals(refresh.sessionId(), jwtHelper.readAccessToken(refreshed).sessionId());
+        assertEquals(7L, jwtHelper.readAccessToken(refreshed).tokenVersion());
+    }
+
+    @Test
+    public void tokenMintedBeforeCredentialGenerationsReadsAsGenerationZero() {
+        byte[] secret = SECRET.getBytes(StandardCharsets.UTF_8);
+        SecretKey key = Keys.hmacShaKeyFor(secret);
+        long now = System.currentTimeMillis();
+        String token = Jwts.builder()
+                .subject("AUTH-USER")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + 60_000))
+                .claim("userId", 1L)
+                .claim("username", "admin")
+                .claim("tokenType", "access")
+                .claim("sessionId", "pre-generation")
+                .signWith(key)
+                .compact();
+
+        JwtHelper.TokenClaims claims = jwtHelper.readAccessToken(token);
+
+        assertEquals(0L, claims.tokenVersion());
+        assertEquals("pre-generation", claims.sessionId());
     }
 
     @Test

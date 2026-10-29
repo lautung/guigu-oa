@@ -78,7 +78,7 @@ public class TokenLoginFilterTest {
 
     @Test
     public void aSuccessfulPasswordClearsTheAccountFailuresAndMintsBothTokens() throws Exception {
-        CustomUser principal = user("alice", 1);
+        CustomUser principal = user("alice", 1, 7L);
         AuthenticationManager manager = authentication ->
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of());
         TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter);
@@ -90,8 +90,12 @@ public class TokenLoginFilterTest {
 
         JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
         assertEquals(200, body.get("code").asInt());
-        assertFalse(body.path("data").path("token").asString("").isEmpty());
-        assertFalse(body.path("data").path("refreshToken").asString("").isEmpty());
+        String token = body.path("data").path("token").asString("");
+        String refreshToken = body.path("data").path("refreshToken").asString("");
+        assertFalse(token.isEmpty());
+        assertFalse(refreshToken.isEmpty());
+        assertEquals(7L, jwtHelper.readAccessToken(token).tokenVersion());
+        assertEquals(7L, jwtHelper.readRefreshToken(refreshToken).tokenVersion());
         verify(limiter).recordSuccess("alice", "127.0.0.1");
     }
 
@@ -142,10 +146,15 @@ public class TokenLoginFilterTest {
     }
 
     private static CustomUser user(String username, int status) {
+        return user(username, status, 0L);
+    }
+
+    private static CustomUser user(String username, int status, long tokenVersion) {
         SysUser sysUser = new SysUser();
         sysUser.setId(1L);
         sysUser.setUsername(username);
         sysUser.setStatus(status);
+        sysUser.setTokenVersion(tokenVersion);
         return new CustomUser(sysUser, List.of());
     }
 

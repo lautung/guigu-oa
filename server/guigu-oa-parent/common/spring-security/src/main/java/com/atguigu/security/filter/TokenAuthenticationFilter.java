@@ -97,6 +97,10 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         if (!Objects.equals(userId, currentUser.getSysUser().getId())) {
             return null;
         }
+        // A password change moves the row's token version, so every earlier token stops here.
+        if (!currentUser.getSysUser().acceptsTokenVersion(claims.tokenVersion())) {
+            return null;
+        }
         if (!AccountStatus.isEnabled(currentUser.getSysUser().getStatus())) {
             throw new AccountDisabledException();
         }

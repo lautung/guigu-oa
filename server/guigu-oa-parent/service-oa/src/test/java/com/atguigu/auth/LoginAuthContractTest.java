@@ -166,6 +166,53 @@ public class LoginAuthContractTest {
     }
 
     @Test
+    public void changingThePasswordRetiresEverySessionIssuedBeforeIt() throws Exception {
+        String adminToken = loginToken("admin", "111111");
+        saveContractUser(adminToken, "reset-contract-user", "111111");
+        Long userId = sysUserService.getUserByUserName("reset-contract-user").getId();
+        String oldLogin = loginBody("reset-contract-user", "111111", "203.0.113.21");
+        String oldAccessToken = JsonPath.read(oldLogin, "$.data.token");
+        String oldRefreshToken = JsonPath.read(oldLogin, "$.data.refreshToken");
+
+        mockMvc.perform(put("/admin/system/sysUser/update")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + userId + ",\"username\":\"reset-contract-user\","
+                                + "\"name\":\"改密测试用户\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        // An edit that leaves the password alone is not a credential change.
+        mockMvc.perform(get("/admin/system/index/info").header("token", oldAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(put("/admin/system/sysUser/update")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + userId + ",\"username\":\"reset-contract-user\","
+                                + "\"name\":\"改密测试用户\",\"status\":1,\"password\":\"222222\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        mockMvc.perform(get("/admin/system/index/info").header("token", oldAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(208));
+        assertRefreshRejected(oldRefreshToken);
+
+        // Only the changed user's sessions retire; the admin that made the change stays in.
+        mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String freshLogin = loginBody("reset-contract-user", "222222", "203.0.113.21");
+        String freshAccessToken = JsonPath.read(freshLogin, "$.data.token");
+        mockMvc.perform(get("/admin/system/index/info").header("token", freshAccessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test
     public void refreshRenewsAccessWithoutExtendingRefreshLifetimeAndAccessTokenCannotRefresh() throws Exception {
         String loginBody = mockMvc.perform(post("/admin/system/index/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -303,9 +350,9 @@ public class LoginAuthContractTest {
 
     @Test
     public void malformedExpiredWrongTypeAndIdentityInconsistentRefreshTokensAreRejected() throws Exception {
-        String accessToken = jwtHelper.createTokenPair(1L, "admin").token();
-        String identityInconsistent = jwtHelper.createTokenPair(1L, "disabled_user").refreshToken();
-        String identityInconsistentAccess = jwtHelper.createTokenPair(1L, "disabled_user").token();
+        String accessToken = jwtHelper.createTokenPair(1L, "admin", 0L).token();
+        String identityInconsistent = jwtHelper.createTokenPair(1L, "disabled_user", 0L).refreshToken();
+        String identityInconsistentAccess = jwtHelper.createTokenPair(1L, "disabled_user", 0L).token();
 
         assertRefreshRejected("not-a-jwt");
         assertRefreshRejected(expiredRefreshToken());

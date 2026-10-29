@@ -7,12 +7,16 @@ import com.atguigu.vo.system.SysUserQueryVo;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -82,7 +86,7 @@ class SysUserControllerTest {
     }
 
     @Test
-    void keepsTheStoredPasswordWhenAnUpdateOmitsIt() {
+    void leavesThePasswordColumnAloneWhenAnUpdateOmitsIt() {
         SysUser existing = new SysUser();
         existing.setId(3L);
         existing.setPassword("stored");
@@ -92,13 +96,16 @@ class SysUserControllerTest {
         update.setId(3L);
         controller.updateById(update);
 
-        assertEquals("stored", update.getPassword());
+        assertNull(update.getPassword());
+        assertNotNull(update.getUpdateTime());
+        assertNull(update.getTokenVersion());
         verify(passwordEncoder, never()).encode(any());
+        verify(service, never()).changePassword(any(), any());
+        verify(service).updateById(update);
     }
 
     @Test
-    void hashesAChangedPasswordOnUpdate() {
-        when(passwordEncoder.encode("new-secret")).thenReturn("hashed-new");
+    void doesNotWriteAPasswordForAMissingRow() {
         SysUser update = new SysUser();
         update.setId(3L);
         update.setPassword("new-secret");
@@ -106,22 +113,48 @@ class SysUserControllerTest {
 
         controller.updateById(update);
 
-        assertEquals("hashed-new", update.getPassword());
+        verify(passwordEncoder, never()).encode(any());
+        verify(service, never()).changePassword(any(), any());
+        verify(service, never()).updateById(any());
+    }
+
+    @Test
+    void changesThePasswordAndItsVersionTogether() {
+        SysUser existing = new SysUser();
+        existing.setId(3L);
+        existing.setPassword("stored");
+        existing.setTokenVersion(2L);
+        when(service.getById(3L)).thenReturn(existing);
+        when(passwordEncoder.matches("new-secret", "stored")).thenReturn(false);
+        when(passwordEncoder.encode("new-secret")).thenReturn("hashed-new");
+        SysUser update = new SysUser();
+        update.setId(3L);
+        update.setPassword("new-secret");
+
+        controller.updateById(update);
+
+        assertNull(update.getPassword());
+        InOrder order = inOrder(service);
+        order.verify(service).changePassword(3L, "hashed-new");
+        order.verify(service).updateById(update);
     }
 
     @Test
     void leavesAnIdenticalPasswordUnhashedOnUpdate() {
         SysUser existing = new SysUser();
         existing.setId(3L);
-        existing.setPassword("same");
+        existing.setPassword("stored-hash");
         when(service.getById(3L)).thenReturn(existing);
+        when(passwordEncoder.matches("same", "stored-hash")).thenReturn(true);
         SysUser update = new SysUser();
         update.setId(3L);
         update.setPassword("same");
 
         controller.updateById(update);
 
-        assertEquals("same", update.getPassword());
+        assertNull(update.getPassword());
+        assertNull(update.getTokenVersion());
         verify(passwordEncoder, never()).encode(any());
+        verify(service, never()).changePassword(any(), any());
     }
 }

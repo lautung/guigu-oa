@@ -97,7 +97,7 @@ class PaginationLimitContractTest {
     }
 
     private String storeToken(Route route) {
-        return jwtHelper.createTokenPair(route.userId(), route.username()).token();
+        return jwtHelper.createTokenPair(route.userId(), route.username(), 0L).token();
     }
 
     private record Route(String template, long userId, String username) {

@@ -44,6 +44,7 @@ class SysUserReadContractTest {
         List<String> usernames = JsonPath.read(body, "$.data.records[*].username");
         assertTrue(usernames.contains("admin"));
         assertEquals(List.of(), JsonPath.read(body, "$.data.records[*].password"));
+        assertEquals(List.of(), JsonPath.read(body, "$.data.records[*].tokenVersion"));
     }
 
     @Test
@@ -58,6 +59,7 @@ class SysUserReadContractTest {
         Map<String, Object> user = JsonPath.read(body, "$.data");
         assertEquals("admin", user.get("username"));
         assertFalse(user.containsKey("password"));
+        assertFalse(user.containsKey("tokenVersion"));
     }
 
     private String loginToken() throws Exception {

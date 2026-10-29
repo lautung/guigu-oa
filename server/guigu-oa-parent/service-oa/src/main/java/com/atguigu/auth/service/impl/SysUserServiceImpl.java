@@ -33,6 +33,12 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         baseMapper.updateById(sysUser);
     }
 
+    //改密：写入新哈希并递增令牌版本
+    @Override
+    public void changePassword(Long id, String encodedPassword) {
+        baseMapper.changePassword(id, encodedPassword);
+    }
+
     //根据用户名进行查询
     @Override
     public SysUser getUserByUserName(String username) {

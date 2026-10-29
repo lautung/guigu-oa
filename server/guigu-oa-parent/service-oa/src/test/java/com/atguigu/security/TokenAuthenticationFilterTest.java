@@ -1,6 +1,11 @@
 package com.atguigu.security;
 
+import com.atguigu.common.jwt.JwtHelper;
+import com.atguigu.model.system.SysUser;
+import com.atguigu.security.custom.CustomUser;
+import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
+import com.atguigu.security.revocation.TokenRevocation;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -12,8 +17,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TokenAuthenticationFilterTest {
 
@@ -94,6 +103,33 @@ public class TokenAuthenticationFilterTest {
 
         assertEquals("", response.getContentAsString());
         assertEquals(1, chain.calls);
+    }
+
+    @Test
+    public void anAccessTokenFromAnEarlierTokenVersionIsRejected() throws Exception {
+        JwtHelper jwtHelper = new JwtHelper(
+                "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000");
+        String token = jwtHelper.createTokenPair(1L, "admin", 3L).token();
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername("admin");
+        user.setStatus(1);
+        user.setTokenVersion(4L);
+        UserDetailsService userDetailsService = mock(UserDetailsService.class);
+        when(userDetailsService.loadUserByUsername("admin"))
+                .thenReturn(new CustomUser(user, List.of()));
+        TokenRevocation revocation = mock(TokenRevocation.class);
+        RecordingFilterChain chain = new RecordingFilterChain();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/system/index/info");
+        request.setRequestURI("/admin/system/index/info");
+        request.addHeader("token", token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        new TokenAuthenticationFilter(null, jwtHelper, userDetailsService, revocation)
+                .doFilter(request, response, chain);
+
+        assertLoginError(response);
+        assertEquals(0, chain.calls);
     }
 
     private MockHttpServletResponse filter(String uri, String token, FilterChain chain) throws Exception {

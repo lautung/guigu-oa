@@ -100,7 +100,9 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         }
         loginAttemptLimiter.recordSuccess(username, sourceAddress);
         JwtHelper.TokenPair tokenPair = jwtHelper.createTokenPair(
-                customUser.getSysUser().getId(), customUser.getSysUser().getUsername());
+                customUser.getSysUser().getId(),
+                customUser.getSysUser().getUsername(),
+                customUser.getSysUser().tokenVersionOrDefault());
 
         Map<String, Object> map = new HashMap<>();
         map.put("token", tokenPair.token());

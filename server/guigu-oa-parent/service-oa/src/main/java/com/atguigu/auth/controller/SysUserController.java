@@ -18,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
+
 /**
  * <p>
  * 用户表 前端控制器
@@ -105,12 +107,21 @@ public class SysUserController {
     @PutMapping("update")
     public Result updateById(@RequestBody SysUser user) {
         SysUser existing = service.getById(user.getId());
-        if (existing != null && !StringUtils.hasText(user.getPassword())) {
-            user.setPassword(existing.getPassword());
-        } else if (StringUtils.hasText(user.getPassword())
-                && (existing == null || !user.getPassword().equals(existing.getPassword()))) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (existing == null) {
+            // Nothing to update; never write an unmasked request password to a row that shows up later.
+            return Result.ok();
         }
+        String submittedPassword = user.getPassword();
+        boolean passwordChanged = StringUtils.hasText(submittedPassword)
+                && !passwordEncoder.matches(submittedPassword, existing.getPassword());
+        if (passwordChanged) {
+            // The hash and the version bump land first; a later failure cannot leave old tokens alive.
+            service.changePassword(existing.getId(), passwordEncoder.encode(submittedPassword));
+        }
+        // The password column is written only by changePassword; a profile edit must not carry an
+        // old hash read before a concurrent change. update_time keeps the row update non-empty.
+        user.setPassword(null);
+        user.setUpdateTime(new Date());
         service.updateById(user);
         return Result.ok();
     }

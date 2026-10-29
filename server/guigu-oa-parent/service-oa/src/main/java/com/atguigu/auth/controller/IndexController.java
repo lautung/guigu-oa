@@ -119,11 +119,15 @@ public class IndexController {
         if (user == null || !username.equals(user.getUsername())) {
             return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
         }
+        if (!user.acceptsTokenVersion(claims.tokenVersion())) {
+            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
+        }
         if (!AccountStatus.isEnabled(user.getStatus())) {
             return Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED);
         }
 
-        String accessToken = jwtHelper.createAccessToken(userId, username, claims.sessionId());
+        String accessToken = jwtHelper.createAccessToken(
+                userId, username, claims.sessionId(), user.tokenVersionOrDefault());
         Map<String, Object> tokenMap = new HashMap<>();
         tokenMap.put("token", accessToken);
         // Keep the refresh token's original 7-day expiry instead of extending it on each refresh.

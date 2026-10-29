@@ -111,7 +111,7 @@ class CorsContractTest {
     }
 
     private String adminToken() {
-        return jwtHelper.createTokenPair(1L, "admin").token();
+        return jwtHelper.createTokenPair(1L, "admin", 0L).token();
     }
 
     private boolean carriesCrossOrigin(HandlerMethod handler) {
