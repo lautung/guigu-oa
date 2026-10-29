@@ -1,0 +1,60 @@
+选中 56 条用例：SEC-JWT-01, SEC-JWT-02, SEC-JWT-03, SEC-JWT-04, SEC-JWT-05, SEC-JWT-06, SEC-JWT-07, SEC-JWT-08, SEC-JWT-09, SEC-JWT-10, SEC-IDOR-01, SEC-IDOR-02, SEC-IDOR-03, SEC-IDOR-04, SEC-IDOR-05, SEC-IDOR-06, SEC-IDOR-07, SEC-IDOR-08, SEC-IDOR-09, SEC-MEM-01, SEC-MEM-02, SEC-MEM-03, SEC-MEM-04, SEC-MEM-05, SEC-GATE-01, SEC-GATE-02, SEC-GATE-03, SEC-UPLOAD-01, SEC-UPLOAD-02, SEC-UPLOAD-03, SEC-UPLOAD-04, SEC-UPLOAD-05, SEC-UPLOAD-06, SEC-UPLOAD-07, SEC-UPLOAD-08, SEC-UPLOAD-09, SEC-CSRF-01, SEC-CSRF-02, SEC-CSRF-03, SEC-CSRF-04, SEC-CSRF-05, SEC-BRUTE-01, SEC-BRUTE-02, SEC-LEAK-01, SEC-LEAK-02, SEC-LEAK-03, SEC-LEAK-04, SEC-LEAK-05, SEC-LEAK-06, SEC-LEAK-07, SEC-LEAK-08, SEC-LEAK-09, SEC-PAGE-01, SEC-PAGE-02, SEC-PAGE-03, SEC-XSS-01
+PASS SEC-JWT-01 无 token 访问受保护接口被拒 — code=208
+PASS SEC-JWT-02 伪造 token 被拒 — code=208
+PASS SEC-JWT-03 篡改 payload（userId→admin）但保留签名被拒 — code=208
+PASS SEC-JWT-04 alg=none 无签名令牌被拒 — code=208
+PASS SEC-JWT-05 refresh token 当作 access token 使用被拒 — code=208
+PASS SEC-JWT-06 access token 当作 refresh token 使用被拒 — code=208
+FAIL SEC-JWT-07 登出后 access token 仍可访问（令牌未吊销） — 登出 code=200，重放仍 code=200
+PASS SEC-JWT-08 停用账号的存量 token 被拒 — code=209
+PASS SEC-JWT-09 过期 token 被拒 — code=208
+PASS SEC-JWT-10 其他密钥签名的 token 被拒 — code=208
+PASS SEC-IDOR-01 非成员读取他人审批详情被拒 — code=403
+PASS SEC-IDOR-02 非成员处理他人审批被拒 — code=403
+PASS SEC-IDOR-03 非成员读取审批附件列表被拒 — code=205（拒绝）
+PASS SEC-IDOR-04 非成员签发他人附件下载凭证被拒 — code=205（拒绝）
+PASS SEC-IDOR-05 他人草稿附件列表按所有者隔离 — code=200, records=0
+PASS SEC-IDOR-06 他人待绑定附件不可删除 — code=205（拒绝）
+PASS SEC-IDOR-07 办事侧模板读只返回已发布模板 — code=200, data=null
+PASS SEC-IDOR-08 抄送人不能处理审批 — code=403
+PASS SEC-IDOR-09 他人未完成上传的附件不能代为完成 — code=205（拒绝）
+PASS SEC-MEM-01 申请人：可读、可补传、不可处理 — {"isApprove":false,"canUpload":true,"approveCode":403}
+PASS SEC-MEM-02 当前处理人：可读、可上传、可处理 — {"isApprove":true,"canUpload":true}
+PASS SEC-MEM-03 抄送人：可读、只读（不可处理/不可上传） — {"isApprove":false,"canUpload":false}
+PASS SEC-MEM-04 历史处理人：审批后可读、不可再处理 — {"approveCode":200,"isApprove":false,"canUpload":false,"replayCode":403}
+PASS SEC-MEM-05 非成员：三类能力全部拒绝 — {"showCode":403,"attachmentsCode":205,"uploadCode":205}
+PASS SEC-GATE-01 35 个配置端点对无配置权限账号返回 205 — 35/35 端点 code=205
+PASS SEC-GATE-02 伪造 gate 参数不能绕过配置权限 — code=205
+PASS SEC-GATE-03 有配置权限账号可读配置端点（gate 未过度拒绝） — 6/6 code=200
+PASS SEC-UPLOAD-01 超过 50 MiB 的附件登记被拒 — code=201, message=附件超过大小限制
+PASS SEC-UPLOAD-02 预签名 PUT 的 Content-Type 与登记不一致时不能完成登记 — {"putStatus":403,"completeCode":201}
+PASS SEC-UPLOAD-03 对象实际大小与登记不一致时不能完成登记 — code=201, message=附件内容与登记信息不一致
+PASS SEC-UPLOAD-04 当前处理人可向审批补传附件 — code=200, attachmentId=12
+PASS SEC-UPLOAD-05 抄送人不能向审批补传附件 — code=205（拒绝）
+PASS SEC-UPLOAD-06 非成员不能向审批上传附件 — code=205（拒绝）
+PASS SEC-UPLOAD-07 流程模板上传拒绝非 zip 后缀 — code=201, message=流程文件必须是 zip
+PASS SEC-UPLOAD-08 流程 zip 文件名穿越路径被消解 — {"code":200,"processDefinitionPath":"processes/sha256/112be2619e5af19c124c8b39170267478b1d8791349925e510da389e27b1b708.zip","processDefinitionKey":"sec-evil"}
+PASS SEC-UPLOAD-09 登出后未完成的上传凭证在过期后不能完成登记 — {"putStatus":403,"completeCode":201,"message":"附件上传凭证已过期，请重新选择文件"}
+PASS SEC-CSRF-01 普通接口不回显恶意 Origin 的 CORS 头 — 无 ACAO 头
+FAIL SEC-CSRF-02 审批接口不回显恶意 Origin 的 CORS 头 — ACAO=*
+FAIL SEC-CSRF-03 跨源预检不授予带 token 头的写请求 — {"status":200,"allowOrigin":"*","allowHeaders":"token, content-type"}
+FAIL SEC-CSRF-04 GET updateStatus 产生写副作用 — {"beforeStatus":1,"toggleCode":200,"afterStatus":0}
+FAIL SEC-CSRF-05 GET publish 是写操作（源码事实） — publish 由 GET 触发
+PASS SEC-BRUTE-01 不存在用户与密码错误返回同一错误码与文案 — {"missingCode":208,"wrongCode":208,"sameMessage":true}
+FAIL SEC-BRUTE-02 30 次失败后正确密码仍可登录（无限流/锁定） — {"failedLogins":30,"correctLoginCode":200}
+FAIL SEC-LEAK-01 用户分页不返回密码哈希 — 6/6 条含 password
+FAIL SEC-LEAK-02 用户详情不返回密码哈希 — data.password 存在
+FAIL SEC-LEAK-03 OpenAPI 文档匿名可读 — 匿名返回 openapi 文档
+FAIL SEC-LEAK-04 Swagger UI 匿名可读 — 匿名可读
+PASS SEC-LEAK-05 其他 actuator 端点匿名不可读 — {"status":200,"code":208}
+FAIL SEC-LEAK-06 抄送候选人接口向普通用户暴露全部启用用户 — 返回 5 个启用用户
+PASS SEC-LEAK-07 异常响应不返回堆栈或内部信息 — code=201, message=执行全局异常处理...
+PASS SEC-LEAK-08 服务端日志不含密码或完整 token — {"passwordHits":0,"jwtHits":0}
+FAIL SEC-LEAK-09 客户端响应头暴露 nginx 版本 — Server=nginx/1.31.8
+FAIL SEC-PAGE-01 用户分页接受无上限 limit — limit=100000 被接受，返回 6 条
+FAIL SEC-PAGE-02 审批待处理分页接受无上限 limit — limit=100000 被接受，返回 31 条
+PASS SEC-PAGE-03 负数/零分页参数被安全处理 — {"negative":{"status":200,"code":200},"zero":{"status":200,"code":200}}
+FAIL SEC-XSS-01 审批表单字段存储型 XSS 不执行 — Playwright：脚本执行（已留证）
+
+证据已写入 docs/test/evidence/2026-10-29-security-baseline
+结果：56 条用例，15 条失败

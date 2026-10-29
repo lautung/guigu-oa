@@ -1,0 +1,218 @@
+{
+  "config": {
+    "argv": [
+      "/Users/lautung/development/tools/node-v24.18.1-darwin-arm64/bin/node",
+      "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "tests/security/playwright.security.config.ts"
+    ],
+    "configFile": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/playwright.security.config.ts",
+    "rootDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "security-chromium",
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "actionTimeout": 15000,
+          "navigationTimeout": 20000,
+          "browserName": "chromium",
+          "viewport": {
+            "width": 1280,
+            "height": 900
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "security-chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/xss-report.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/xss-report.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "security-xss.spec.ts",
+      "file": "security-xss.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "审批表单字段的存储型 XSS 不执行",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 4171,
+                  "error": {
+                    "message": "Error: 列表页 v-html 执行了脚本\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeNull\u001b[2m()\u001b[22m\n\nReceived: \u001b[31m1\u001b[39m",
+                    "stack": "Error: 列表页 v-html 执行了脚本\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeNull\u001b[2m()\u001b[22m\n\nReceived: \u001b[31m1\u001b[39m\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts:108:45",
+                    "location": {
+                      "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts",
+                      "column": 45,
+                      "line": 108
+                    },
+                    "snippet": "  106 |     contentType: 'application/json',\n  107 |   })\n> 108 |   expect.soft(listFlag, '列表页 v-html 执行了脚本').toBeNull()\n      |                                             ^\n  109 |\n  110 |   await page.evaluate(() => {\n  111 |     ;(window as { __secXss?: number }).__secXss = undefined"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts",
+                        "column": 45,
+                        "line": 108
+                      },
+                      "message": "Error: 列表页 v-html 执行了脚本\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeNull\u001b[2m()\u001b[22m\n\nReceived: \u001b[31m1\u001b[39m\n\n  106 |     contentType: 'application/json',\n  107 |   })\n> 108 |   expect.soft(listFlag, '列表页 v-html 执行了脚本').toBeNull()\n      |                                             ^\n  109 |\n  110 |   await page.evaluate(() => {\n  111 |     ;(window as { __secXss?: number }).__secXss = undefined\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts:108:45"
+                    },
+                    {
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts",
+                        "column": 47,
+                        "line": 122
+                      },
+                      "message": "Error: 详情页 v-html 执行了脚本\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeNull\u001b[2m()\u001b[22m\n\nReceived: \u001b[31m1\u001b[39m\n\n  120 |     contentType: 'application/json',\n  121 |   })\n> 122 |   expect.soft(detailFlag, '详情页 v-html 执行了脚本').toBeNull()\n      |                                               ^\n  123 | })\n  124 |\n    at /Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts:122:47"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-29T03:47:19.967Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "list-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3Mtc2VjbXZzenlqdDAiLCJsaXN0RmxhZyI6MX0="
+                    },
+                    {
+                      "name": "detail-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3Mtc2VjbXZzenlqdDAiLCJkZXRhaWxGbGFnIjoxfQ=="
+                    },
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/security-xss-审批表单字段的存储型-XSS-不执行-security-chromium/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/security-xss-审批表单字段的存储型-XSS-不执行-security-chromium/error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results/security-xss-审批表单字段的存储型-XSS-不执行-security-chromium/trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-xss.spec.ts",
+                    "column": 45,
+                    "line": 108
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "9a593d2aa7f1749c988b-f061ed552312aea4979a",
+          "file": "security-xss.spec.ts",
+          "line": 92,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-29T03:47:19.701Z",
+    "duration": 4790.7480000000005,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}
