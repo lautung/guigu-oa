@@ -1,0 +1,45 @@
+{
+  "environment": {
+    "date": "2026-10-29T04:16:50.507Z",
+    "commit": "ee27a7d5b797fc2f59facd9cca81acb516c9de17",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvt17fpl",
+    "compose": "client Up 21 minutes\nminio Up 22 minutes\nmysql Up 23 minutes (healthy)\nredis Up 21 minutes (healthy)\nservice-oa Up 17 seconds (healthy)",
+    "startedAt": "2026-10-29T04:16:48.201Z"
+  },
+  "results": [
+    {
+      "id": "SEC-LEAK-01",
+      "family": "SEC-LEAK",
+      "title": "用户分页不返回密码哈希",
+      "severity": "S2",
+      "expected": "records 不含 password",
+      "actual": "0/6 含 password",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 12,
+      "evidence": {
+        "total": 6,
+        "leaked": 0,
+        "samplePrefix": null
+      }
+    },
+    {
+      "id": "SEC-LEAK-02",
+      "family": "SEC-LEAK",
+      "title": "用户详情不返回密码哈希",
+      "severity": "S2",
+      "expected": "data 不含 password",
+      "actual": "无 password",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 12,
+      "evidence": {
+        "hasPassword": false,
+        "samplePrefix": null
+      }
+    }
+  ]
+}
