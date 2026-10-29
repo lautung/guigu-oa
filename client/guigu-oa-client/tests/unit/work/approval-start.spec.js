@@ -43,7 +43,7 @@ function harness(overrides = {}) {
     storage,
     id: () => `uuid-${++sequence}`,
     readTemplate: vi.fn(async () => template),
-    recipients: vi.fn(async () => [{ id: 7, username: 'carol', name: 'Carol' }]),
+    recipients: vi.fn(async () => [{ id: 7, name: 'Carol' }]),
     listDraft: vi.fn(async () => []),
     upload: vi.fn(async (file) => ({ ...attachment, fileName: file.name })),
     remove: vi.fn(async () => {}),

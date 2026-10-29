@@ -61,9 +61,8 @@ public class CarbonCopyService implements CarbonCopyWriter, ProcessMembershipExt
 
     public List<CarbonCopyRecipient> findRecipients(Long excludedUserId) {
         return jdbcTemplate.query(
-                "SELECT id, username, name FROM sys_user WHERE status = 1 AND is_deleted = 0 AND id <> ? ORDER BY name, id",
-                (result, row) -> new CarbonCopyRecipient(
-                        result.getLong("id"), result.getString("username"), result.getString("name")),
+                "SELECT id, name FROM sys_user WHERE status = 1 AND is_deleted = 0 AND id <> ? ORDER BY name, id",
+                (result, row) -> new CarbonCopyRecipient(result.getLong("id"), result.getString("name")),
                 excludedUserId == null ? -1L : excludedUserId);
     }
 

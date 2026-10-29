@@ -64,7 +64,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
       ])
     }
     if (path === '/admin/process/carbonCopyRecipients' && method === 'GET') {
-      return json(route, [{ id: 3, username: 'carol', name: 'Carol' }])
+      return json(route, [{ id: 3, name: 'Carol' }])
     }
     if (path === `/admin/process/getProcessTemplate/${templateId}` && method === 'GET') {
       return json(route, {

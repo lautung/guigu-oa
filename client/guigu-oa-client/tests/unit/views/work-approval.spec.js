@@ -47,8 +47,7 @@ beforeEach(() => {
   http = installHttp((config) => {
     const url = config.url || ''
     if (/getProcessTemplate\/5$/.test(url)) return ok(template)
-    if (url.includes('/carbonCopyRecipients'))
-      return ok([{ id: 9, name: '卡罗尔', username: 'carol' }])
+    if (url.includes('/carbonCopyRecipients')) return ok([{ id: 9, name: '卡罗尔' }])
     if (url.includes('/admin/attachments/drafts/')) return ok([])
     if (url.includes('/admin/process/startUp')) return ok(null)
     if (url.includes('/admin/process/show/')) {

@@ -88,23 +88,25 @@ class CarbonCopyServiceTest {
     }
 
     @Test
-    void findRecipientsExcludesTheCurrentUserAndMapsRows() throws Exception {
+    void findRecipientsExcludesTheCurrentUserAndReadsOnlyIdAndName() throws Exception {
         when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<CarbonCopyRecipient>>any(),
                 any(Object[].class)))
-                .thenReturn(List.of(new CarbonCopyRecipient(2L, "bob", "鲍勃")));
+                .thenReturn(List.of(new CarbonCopyRecipient(2L, "鲍勃")));
 
         assertEquals(1, service.findRecipients(null).size());
         assertEquals(1, service.findRecipients(1L).size());
 
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<RowMapper<CarbonCopyRecipient>> mapper =
                 ArgumentCaptor.forClass(RowMapper.class);
-        verify(jdbcTemplate, times(2)).query(anyString(), mapper.capture(), any(Object[].class));
+        verify(jdbcTemplate, times(2)).query(sql.capture(), mapper.capture(), any(Object[].class));
+        assertFalse(sql.getValue().contains("username"));
         ResultSet resultSet = mock(ResultSet.class);
         when(resultSet.getLong("id")).thenReturn(2L);
-        when(resultSet.getString("username")).thenReturn("bob");
         when(resultSet.getString("name")).thenReturn("鲍勃");
         CarbonCopyRecipient recipient = mapper.getValue().mapRow(resultSet, 0);
-        assertEquals("bob", recipient.username());
+        assertEquals(2L, recipient.id());
+        assertEquals("鲍勃", recipient.name());
     }
 
     @Test

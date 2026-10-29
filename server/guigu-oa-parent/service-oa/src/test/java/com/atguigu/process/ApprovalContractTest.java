@@ -612,6 +612,23 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void httpCarbonCopyRecipientsExposeOnlyIdAndDisplayName() throws Exception {
+        String body = mockMvc.perform(get("/admin/process/carbonCopyRecipients")
+                        .header("token", loginToken("alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(greaterThan(0)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // 抄送人选项只用于按显示名选择；返回登录名会给出可枚举的爆破入口（#136）。
+        List<Map<String, Object>> recipients = JsonPath.read(body, "$.data");
+        assertFalse(recipients.isEmpty(), body);
+        assertTrue(recipients.stream().allMatch(row -> row.keySet().equals(Set.of("id", "name"))), body);
+    }
+
+    @Test
     public void httpTaskCreatedRuleGrantsLiveReadAccessThroughApprovalHistory() throws Exception {
         String aliceToken = loginToken("alice");
         String zhangsanToken = loginToken("zhangsan");

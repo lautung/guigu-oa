@@ -57,8 +57,7 @@ async function setup(page: Page): Promise<State> {
           ],
         },
       ])
-    if (path.endsWith('/carbonCopyRecipients'))
-      return json(route, [{ id: 7, username: 'carol', name: 'Carol' }])
+    if (path.endsWith('/carbonCopyRecipients')) return json(route, [{ id: 7, name: 'Carol' }])
     if (path.includes('/admin/process/getProcessTemplate/'))
       return json(route, {
         id: 101,

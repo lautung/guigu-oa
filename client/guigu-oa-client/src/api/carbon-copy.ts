@@ -3,7 +3,6 @@ import type { ApiResponse, EntityId } from '@/types/domain'
 
 export interface CarbonCopyRecipient {
   id: EntityId
-  username: string
   name: string
 }
 
