@@ -1,6 +1,7 @@
 package com.atguigu.auth.controller;
 
 import com.atguigu.auth.service.SysRoleService;
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -78,7 +79,7 @@ public class SysRoleController {
         //调用service的方法实现
         //1 创建Page对象，传递分页相关参数
         //page 当前页  limit 每页显示记录数
-        Page<SysRole> pageParam = new Page<>(page,limit);
+        Page<SysRole> pageParam = PageWindow.of(page, limit);
 
         //2 封装条件，判断条件是否为空，不为空进行封装
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();

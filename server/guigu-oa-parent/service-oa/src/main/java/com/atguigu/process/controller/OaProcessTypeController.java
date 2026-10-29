@@ -1,6 +1,7 @@
 package com.atguigu.process.controller;
 
 
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.process.service.OaProcessTypeService;
@@ -41,7 +42,7 @@ public class OaProcessTypeController {
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit) {
-        Page<ProcessType> pageParam = new Page<>(page,limit);
+        Page<ProcessType> pageParam = PageWindow.of(page, limit);
         IPage<ProcessType> pageModel = processTypeService.page(pageParam);
         return Result.ok(pageModel);
     }

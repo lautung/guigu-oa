@@ -1,5 +1,6 @@
 package com.atguigu.common.config.mp;
 
+import com.atguigu.common.page.PageWindow;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
@@ -18,7 +19,10 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        PaginationInnerInterceptor pagination = new PaginationInnerInterceptor();
+        // 兜住绕过 HTTP 入口的 MyBatis-Plus 分页查询；Flowable 任务查询与原生 LIMIT 由 PageWindow 负责。
+        pagination.setMaxLimit(PageWindow.MAX_LIMIT);
+        interceptor.addInnerInterceptor(pagination);
         return interceptor;
     }
 }

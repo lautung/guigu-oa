@@ -1,6 +1,7 @@
 package com.atguigu.process.controller.api;
 
 import com.atguigu.auth.service.SysUserService;
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
@@ -51,7 +52,7 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<Process> pageParam = new Page<>(page,limit);
+        Page<Process> pageParam = PageWindow.of(page, limit);
         IPage<ProcessVo> pageModel = processService.findPending(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
@@ -102,7 +103,7 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<Process> pageParam = new Page<>(page,limit);
+        Page<Process> pageParam = PageWindow.of(page, limit);
         IPage<ProcessVo> pageModel = processService.findProcessed(currentUser(), pageParam);
         return Result.ok(pageModel);
     }
@@ -114,7 +115,7 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<ProcessVo> pageParam = new Page<>(page, limit);
+        Page<ProcessVo> pageParam = PageWindow.of(page, limit);
         return Result.ok(carbonCopyService.findMine(pageParam, currentUser().getId()));
     }
 
@@ -132,7 +133,7 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<ProcessVo> pageParam = new Page<>(page, limit);
+        Page<ProcessVo> pageParam = PageWindow.of(page, limit);
         IPage<ProcessVo> pageModel = processService.findStarted(currentUser(), pageParam);
         return Result.ok(pageModel);
     }

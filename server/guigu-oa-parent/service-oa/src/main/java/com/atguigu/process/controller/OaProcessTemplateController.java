@@ -1,6 +1,7 @@
 package com.atguigu.process.controller;
 
 
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.process.service.OaProcessTemplateService;
@@ -37,7 +38,7 @@ public class OaProcessTemplateController {
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit) {
-        Page<ProcessTemplate> pageParam = new Page<>(page,limit);
+        Page<ProcessTemplate> pageParam = PageWindow.of(page, limit);
         //分页查询审批模板，把审批类型对应名称查询
         IPage<ProcessTemplate> pageModel =
                 processTemplateService.findPage(pageParam);

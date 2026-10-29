@@ -2,6 +2,7 @@ package com.atguigu.auth.controller;
 
 
 import com.atguigu.auth.service.SysUserService;
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.vo.system.AssginRoleVo;
@@ -52,7 +53,7 @@ public class SysUserController {
                         @PathVariable Long limit,
                         SysUserQueryVo sysUserQueryVo) {
         //创建page对象
-        Page<SysUser> pageParam = new Page<>(page,limit);
+        Page<SysUser> pageParam = PageWindow.of(page, limit);
 
         //封装条件，判断条件值不为空
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
