@@ -98,7 +98,7 @@ public class OaProcessTemplateController {
     //部署流程定义（发布）
     @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "发布")
-    @GetMapping("/publish/{id}")
+    @PostMapping("/publish/{id}")
     public Result publish(@PathVariable Long id) {
         //修改模板发布状态 1 已经发布
         //流程定义部署

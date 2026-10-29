@@ -143,7 +143,7 @@ export async function publish(
     return Promise.reject(new Error('已发布的审批模板不能再发布'))
   }
   return request({
-    method: 'get',
+    method: 'post',
     url: `${PROCESS_TEMPLATE_API}/publish/${template.id}`,
   })
 }

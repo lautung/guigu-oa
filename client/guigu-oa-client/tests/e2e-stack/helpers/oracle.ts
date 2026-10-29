@@ -268,7 +268,7 @@ export class Oracle {
   }
 
   async setUserStatus(admin: string, userId: number, status: 0 | 1): Promise<void> {
-    await this.call(admin, 'get', `/admin/system/sysUser/updateStatus/${userId}/${status}`)
+    await this.call(admin, 'put', `/admin/system/sysUser/updateStatus/${userId}/${status}`)
   }
 
   async assignRoles(admin: string, userId: number, roleIdList: number[]): Promise<void> {

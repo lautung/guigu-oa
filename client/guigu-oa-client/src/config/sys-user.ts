@@ -52,7 +52,7 @@ export function removeRequest(id: EntityId): ApiRequestConfig {
 
 export function updateStatusRequest(id: EntityId, status: number): ApiRequestConfig {
   return {
-    method: 'get',
+    method: 'put',
     url: `${SYS_USER_API}/updateStatus/${id}/${status}`,
   }
 }

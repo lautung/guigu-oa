@@ -152,6 +152,17 @@ describe('审批模板', () => {
   })
 
   describe('publish / removeUnpublished', () => {
+    it('publishes 未发布 with POST /admin/process/processTemplate/publish/{id}', async () => {
+      const request = async (config) => ({ code: 200, data: config })
+
+      const response = await publish({ id: 3, status: 0 }, request)
+
+      expect(response.data).toEqual({
+        method: 'post',
+        url: '/admin/process/processTemplate/publish/3',
+      })
+    })
+
     it('does not publish 已发布', async () => {
       let sent = false
       const request = async () => {

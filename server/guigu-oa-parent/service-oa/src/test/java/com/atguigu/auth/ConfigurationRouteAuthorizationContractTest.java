@@ -21,10 +21,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,6 +37,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -107,6 +113,20 @@ class ConfigurationRouteAuthorizationContractTest {
         }
 
         assertEquals(EXPECTED_GATES, actual);
+    }
+
+    @Test
+    void statusToggleAndPublishAreWrittenOnlyByWriteMethods() throws Exception {
+        assertOnlyMethod(SysUserController.class, "updateStatus", RequestMethod.PUT);
+        assertOnlyMethod(OaProcessTemplateController.class, "publish", RequestMethod.POST);
+
+        String token = jwtHelper.createTokenPair(1L, "admin").token();
+        Integer statusBefore = userStatus(1L);
+
+        // 旧 GET 路径没有处理器：DispatcherServlet 抛方法不支持，由 GlobalExceptionHandler 收成失败信封。
+        mockMvc.perform(get("/admin/system/sysUser/updateStatus/1/0").header("token", token))
+                .andExpect(this::rejectsTheHttpMethod);
+        assertEquals(statusBefore, userStatus(1L));
     }
 
     @Test
@@ -198,6 +218,19 @@ class ConfigurationRouteAuthorizationContractTest {
                 .andExpect(jsonPath("$.code").value(code));
     }
 
+    private void assertOnlyMethod(Class<?> controller, String methodName, RequestMethod expected) {
+        Set<RequestMethod> methods = new LinkedHashSet<>();
+        for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMapping.getHandlerMethods().entrySet()) {
+            HandlerMethod handler = entry.getValue();
+            if (handler.getBeanType().equals(controller)
+                    && handler.getMethod().getName().equals(methodName)) {
+                methods.addAll(entry.getKey().getMethodsCondition().getMethods());
+            }
+        }
+        assertEquals(Set.of(expected), methods,
+                controller.getSimpleName() + "#" + methodName + " must be served only by " + expected);
+    }
+
     private void grant(long roleId, long userId, String username, String menuPath) {
         Integer menuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = ?", Integer.class, menuPath);
@@ -218,6 +251,15 @@ class ConfigurationRouteAuthorizationContractTest {
     private long templateId() {
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM oa_process_template WHERE name = '请假申请'", Long.class);
+    }
+
+    private Integer userStatus(long id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM sys_user WHERE id = ?", Integer.class, id);
+    }
+
+    private void rejectsTheHttpMethod(MvcResult result) {
+        assertInstanceOf(HttpRequestMethodNotSupportedException.class, result.getResolvedException());
     }
 
     private static String keyOf(HandlerMethod handler) {

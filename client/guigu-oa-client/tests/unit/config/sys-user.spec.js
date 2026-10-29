@@ -121,9 +121,9 @@ describe('config/sys-user', () => {
       })
     })
 
-    it('enables or disables a 用户 with GET /admin/system/sysUser/updateStatus/{id}/{status}', () => {
+    it('enables or disables a 用户 with PUT /admin/system/sysUser/updateStatus/{id}/{status}', () => {
       expect(updateStatusRequest(2, 0)).toEqual({
-        method: 'get',
+        method: 'put',
         url: '/admin/system/sysUser/updateStatus/2/0',
       })
     })
