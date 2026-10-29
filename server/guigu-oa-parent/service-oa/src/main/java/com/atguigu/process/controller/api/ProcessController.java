@@ -30,7 +30,6 @@ import java.util.Map;
 @Tag(name = "审批流管理")
 @RestController
 @RequestMapping(value="/admin/process")
-@CrossOrigin //跨域
 public class ProcessController {
 
     @Autowired

@@ -92,7 +92,8 @@ public class WebSecurityConfig {
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> {})
+                // 服务端不接跨源：统一客户端经 nginx 的 /dev-api 同源代理访问 API，
+                // 跨源需求由入口网关按受信来源显式放行（#141）。
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PublicApiPaths.REQUEST_MATCHERS).permitAll()
                         .anyRequest().authenticated()

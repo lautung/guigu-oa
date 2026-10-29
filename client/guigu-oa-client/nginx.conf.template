@@ -21,6 +21,8 @@ server {
         return 301 /dev-api/;
     }
 
+    # API 与客户端同源：浏览器只访问本来源的 /dev-api，跨域不参与（#141）。
+    # 若部署时把 API 放到另一个来源，在入口网关按受信来源显式放行，不要下发 *。
     location /dev-api/ {
         proxy_pass http://service-oa:8800/;
         proxy_http_version 1.1;

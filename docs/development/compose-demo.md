@@ -125,6 +125,16 @@ docker compose up -d --build client
 展开 `${CSP_CONNECT_SRC}`；nginx 自己的 `$host`、`$uri` 等变量保持不变。改了模板要重建
 `client` 镜像，容器重启不会重新生成。
 
+## 跨域
+
+API 与客户端同源：浏览器只访问 9530，`/dev-api` 由客户端 nginx 反代到 `service-oa:8800`。
+所以 `service-oa` 不下发任何 CORS 响应头，也没有开启 Spring 的 CORS 处理（#141）；开发态的
+9530 同样经 Vite 代理访问 8800，不需要跨域。演示栈里唯一的跨源请求是附件直传 MinIO，由
+`minio` 服务的 `MINIO_API_CORS_ALLOW_ORIGIN` 单独放行。
+
+如果部署时把 API 放到另一个来源，在入口网关按受信来源配置 `Access-Control-Allow-Origin`，
+不要用 `*`；也不要在控制器上加 `@CrossOrigin`，`CorsContractTest` 会因此失败。
+
 ## 重置
 
 下面的命令删除当前 Compose 项目的所有持久数据，再由 Flyway、Flowable 和演示初始化器重建。
