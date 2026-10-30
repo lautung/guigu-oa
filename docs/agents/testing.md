@@ -4,6 +4,8 @@
 
 五类测试（功能、接口、性能、安全、兼容性）的资产在 `docs/test/`：`plan.md` 定测什么与怎么判，`execution/` 一文件一轮，`report.md` 是结论与缺陷账本，`evidence/README.md` 是证据索引。性能资产见 `perf/README.md`（压测命令以它为准；造数必须在宿主机 `localhost` 执行，容器改写预签名 Host 会 403）。一键复跑用 `./scripts/test-round.sh all`，按类子命令见 `--help`。常态化拓扑见 ADR 0030：PR 维持轻量，push main 跑栈回归，每周跑安全，性能只在本地。
 
+手工打栈的登录与调用范式见 `scripts/compose-demo-smoke.mjs`。可发起的模板只由 `/admin/process/findStartable` 回答：`oa_process_template.status = 1` 只是「已发布」，发布产物不可核验时仍不可发起。
+
 ## 分层
 
 - module 测试是主：phase、迟到归属、写后策略等规则打在 interface 上。
@@ -22,6 +24,7 @@
 ## e2e
 
 - 默认 `npm run test:e2e` 起 9530 的 Vite dev server；设置 `E2E_BASE_URL` 时指向已构建客户端并跳过 dev server（兼容性矩阵，见 `docs/test/plan/compatibility-matrix.md`）。
+- 种会话 cookie 一律用 `tests/e2e/helpers/base-url.ts` 的 `e2eCookieURL()`（它是 `E2E_BASE_URL` 的唯一解读者）。硬编码 `domain` 会让 `localhost` 与 `127.0.0.1` 两种入口表现不一致，失败点还会落在与该用例无关的断言上。
 - project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
 - **报告路径按 Playwright config 所在目录解析**：`tests/e2e-stack/` 与 `tests/security/` 的 JSON/JUnit 落在各自 `test-results/` 下，接口与 mock 套件在客户端根 `test-results/`。每次运行会清空自己的 outputDir，手工连着跑多套时先归档再跑下一套（`scripts/test-round.sh` 已内置归档顺序）。
 - 生产构建有 CSP（#139）：mock 预签名上传使用 `http://localhost:9000`（`connect-src` 默认放行源），不要再用 `objects.test` 之类的外部主机。

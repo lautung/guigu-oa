@@ -16,6 +16,7 @@
 #   DEMO_ORIGIN      (http://localhost:9530)  浏览器/接口套件入口
 #   E2E_ORIGIN       (http://127.0.0.1:9530)  兼容性矩阵页面入口（nginx 生产构建）
 #   MAVEN_MIRROR_URL / NPM_REGISTRY (空)      受限网络构建镜像源，透传 compose build
+#                                             （api/functional/compat/security 会先重建镜像）
 #   BASE_SNAPSHOT    (/tmp/guigu-oa-base-snapshot)  clean 产出的干净基线快照
 #   OUT              (docs/test/evidence/<日期>-clean-rerun) 证据目录
 #   ZAP_HOME         (/tmp/zap/ZAP_2.17.0)    ZAP Core 解压目录
@@ -118,6 +119,13 @@ require_stack_origin() {
     || die "$DEMO_ORIGIN 不可用，先起 Compose 栈（./scripts/test-round.sh clean）"
 }
 
+# 套件打的是正在跑的镜像。源码改过而没重建时，`up -d` 会沿用旧 jar：
+# 新用例红得莫名其妙，旧套件则对着旧代码假绿。带 --build 起一次，有层缓存时只是几秒。
+refresh_stack() {
+  step "stack: up --build --wait service-oa client" \
+    docker compose up -d --build --wait service-oa client
+}
+
 snapshot_base() {
   say "制作干净基线快照 → $BASE_SNAPSHOT"
   perf/ops/snapshot.sh
@@ -146,6 +154,7 @@ phase_clean() {
 
 phase_api() {
   preflight
+  refresh_stack
   require_stack_origin
   step "api: round 1" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:api
   step "api: round 2" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:api
@@ -156,6 +165,7 @@ phase_api() {
 
 phase_functional() {
   preflight
+  refresh_stack
   require_stack_origin
   step "functional: e2e-stack" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:e2e:stack
   # e2e-stack 的 config 在 tests/e2e-stack 下，JSON/JUnit 相对 config 目录落盘。
@@ -220,6 +230,7 @@ security_suite() {
 
 phase_security() {
   preflight
+  refresh_stack
   require_zap
   step "security: restore base" perf/ops/restore.sh slow-security.log
   security_suite
@@ -259,6 +270,7 @@ compat_matrix() {
 
 phase_compat() {
   preflight
+  refresh_stack
   require_stack_origin
   compat_matrix
 

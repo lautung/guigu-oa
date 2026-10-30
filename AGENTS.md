@@ -6,6 +6,10 @@ Per-repo configuration for [Matt Pocock skills 1.3](https://github.com/mattpococ
 
 创建或更新 PR（包括草稿 PR）前，必须读取并使用 Matt Pocock 的 `pr` skill（在当前可用 skills 中定位 `pr/SKILL.md`），按其模板编写 PR 正文。
 
+### Commits
+
+一个 ADR / issue 完成即提交，不把两轮改动留在同一工作区：收尾时 `git status` 只应剩一个主题的改动。混在一起后只能按 hunk 手工拆分，拆分本身会静默丢内容。
+
 ### Issue tracker
 
 Issues live in this repo's GitHub Issues (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
@@ -39,7 +43,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 
 ### 后端启动
 
-1. **用 JDK 21 编译和运行**（`java.version` / `--release` 21）。不要再用 JDK 8 启动路径。
+1. **用 JDK 21 编译和运行**（`java.version` / `--release` 21）。
 2. `service-oa` 的 `pom.xml` 已把 `src/main/resources/**` 打进 jar。在 `service-oa` 目录先 `mvn -DskipTests install`，再：
    `java -jar target/service-oa.jar`
    若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
@@ -53,14 +57,14 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 ```sh
 mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHARACTER SET utf8mb4;'
 ```
-首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。不要再手动执行旧的 `guigu-oa-init.sql`；`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`admin` 通过种子角色「配置管理员」获得配置菜单权限，`userId=1` 不再特殊）。配置类接口由服务端 `configurationMenuGate` 按菜单授予统一判定；`user` 种子没有配置角色，只用于办事。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
+首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`；`service-oa/src/main/java/db/migration/` 下还有 Java 迁移（如 V104），选下一个版本号时两个目录一起看。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`admin` 通过种子角色「配置管理员」获得配置菜单权限，`userId=1` 不再特殊）。配置类接口由服务端 `configurationMenuGate` 按菜单授予统一判定；`user` 种子没有配置角色，只用于办事。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
 
 
 ### 前端检查与构建
 
 - `npm run verify`：lint + typecheck + format:check + test:unit + 文档检查（模块地图路径、Markdown 相对链接、证据路径与体积）+ shell 检查（提交前必跑）。
 - `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动（兼容性矩阵）。
-- `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数数据（alice 已发起超过 2000 条）会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --wait`。
+- `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数数据（alice 已发起超过 2000 条）会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --build --wait`。改了服务端必须带 `--build` 起栈：直接 `up -d` 会沿用旧 jar，新用例红得莫名其妙、旧套件假绿；`./scripts/test-round.sh` 的套件阶段会自己重建。
 - `npm run build:prod`：类型检查 + 生产构建。
 
 ### 仓库检查

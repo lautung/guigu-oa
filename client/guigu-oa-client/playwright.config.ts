@@ -5,6 +5,7 @@ const port = 9530
 /**
  * 兼容性矩阵（#114）：`E2E_BASE_URL` 指向已构建的客户端（Compose 栈 9530 的 nginx 产物），
  * 未设置时沿用 Vite dev server。mock 套件只替换 `/dev-api`，静态资源来自被指向的来源。
+ * cookie 由 `tests/e2e/helpers/base-url.ts` 绑定到同一来源，不在这里改写入口。
  */
 const externalBaseURL = process.env.E2E_BASE_URL?.replace(/\/$/, '')
 

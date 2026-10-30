@@ -519,7 +519,7 @@ test('进入结果被替换时清理编辑，旧上传结果不影响重新进�
   await page
     .context()
     .addCookies([
-      { name: 'guigu_oa_client_entry', value: 'replacement-entry', domain: '127.0.0.1', path: '/' },
+      { name: 'guigu_oa_client_entry', value: 'replacement-entry', url: e2eCookieURL() },
     ])
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(page).toHaveURL(/\/work\/pending$/)

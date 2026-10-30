@@ -5,7 +5,8 @@ ARG MAVEN_MIRROR_URL=""
 
 WORKDIR /build
 COPY . .
-RUN set -eu; \
+# 只缓存 repository：settings.xml 若一起缓存，未传镜像源的构建会沿用上一次的镜像配置。
+RUN --mount=type=cache,target=/root/.m2/repository set -eu; \
     if [ -n "$MAVEN_MIRROR_URL" ]; then \
       mkdir -p /root/.m2; \
       printf '<settings><mirrors><mirror><id>build-mirror</id><mirrorOf>*</mirrorOf><url>%s</url></mirror></mirrors></settings>\n' "$MAVEN_MIRROR_URL" > /root/.m2/settings.xml; \
