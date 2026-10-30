@@ -31,3 +31,7 @@ logging:
   structured:
     format:
       console: logstash
+    json:
+      # 手机号打码在结构化输出层统一完成（ADR 0039）：message 与 stack_trace 经
+      # PhoneNumberMasker 渲染成 138****1234，覆盖所有 logger，含异常栈里的 rejected value。
+      customizer: com.atguigu.common.observability.PhoneNumberMaskingCustomizer
