@@ -116,14 +116,14 @@ test.describe.serial('D 办事', () => {
       const unpublished = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
         processTemplateId: unpublishedId,
         processTypeId: template.processTypeId,
-        formValues: '{}',
+        formValues: '{"formData":{}}',
       })
       expectCode(unpublished.body, 201, 'D2 未发布模板')
 
       const ghostCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
         processTemplateId: template.id,
         processTypeId: template.processTypeId,
-        formValues: '{}',
+        formValues: '{"formData":{}}',
         ccUserIds: [999999],
       })
       expectCode(ghostCc.body, 201, 'D2 抄送人不存在')
@@ -134,7 +134,7 @@ test.describe.serial('D 办事', () => {
         const disabledCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
           processTemplateId: template.id,
           processTypeId: template.processTypeId,
-          formValues: '{}',
+          formValues: '{"formData":{}}',
           ccUserIds: [disabled.id],
         })
         expectCode(disabledCc.body, 201, 'D2 抄送人停用')

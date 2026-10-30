@@ -1,6 +1,7 @@
 package com.atguigu.vo.process;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.List;
 public class ProcessFormVo {
 
 	@Schema(description = "审批模板id")
+	@NotNull(message = "审批模板不能为空")
 	private Long processTemplateId;
 
 	@Schema(description = "审批类型id")

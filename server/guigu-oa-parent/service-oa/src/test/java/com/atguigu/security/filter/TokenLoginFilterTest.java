@@ -3,7 +3,10 @@ package com.atguigu.security.filter;
 import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.security.custom.CustomUser;
+import com.atguigu.security.login.InvalidLoginInputException;
 import com.atguigu.security.login.LoginAttemptLimiter;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -36,6 +39,7 @@ public class TokenLoginFilterTest {
     private static final String SECRET =
             "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
 
     private final LoginAttemptLimiter limiter = mock(LoginAttemptLimiter.class);
     private final JwtHelper jwtHelper = new JwtHelper(SECRET);
@@ -44,7 +48,7 @@ public class TokenLoginFilterTest {
     public void aBlockedAccountIsRefusedBeforeThePasswordIsChecked() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
         when(limiter.isBlocked("alice", "127.0.0.1")).thenReturn(true);
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
 
         assertThrows(LockedException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
@@ -53,11 +57,67 @@ public class TokenLoginFilterTest {
     }
 
     @Test
+    public void aBlankUsernameIsRejectedBeforeTheLimiterAndManager() {
+        AuthenticationManager manager = mock(AuthenticationManager.class);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+
+        InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
+                () -> filter.attemptAuthentication(
+                        loginRequestJson("{\"password\":\"secret\"}"), new MockHttpServletResponse()));
+
+        assertEquals("用户名不能为空", failure.getMessage());
+        verifyNoInteractions(manager);
+        verifyNoInteractions(limiter);
+    }
+
+    @Test
+    public void aBlankPasswordIsRejectedWithoutCountingAFailure() {
+        AuthenticationManager manager = mock(AuthenticationManager.class);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+
+        InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
+                () -> filter.attemptAuthentication(
+                        loginRequestJson("{\"username\":\"alice\"}"), new MockHttpServletResponse()));
+
+        assertEquals("密码不能为空", failure.getMessage());
+        verifyNoInteractions(manager);
+        verifyNoInteractions(limiter);
+    }
+
+    @Test
+    public void anUnreadableBodyIsRejectedAsInvalidLoginInput() {
+        TokenLoginFilter filter = new TokenLoginFilter(
+                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+
+        InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
+                () -> filter.attemptAuthentication(
+                        loginRequestJson(""), new MockHttpServletResponse()));
+
+        assertEquals("请输入用户名和密码", failure.getMessage());
+        verifyNoInteractions(limiter);
+    }
+
+    @Test
+    public void anInvalidInputIsReportedWithItsFieldMessage() throws Exception {
+        TokenLoginFilter filter = new TokenLoginFilter(
+                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.unsuccessfulAuthentication(
+                loginRequest("alice", "111111"), response, new InvalidLoginInputException("密码不能为空"));
+
+        assertEquals(401, response.getStatus());
+        JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
+        assertEquals(208, body.get("code").asInt());
+        assertEquals("密码不能为空", body.get("message").asString());
+    }
+
+    @Test
     public void aWrongPasswordIsCounted() {
         AuthenticationManager manager = authentication -> {
             throw new BadCredentialsException("bad credentials");
         };
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
 
         assertThrows(BadCredentialsException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
@@ -69,7 +129,7 @@ public class TokenLoginFilterTest {
         AuthenticationManager manager = authentication -> {
             throw new InternalAuthenticationServiceException("database is down");
         };
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
 
         assertThrows(InternalAuthenticationServiceException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
@@ -81,7 +141,7 @@ public class TokenLoginFilterTest {
         CustomUser principal = user("alice", 1, 7L);
         AuthenticationManager manager = authentication ->
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of());
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
 
         Authentication authentication = filter.attemptAuthentication(
                 loginRequest("alice", "111111"), new MockHttpServletResponse());
@@ -104,7 +164,8 @@ public class TokenLoginFilterTest {
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user("alice", 1), null, List.of());
         when(limiter.isBlocked("alice", "127.0.0.1")).thenReturn(true);
-        TokenLoginFilter filter = new TokenLoginFilter(mock(AuthenticationManager.class), jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(
+                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
@@ -121,7 +182,8 @@ public class TokenLoginFilterTest {
     public void aDisabledAccountIsRefusedWithoutClearingItsFailures() throws Exception {
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user("alice", 0), null, List.of());
-        TokenLoginFilter filter = new TokenLoginFilter(mock(AuthenticationManager.class), jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(
+                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
@@ -135,7 +197,8 @@ public class TokenLoginFilterTest {
 
     @Test
     public void aLockedExceptionIsReportedWithTheTooFrequentMessage() throws Exception {
-        TokenLoginFilter filter = new TokenLoginFilter(mock(AuthenticationManager.class), jwtHelper, limiter);
+        TokenLoginFilter filter = new TokenLoginFilter(
+                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.unsuccessfulAuthentication(
@@ -162,10 +225,13 @@ public class TokenLoginFilterTest {
     }
 
     private static MockHttpServletRequest loginRequest(String username, String password) {
+        return loginRequestJson("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}");
+    }
+
+    private static MockHttpServletRequest loginRequestJson(String json) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/admin/system/index/login");
         request.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        request.setContent(("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}")
-                .getBytes(StandardCharsets.UTF_8));
+        request.setContent(json.getBytes(StandardCharsets.UTF_8));
         return request;
     }
 }

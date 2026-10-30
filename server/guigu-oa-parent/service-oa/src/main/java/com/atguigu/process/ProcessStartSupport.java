@@ -23,19 +23,31 @@ public final class ProcessStartSupport {
     }
 
     public static Map<String, Object> formDataVariables(String formValues) {
-        if (!StringUtils.hasText(formValues)) {
+        JsonNode formData = formDataNode(formValues);
+        if (formData == null) {
             return Collections.emptyMap();
+        }
+        Map<String, Object> parsed = OBJECT_MAPPER.convertValue(formData, MAP_TYPE);
+        return parsed == null ? Collections.emptyMap() : parsed;
+    }
+
+    /**
+     * 空值仍允许（无表单的模板）；有内容时必须是带 {@code formData} 对象的合法 JSON。
+     */
+    public static boolean isValidFormValues(String formValues) {
+        return !StringUtils.hasText(formValues) || formDataNode(formValues) != null;
+    }
+
+    private static JsonNode formDataNode(String formValues) {
+        if (!StringUtils.hasText(formValues)) {
+            return null;
         }
         try {
             JsonNode root = OBJECT_MAPPER.readTree(formValues);
             JsonNode formData = root.get("formData");
-            if (formData == null || !formData.isObject()) {
-                return Collections.emptyMap();
-            }
-            Map<String, Object> parsed = OBJECT_MAPPER.convertValue(formData, MAP_TYPE);
-            return parsed == null ? Collections.emptyMap() : parsed;
+            return formData != null && formData.isObject() ? formData : null;
         } catch (Exception ignored) {
-            return Collections.emptyMap();
+            return null;
         }
     }
 

@@ -4,11 +4,16 @@ import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.ResponseUtil;
 import com.atguigu.common.result.Result;
 import com.atguigu.common.result.ResultCodeEnum;
+import com.atguigu.common.validation.ValidationMessages;
 import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.login.ClientAddress;
+import com.atguigu.security.login.InvalidLoginInputException;
 import com.atguigu.security.login.LoginAttemptLimiter;
 import com.atguigu.vo.system.LoginVo;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,23 +30,28 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtHelper jwtHelper;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final Validator validator;
 
     public TokenLoginFilter(
             AuthenticationManager authenticationManager,
             JwtHelper jwtHelper,
-            LoginAttemptLimiter loginAttemptLimiter
+            LoginAttemptLimiter loginAttemptLimiter,
+            Validator validator
     ) {
         this.setAuthenticationManager(authenticationManager);
         this.jwtHelper = jwtHelper;
         this.loginAttemptLimiter = loginAttemptLimiter;
+        this.validator = validator;
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
@@ -52,6 +62,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                                 HttpServletResponse response)
             throws AuthenticationException {
         LoginVo loginVo = readLoginVo(request);
+        requireValid(loginVo);
         String username = loginVo.getUsername();
         String sourceAddress = ClientAddress.of(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
@@ -74,10 +85,23 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private LoginVo readLoginVo(HttpServletRequest request) {
         try {
-            return objectMapper.readValue(request.getInputStream(), LoginVo.class);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            LoginVo loginVo = objectMapper.readValue(request.getInputStream(), LoginVo.class);
+            return loginVo == null ? new LoginVo() : loginVo;
+        } catch (IOException | JacksonException e) {
+            throw new InvalidLoginInputException("请输入用户名和密码");
         }
+    }
+
+    private void requireValid(LoginVo loginVo) {
+        Set<ConstraintViolation<LoginVo>> violations = validator.validate(loginVo);
+        if (violations.isEmpty()) {
+            return;
+        }
+        String message = ValidationMessages.join(violations.stream()
+                .sorted(Comparator.comparing(violation -> violation.getPropertyPath().toString()))
+                .map(ConstraintViolation::getMessage)
+                .toList());
+        throw new InvalidLoginInputException(message);
     }
 
     @Override
@@ -116,6 +140,11 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                               HttpServletResponse response,
                                               AuthenticationException failed)
             throws IOException, ServletException {
+        if (failed instanceof InvalidLoginInputException invalidInput) {
+            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
+                    Result.build(null, ResultCodeEnum.LOGIN_ERROR).message(invalidInput.getMessage()));
+            return;
+        }
         if (failed instanceof LockedException) {
             ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED, tooFrequent());
             return;

@@ -21,6 +21,11 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
+        <!-- 请求 DTO 的校验约束（实现由 service-oa 的 starter 提供，ADR 0033） -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
         <!-- Springdoc OpenAPI 注解 (替换 Knife4j) -->
         <dependency>
             <groupId>org.springdoc</groupId>

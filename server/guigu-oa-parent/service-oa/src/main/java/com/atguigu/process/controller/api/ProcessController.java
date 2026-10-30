@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,7 +59,7 @@ public class ProcessController {
 
     @Operation(summary = "启动流程")
     @PostMapping("/startUp")
-    public Result startUp(@RequestBody ProcessFormVo processFormVo) {
+    public Result startUp(@Valid @RequestBody ProcessFormVo processFormVo) {
         processService.startUp(currentUser(), processFormVo);
         return Result.ok();
     }
@@ -90,7 +91,7 @@ public class ProcessController {
     //审批
     @Operation(summary = "审批")
     @PostMapping("approve")
-    public Result approve(@RequestBody ApprovalVo approvalVo) {
+    public Result approve(@Valid @RequestBody ApprovalVo approvalVo) {
         processService.approve(currentUser(), approvalVo);
         return Result.ok();
     }

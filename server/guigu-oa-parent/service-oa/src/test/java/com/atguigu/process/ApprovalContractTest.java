@@ -913,6 +913,20 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void aReplayWithMalformedFormValuesStillReturnsTheFirstApproval() {
+        SysUser alice = user(2L, "alice", "小艾");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm("attempt-1"));
+        ProcessFormVo replay = publishedLeaveForm("attempt-1");
+        replay.setFormValues("{not-json");
+
+        Approval.StartOutcome replayed = approval.startUp(alice, replay);
+
+        assertEquals(first.processId(), replayed.processId());
+        assertEquals(1, processCount());
+    }
+
+    @Test
     public void approveReturnsNextState() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");

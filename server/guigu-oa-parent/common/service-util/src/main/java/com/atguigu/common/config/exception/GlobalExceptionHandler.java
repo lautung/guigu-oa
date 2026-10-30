@@ -1,16 +1,23 @@
 package com.atguigu.common.config.exception;
 
 import com.atguigu.common.result.Result;
+import com.atguigu.common.validation.ValidationMessages;
 import org.springframework.security.access.AccessDeniedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.Comparator;
 
 
 @ControllerAdvice
@@ -42,6 +49,28 @@ public class GlobalExceptionHandler {
     public Result error(HttpRequestMethodNotSupportedException e) {
         log.info("Method not allowed: {}", e.getMessage());
         return Result.fail().message("请求方法不支持");
+    }
+
+    //参数校验失败：仍走业务信封，消息按字段名排序后连接（ADR 0033）
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public Result error(MethodArgumentNotValidException e) {
+        String message = ValidationMessages.join(e.getBindingResult().getAllErrors().stream()
+                .sorted(Comparator.comparing(error -> error instanceof FieldError fieldError
+                        ? fieldError.getField()
+                        : ""))
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .toList());
+        log.info("Request validation failed: {}", message);
+        return Result.fail().message(message);
+    }
+
+    //缺体或畸形 JSON：不落到泛化的全局异常文案
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseBody
+    public Result error(HttpMessageNotReadableException e) {
+        log.info("Unreadable request body: {}", e.getMessage());
+        return Result.fail().message("请求体格式无效");
     }
 
     //特定异常处理

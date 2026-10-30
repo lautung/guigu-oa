@@ -77,6 +77,9 @@ public class ApprovalWriter {
             return replayedOutcome(started);
         }
 
+        // 只在真正新发起时检查表单结构：重复送达按 ADR 0032 返回第一条，不比对内容。
+        requireWellFormedFormValues(processFormVo.getFormValues());
+
         ApprovalTemplate.PublishedApproval publication =
                 approvalTemplate.resolveForInitiation(processFormVo.getProcessTemplateId());
         ProcessTemplate processTemplate = publication.template();
@@ -163,6 +166,12 @@ public class ApprovalWriter {
             throw new GuiguException(201, "提交标识过长");
         }
         return idempotencyKey;
+    }
+
+    private static void requireWellFormedFormValues(String formValues) {
+        if (!ProcessStartSupport.isValidFormValues(formValues)) {
+            throw new GuiguException(201, "表单内容格式无效");
+        }
     }
 
     @Transactional

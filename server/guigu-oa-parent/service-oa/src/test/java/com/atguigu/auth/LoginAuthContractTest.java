@@ -78,8 +78,8 @@ public class LoginAuthContractTest {
 
     @AfterEach
     public void removeContractUser() {
-        jdbcTemplate.update("DELETE FROM sys_user WHERE username IN (?, ?, ?)",
-                "new-contract-user", "lock-contract-user", "reset-contract-user");
+        jdbcTemplate.update("DELETE FROM sys_user WHERE username IN (?, ?, ?, ?)",
+                "new-contract-user", "lock-contract-user", "reset-contract-user", "blank-contract-user");
     }
 
     @Test
@@ -103,6 +103,70 @@ public class LoginAuthContractTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
                 .andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    public void aBlankUsernameIsRejectedWithTheFieldMessage() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .header("X-Forwarded-For", "203.0.113.30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"111111\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("用户名不能为空"));
+    }
+
+    @Test
+    public void aBlankPasswordIsRejectedWithTheFieldMessage() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .header("X-Forwarded-For", "203.0.113.30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("密码不能为空"));
+    }
+
+    @Test
+    public void bothBlankFieldsAreJoinedInFieldOrder() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .header("X-Forwarded-For", "203.0.113.30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("密码不能为空；用户名不能为空"));
+    }
+
+    @Test
+    public void anUnreadableLoginBodyIsRejectedAsInvalidInput() throws Exception {
+        mockMvc.perform(post("/admin/system/index/login")
+                        .header("X-Forwarded-For", "203.0.113.30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("请输入用户名和密码"));
+    }
+
+    @Test
+    public void blankPasswordsDoNotCountTowardsTheAccountLock() throws Exception {
+        String adminToken = loginToken("admin", "111111");
+        saveContractUser(adminToken, "blank-contract-user", "111111");
+        String source = "203.0.113.32";
+
+        for (int attempt = 1; attempt <= 12; attempt += 1) {
+            mockMvc.perform(post("/admin/system/index/login")
+                            .header("X-Forwarded-For", source)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"blank-contract-user\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(208))
+                    .andExpect(jsonPath("$.message").value("密码不能为空"));
+        }
+
+        // Without the input check these twelve would lock the account long before the password.
+        assertLoginCode("blank-contract-user", "111111", source, 200);
     }
 
     @Test

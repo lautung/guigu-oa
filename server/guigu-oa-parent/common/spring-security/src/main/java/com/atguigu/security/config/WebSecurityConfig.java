@@ -13,6 +13,7 @@ import com.atguigu.security.login.RedisLoginAttemptLimiter;
 import com.atguigu.security.login.Slf4jLoginAudit;
 import com.atguigu.security.revocation.RedisTokenRevocation;
 import com.atguigu.security.revocation.TokenRevocation;
+import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -90,7 +91,8 @@ public class WebSecurityConfig {
             UserDetailsService userDetailsService,
             AuthenticationManager authenticationManager,
             TokenRevocation tokenRevocation,
-            LoginAttemptLimiter loginAttemptLimiter
+            LoginAttemptLimiter loginAttemptLimiter,
+            Validator validator
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -108,7 +110,7 @@ public class WebSecurityConfig {
                 .addFilterBefore(
                         new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService, tokenRevocation),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper, loginAttemptLimiter))
+                .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper, loginAttemptLimiter, validator))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

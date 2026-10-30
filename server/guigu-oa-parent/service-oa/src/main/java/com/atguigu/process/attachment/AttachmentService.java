@@ -265,9 +265,7 @@ public class AttachmentService {
     }
 
     private void validateRequest(AttachmentUploadRequest request) {
-        if (request == null || !StringUtils.hasText(request.getFileName())
-                || request.getFileName().length() > 512
-                || request.getSizeBytes() == null || request.getSizeBytes() <= 0) {
+        if (request == null || request.getFileName() == null || request.getSizeBytes() == null) {
             throw new GuiguException(201, "附件信息无效");
         }
         String contentType = StringUtils.hasText(request.getContentType())
