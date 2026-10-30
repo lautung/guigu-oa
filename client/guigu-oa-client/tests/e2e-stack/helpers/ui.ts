@@ -24,15 +24,29 @@ export function workItem(page: Page, text: string): Locator {
 }
 
 /** 办事列表翻页找行：数据积累后目标行可能不在第 1 页（列表无排序保证，新行靠后）。 */
+async function goNextPage(page: Page): Promise<boolean> {
+  const next = page.locator('.el-pagination .btn-next')
+  if ((await next.count()) === 0 || (await next.isDisabled())) return false
+  // 等列表请求真正返回再继续：固定 sleep 在慢 runner 上会提前翻下一页，跳过目标行。
+  const response = page.waitForResponse(
+    (res) => /\/admin\/process\/find(?:Pending|Processed)\//.test(res.url()),
+    { timeout: 15_000 },
+  )
+  await next.click()
+  await response
+  await page
+    .locator('.list-container .el-loading-mask')
+    .waitFor({ state: 'hidden', timeout: 5_000 })
+    .catch(() => {})
+  return true
+}
+
 async function walkWorkList(page: Page, text: string, maxPages: number): Promise<Locator | null> {
   for (let visited = 1; ; visited++) {
     const item = workItem(page, text)
     if ((await item.count()) > 0) return item.first()
     if (visited >= maxPages) return null
-    const next = page.locator('.el-pagination .btn-next')
-    if ((await next.count()) === 0 || (await next.isDisabled())) return null
-    await next.click()
-    await page.waitForTimeout(400)
+    if (!(await goNextPage(page))) return null
   }
 }
 
