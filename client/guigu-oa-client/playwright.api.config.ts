@@ -14,6 +14,7 @@ import { apiBaseURL } from './tests/api/helpers/env'
 
 export default defineConfig({
   testDir: './tests/api',
+  globalSetup: './tests/api/global-setup.ts',
   fullyParallel: false,
   workers: 1,
   retries: 0,
