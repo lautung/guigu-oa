@@ -147,7 +147,7 @@
 | 缺陷清单 | GitHub issues #131–#147（`bug` + `severity:Sx`） | ✅ 17/17 verified |
 | 修复与回归记录 | #127；接口/性能 after-fix 记录；安全逐缺陷证据 + 整轮 61/61（#119） | ✅ |
 | 可复跑测试资产 | `tests/api/`、`tests/e2e-stack/`、`tests/security/`、`perf/`、`scripts/` | ✅ 入仓 |
-| 证据链 | [`evidence/`](evidence/)（3.4 MB，单文件 ≤100 KB、目录 ≤5 MB） | ✅ 符合 #122 |
+| 证据链 | [`evidence/`](evidence/)（3.1 MB，单文件 ≤100 KB、目录 ≤5 MB） | ✅ 符合 #122 |
 | 干净环境一键复跑验证 | [#119](https://github.com/lautung/guigu-oa/issues/119) / `scripts/test-round.sh` | ✅ 69m55s，见 [`execution/2026-10-30-clean-rerun.md`](execution/2026-10-30-clean-rerun.md) |
 
 ## 8. 残余风险与已知局限

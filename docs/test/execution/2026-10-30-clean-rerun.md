@@ -155,7 +155,7 @@
 
 ## 7. 证据
 
-目录 [`../evidence/2026-10-30-clean-rerun/`](../evidence/2026-10-30-clean-rerun/)（2.6 MB，符合 ≤5 MB 上限）：
+目录 [`../evidence/2026-10-30-clean-rerun/`](../evidence/2026-10-30-clean-rerun/)（848 KB，符合 ≤5 MB 上限）：
 
 | 子目录/文件 | 内容 |
 |---|---|
