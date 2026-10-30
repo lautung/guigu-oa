@@ -1,0 +1,2707 @@
+{
+  "config": {
+    "argv": [
+      "/Users/lautung/development/tools/node-v24.18.1-darwin-arm64/bin/node",
+      "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/node_modules/.bin/playwright",
+      "test",
+      "--config=playwright.api.config.ts"
+    ],
+    "configFile": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/playwright.api.config.ts",
+    "rootDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530/dev-api",
+          "extraHTTPHeaders": {
+            "Accept": "application/json"
+          },
+          "actionTimeout": 15000
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/api/report.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/api/junit.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "a-auth.spec.ts",
+      "file": "a-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "A 认证与认出",
+          "file": "a-auth.spec.ts",
+          "line": 26,
+          "column": 6,
+          "specs": [
+            {
+              "title": "A1 登录：正例 / 错密码 / 不存在用户 / 停用用户",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 681,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:57.486Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d0306d165409e8d6726a-2c792e0002944f027ae5",
+              "file": "a-auth.spec.ts",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "A2 刷新：正例 / access 当 refresh / 篡改 refresh / 停用用户",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 426,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:58.184Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d0306d165409e8d6726a-07f54fbf4947e33b86bf",
+              "file": "a-auth.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "A3 info：admin 有配置菜单 / user 为空 / 无 token 208",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 212,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:58.616Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d0306d165409e8d6726a-ab78a5fc982291531845",
+              "file": "a-auth.spec.ts",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "A4 登出：有 token 作废会话 / 无 token 幂等 200",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 367,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:58.834Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d0306d165409e8d6726a-32aa22338d314a4d365f",
+              "file": "a-auth.spec.ts",
+              "line": 106,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "b-grant.spec.ts",
+      "file": "b-grant.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "B 配置授予分支",
+          "file": "b-grant.spec.ts",
+          "line": 25,
+          "column": 6,
+          "specs": [
+            {
+              "title": "单页授予只开 sysUser，其余配置页仍 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 399,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:59.213Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "820fbbb4d616e6eaaccd-e043137ca332f7b4510d",
+              "file": "b-grant.spec.ts",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "删除角色后成员授予即时回收（#146 修复）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 384,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:23:59.618Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "820fbbb4d616e6eaaccd-953d3314176a9b26becf",
+              "file": "b-grant.spec.ts",
+              "line": 61,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "b-menu.spec.ts",
+      "file": "b-menu.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "B 菜单管理",
+          "file": "b-menu.spec.ts",
+          "line": 38,
+          "column": 6,
+          "specs": [
+            {
+              "title": "B16 toAssign：可授树 + 已勾选 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 223,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.011Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-631f7a9ac7969db32302",
+              "file": "b-menu.spec.ts",
+              "line": 39,
+              "column": 3
+            },
+            {
+              "title": "B17 doAssign：合法授予生效 / 新非法 id 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 157,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.240Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-235ba95e8735a42f6fe6",
+              "file": "b-menu.spec.ts",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "B18 findNodes：配置树 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 187,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.402Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-b855a4cb378e87412f23",
+              "file": "b-menu.spec.ts",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "B19 save：正例 / 受保护 path 201 / 非配置菜单 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 146,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.594Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-418ef9050c574470bdb1",
+              "file": "b-menu.spec.ts",
+              "line": 99,
+              "column": 3
+            },
+            {
+              "title": "B20 update：正例 / 受保护 type 与 status 变更 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 169,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.745Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-a8ac4d774fadb608c27d",
+              "file": "b-menu.spec.ts",
+              "line": 142,
+              "column": 3
+            },
+            {
+              "title": "B21 remove：正例 / 有子节点 201 / 受保护入口 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 201,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:00.919Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "594a51bdb7ea79db7c71-aa62149130cc2d72b79c",
+              "file": "b-menu.spec.ts",
+              "line": 181,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "b-role.spec.ts",
+      "file": "b-role.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "B 角色管理",
+          "file": "b-role.spec.ts",
+          "line": 24,
+          "column": 6,
+          "specs": [
+            {
+              "title": "B7 toAssign：正例（全量 + 已授）/ 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 293,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:01.135Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-dd65d2b9904e89e579a3",
+              "file": "b-role.spec.ts",
+              "line": 25,
+              "column": 3
+            },
+            {
+              "title": "B8 doAssign：全量覆写生效；不存在/已删除的 roleId 返回 201 且不写行（#144）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 305,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:01.433Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-682b379760af3961c57f",
+              "file": "b-role.spec.ts",
+              "line": 44,
+              "column": 3
+            },
+            {
+              "title": "B9 findAll：有授予 200 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 186,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:01.742Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-d28e9b6137fb45b8091f",
+              "file": "b-role.spec.ts",
+              "line": 89,
+              "column": 3
+            },
+            {
+              "title": "B10 分页：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 198,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:01.933Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-3cc2102cdbdd97efdf37",
+              "file": "b-role.spec.ts",
+              "line": 96,
+              "column": 3
+            },
+            {
+              "title": "B11 save：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 210,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:02.137Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-58d5955698aa5d9e1e5b",
+              "file": "b-role.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "B12 get：正例 / 无授予 205 / 不存在的 id 返回 200 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 220,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:02.351Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-0c3d1d1ade4295bc4446",
+              "file": "b-role.spec.ts",
+              "line": 120,
+              "column": 3
+            },
+            {
+              "title": "B13 update：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 225,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:02.575Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-d618bf0b08da6cc3db96",
+              "file": "b-role.spec.ts",
+              "line": 144,
+              "column": 3
+            },
+            {
+              "title": "B14 remove：正例（get 返回 null）/ 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 214,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:02.805Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-ac13f1283718f42deee4",
+              "file": "b-role.spec.ts",
+              "line": 172,
+              "column": 3
+            },
+            {
+              "title": "B15 batchRemove：正例（List<Long> 体）/ 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 260,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:03.025Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2594749d3dc307dacc4-1504a180483837dcd7c5",
+              "file": "b-role.spec.ts",
+              "line": 188,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "b-user.spec.ts",
+      "file": "b-user.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "B 用户管理",
+          "file": "b-user.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "B1 updateStatus：停用后下一次请求 209 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 376,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:03.293Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-60364c31e78109b84ff1",
+              "file": "b-user.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "B2 分页：正例 / 无授予 205 / limit 超上限 201 / 不返回密码",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 195,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:03.674Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-ddb5b1ad8934aed133c7",
+              "file": "b-user.spec.ts",
+              "line": 41,
+              "column": 3
+            },
+            {
+              "title": "B3 get：正例 / 无授予 205 / 不存在的 id 返回 200 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 298,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:03.875Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-a120534b8e5bf0bf513c",
+              "file": "b-user.spec.ts",
+              "line": 56,
+              "column": 3
+            },
+            {
+              "title": "B4 save：正例（BCrypt 落库）/ 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 373,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:04.177Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-20c0e72e1dfd1c9a621e",
+              "file": "b-user.spec.ts",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "B5 update：空密码保留原 hash / 改密生效且旧会话立即失效（#143）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 733,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:04.554Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-3bf866f5e685e430eaeb",
+              "file": "b-user.spec.ts",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "B6 remove：逻辑删除后列表不含 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 301,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:05.291Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5df272811eeb756b3360-23d9efbb8f2b44b44053",
+              "file": "b-user.spec.ts",
+              "line": 156,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "c-process-config.spec.ts",
+      "file": "c-process-config.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "C 审批配置",
+          "file": "c-process-config.spec.ts",
+          "line": 42,
+          "column": 6,
+          "specs": [
+            {
+              "title": "C1 审批列表：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 102,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:05.601Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-bec5d362791a305c06b4",
+              "file": "c-process-config.spec.ts",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "C2 模板分页：含未发布 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 72,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:05.889Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-b81443dc6c9d1ba96f77",
+              "file": "c-process-config.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "C3 模板详情：正例 / 无授予 205 / 不存在 200 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 24,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:05.966Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-73fdf6e6778c6a100650",
+              "file": "c-process-config.spec.ts",
+              "line": 70,
+              "column": 3
+            },
+            {
+              "title": "C4 save：新建即未发布 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 65,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:05.995Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-ec8458df15a7667dbbd1",
+              "file": "c-process-config.spec.ts",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "C5 update：未发布正例 / 已发布 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 84,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.065Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-14afdd85eaa3e89c8471",
+              "file": "c-process-config.spec.ts",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "C6 remove：未发布正例 / 已发布 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 58,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.154Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-2942e59206c8d3696433",
+              "file": "c-process-config.spec.ts",
+              "line": 135,
+              "column": 3
+            },
+            {
+              "title": "C7 uploadProcessDefinition：zip 正例 / 非 zip 201 / 空文件 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 24,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.216Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-2a4efe5e42c586b38c63",
+              "file": "c-process-config.spec.ts",
+              "line": 148,
+              "column": 3
+            },
+            {
+              "title": "C8 publish：未发布正例 / 再发布 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 100,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.245Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-7f9f14a2d5f5bafe301f",
+              "file": "c-process-config.spec.ts",
+              "line": 169,
+              "column": 3
+            },
+            {
+              "title": "C9 processType findAll：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 15,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.350Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-3e942aacdc1a8fdefe5e",
+              "file": "c-process-config.spec.ts",
+              "line": 179,
+              "column": 3
+            },
+            {
+              "title": "C10 processType 分页：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 17,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.374Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-5f7b74fe2cc1aa8838f1",
+              "file": "c-process-config.spec.ts",
+              "line": 189,
+              "column": 3
+            },
+            {
+              "title": "C11 processType get：正例 / 无授予 205 / 不存在 200 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 28,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.396Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-3a1ab84c42597cdb2816",
+              "file": "c-process-config.spec.ts",
+              "line": 199,
+              "column": 3
+            },
+            {
+              "title": "C12 processType save：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 34,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.429Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-896ba03f0531216593e1",
+              "file": "c-process-config.spec.ts",
+              "line": 218,
+              "column": 3
+            },
+            {
+              "title": "C13 processType update：正例 / 无授予 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 51,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.468Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-25cdd2f62206e748fea9",
+              "file": "c-process-config.spec.ts",
+              "line": 243,
+              "column": 3
+            },
+            {
+              "title": "C14 processType remove：逻辑删除后 get 返回 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.523Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f317ecc196e6253559a0-289e56dccf1c532aecef",
+              "file": "c-process-config.spec.ts",
+              "line": 276,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "d-work.spec.ts",
+      "file": "d-work.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "D 办事",
+          "file": "d-work.spec.ts",
+          "line": 76,
+          "column": 15,
+          "specs": [
+            {
+              "title": "D1 findPending：bob 有记录 / alice 空",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 106,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.568Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-e58c3a760e7010c58c9f",
+              "file": "d-work.spec.ts",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "D2 startUp：正例已发起 / 未发布模板 201 / 抄送人无效 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 303,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:06.876Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-a0f879c8975697f6640e",
+              "file": "d-work.spec.ts",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "D3 getProcessTemplate：已发布可读 / 未发布返回 null",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 170,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.183Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-8065e833e039efbd11af",
+              "file": "d-work.spec.ts",
+              "line": 135,
+              "column": 3
+            },
+            {
+              "title": "D4 findStartable：只含已发布且可用",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.358Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-475cce529d26a55eeadc",
+              "file": "d-work.spec.ts",
+              "line": 160,
+              "column": 3
+            },
+            {
+              "title": "D5 show：申请人/处理人/抄送人可读，非成员 403",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 139,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.388Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-e45bb6e602c61bedd40b",
+              "file": "d-work.spec.ts",
+              "line": 170,
+              "column": 3
+            },
+            {
+              "title": "D6 approve：当前处理人通过 / 非当前处理人 403",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 71,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.532Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-d07c8a0d0b8b795f6378",
+              "file": "d-work.spec.ts",
+              "line": 197,
+              "column": 3
+            },
+            {
+              "title": "D7 findProcessed：bob 正例",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.607Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-43a6fa1d17b8a8671428",
+              "file": "d-work.spec.ts",
+              "line": 222,
+              "column": 3
+            },
+            {
+              "title": "D8 findCarbonCopied：carol 正例",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.623Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-237c14776839b21eac4a",
+              "file": "d-work.spec.ts",
+              "line": 231,
+              "column": 3
+            },
+            {
+              "title": "D9 carbonCopyRecipients：普通用户可读，只含 id 与 name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.634Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-2b47bc4f17c13e0c37b7",
+              "file": "d-work.spec.ts",
+              "line": 240,
+              "column": 3
+            },
+            {
+              "title": "D10 findStarted：alice 只看到本人，userId 参数被忽略",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.645Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-c10b71fe7ba423b1f62e",
+              "file": "d-work.spec.ts",
+              "line": 252,
+              "column": 3
+            },
+            {
+              "title": "D11 getCurrentUser：只含 name 与 phone",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                        "line": 76,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.675Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/api/d-work.spec.ts",
+                            "line": 76,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5175610bd2f512a703d-85da1404a70b4eb68d87",
+              "file": "d-work.spec.ts",
+              "line": 270,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "e-attachments.spec.ts",
+      "file": "e-attachments.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "E 附件",
+          "file": "e-attachments.spec.ts",
+          "line": 88,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E1 uploads：草稿正例 / 超过 50 MiB 201 / 非成员 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 314,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:07.697Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-319a874c0d43f42771a1",
+              "file": "e-attachments.spec.ts",
+              "line": 89,
+              "column": 3
+            },
+            {
+              "title": "E2 complete：正例 / 对象缺失 201 / 大小不符 201 / 非 owner 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5331,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:08.015Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-06b2c4a595d8e966777f",
+              "file": "e-attachments.spec.ts",
+              "line": 119,
+              "column": 3
+            },
+            {
+              "title": "E3 drafts：owner 正例 / 他人空 / 非法 draftId 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 232,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:13.351Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-882c03e5c2522f166b32",
+              "file": "e-attachments.spec.ts",
+              "line": 167,
+              "column": 3
+            },
+            {
+              "title": "E4 deletePending：PENDING 正例 / 已绑定 205 / 非 owner 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 245,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:13.588Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-f2af913843c6a96afef5",
+              "file": "e-attachments.spec.ts",
+              "line": 195,
+              "column": 3
+            },
+            {
+              "title": "E5 processes：成员可读（canUpload）/ 非成员 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 473,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:13.837Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-c639eb8885fbb4ec51cb",
+              "file": "e-attachments.spec.ts",
+              "line": 226,
+              "column": 3
+            },
+            {
+              "title": "E6 download-url：成员正例 / 非成员 205 / 附件不属于该 process 205",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 389,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:14.315Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-f207687b22186a036031",
+              "file": "e-attachments.spec.ts",
+              "line": 251,
+              "column": 3
+            },
+            {
+              "title": "E 附：附件生命周期正例（登记→PUT→complete→删除）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5140,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:14.708Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e7207f730f5adef88756-11e2d9754b0f52fa3500",
+              "file": "e-attachments.spec.ts",
+              "line": 284,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "f-http-semantics.spec.ts",
+      "file": "f-http-semantics.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "F HTTP 语义（#145 修复后的契约）",
+          "file": "f-http-semantics.spec.ts",
+          "line": 19,
+          "column": 6,
+          "specs": [
+            {
+              "title": "F1 登录失败返回 HTTP 401 + code 208",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 99,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:19.856Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-544e8630fde962b977c3",
+              "file": "f-http-semantics.spec.ts",
+              "line": 20,
+              "column": 3
+            },
+            {
+              "title": "F2 未知路径返回 HTTP 404 + code 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 93,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:19.960Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-9506f8ba33bb4b197aa0",
+              "file": "f-http-semantics.spec.ts",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "F3 方法不匹配（GET doAssign）返回 HTTP 405 + code 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 92,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:20.058Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-da3a2229e037944f7ef3",
+              "file": "f-http-semantics.spec.ts",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "F4 方法不匹配（GET updateStatus）返回 HTTP 405 + code 201",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 92,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:20.154Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-5bad324eb68c34d23650",
+              "file": "f-http-semantics.spec.ts",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "F7 参数类型不匹配仍是业务信封（HTTP 200 + code 201，非容器级错误）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 92,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:20.251Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-6cbdefeb17c69f80dfa2",
+              "file": "f-http-semantics.spec.ts",
+              "line": 54,
+              "column": 3
+            },
+            {
+              "title": "F5 无 token 受保护请求：HTTP 401 + code 208",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:20.348Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-85b6ea0573c6e01030ce",
+              "file": "f-http-semantics.spec.ts",
+              "line": 65,
+              "column": 3
+            },
+            {
+              "title": "F6 匿名路径上的错误方法：HTTP 401 + code 208（不再 403 空体）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-30T04:24:20.360Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "39b121ca9b636e9a7ddd-fbaac1936c84a7af35aa",
+              "file": "f-http-semantics.spec.ts",
+              "line": 72,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-30T04:23:57.049Z",
+    "duration": 23334.017,
+    "expected": 66,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

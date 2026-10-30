@@ -4,8 +4,8 @@
 - 测试方案：[把测试决策汇总成测试方案 #126](https://github.com/lautung/guigu-oa/issues/126) / [`plan.md`](plan.md)（本报告只给结论，测什么、怎么判见方案）。
 - 记录规范：[确定测试数据、缺陷记录与报告规范 #122](https://github.com/lautung/guigu-oa/issues/122)。
 - 日期：2026-10-30。
-- 被测基线：应用代码 `f0a3469`（最后一次修复提交），测试资产与文档 `b65983f`（本报告之前）。
-- 一句话结论：**五类测试全部执行完毕，17 个缺陷全部修复并回归（closed = verified），S1/S2 清零，生产加固目标达成；仅剩「干净环境一键复跑验证」[#119](https://github.com/lautung/guigu-oa/issues/119) 与安全整轮合并不在本次汇总内。**
+- 被测基线：应用代码 `f0a3469`（最后一次修复提交），测试资产与文档 `c245183`（本报告之前）。
+- 一句话结论：**五类测试全部执行完毕，17 个缺陷全部修复并回归（closed = verified），S1/S2 清零，生产加固目标达成；干净环境五类复跑与安全整轮 after-fix（61/61）已由 [#119](https://github.com/lautung/guigu-oa/issues/119) 验证通过。**
 
 ## 1. 摘要与结论
 
@@ -16,14 +16,15 @@
 | 功能（真实栈） | 13 场景 / 26 次运行 | 26/26 通过，54.1 s，P0 8/8 | S1×1、S3×1 |
 | 接口（黑盒） | 56 端点 / 66 用例 | 基线 65/65 ×2；after-fix 66/66 ×2 | S3×2、S4×2 |
 | 性能（k6） | 7 档（冒烟/基线×3/拐点/压力/附件） | 全阈值达标；调优后中位 288 → 362.6 req/s（+25.9%） | S3×1（连接池） |
-| 安全（定向 + ZAP + XSS） | 61 条定向 + 被动扫描 + 浏览器 XSS | 基线 56 条 41 过 / 15 败并全部入账；10 个缺陷逐个复跑转绿 | S1×1、S2×1、S3×6、S4×2 |
+| 安全（定向 + ZAP + XSS） | 61 条定向 + 被动扫描 + 浏览器 XSS | 基线 56 条 41 过 / 15 败并全部入账；整轮 after-fix 61/61，ZAP 0 High / 5 Medium（接受项）/ 0 Low | S1×1、S2×1、S3×6、S4×2 |
 | 兼容性（Chromium/WebKit × 桌面/手机 + 1440） | 5 格 / 189 次运行 | 145 过 / 44 按视口设计性跳过 / 0 失败，50.8 s | 0 |
+| 干净环境复跑（#119） | 五类按序 + 一键编排 | 66/66 ×2、27/27、7 档全过（中位 319 req/s）、61/61、145/44/0；总耗时 69m55s | 0 |
 | 回归底座 | 客户端 496 单测、服务端 333、mock e2e 189 次运行 | 全绿；覆盖率 91.3/83.6 与 93.4/81.8（只报告） | — |
 
 **结论**
 
 1. **缺陷账本清空**：17 个缺陷（S1×2、S2×1、S3×10、S4×4）全部 `closed = verified`，每个关闭评论含修复提交 SHA、回归用例与复跑证据。
-2. **发布门槛**（方案 §5.3）：无未关闭 S1/S2 ✅；缺陷 17/17 已验证 ✅；功能、接口、性能、兼容性基线轮与修复/调优轮记录齐全 ✅；安全整轮 after-fix 目前是**逐缺陷分项复跑**，61 条整轮 + ZAP 复跑并入 #119 ⚠️；残余风险本文 §8 ✅。
+2. **发布门槛**（方案 §5.3）：无未关闭 S1/S2 ✅；缺陷 17/17 已验证 ✅；功能、接口、性能、兼容性基线轮与修复/调优轮记录齐全 ✅；安全整轮 after-fix 61 条 + ZAP 已由 #119 复跑通过 ✅；残余风险本文 §8 ✅。
 3. **性能瓶颈已消除**：HikariCP 默认 10 连接是吞吐在 ~300 req/s 饱和的根因（#147）；调优到 25 后基线中位 362.6 req/s，压力档与附件档无回退，新平台 ~380–386 req/s。
 4. **安全风险已收敛**：2 个 S1（存储型 XSS、办事主链路被权限门切断）、1 个 S2（密码哈希外泄）与 10 个 S3/S4 全部修复；ZAP 基线 0 High，修复后剩余 5 条 `style-src 'unsafe-inline'`（ADR 0026 接受项）与 11 条 Informational。
 5. **可复跑资产已入仓**：接口/功能/安全/性能/兼容性套件、脚本与证据链均在仓库内，命令见 §9。
@@ -80,8 +81,8 @@
 - **定向矩阵**：基线 56 条 **41 过 / 15 败 / 0 跳过**，失败项全部入账；套件后续扩到 61 条（新增 HDR 5 条）。
 - **ZAP 2.17.0 被动 baseline**：29 条告警（0 High / 11 Medium / 12 Low / 6 Info），去重 6 类；修复后基线中的 CSP not set、X-Frame-Options、X-Content-Type-Options 三类安全头告警与 nginx 版本泄露均清零，剩余 5 条 `style-src 'unsafe-inline'`（ADR 0026 接受项）与 11 条 Informational。
 - **存储型 XSS**：`tests/security/` 复现 `v-html` 执行（S1 #142），修复后同一 spec 通过且载荷按文本显示。
-- **after-fix**：10 个缺陷各有独立复跑证据目录（`evidence/2026-10-29-security-fix-133` … `-142`），SEC 用例逐项转绿；**61 条整轮 + ZAP 合并复跑**尚未作为单独轮次执行，并入 #119。
-- 判定：安全基线执行完成；S1/S2 已清零，逐缺陷回归通过；整轮记录完整性见 §7。
+- **after-fix**：10 个缺陷各有独立复跑证据目录（`evidence/2026-10-29-security-fix-133` … `-142`）；#119 完成**整轮 61/61**（0 跳过）+ ZAP + 存储型 XSS 3/3，证据 `evidence/2026-10-30-clean-rerun/security/`。
+- 判定：安全基线执行完成；S1/S2 已清零，整轮 after-fix 通过。
 
 ### 4.5 兼容性
 
@@ -133,7 +134,7 @@
 - **红绿验证**：接口的「已知缺陷断言」在修复后翻红再改写为新契约（#145/#146/#143/#144）；安全用例（SEC-JWT/LEAK/CSRF/PAGE/XSS）逐项由失败转通过；性能以同快照前后对比判定，不以绝对数字。
 - **契约与设计记录**：相关决策已写入 ADR（0022–0029 等）与 GLOSSARY（登录失败限制、退出、表单文本等），报告不重复。
 
-回归后的发布判定：**不存在未关闭的 S1/S2，缺陷全部 verified；代码层面满足发布门槛**。唯一记录完整性缺口是安全 61 条整轮 + ZAP 合并复跑尚未落成单独轮次（并入 #119）。
+回归后的发布判定：**不存在未关闭的 S1/S2，缺陷全部 verified；代码层面满足发布门槛**。安全 61 条整轮 + ZAP 合并复跑已由 #119 补齐（61/61）。
 
 ## 7. 交付完整性对照（地图目的地）
 
@@ -144,10 +145,10 @@
 | 测试方案与用例清单 | [`plan.md`](plan.md) + [`plan/`](plan/)（功能/接口/性能/安全/兼容性 5 份） | ✅ #126 |
 | 执行记录 | [`execution/`](execution/) 8 份（基线/开发期/after-fix/调优） | ✅ 五类齐全 |
 | 缺陷清单 | GitHub issues #131–#147（`bug` + `severity:Sx`） | ✅ 17/17 verified |
-| 修复与回归记录 | #127；接口/性能 after-fix 记录；安全逐缺陷证据 | ✅（安全整轮待 #119） |
+| 修复与回归记录 | #127；接口/性能 after-fix 记录；安全逐缺陷证据 + 整轮 61/61（#119） | ✅ |
 | 可复跑测试资产 | `tests/api/`、`tests/e2e-stack/`、`tests/security/`、`perf/`、`scripts/` | ✅ 入仓 |
-| 证据链 | [`evidence/`](evidence/)（2.9 MB，单文件 ≤100 KB、目录 ≤5 MB） | ✅ 符合 #122 |
-| 干净环境一键复跑验证 | [#119](https://github.com/lautung/guigu-oa/issues/119) | ⏳ 地图剩余票 |
+| 证据链 | [`evidence/`](evidence/)（3.4 MB，单文件 ≤100 KB、目录 ≤5 MB） | ✅ 符合 #122 |
+| 干净环境一键复跑验证 | [#119](https://github.com/lautung/guigu-oa/issues/119) / `scripts/test-round.sh` | ✅ 69m55s，见 [`execution/2026-10-30-clean-rerun.md`](execution/2026-10-30-clean-rerun.md) |
 
 ## 8. 残余风险与已知局限
 
@@ -157,7 +158,7 @@
 4. **兼容性无真机**：WebKit 是 Safari 近似，不等于 iOS Safari 实机；不测 Edge/国产浏览器，不承诺平板宽度；模板图标依赖外部 CDN（`gw.alicdn.com`），受限网络下只显示文字选项。
 5. **接口套件依赖干净演示栈**：压测造数卷会被 `global-setup.ts` 拒绝；`sysMenu/doAssign` 的 legacy 静默跳过分支未覆盖。
 6. **功能套件可预期残留**：每轮留下 1 个已发布模板（ADR 0005 冻结不可删）；P1 失败只记缺陷不阻塞基线。
-7. **38 条从不执行的 `@Test`**（`**/auth/activiti/**` 30 条、`**/auth/TestMpDemo*` 8 条，Activiti 7 课程 demo）仍在源码里；删除或收编待 #119 定。
+7. **38 条从不执行的 `@Test`**（`**/auth/activiti/**` 30 条、`**/auth/TestMpDemo*` 8 条，Activiti 7 课程 demo）仍在源码里；#119 只完成复跑验证，删除或收编仍待地图后续决策。
 8. **覆盖率只报告不卡红**：不设阈值，不影响构建结果。
 9. **生产部署前置**：必须启用 `prod` profile 并注入 ≥64 字节 `JWT_SECRET`；附件直传源与 `CSP_CONNECT_SRC` 成对配置；OpenAPI/Swagger 在非 `dev` profile 下关闭（#140）。
 
@@ -167,16 +168,17 @@
 
 | 目标 | 命令 | 前置 | 实测耗时 |
 |---|---|---|---|
+| 五类一键 | `./scripts/test-round.sh all`（或 `clean|api|functional|perf|security|compat`） | 见脚本头部前置 | 69m55s（本轮含脚本复跑验证） |
 | 客户端静态检查 + 单测 | `cd client/guigu-oa-client && npm run verify` | `npm ci` | — |
 | 服务端测试 | `cd server/guigu-oa-parent && mvn -pl service-oa -am test` | — | — |
 | 全仓检查 | `./scripts/verify.sh` | — | — |
-| 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 54 s |
-| 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 13–14 s |
-| mock e2e 全矩阵 | `E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e` | 栈 + 生产构建 | 51 s |
-| 安全定向 | `node scripts/security-scan.mjs --out docs/test/evidence/<轮次>` | 栈 + 快照 | ~6 min |
-| ZAP 被动 | `node scripts/zap-baseline.mjs --out docs/test/evidence/<轮次>` | 栈 + ZAP 2.17.0 Core | — |
-| 存储型 XSS | `cd client/guigu-oa-client && npm run test:security` | 栈 | — |
-| 性能整轮 | `perf/ops/round.sh <name> <tier>`（逐档） | 造数 + 快照 | ~40 min |
+| 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 57 s |
+| 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 14–16 s/轮 |
+| mock e2e 全矩阵 | `E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e` | 栈 + 生产构建 | 52 s |
+| 安全定向 | `node scripts/security-scan.mjs --out docs/test/evidence/<轮次>` | 栈 + 快照 | 5m33s（含 5 分钟过期等待） |
+| ZAP 被动 | `node scripts/zap-baseline.mjs --out docs/test/evidence/<轮次>` | 栈 + ZAP 2.17.0 Core | 31 s |
+| 存储型 XSS | `cd client/guigu-oa-client && npm run test:security` | 栈 | 10 s |
+| 性能整轮 | `./scripts/test-round.sh perf`（或逐档 `perf/ops/round.sh <name> <tier>`） | 造数 + 快照 | 45m22s |
 
 起栈：`docker compose down --volumes --remove-orphans` 后
 `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose up -d --build --wait`，
@@ -196,12 +198,13 @@
 | `evidence/2026-10-30-perf-baseline/` | k6 汇总、stats、慢日志、行数 | 性能基线 |
 | `evidence/2026-10-30-perf-fix-147/` | 调优整轮 k6 汇总与观测 | 性能回归 |
 | `evidence/2026-10-29-compatibility/` | 五格 35 张关键页截图 + 控制台 JSON + JUnit | 兼容性 |
+| `evidence/2026-10-30-clean-rerun/` | 干净环境五类复跑：接口/功能/性能/安全/兼容性 + 耗时表 | 干净环境复跑 |
 
 入仓证据遵循 #122：单文件 ≤100 KB、`evidence/` 整目录 ≤5 MB、必须脱敏。大件不入仓：完整 ZAP HTML（`/tmp/security-evidence-full/…`）、Playwright JSON/trace（`client/guigu-oa-client/test-results/`）、k6 原始结果（`perf/results/`）——路径与重跑命令见各执行记录与目录 README。证据总索引见 [`evidence/README.md`](evidence/README.md)。
 
 ## 10. 后续工作
 
-- **#119 从干净环境验证测试资产一键复跑**：按本报告 §9 从空环境依次执行五类套件，记录总耗时与失败点；同时补安全 61 条整轮 + ZAP 合并复跑，并决定 38 条死 `@Test` 的去留。
-- **门限校准**：性能混合吞吐回归下限建议从 259 调到 326 req/s（新平台中位 362.6 的 90%），与方案 §5.2 一并维护。
-- **CI 门禁与频率**（地图 Not yet specified）：性能/安全按需执行，功能与兼容矩阵可评估纳入发布前检查；长期频率与责任人待定。
+- **#119 已完成**：干净环境五类复跑 69m55s 全绿，安全整轮 61/61 已补齐，一键入口 `scripts/test-round.sh` 入仓；详见 [`execution/2026-10-30-clean-rerun.md`](execution/2026-10-30-clean-rerun.md)。
+- **门限校准**：性能混合吞吐回归下限仍按 259 req/s 判定；#147 建议的 326 req/s 在午间窗口未复现（本轮中位 319），暂缓采用，或只在同窗口 3 轮中位数上校准。
+- **38 条死 `@Test` 的去留**（删除还是收编）与 **是否接入 CI 门禁/定时任务**（地图 Not yet specified）仍待决策。
 - **静态资源本地化**：模板图标外部 CDN 是否改本地，取决于是否支持离线/内网部署。

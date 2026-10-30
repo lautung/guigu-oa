@@ -35,13 +35,16 @@
 
 ## 一轮完整执行
 
+一条命令（#119）：`./scripts/test-round.sh perf`（恢复基线快照 → 造数 → 快照 → 全档位 → 取证）。
+手动分步如下：
+
 ```sh
 # 0. 全新栈（首次造数用全新卷）
 docker compose down --volumes --remove-orphans
 MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose up -d --build --wait
 ./scripts/compose-baseline-check.sh
 
-# 1. 造数（10–15 分钟；若超 20 分钟降 TARGET=5000 并在 #124 记录取舍）
+# 1. 造数（宿主机执行；实测 Phase A 27s + Phase B 20s + 附件 4s）
 TARGET=10000 FINISHED=4000 node perf/seed.mjs
 
 # 2. 快照
@@ -123,3 +126,17 @@ GC 取证必须在**下一档 restore 之前**完成（restore 会 `down -v`）�
 2. **服务端请求级 trace 关联不做**：后端无 `X-Trace-Id` 日志过滤器，零代码改动
    前提下无法把 k6 的 `X-Trace-Id` 关联到服务端日志；k6 仍然按请求发送该头，
    服务端耗时证据改由 k6 客户端视角 + 慢 SQL + GC + docker stats 组成。
+
+## 造数执行位置（2026-10-30 复跑修正）
+
+造数在**宿主机**执行，默认 `PERF_BASE=http://localhost:8800`、`PERF_MINIO_PUT=http://localhost:9000`：
+
+```sh
+TARGET=10000 FINISHED=4000 node perf/seed.mjs
+```
+
+`seed.mjs` 会按 `MINIO_PUT_BASE` 改写预签名 URL 的 host，而 **host 参与 SigV4 签名**：
+在容器内用 `host.docker.internal:9000` 改写会让 MinIO 返回 `403 SignatureDoesNotMatch`
+（Phase A/B 已成功，Phase C 附件全失败并中止）。需要容器内造数时，必须同时把 `service-oa` 的
+`S3_PUBLIC_ENDPOINT` 指到同一个容器可达地址，不要只改 `MINIO_PUT_BASE`。
+宿主机 TUN 代理只污染 `host.docker.internal` 的解析，`localhost` 直连不受影响。

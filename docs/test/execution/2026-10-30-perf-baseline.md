@@ -103,8 +103,10 @@ MinIO 在环回网络上吞吐充裕（65,459 请求 / 3min），附件链路不
    startUp 保持写配比，计数器单独报告（基线轮 retry 6–9k / exhausted 1.1–1.6k，压力轮 10.6k/2.9k）。
 5. **取证要在下一次 restore 之前**：`down -v` 会随卷删掉慢日志与 GC 日志（baseline-1/2 的慢日志
    因此丢失，由 baseline-slow 补取）；`collect.sh` 已固化。
-6. **宿主机 TUN 代理把 `host.docker.internal` 污染成 fake-IP（198.18.1.63）**：宿主机 Node 直连会断，
-   造数统一在 `node:24-slim` 容器内跑。
+6. **宿主机 TUN 代理把 `host.docker.internal` 污染成 fake-IP（198.18.1.63）**：宿主机 Node 直连该域名会断。
+   **修正（2026-10-30，#119）**：造数应在宿主机用默认 `localhost:8800/9000` 执行，不要放容器里——
+   `seed.mjs` 改写预签名 URL 的 host 会破坏 SigV4 签名（MinIO 403）；见 `perf/README.md`
+   「造数执行位置」。
 
 ## 7. 与 #112 决议的偏差
 

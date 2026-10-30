@@ -1,0 +1,124 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: -
+        output: -
+
+     scenarios: (100.00%) 8 scenarios, 8 max VUs, 10m30s max duration (incl. graceful stop):
+              * approve: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doApprove, gracefulStop: 30s)
+              * findPending: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doFindPending, gracefulStop: 30s)
+              * findProcessed: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doFindProcessed, gracefulStop: 30s)
+              * findStarted: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doFindStarted, gracefulStop: 30s)
+              * login: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doLogin, gracefulStop: 30s)
+              * processTypeAll: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doProcessType, gracefulStop: 30s)
+              * show: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doShow, gracefulStop: 30s)
+              * startUp: 1 iterations for each of 1 VUs (maxDuration: 10m0s, exec: doStartUp, gracefulStop: 30s)
+
+time="2026-10-30T03:35:45Z" level=info msg="setup: 模板 id=3 processTypeId=2" source=console
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+
+Run              [ 100% ] setup()
+approve          [   0% ]
+findPending      [   0% ]
+findProcessed    [   0% ]
+findStarted      [   0% ]
+login            [   0% ]
+processTypeAll   [   0% ]
+show             [   0% ]
+startUp          [   0% ]
+time="2026-10-30T03:35:54Z" level=info msg="setup: 待办池 6000 条" source=console
+
+running (00m09.6s), 0/8 VUs, 8 complete and 0 interrupted iterations
+approve        ✓ [ 100% ] 1 VUs  00m00.2s/10m0s  1/1 iters, 1 per VU
+findPending    ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+findProcessed  ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+findStarted    ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+login          ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+processTypeAll ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+show           ✓ [ 100% ] 1 VUs  00m00.1s/10m0s  1/1 iters, 1 per VU
+startUp        ✓ [ 100% ] 1 VUs  00m00.2s/10m0s  1/1 iters, 1 per VU

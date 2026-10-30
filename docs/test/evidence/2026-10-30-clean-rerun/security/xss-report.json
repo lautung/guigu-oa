@@ -1,0 +1,261 @@
+{
+  "config": {
+    "argv": [
+      "/Users/lautung/development/tools/node-v24.18.1-darwin-arm64/bin/node",
+      "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "tests/security/playwright.security.config.ts"
+    ],
+    "configFile": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/playwright.security.config.ts",
+    "rootDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "security-chromium",
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "actionTimeout": 15000,
+          "navigationTimeout": 20000,
+          "browserName": "chromium",
+          "viewport": {
+            "width": 1280,
+            "height": 900
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "security-chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/xss-report.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/xss-report.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "security-headers.spec.ts",
+      "file": "security-headers.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "CSP 生效时主要页面无安全策略违规",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4437,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-30T04:32:12.612Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "csp-violations",
+                      "contentType": "application/json",
+                      "body": "eyJ0b3RhbCI6NCwidW5leHBlY3RlZCI6W119"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e3ea47c3dd308804f1b-c033a6ffb1129d995f5a",
+          "file": "security-headers.spec.ts",
+          "line": 24,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-server-version.spec.ts",
+      "file": "security-server-version.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "客户端响应头不暴露 nginx 精确版本",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 17,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-30T04:32:17.170Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "7010dfb1d867e97c8111-10b788641706130399d3",
+          "file": "security-server-version.spec.ts",
+          "line": 12,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-xss.spec.ts",
+      "file": "security-xss.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "审批表单字段的存储型 XSS 不执行",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3809,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-30T04:32:17.197Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "list-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3MtbXZ1aDc3OGEiLCJsaXN0RmxhZyI6bnVsbH0="
+                    },
+                    {
+                      "name": "detail-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3MtbXZ1aDc3OGEiLCJkZXRhaWxGbGFnIjpudWxsfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9a593d2aa7f1749c988b-f061ed552312aea4979a",
+          "file": "security-xss.spec.ts",
+          "line": 85,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-30T04:32:12.347Z",
+    "duration": 8704.376,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

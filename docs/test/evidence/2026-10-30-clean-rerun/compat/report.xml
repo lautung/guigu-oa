@@ -1,0 +1,710 @@
+<testsuites id="" name="" tests="189" failures="0" skipped="44" errors="0" time="51.461548">
+<testsuite name="approval-detail.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="6" failures="0" skipped="0" time="7.129" errors="0">
+<testcase name="通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入" classname="approval-detail.spec.ts" time="1.748">
+</testcase>
+<testcase name="处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示" classname="approval-detail.spec.ts" time="1.196">
+</testcase>
+<testcase name="整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理" classname="approval-detail.spec.ts" time="1.001">
+</testcase>
+<testcase name="已处理入口保持只读并返回原列表" classname="approval-detail.spec.ts" time="0.804">
+</testcase>
+<testcase name="读取 A 时返回并打开 B，A 迟到结果不覆盖 B" classname="approval-detail.spec.ts" time="1.24">
+</testcase>
+<testcase name="附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队" classname="approval-detail.spec.ts" time="1.14">
+</testcase>
+</testsuite>
+<testsuite name="approval-start.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="6" failures="0" skipped="0" time="12.48" errors="0">
+<testcase name="删除在途阻止发起，完成后需要再次点击" classname="approval-start.spec.ts" time="1.712">
+</testcase>
+<testcase name="提交在途锁定全部内容，离开后的成功不抢导航" classname="approval-start.spec.ts" time="1.673">
+</testcase>
+<testcase name="明确拒绝保留内容解锁，修改后可再次发起" classname="approval-start.spec.ts" time="1.885">
+</testcase>
+<testcase name="结果不明跨刷新保留内容，核实后结束本次" classname="approval-start.spec.ts" time="2.146">
+</testcase>
+<testcase name="重新选择替换不可用附件，无需再忽略旧引用" classname="approval-start.spec.ts" time="2.398">
+</testcase>
+<testcase name="空列表不解锁，明确重新发起先核对不可用附件" classname="approval-start.spec.ts" time="2.666">
+</testcase>
+</testsuite>
+<testsuite name="approval-template-availability.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="1" failures="0" skipped="0" time="2.067" errors="0">
+<testcase name="keeps unverified published templates frozen and blocks direct start URLs" classname="approval-template-availability.spec.ts" time="2.067">
+</testcase>
+</testsuite>
+<testsuite name="assign-roles.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="4" failures="0" skipped="0" time="10.959" errors="0">
+<testcase name="勾选并保存角色后关闭弹窗并刷新当前操作者" classname="assign-roles.spec.ts" time="2.362">
+</testcase>
+<testcase name="保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色" classname="assign-roles.spec.ts" time="3.988">
+</testcase>
+<testcase name="关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单" classname="assign-roles.spec.ts" time="2.812">
+</testcase>
+<testcase name="变成手机尺寸时强制离开配置并丢弃未保存勾选" classname="assign-roles.spec.ts" time="1.797">
+</testcase>
+</testsuite>
+<testsuite name="compatibility-pages.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="5" failures="0" skipped="0" time="3.78" errors="0">
+<testcase name="登录页在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.452">
+</testcase>
+<testcase name="发起审批的模板列表与表单在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="1.094">
+</testcase>
+<testcase name="待处理列表与审批详情在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.875">
+</testcase>
+<testcase name="配置-模板编辑：桌面可占用，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.683">
+</testcase>
+<testcase name="配置-分配角色：桌面可打开弹窗，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.676">
+</testcase>
+</testsuite>
+<testsuite name="recognition.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="4" failures="0" skipped="0" time="3.243" errors="0">
+<testcase name="首次认出临时失败可重试，保留原目标和进入结果" classname="recognition.spec.ts" time="0.494">
+</testcase>
+<testcase name="已认出后的刷新网络故障保留原页面与进入结果" classname="recognition.spec.ts" time="0.56">
+</testcase>
+<testcase name="旧业务请求迟到失败不会提示或清掉新用户" classname="recognition.spec.ts" time="0.77">
+</testcase>
+<testcase name="另一标签的新进入结果不会被旧标签迟到刷新覆盖" classname="recognition.spec.ts" time="1.419">
+</testcase>
+</testsuite>
+<testsuite name="template-edit.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="18" failures="0" skipped="1" time="24.813" errors="0">
+<testcase name="真实设计器往返三步后提交完整设计，保存仍为未发布" classname="template-edit.spec.ts" time="1.597">
+</testcase>
+<testcase name="已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包" classname="template-edit.spec.ts" time="1.514">
+</testcase>
+<testcase name="上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B" classname="template-edit.spec.ts" time="1.37">
+</testcase>
+<testcase name="保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容" classname="template-edit.spec.ts" time="2.825">
+</testcase>
+<testcase name="认证恢复重发保存后断网，仍进入待确认且不再次自动重发" classname="template-edit.spec.ts" time="1.282">
+</testcase>
+<testcase name="上传逐请求采用刷新后的凭据，再上传新包使用当前身份" classname="template-edit.spec.ts" time="1.138">
+</testcase>
+<testcase name="缺失记录不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="0.709">
+</testcase>
+<testcase name="损坏设计不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="0.685">
+</testcase>
+<testcase name="顶层不兼容不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="0.776">
+</testcase>
+<testcase name="手机尺寸与缺少配置菜单时不能占用模板编辑页" classname="template-edit.spec.ts" time="0.78">
+</testcase>
+<testcase name="有配置菜单的手机也不能占用模板编辑页" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="验证手机配置进入规则">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="新建的合法空设计在有效上传后保存为未发布" classname="template-edit.spec.ts" time="1.66">
+</testcase>
+<testcase name="B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B" classname="template-edit.spec.ts" time="1.627">
+</testcase>
+<testcase name="保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功" classname="template-edit.spec.ts" time="1.931">
+</testcase>
+<testcase name="普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认" classname="template-edit.spec.ts" time="1.485">
+</testcase>
+<testcase name="结束待确认编辑前说明重复写入风险，取消结束仍保留快照" classname="template-edit.spec.ts" time="2.198">
+</testcase>
+<testcase name="读取在途离开后重开同地址，旧读取不覆盖本次内容" classname="template-edit.spec.ts" time="1.327">
+</testcase>
+<testcase name="进入结果被替换时清理编辑，旧上传结果不影响重新进入" classname="template-edit.spec.ts" time="1.813">
+</testcase>
+</testsuite>
+<testsuite name="workflow-smoke.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-chromium" tests="2" failures="0" skipped="0" time="4.273" errors="0">
+<testcase name="登录、发起含附件审批并通过" classname="workflow-smoke.spec.ts" time="2.19">
+</testcase>
+<testcase name="登录、发起含附件审批并拒绝" classname="workflow-smoke.spec.ts" time="2.083">
+</testcase>
+</testsuite>
+<testsuite name="approval-detail.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="6" failures="0" skipped="0" time="5.316" errors="0">
+<testcase name="通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入" classname="approval-detail.spec.ts" time="1.081">
+</testcase>
+<testcase name="处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示" classname="approval-detail.spec.ts" time="1.067">
+</testcase>
+<testcase name="整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理" classname="approval-detail.spec.ts" time="0.67">
+</testcase>
+<testcase name="已处理入口保持只读并返回原列表" classname="approval-detail.spec.ts" time="0.482">
+</testcase>
+<testcase name="读取 A 时返回并打开 B，A 迟到结果不覆盖 B" classname="approval-detail.spec.ts" time="0.975">
+</testcase>
+<testcase name="附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队" classname="approval-detail.spec.ts" time="1.041">
+</testcase>
+</testsuite>
+<testsuite name="approval-start.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="6" failures="0" skipped="0" time="12.435" errors="0">
+<testcase name="删除在途阻止发起，完成后需要再次点击" classname="approval-start.spec.ts" time="1.79">
+</testcase>
+<testcase name="提交在途锁定全部内容，离开后的成功不抢导航" classname="approval-start.spec.ts" time="1.943">
+</testcase>
+<testcase name="明确拒绝保留内容解锁，修改后可再次发起" classname="approval-start.spec.ts" time="1.924">
+</testcase>
+<testcase name="结果不明跨刷新保留内容，核实后结束本次" classname="approval-start.spec.ts" time="2.078">
+</testcase>
+<testcase name="重新选择替换不可用附件，无需再忽略旧引用" classname="approval-start.spec.ts" time="2.261">
+</testcase>
+<testcase name="空列表不解锁，明确重新发起先核对不可用附件" classname="approval-start.spec.ts" time="2.439">
+</testcase>
+</testsuite>
+<testsuite name="approval-template-availability.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="1" failures="0" skipped="1" time="0.064" errors="0">
+<testcase name="keeps unverified published templates frozen and blocks direct start URLs" classname="approval-template-availability.spec.ts">
+<properties>
+<property name="skip" value="configuration pages require desktop width">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="assign-roles.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="4" failures="0" skipped="4" time="0.198" errors="0">
+<testcase name="勾选并保存角色后关闭弹窗并刷新当前操作者" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="变成手机尺寸时强制离开配置并丢弃未保存勾选" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="compatibility-pages.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="5" failures="0" skipped="0" time="2.687" errors="0">
+<testcase name="登录页在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.35">
+</testcase>
+<testcase name="发起审批的模板列表与表单在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.618">
+</testcase>
+<testcase name="待处理列表与审批详情在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.687">
+</testcase>
+<testcase name="配置-模板编辑：桌面可占用，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.578">
+</testcase>
+<testcase name="配置-分配角色：桌面可打开弹窗，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.454">
+</testcase>
+</testsuite>
+<testsuite name="recognition.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="4" failures="0" skipped="0" time="2.672" errors="0">
+<testcase name="首次认出临时失败可重试，保留原目标和进入结果" classname="recognition.spec.ts" time="0.498">
+</testcase>
+<testcase name="已认出后的刷新网络故障保留原页面与进入结果" classname="recognition.spec.ts" time="0.409">
+</testcase>
+<testcase name="旧业务请求迟到失败不会提示或清掉新用户" classname="recognition.spec.ts" time="0.66">
+</testcase>
+<testcase name="另一标签的新进入结果不会被旧标签迟到刷新覆盖" classname="recognition.spec.ts" time="1.105">
+</testcase>
+</testsuite>
+<testsuite name="template-edit.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="18" failures="0" skipped="16" time="2.588" errors="0">
+<testcase name="真实设计器往返三步后提交完整设计，保存仍为未发布" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="认证恢复重发保存后断网，仍进入待确认且不再次自动重发" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="上传逐请求采用刷新后的凭据，再上传新包使用当前身份" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="缺失记录不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="损坏设计不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="顶层不兼容不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="手机尺寸与缺少配置菜单时不能占用模板编辑页" classname="template-edit.spec.ts" time="0.51">
+</testcase>
+<testcase name="有配置菜单的手机也不能占用模板编辑页" classname="template-edit.spec.ts" time="0.567">
+</testcase>
+<testcase name="新建的合法空设计在有效上传后保存为未发布" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="从桌面缩为手机">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="结束待确认编辑前说明重复写入风险，取消结束仍保留快照" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="读取在途离开后重开同地址，旧读取不覆盖本次内容" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="进入结果被替换时清理编辑，旧上传结果不影响重新进入" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="workflow-smoke.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-chromium" tests="2" failures="0" skipped="0" time="4.786" errors="0">
+<testcase name="登录、发起含附件审批并通过" classname="workflow-smoke.spec.ts" time="2.214">
+</testcase>
+<testcase name="登录、发起含附件审批并拒绝" classname="workflow-smoke.spec.ts" time="2.572">
+</testcase>
+</testsuite>
+<testsuite name="approval-detail.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="6" failures="0" skipped="0" time="8.336" errors="0">
+<testcase name="通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入" classname="approval-detail.spec.ts" time="1.814">
+</testcase>
+<testcase name="处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示" classname="approval-detail.spec.ts" time="1.422">
+</testcase>
+<testcase name="整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理" classname="approval-detail.spec.ts" time="1.386">
+</testcase>
+<testcase name="已处理入口保持只读并返回原列表" classname="approval-detail.spec.ts" time="1.368">
+</testcase>
+<testcase name="读取 A 时返回并打开 B，A 迟到结果不覆盖 B" classname="approval-detail.spec.ts" time="0.951">
+</testcase>
+<testcase name="附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队" classname="approval-detail.spec.ts" time="1.395">
+</testcase>
+</testsuite>
+<testsuite name="approval-start.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="6" failures="0" skipped="0" time="16.815" errors="0">
+<testcase name="删除在途阻止发起，完成后需要再次点击" classname="approval-start.spec.ts" time="2.47">
+</testcase>
+<testcase name="提交在途锁定全部内容，离开后的成功不抢导航" classname="approval-start.spec.ts" time="2.514">
+</testcase>
+<testcase name="明确拒绝保留内容解锁，修改后可再次发起" classname="approval-start.spec.ts" time="2.582">
+</testcase>
+<testcase name="结果不明跨刷新保留内容，核实后结束本次" classname="approval-start.spec.ts" time="3.05">
+</testcase>
+<testcase name="重新选择替换不可用附件，无需再忽略旧引用" classname="approval-start.spec.ts" time="3.148">
+</testcase>
+<testcase name="空列表不解锁，明确重新发起先核对不可用附件" classname="approval-start.spec.ts" time="3.051">
+</testcase>
+</testsuite>
+<testsuite name="approval-template-availability.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="1" failures="0" skipped="0" time="2.349" errors="0">
+<testcase name="keeps unverified published templates frozen and blocks direct start URLs" classname="approval-template-availability.spec.ts" time="2.349">
+</testcase>
+</testsuite>
+<testsuite name="assign-roles.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="4" failures="0" skipped="0" time="11.268" errors="0">
+<testcase name="勾选并保存角色后关闭弹窗并刷新当前操作者" classname="assign-roles.spec.ts" time="1.629">
+</testcase>
+<testcase name="保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色" classname="assign-roles.spec.ts" time="4.777">
+</testcase>
+<testcase name="关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单" classname="assign-roles.spec.ts" time="2.487">
+</testcase>
+<testcase name="变成手机尺寸时强制离开配置并丢弃未保存勾选" classname="assign-roles.spec.ts" time="2.375">
+</testcase>
+</testsuite>
+<testsuite name="compatibility-pages.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="5" failures="0" skipped="0" time="4.903" errors="0">
+<testcase name="登录页在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.648">
+</testcase>
+<testcase name="发起审批的模板列表与表单在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="1.127">
+</testcase>
+<testcase name="待处理列表与审批详情在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="1">
+</testcase>
+<testcase name="配置-模板编辑：桌面可占用，手机落回待处理" classname="compatibility-pages.spec.ts" time="1.028">
+</testcase>
+<testcase name="配置-分配角色：桌面可打开弹窗，手机落回待处理" classname="compatibility-pages.spec.ts" time="1.1">
+</testcase>
+</testsuite>
+<testsuite name="recognition.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="4" failures="0" skipped="0" time="4.25" errors="0">
+<testcase name="首次认出临时失败可重试，保留原目标和进入结果" classname="recognition.spec.ts" time="0.707">
+</testcase>
+<testcase name="已认出后的刷新网络故障保留原页面与进入结果" classname="recognition.spec.ts" time="0.652">
+</testcase>
+<testcase name="旧业务请求迟到失败不会提示或清掉新用户" classname="recognition.spec.ts" time="0.906">
+</testcase>
+<testcase name="另一标签的新进入结果不会被旧标签迟到刷新覆盖" classname="recognition.spec.ts" time="1.985">
+</testcase>
+</testsuite>
+<testsuite name="template-edit.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="18" failures="0" skipped="1" time="32.334" errors="0">
+<testcase name="真实设计器往返三步后提交完整设计，保存仍为未发布" classname="template-edit.spec.ts" time="2.205">
+</testcase>
+<testcase name="已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包" classname="template-edit.spec.ts" time="1.845">
+</testcase>
+<testcase name="上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B" classname="template-edit.spec.ts" time="1.779">
+</testcase>
+<testcase name="保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容" classname="template-edit.spec.ts" time="3.997">
+</testcase>
+<testcase name="认证恢复重发保存后断网，仍进入待确认且不再次自动重发" classname="template-edit.spec.ts" time="1.504">
+</testcase>
+<testcase name="上传逐请求采用刷新后的凭据，再上传新包使用当前身份" classname="template-edit.spec.ts" time="1.342">
+</testcase>
+<testcase name="缺失记录不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="0.99">
+</testcase>
+<testcase name="损坏设计不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="1.066">
+</testcase>
+<testcase name="顶层不兼容不会降级为空白新建或覆盖" classname="template-edit.spec.ts" time="1.304">
+</testcase>
+<testcase name="手机尺寸与缺少配置菜单时不能占用模板编辑页" classname="template-edit.spec.ts" time="1.235">
+</testcase>
+<testcase name="有配置菜单的手机也不能占用模板编辑页" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="验证手机配置进入规则">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="新建的合法空设计在有效上传后保存为未发布" classname="template-edit.spec.ts" time="2.351">
+</testcase>
+<testcase name="B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B" classname="template-edit.spec.ts" time="1.912">
+</testcase>
+<testcase name="保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功" classname="template-edit.spec.ts" time="2.216">
+</testcase>
+<testcase name="普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认" classname="template-edit.spec.ts" time="2.033">
+</testcase>
+<testcase name="结束待确认编辑前说明重复写入风险，取消结束仍保留快照" classname="template-edit.spec.ts" time="2.501">
+</testcase>
+<testcase name="读取在途离开后重开同地址，旧读取不覆盖本次内容" classname="template-edit.spec.ts" time="1.667">
+</testcase>
+<testcase name="进入结果被替换时清理编辑，旧上传结果不影响重新进入" classname="template-edit.spec.ts" time="2.11">
+</testcase>
+</testsuite>
+<testsuite name="workflow-smoke.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-webkit" tests="2" failures="0" skipped="0" time="5.26" errors="0">
+<testcase name="登录、发起含附件审批并通过" classname="workflow-smoke.spec.ts" time="2.608">
+</testcase>
+<testcase name="登录、发起含附件审批并拒绝" classname="workflow-smoke.spec.ts" time="2.652">
+</testcase>
+</testsuite>
+<testsuite name="approval-detail.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="6" failures="0" skipped="0" time="8.558" errors="0">
+<testcase name="通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入" classname="approval-detail.spec.ts" time="1.857">
+</testcase>
+<testcase name="处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示" classname="approval-detail.spec.ts" time="1.348">
+</testcase>
+<testcase name="整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理" classname="approval-detail.spec.ts" time="1.205">
+</testcase>
+<testcase name="已处理入口保持只读并返回原列表" classname="approval-detail.spec.ts" time="1.229">
+</testcase>
+<testcase name="读取 A 时返回并打开 B，A 迟到结果不覆盖 B" classname="approval-detail.spec.ts" time="1.279">
+</testcase>
+<testcase name="附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队" classname="approval-detail.spec.ts" time="1.64">
+</testcase>
+</testsuite>
+<testsuite name="approval-start.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="6" failures="0" skipped="0" time="15.012" errors="0">
+<testcase name="删除在途阻止发起，完成后需要再次点击" classname="approval-start.spec.ts" time="2.524">
+</testcase>
+<testcase name="提交在途锁定全部内容，离开后的成功不抢导航" classname="approval-start.spec.ts" time="2.459">
+</testcase>
+<testcase name="明确拒绝保留内容解锁，修改后可再次发起" classname="approval-start.spec.ts" time="2.396">
+</testcase>
+<testcase name="结果不明跨刷新保留内容，核实后结束本次" classname="approval-start.spec.ts" time="2.493">
+</testcase>
+<testcase name="重新选择替换不可用附件，无需再忽略旧引用" classname="approval-start.spec.ts" time="2.356">
+</testcase>
+<testcase name="空列表不解锁，明确重新发起先核对不可用附件" classname="approval-start.spec.ts" time="2.784">
+</testcase>
+</testsuite>
+<testsuite name="approval-template-availability.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="1" failures="0" skipped="1" time="0.263" errors="0">
+<testcase name="keeps unverified published templates frozen and blocks direct start URLs" classname="approval-template-availability.spec.ts">
+<properties>
+<property name="skip" value="configuration pages require desktop width">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="assign-roles.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="4" failures="0" skipped="4" time="0.929" errors="0">
+<testcase name="勾选并保存角色后关闭弹窗并刷新当前操作者" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="变成手机尺寸时强制离开配置并丢弃未保存勾选" classname="assign-roles.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="compatibility-pages.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="5" failures="0" skipped="0" time="4.982" errors="0">
+<testcase name="登录页在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.619">
+</testcase>
+<testcase name="发起审批的模板列表与表单在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="1.307">
+</testcase>
+<testcase name="待处理列表与审批详情在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="1.112">
+</testcase>
+<testcase name="配置-模板编辑：桌面可占用，手机落回待处理" classname="compatibility-pages.spec.ts" time="1.062">
+</testcase>
+<testcase name="配置-分配角色：桌面可打开弹窗，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.882">
+</testcase>
+</testsuite>
+<testsuite name="recognition.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="4" failures="0" skipped="0" time="4.248" errors="0">
+<testcase name="首次认出临时失败可重试，保留原目标和进入结果" classname="recognition.spec.ts" time="0.795">
+</testcase>
+<testcase name="已认出后的刷新网络故障保留原页面与进入结果" classname="recognition.spec.ts" time="0.738">
+</testcase>
+<testcase name="旧业务请求迟到失败不会提示或清掉新用户" classname="recognition.spec.ts" time="1.042">
+</testcase>
+<testcase name="另一标签的新进入结果不会被旧标签迟到刷新覆盖" classname="recognition.spec.ts" time="1.673">
+</testcase>
+</testsuite>
+<testsuite name="template-edit.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="18" failures="0" skipped="16" time="6.155" errors="0">
+<testcase name="真实设计器往返三步后提交完整设计，保存仍为未发布" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="认证恢复重发保存后断网，仍进入待确认且不再次自动重发" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="上传逐请求采用刷新后的凭据，再上传新包使用当前身份" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="缺失记录不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="损坏设计不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="顶层不兼容不会降级为空白新建或覆盖" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="手机尺寸与缺少配置菜单时不能占用模板编辑页" classname="template-edit.spec.ts" time="0.944">
+</testcase>
+<testcase name="有配置菜单的手机也不能占用模板编辑页" classname="template-edit.spec.ts" time="0.99">
+</testcase>
+<testcase name="新建的合法空设计在有效上传后保存为未发布" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="从桌面缩为手机">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="结束待确认编辑前说明重复写入风险，取消结束仍保留快照" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="读取在途离开后重开同地址，旧读取不覆盖本次内容" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="进入结果被替换时清理编辑，旧上传结果不影响重新进入" classname="template-edit.spec.ts">
+<properties>
+<property name="skip" value="配置在桌面使用">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="workflow-smoke.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="mobile-webkit" tests="2" failures="0" skipped="0" time="4.826" errors="0">
+<testcase name="登录、发起含附件审批并通过" classname="workflow-smoke.spec.ts" time="2.565">
+</testcase>
+<testcase name="登录、发起含附件审批并拒绝" classname="workflow-smoke.spec.ts" time="2.261">
+</testcase>
+</testsuite>
+<testsuite name="compatibility-pages.spec.ts" timestamp="2026-10-30T04:37:08.127Z" hostname="desktop-1440-chromium" tests="5" failures="0" skipped="0" time="3.697" errors="0">
+<testcase name="登录页在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.578">
+</testcase>
+<testcase name="发起审批的模板列表与表单在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.794">
+</testcase>
+<testcase name="待处理列表与审批详情在矩阵内可渲染" classname="compatibility-pages.spec.ts" time="0.821">
+</testcase>
+<testcase name="配置-模板编辑：桌面可占用，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.614">
+</testcase>
+<testcase name="配置-分配角色：桌面可打开弹窗，手机落回待处理" classname="compatibility-pages.spec.ts" time="0.89">
+</testcase>
+</testsuite>
+</testsuites>

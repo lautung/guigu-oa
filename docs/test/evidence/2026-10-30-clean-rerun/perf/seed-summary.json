@@ -1,0 +1,27 @@
+{
+  "base": "http://localhost:8800",
+  "target": 10000,
+  "finished": 4000,
+  "concurrency": 20,
+  "phases": {
+    "startUp": {
+      "created": 0,
+      "totalNow": 10001,
+      "seconds": 0.011
+    },
+    "approve": {
+      "approved": 0,
+      "processedNow": 4001,
+      "seconds": 0.029
+    },
+    "attachments": {
+      "count": 110,
+      "seconds": 4.041
+    }
+  },
+  "template": {
+    "id": 3,
+    "name": "演示请假申请"
+  },
+  "totalSeconds": 4.305
+}

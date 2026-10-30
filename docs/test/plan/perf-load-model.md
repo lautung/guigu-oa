@@ -70,7 +70,9 @@
 - **造数**：`perf/seed.mjs` 走真实 API（startUp → approve），20 并发，按 findStarted/findProcessed
   总数**补差造数**（可安全重跑）；演示模板由 Compose 启动时 `DemoApprovalPublisher` 自动发布（#128），
   造数不自带发布步骤。直连 `ACT_*` 表被禁止，Flowable 运行时/历史一致性只能由引擎维护。
-  宿主机的 TUN 代理会把 `host.docker.internal` 污染成 fake-IP，造数统一在 `node:24-slim` 容器内执行。
+  宿主机的 TUN 代理会把 `host.docker.internal` 污染成 fake-IP，因此造数在**宿主机**用
+  `localhost:8800/9000` 执行（2026-10-30 #119 复跑验证）；容器内造数会让预签名 URL 的 host
+  与 SigV4 签名不一致（MinIO 403），不可只改 `MINIO_PUT_BASE`（详见 `perf/README.md`）。
 - **快照**：造数完成后 `perf/ops/snapshot.sh` = mysqldump（含 ACT_*/FLW_*）+ process-definitions 卷 +
   minio-data 卷。每轮压测前 `perf/ops/restore.sh` 恢复（实测 ~37s）：`down -v` → 卷还原 → 导 dump →
   `up --wait` → 打开慢 SQL。**写负载一次运行会新增上千实例，每次运行前都恢复快照。**

@@ -175,18 +175,23 @@
 
 ## 8. 复跑入口
 
+一条命令跑完五类：`./scripts/test-round.sh all`（干净栈 → 接口 → 功能 → 性能 → 安全 → 兼容性，
+约 50–60 min）；也可按类取子命令 `clean|api|functional|perf|security|compat`（#119 验证）。
+分步入口与实测耗时：
+
 | 目标 | 命令 | 前置 | 实测耗时 |
 |---|---|---|---|
+| 五类一键 | `./scripts/test-round.sh all` | 见脚本头部前置 | 见 `execution/2026-10-30-clean-rerun.md` |
 | 客户端静态检查 + 单测 | `cd client/guigu-oa-client && npm run verify` | `npm ci` | — |
 | 服务端测试 | `cd server/guigu-oa-parent && mvn -pl service-oa -am test` | — | — |
 | 全仓检查 | `./scripts/verify.sh` | — | — |
-| 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 54s（27 次运行 1.2min） |
-| 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 13–14s |
+| 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 57s（27 次运行） |
+| 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 14–16s/轮 |
 | mock e2e 全矩阵 | `E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e` | 栈 + 生产构建 | 51s（189 次运行） |
 | 安全定向 | `node scripts/security-scan.mjs --out docs/test/evidence/<轮次>` | 栈 + 快照 | ~6min |
 | ZAP 被动 | `node scripts/zap-baseline.mjs --out docs/test/evidence/<轮次>` | 栈 + ZAP 2.17.0 Core | — |
 | 存储型 XSS | `cd client/guigu-oa-client && npm run test:security` | 栈 | — |
-| 性能整轮 | `perf/ops/round.sh <name> <tier>`（逐档） | 造数 + 快照 | ~40min 全协议 |
+| 性能整轮 | `./scripts/test-round.sh perf`（或逐档 `perf/ops/round.sh <name> <tier>`） | 造数 + 快照 | ~40min 全协议 |
 
 完整起栈与性能复跑细节见 `docs/development/compose-demo.md` 与 `perf/README.md`；
 每档取证必须在下一档 `restore.sh` 之前完成（`down -v` 会销毁慢日志与 GC 日志）。
@@ -200,8 +205,9 @@
 | 功能 | `execution/2026-10-29-functional-stack-formal.md`（开发期自测见 `2026-10-29-functional-stack-devrun.md`） | — |
 | 接口 | `execution/2026-10-29-api.md` | `execution/2026-10-30-api-after-fix.md` |
 | 性能 | `execution/2026-10-30-perf-baseline.md` | `execution/2026-10-30-perf-fix-147.md` |
-| 安全 | `execution/2026-10-29-security-baseline.md`（56 条为当时口径，HDR 5 条修复后补入，现 61 条） | `evidence/2026-10-29-security-fix-*`（逐缺陷分项复跑）；61 条整轮 + ZAP 复跑待并入 #119 |
+| 安全 | `execution/2026-10-29-security-baseline.md`（56 条为当时口径，HDR 5 条修复后补入，现 61 条） | `evidence/2026-10-29-security-fix-*`（逐缺陷分项复跑）；61 条整轮 + ZAP 复跑见 `execution/2026-10-30-clean-rerun.md` |
 | 兼容性 | `execution/2026-10-29-compatibility.md` | — |
+| 干净环境复跑 | `execution/2026-10-30-clean-rerun.md`（五类按序 + 安全整轮 after-fix） | — |
 | 底座 | README「测试与覆盖率」 | — |
 
 ## 10. 已知局限与风险
@@ -219,16 +225,19 @@
 - **测试语料口径**：服务端 333 条是**执行口径**；源码另有 38 条 `@Test` 从不编译或执行
   （`**/auth/activiti/**` 30 条、`**/auth/TestMpDemo*` 8 条，都是 Activiti 7 课程 demo）。
 - **覆盖率只报告不卡红**：不设阈值，不影响构建结果。
-- **安全整轮 after-fix 未合并**：当前证据是逐缺陷分项复跑；61 条整轮 + ZAP 复跑建议并入
-  [#119 从干净环境验证测试资产一键复跑](https://github.com/lautung/guigu-oa/issues/119)。
+- **安全整轮 after-fix 已完成**：61 条定向 61/61、ZAP 0 High、存储型 XSS 3/3，
+  见 [`execution/2026-10-30-clean-rerun.md`](execution/2026-10-30-clean-rerun.md)（#119）。
+- **性能回归下限**：正式口径仍是 259 req/s（#124）；#147 建议的 326 req/s 在 2026-10-30 午间窗口
+  未复现（中位 319），跨窗口不可直接卡线，见 clean-rerun §6。
 
 ## 11. 未定事项（地图 Not yet specified）
 
 以下问题不在本方案内拍板，留给后续评估：
 
 - **五类测试是否接入 CI 门禁、定时任务或发布前检查**：当前 CI 只跑服务端测试、客户端 `verify`、
-  Chromium 两档 mock e2e 与构建；API/功能/兼容全矩阵/安全/性能均为按需执行。兼容矩阵约 50s、
-  真实栈约 1.2min，性能全协议约 40min 且需本机 Docker/快照。
+  Chromium 两档 mock e2e 与构建；API/功能/兼容全矩阵/安全/性能均为按需执行。#119 实测：
+  兼容矩阵约 52s、真实栈约 56s、安全约 6.5min、性能全协议 45m22s（含恢复/造数/快照），
+  五类整轮 69m55s 且需本机 Docker/快照。
 - **长期回归频率与责任人**。
 - **模板图标等前端静态资源是否本地化**（取决于生产加固是否覆盖离线/内网部署）。
-- **38 条从不运行的 `@Test` 是删除还是收编**（取决于报告口径与「从干净环境一键复跑」）。
+- **38 条从不运行的 `@Test` 是删除还是收编**（#119 已确认可复跑，去留仍待定）。
