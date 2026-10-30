@@ -13,6 +13,11 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+**Gotchas**
+
+- `gh issue list` 的标签过滤是 `--label`（可重复），没有 `--labels`；写错时命令直接失败，不要当成网络问题重试。
+- 本机 GitHub API 偶发 `Post "https://api.github.com/graphql": EOF`；同一命令重试 3–5 次（间隔几秒）再判定失败。重试循环要保留每次的 stderr，否则错误会被吞掉。
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_

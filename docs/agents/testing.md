@@ -2,6 +2,8 @@
 
 测试怎么分层、挂载工具怎么用、服务端单元测试有哪些坑。命令与覆盖率口径见 README「测试与覆盖率」。
 
+五类测试（功能、接口、性能、安全、兼容性）的资产在 `docs/test/`：`plan.md` 定测什么与怎么判，`execution/` 一文件一轮，`report.md` 是结论与缺陷账本，`evidence/README.md` 是证据索引。性能资产见 `perf/README.md`。
+
 ## 分层
 
 - module 测试是主：phase、迟到归属、写后策略等规则打在 interface 上。

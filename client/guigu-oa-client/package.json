@@ -21,7 +21,7 @@
     "test:e2e:stack": "playwright test --config tests/e2e-stack/playwright.config.ts",
     "test:security": "playwright test --config tests/security/playwright.security.config.ts",
     "test:unit:watch": "vitest",
-    "check:docs": "node scripts/check-module-map.mjs",
+    "check:docs": "node scripts/check-module-map.mjs && node scripts/check-docs.mjs",
     "check:test-tooling": "node scripts/check-test-tooling.mjs"
   },
   "dependencies": {
