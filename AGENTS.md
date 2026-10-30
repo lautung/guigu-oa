@@ -20,7 +20,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 
 ### Module map
 
-`docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam.
+`docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam. `docs/agents/server-modules.md` maps the server modules (where `Result`/异常处理/安全过滤链/权限失效 live) and the request-rejection order of the security chain.
 
 ## 项目环境与运行
 
@@ -45,6 +45,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
    若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
 3. Flowable 的 `ACT_*` 表由引擎在空库上首启动时自动建（`application-dev.yml`: `flowable.database-schema-update: true`，`flowable.history-level: full`）。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
 4. OpenAPI / Swagger UI：只在 `dev` profile 下无需登录可读（`/v3/api-docs`、`/swagger-ui.html`）。Compose 演示栈（`dev,demo`）与 `prod` 都关闭这两个端点（#140）。业务接口仍用请求头 `token`。
+5. Compose 构建：本机 `docker compose build service-oa` 直连 Maven Central 会被代理打断 TLS 握手，需带镜像源 `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose build service-oa`。
 
 ### 数据库初始化
 
@@ -59,6 +60,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 - `npm run verify`：lint + typecheck + format:check + test:unit + 模块地图路径检查（提交前必跑）。
 - `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动（兼容性矩阵）。
+- `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数数据（alice 已发起超过 2000 条）会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --wait`。
 - `npm run build:prod`：类型检查 + 生产构建。
 
 ### 仓库检查
@@ -67,7 +69,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 ### 后端测试
 
-`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。
+`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。单次运行会刷出数十 KB 结构化日志：重定向到文件后 `grep "Tests run:"` 看汇总；不要加 `-q`（会吞掉 surefire 汇总）。
 
 ### 测试覆盖率
 
