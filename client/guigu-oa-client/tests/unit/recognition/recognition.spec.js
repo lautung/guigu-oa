@@ -277,6 +277,29 @@ describe('recognition interface with real request transport', () => {
     expect(h.notifications).toEqual(['身份失效'])
   })
 
+  // #155：refresh 失败与登录同族（HTTP 401 + 业务信封），必须按业务失败分类并清会话，
+  // 不能因状态码变 4xx 就降级成 transport/retryable——那样会话不结束、每个请求各 toast 一次。
+  it.each([208, 209])(
+    'clears refresh failure delivered as an HTTP 401 envelope %s (#155)',
+    async (code) => {
+      const refresh = deferred()
+      const h = harness((config) => (config.url.endsWith('/refresh') ? refresh.promise : expired))
+      const requests = [
+        h.request({ method: 'get', url: businessUrl }),
+        h.request({ method: 'get', url: businessUrl }),
+      ]
+      const result = Promise.allSettled(requests)
+      await vi.waitFor(() =>
+        expect(h.calls.filter((c) => c.url.endsWith('/refresh'))).toHaveLength(1),
+      )
+      refresh.reject(httpError(401, { code, message: '身份失效' }, null))
+      await result
+      expect(h.state.tokens.token).toBe('')
+      expect(h.destinations).toHaveLength(1)
+      expect(h.notifications).toEqual(['身份失效'])
+    },
+  )
+
   it('does not retry an original request more than once', async () => {
     const h = harness((config) =>
       config.url.endsWith('/refresh')

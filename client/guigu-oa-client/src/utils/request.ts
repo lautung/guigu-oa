@@ -98,6 +98,21 @@ function transportFailure(
   })
 }
 
+/**
+ * 4xx 错误响应若带着业务信封，按业务失败而不是传输损失处理（#145）；refresh 的
+ * 401+208/209 加入契约后（#155），两个入口共用这一个判定。
+ */
+function businessEnvelope(error: unknown): ApiResponse<unknown> | undefined {
+  if (!axios.isAxiosError(error) || !error.response) return undefined
+  const { status, data } = error.response
+  return status >= 400 &&
+    status < 500 &&
+    data &&
+    typeof (data as ApiResponse<unknown>).code === 'number'
+    ? (data as ApiResponse<unknown>)
+    : undefined
+}
+
 export function createRequestClient(recognition: Recognition): ApiClient {
   const service = axios.create({ baseURL, timeout: 15000 })
   let refreshFlight: { context: RequestContext; promise: Promise<string> } | null = null
@@ -131,7 +146,12 @@ export function createRequestClient(recognition: Recognition): ApiClient {
         return response.data.token
       })
       .catch((error: unknown) => {
-        const reason = transportFailure(error, 'refresh')
+        // #155：refresh 失败与登录同族（HTTP 401 + 业务信封 208/209），4xx 带信封按业务
+        // 失败分类——降级成 transport 会把认证失败归为 retryable，会话不结束。
+        const envelope = businessEnvelope(error)
+        const reason = envelope
+          ? businessFailure(envelope, 'refresh')
+          : transportFailure(error, 'refresh')
         if (reason instanceof RequestFailure) {
           throw new RequestFailure(reason.kind, reason.message, {
             ...reason.detail,
@@ -214,25 +234,13 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       const config = axios.isAxiosError(error)
         ? (error.config as RefreshableRequestConfig)
         : undefined
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined
-      const body = axios.isAxiosError(error) ? error.response?.data : undefined
+      const envelope = businessEnvelope(error)
       // #145：认证失败 401 + code 208/209、容器级 404/405 + code 201 仍带业务信封，
       // 按 body.code 走业务分支，不降级成传输错误。5xx（网关/服务器故障）即使碰巧
       // 带了 JSON 体也保持传输失败语义，由上层保留待确认。
-      if (
-        config &&
-        status !== undefined &&
-        status >= 400 &&
-        status < 500 &&
-        body &&
-        typeof (body as ApiResponse<unknown>).code === 'number'
-      ) {
+      if (config && envelope) {
         const context = config._recognition || recognition.capture(isInfo(config.url))
-        return processEnvelope(
-          config,
-          context,
-          body as ApiResponse<unknown>,
-        ) as unknown as AxiosResponse
+        return processEnvelope(config, context, envelope) as unknown as AxiosResponse
       }
       throw rejectRequest(
         config || ({} as RefreshableRequestConfig),

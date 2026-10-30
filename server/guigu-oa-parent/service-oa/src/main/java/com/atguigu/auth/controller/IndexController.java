@@ -13,6 +13,8 @@ import com.atguigu.vo.system.ConfigMenuVo;
 import com.atguigu.vo.system.RefreshTokenVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
@@ -105,25 +107,31 @@ public class IndexController {
         }
     }
 
+    /**
+     * Anonymous on purpose: the access token that would carry the user here may already be
+     * expired — the refresh token is the credential. Its absence or failure is an authentication
+     * failure, so rejections join the filter family at HTTP 401 + code 208/209 (#155) instead of
+     * the 200-envelope business failures other endpoints return.
+     */
     @PostMapping("refresh")
-    public Result refresh(@RequestBody RefreshTokenVo refreshTokenVo) {
+    public ResponseEntity<Result> refresh(@RequestBody(required = false) RefreshTokenVo refreshTokenVo) {
         String refreshToken = refreshTokenVo == null ? null : refreshTokenVo.getRefreshToken();
         JwtHelper.TokenClaims claims = jwtHelper.readRefreshToken(refreshToken);
         if (claims == null || tokenRevocation.isRevoked(claims.sessionId())) {
-            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
+            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
         }
         Long userId = claims.userId();
         String username = claims.username();
 
         SysUser user = sysUserService.getById(userId);
         if (user == null || !username.equals(user.getUsername())) {
-            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
+            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
         }
         if (!user.acceptsTokenVersion(claims.tokenVersion())) {
-            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
+            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
         }
         if (!AccountStatus.isEnabled(user.getStatus())) {
-            return Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED);
+            return unauthorized(ResultCodeEnum.ACCOUNT_DISABLED);
         }
 
         String accessToken = jwtHelper.createAccessToken(
@@ -132,7 +140,11 @@ public class IndexController {
         tokenMap.put("token", accessToken);
         // Keep the refresh token's original 7-day expiry instead of extending it on each refresh.
         tokenMap.put("refreshToken", refreshToken);
-        return Result.ok(tokenMap);
+        return ResponseEntity.ok(Result.ok(tokenMap));
+    }
+
+    private ResponseEntity<Result> unauthorized(ResultCodeEnum code) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.build(null, code));
     }
 
     private void refreshCachedAuthorities(String username, List<String> permsList) {

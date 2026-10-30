@@ -20,15 +20,16 @@
 1. `TokenAuthenticationFilter`：`PublicApiPaths.permitsAnonymous(uri)` 的 URI 跳过校验；其余请求无有效 token → **401 + code 208**；停用账号 → 401 + 209。
 2. `TokenLoginFilter`：只接 `POST /admin/system/index/login`（POST-only 且不在白名单里，靠过滤器先于授权层接管）。空凭证/畸形体在限流计数之前拒绝（**401 + 208 + 字段消息**，不计入失败次数）；登录失败/锁定/停用 → **401 + 208/209**。
 3. `AuthorizationFilter`：白名单 `permitAll`，其余 `authenticated()`。未认证被拒 → `RestAuthenticationEntryPoint`（**401 + 208**，覆盖匿名路径上的错误方法）；已认证被拒 → `RestAccessDeniedHandler`（**403 + 205**）。
-4. MVC 参数解析：`@Valid` 在控制器方法调用前执行，所以**校验先于 `@PreAuthorize`**。未授权 + 畸形体得到校验失败（201），不是 205；良构体才轮到配置 gate。认证早于这一层，所以匿名 + 畸形体仍是 401+208（ADR 0034）。
-5. `@PreAuthorize`：拒绝 → `GlobalExceptionHandler` 的 `AccessDeniedException` 分支（**HTTP 200 + code 205**，历史约定）。未知路径 404、方法不匹配 405（均带 `code=201` 信封）；校验失败与缺体/畸形 JSON 是 HTTP 200 + `code=201` + 具体消息（ADR 0033）；其余业务失败 HTTP 200 + `code`。
+4. `IndexController.refresh`：匿名白名单上的续期端点，失败由控制器自己写出认证家族语义（ADR 0037）——缺失/空白/无效/吊销的 refreshToken **401 + 208「认证失败」**，停用用户 **401 + 209**；畸形 JSON 仍按第 6 条的 200+201。
+5. MVC 参数解析：`@Valid` 在控制器方法调用前执行，所以**校验先于 `@PreAuthorize`**。未授权 + 畸形体得到校验失败（201），不是 205；良构体才轮到配置 gate。认证早于这一层，所以受保护路由上匿名 + 畸形体仍是 401+208（ADR 0034）。
+6. `@PreAuthorize`：拒绝 → `GlobalExceptionHandler` 的 `AccessDeniedException` 分支（**HTTP 200 + code 205**，历史约定）。未知路径 404、方法不匹配 405（均带 `code=201` 信封）；校验失败与缺体/畸形 JSON 是 HTTP 200 + `code=201` + 具体消息（ADR 0033）；其余业务失败 HTTP 200 + `code`。
 
-回归锚点：`LoginAuthContractTest`（401/208/209 全表）、`HttpErrorSemanticsContractTest`（404/405/类型不匹配）、`RequestValidationContractTest`（参数校验 201 文案与顺序契约）、`FlywayMigrationContractTest`（配置 gate 的授予矩阵，用良构体触发）、接口套件 `tests/api/f-http-semantics.spec.ts`、`tests/api/b-menu.spec.ts`（B22 顺序契约）。
+回归锚点：`LoginAuthContractTest`（401/208/209 全表，含 refresh 失败形状与缺失/空白/无体）、`HttpErrorSemanticsContractTest`（404/405/类型不匹配）、`RequestValidationContractTest`（参数校验 201 文案与顺序契约）、`FlywayMigrationContractTest`（配置 gate 的授予矩阵，用良构体触发）、接口套件 `tests/api/f-http-semantics.spec.ts`、`tests/api/b-menu.spec.ts`（B22 顺序契约）。
 
 ## 行政约定
 
 - 业务 `@RequestMapping` 前缀：`/admin/system/*`（认证与配置）、`/admin/process/*`（流程）、`/admin/attachments/*`。
-- 静态形状约束写请求 DTO 的 jsr303 注解 + `@Valid`；领域/状态判断留 service；登录在 `TokenLoginFilter` 里手工校验（ADR 0033）。
+- 静态形状约束写请求 DTO 的 jsr303 注解 + `@Valid`；领域/状态判断留 service；登录在 `TokenLoginFilter` 里手工校验（ADR 0033）；refresh 的失败按认证家族由控制器写 401（ADR 0037），不走 201 校验路线。
 - 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。长度上限对齐列宽、`sys_menu.type` 只收 0/1、菜单页必须自带组件路径（save 在 DTO、update 在 service 按落库形状判），见 ADR 0036。
 - 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门。
 - 表结构迁移只加不改：`service-oa/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。

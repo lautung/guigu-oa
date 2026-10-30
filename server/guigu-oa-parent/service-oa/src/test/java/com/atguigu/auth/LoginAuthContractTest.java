@@ -315,7 +315,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + accessToken + "\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
     }
 
@@ -336,7 +336,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
     }
 
@@ -388,7 +388,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
     }
 
@@ -408,7 +408,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
     }
 
@@ -426,6 +426,46 @@ public class LoginAuthContractTest {
         mockMvc.perform(get("/admin/system/index/info").header("token", identityInconsistentAccess))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(208));
+    }
+
+    @Test
+    public void missingBlankAndAbsentRefreshTokensAreRejectedAsAuthenticationFailure() throws Exception {
+        // #155：refresh 的失败语义是认证失败，与过滤器的 401+208 同族；缺字段、空白与
+        // 完全没有请求体落同一分支，不再取决于 readRefreshToken 对空值的实现细节。
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"   \"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
+
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
+
+        // 畸形 JSON 是形状错误不是凭证缺失：仍按 ADR 0033 全局规则走 200+201，与上面的分界钉在这里。
+        mockMvc.perform(post("/admin/system/index/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("请求体格式无效"));
     }
 
     @Test
@@ -463,7 +503,7 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(209));
     }
 
@@ -667,8 +707,9 @@ public class LoginAuthContractTest {
         mockMvc.perform(post("/admin/system/index/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + token + "\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(208));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(208))
+                .andExpect(jsonPath("$.message").value("认证失败"));
     }
 
     private String expiredRefreshToken() {
