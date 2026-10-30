@@ -18,7 +18,7 @@
 | `src/config/template-editor.ts` | `createTemplateEditor(options)` → `open(id)`（`requestLeave` / `environmentChanged` / `dispose`） | 审批模板编辑的保存/待确认/占用；`occupancy()` 是端口 |
 | `src/work/work-list.ts` | `presentWorkList` / `workListDefinition` / `workListRequest` / `workListPerspectiveFromRoute` / `summaryFields` | 办事四种列表的呈现与视角；文案在这里，路径在 `router/paths` |
 | `src/work/form-values.ts` | `formFields` / `formFieldText` | 表单值转显示文本的唯一入口；用户输入只作字符（ADR 0028） |
-| `src/work/approval-start.ts` | `createApprovalStart(adapter)` → `open(templateId)`（`draft` / `edit` / `submit` / `add` / `remove`） | 发起草稿与附件草稿的 owner、phase、每次尝试的提交标识（重新发起换新）；浏览器接线在 `approval-start-browser.ts` |
+| `src/work/approval-start.ts` | `createApprovalStart(adapter)` → `open(templateId)`（`draft` / `edit` / `submit` / `add` / `remove`） | 发起草稿与附件草稿的 owner、phase、每次尝试的提交标识（重新发起换新）；浏览器接线在 `approval-start-browser.ts`。表单渲染与必填校验是 form-create 内建、项目零转换：required provider 与消息在 `@form-create/element-ui/src/core/provider.js`，`$required`/`effect.required` 的读取在 `@form-create/core/src/handler/effect.js`，空值定义 `is.empty` 在 `@form-create/utils/lib/type.js`（服务端按 ADR 0035 镜像这套语义） |
 | `src/work/approval-detail.ts` | `createApprovalDetail(adapter)` → `open(target)`（`decide` / `endRecovery` / `reloadAttachments`） | 审批详情与处理结果待确认；HTTP 接线在 `approval-detail-http.ts` |
 | `src/submission-outcome.ts` | `classifySubmissionFailure(error, action)` | 明确拒绝 vs 待确认的分类 |
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
