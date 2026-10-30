@@ -335,7 +335,8 @@ class AttachmentContractTest {
 
         mockMvc.perform(post("/admin/attachments/" + attachmentId + "/complete").header("token", aliceToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("附件内容与登记信息不一致"));
 
         assertEquals(Attachment.UPLOADING, attachmentMapper.selectById(attachmentId).getStatus());
     }

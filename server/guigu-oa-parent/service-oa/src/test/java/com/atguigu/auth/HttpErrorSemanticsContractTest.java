@@ -55,17 +55,20 @@ public class HttpErrorSemanticsContractTest {
     public void methodMismatchOnAThreeSegmentPutEndpointReturnsReal405() throws Exception {
         mockMvc.perform(get("/admin/system/sysUser/updateStatus/1/1").header("token", adminToken()))
                 .andExpect(status().isMethodNotAllowed())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("请求方法不支持"));
     }
 
     @Test
     public void aTypeMismatchOnThePagingRouteStaysABusinessEnvelope() throws Exception {
         // GET publish/1 命中 GET {page}/{limit} 的分页路由："publish" 转 Long 失败
         // 是业务参数错误，不在 #145 的容器级范围，契约保持 HTTP 200 + code 201。
+        // 类型不匹配的专门文案还没做（ADR 0033），所以这里钉的是兜底消息——它同时也是「没被当成 4xx」的证据。
         String body = mockMvc.perform(get("/admin/process/processTemplate/publish/1")
                         .header("token", adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("执行全局异常处理..."))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

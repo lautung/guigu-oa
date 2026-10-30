@@ -185,7 +185,8 @@ class FlywayMigrationContractTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("只能授予配置菜单"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
@@ -193,7 +194,8 @@ class FlywayMigrationContractTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",901]}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("只能授予配置菜单"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
         mockMvc.perform(get("/admin/system/sysMenu/toAssign/1")
@@ -279,7 +281,8 @@ class FlywayMigrationContractTest {
         mockMvc.perform(delete("/admin/system/sysMenu/remove/" + menuAdminMenuId)
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("配置菜单入口不能删除"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND is_deleted = 0"));
         // 未授权的判据用良构请求体：畸形体会在校验期就 201 返回，那样这条用例就不再证明 gate 拦住了谁（ADR 0034）。
         mockMvc.perform(post("/admin/system/sysMenu/save")

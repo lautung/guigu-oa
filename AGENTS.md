@@ -26,6 +26,8 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 
 `docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam. `docs/agents/server-modules.md` maps the server modules (where `Result`/异常处理/安全过滤链/权限失效 live) and the request-rejection order of the security chain.
 
+侦察成本：一次派一个事实域（DDL、客户端载荷、service 行为分开问），报告只要结论 + `file:line`；要改的文件自己读。
+
 ## 项目环境与运行
 
 目标产品是**统一客户端** `client/guigu-oa-client`（Vue 3.5 + Vite 8 + Element Plus + Pinia）配合后端 `server/guigu-oa-parent`（Spring Boot 4.1.0、JDK 21、Flowable 8.0.0 Process）。旧的 `管理端`/`员工端`/`其他` 前端不是目标产品。系统依赖（Maven、JDK 21、MySQL 8、Redis）已装入环境镜像；update 脚本只刷新 `npm install` 与 `mvn -DskipTests install`。

@@ -38,8 +38,10 @@
 - `BaseMapper` 有重载，mock 时要类型化 matcher：`selectList(isNull())`、`insert(any(Entity.class))`、`update(isNull(), any())`；裸 `any()` 会编译歧义或匹配不到。
 - 文件上传用 `@TempDir` + `MockMultipartFile`；S3 相关 mock `S3Client` / `S3Presigner` 返回 `Presigned*Request` 的 mock，`url()` 直接 stub。
 - 真实 Spring 合同测试沿用现有 `@SpringBootTest` + H2 + 内存 Redis，不需要本地 MySQL/Redis。
+- 每份 H2 schema 只裁到该组用例需要的表，**不是全库**：`auth-contract-schema.sql` 只有 `sys_user` / `sys_menu`（没有角色与授予行，配置 gate 恒拒绝），所以逐字段校验用例放那里成立（校验先于 gate），正向路径要用 `FlywayMigrationContractTest`（真迁移 + 种子授予）。新增合同测试前先看它挂的 schema 有没有你要的表。
 - 单类/多类：`mvn -pl service-oa -am test -Dtest=A,B -Dsurefire.failIfNoSpecifiedTests=false`；漏掉最后一个参数会因上游模块没有匹配用例而整轮失败。
 - 收紧入参规则（新增 `@Valid`/约束）时，grep `tests/api` 与 `tests/e2e-stack` 的负例载荷：仍返回 201 不代表走到了命名分支，必要时用 `expectCodeAndMessage` 钉住稳定消息片段。
+- 服务端合同测试同样受这条约束，且由 `npm run check:contracts`（`scripts/check-contract-assertions.mjs`）强制：断言 201 的用例必须同链钉 `$.message`；同一检查还禁止控制器把 MyBatis 实体当 `@RequestBody`、禁止 `*SaveRequest` 声明 `id`。205 不要求钉消息——它的文案由两个 producer 统一为「没有操作权限」，码加上 `status().isOk()` 已能指认分支。
 
 ## 覆盖率
 

@@ -19,6 +19,7 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 - `gh issue list --json … --jq` 的空输出表示没有匹配项（例如没有 open issue），不是失败；要复核时用 `--json number --jq length`。
 - 本机 GitHub API 偶发 `Post "https://api.github.com/graphql": EOF`；同一命令重试 3–5 次（间隔几秒）再判定失败。重试循环要保留每次的 stderr，否则错误会被吞掉。
 - GraphQL 连续 `EOF` 时，读操作改用 REST：`gh api repos/:owner/:repo/issues/<n>`、`gh api repos/:owner/:repo/issues/<n>/comments`；写操作仍用 `gh issue create/comment/close`。
+- 重试超过 3 次仍 `EOF` 时先跑 `gh auth status`：keyring 里的 token 失效与网络故障表现完全一样（`Post ... EOF`），此时重试永远不成功，要 `gh auth refresh -h github.com` 换新 token。别把「认证失效」当网络问题熬。
 
 ## Pull requests as a triage surface
 
