@@ -9,6 +9,8 @@
 #   ./scripts/test-round.sh perf         # 造数 10k + 快照 + 全档位（约 40 min）
 #   ./scripts/test-round.sh security     # 恢复基线快照 + 61 条定向 + ZAP + 存储型 XSS
 #   ./scripts/test-round.sh compat       # 兼容性矩阵 + 真实栈 smoke
+#   ./scripts/test-round.sh ci-stack     # 干净起栈 + 接口 + 功能 + 兼容矩阵（push main 用）
+#   ./scripts/test-round.sh ci-security  # 干净起栈 + 61 条定向 + ZAP + 存储型 XSS（周任务用）
 #
 # 环境变量（括号内为默认值）：
 #   DEMO_ORIGIN      (http://localhost:9530)  浏览器/接口套件入口
@@ -50,6 +52,8 @@ usage() {
   ./scripts/test-round.sh perf         # 造数 10k + 快照 + 全档位（约 40 min）
   ./scripts/test-round.sh security     # 恢复基线快照 + 61 条定向 + ZAP + 存储型 XSS
   ./scripts/test-round.sh compat       # 兼容性矩阵 + 真实栈 smoke
+  ./scripts/test-round.sh ci-stack     # 干净起栈 + 接口 + 功能 + 兼容矩阵（push main 用）
+  ./scripts/test-round.sh ci-security  # 干净起栈 + 61 条定向 + ZAP + 存储型 XSS（周任务用）
 
 环境变量（括号内为默认值）：
   DEMO_ORIGIN      (http://localhost:9530)  浏览器/接口套件入口
@@ -95,9 +99,16 @@ preflight() {
   need curl
   need jq
   docker compose version > /dev/null 2>&1 || die "Docker Compose v2 不可用"
+  [ -d "$client/node_modules" ] || die "缺少 $client/node_modules：先 cd $client && npm ci"
+}
+
+require_k6() {
   docker image inspect grafana/k6:latest > /dev/null 2>&1 || die \
     "缺少 grafana/k6:latest。受限网络获取：crane pull --platform linux/arm64 grafana/k6:latest k6.tar && docker load -i k6.tar"
-  [ -d "$client/node_modules" ] || die "缺少 $client/node_modules：先 cd $client && npm ci"
+}
+
+require_zap() {
+  [ -d "$ZAP_HOME" ] || die "缺少 ZAP Core：${ZAP_HOME}（可用 ZAP_HOME 覆盖）"
 }
 
 # 兼容性矩阵与真实栈 smoke 都依赖 nginx 生产构建；dev server 是本地开发路径，不在复跑口径内。
@@ -155,6 +166,7 @@ phase_functional() {
 
 phase_perf() {
   preflight
+  require_k6
   [ -f "$BASE_SNAPSHOT/mysql.sql.gz" ] || die \
     "缺少基线快照 ${BASE_SNAPSHOT}（先跑 ./scripts/test-round.sh clean）"
   # 造数在宿主机执行：seed.mjs 直连 localhost:8800/9000，预签名 URL 的 Host 与签名一致。
@@ -188,10 +200,7 @@ phase_perf() {
   done
 }
 
-phase_security() {
-  preflight
-  [ -d "$ZAP_HOME" ] || die "缺少 ZAP Core：${ZAP_HOME}（可用 ZAP_HOME 覆盖）"
-  step "security: restore base" perf/ops/restore.sh slow-security.log
+security_suite() {
   mkdir -p "$OUT/security"
   local force=()
   [ "$FORCE" = 1 ] && force=(--force)
@@ -209,9 +218,24 @@ phase_security() {
   cp "$client/tests/security/test-results/xss-report.xml" "$OUT/security/junit-xss.xml"
 }
 
-phase_compat() {
+phase_security() {
   preflight
-  require_stack_origin
+  require_zap
+  step "security: restore base" perf/ops/restore.sh slow-security.log
+  security_suite
+}
+
+phase_ci_security() {
+  preflight
+  require_zap
+  step "ci-security: down --volumes" docker compose down --volumes --remove-orphans
+  step "ci-security: up --build --wait" docker compose up -d --build --wait
+  step "ci-security: baseline-check" ./scripts/compose-baseline-check.sh
+  step "ci-security: demo-smoke" node scripts/compose-demo-smoke.mjs
+  security_suite
+}
+
+compat_matrix() {
   # mock 矩阵的 reporter 由配置决定；这里显式加 JSON/JUnit，证据可归档。
   local reporters='list,json,junit'
   local started ended seconds
@@ -228,12 +252,30 @@ phase_compat() {
   printf '%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "compat: mock matrix" "$seconds" >> "$timings"
   say "完成：compat: mock matrix（${seconds}s）"
 
-  # 先归档截图与控制台日志：e2e-stack 会清理默认 outputDir（client/test-results）。
+  # 先归档截图与控制台日志：后续套件会清理默认 outputDir（client/test-results）。
   mkdir -p "$OUT/compat"
   cp -a "$client/test-results/compatibility/." "$OUT/compat/"
+}
+
+phase_compat() {
+  preflight
+  require_stack_origin
+  compat_matrix
 
   step "compat: e2e-stack" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:e2e:stack
   cp "$client/tests/e2e-stack/test-results/e2e-stack/report.xml" "$OUT/compat/e2e-stack-junit.xml"
+}
+
+phase_ci_stack() {
+  preflight
+  step "ci-stack: down --volumes" docker compose down --volumes --remove-orphans
+  step "ci-stack: up --build --wait" docker compose up -d --build --wait
+  step "ci-stack: baseline-check" ./scripts/compose-baseline-check.sh
+  step "ci-stack: demo-smoke" node scripts/compose-demo-smoke.mjs
+  phase_api
+  phase_functional
+  require_stack_origin
+  compat_matrix
 }
 
 phase_all() {
@@ -253,6 +295,8 @@ case "${1:-}" in
   perf) phase_perf ;;
   security) phase_security ;;
   compat) phase_compat ;;
+  ci-stack) phase_ci_stack ;;
+  ci-security) phase_ci_security ;;
   all) phase_all ;;
   -h | --help | help) usage; exit 0 ;;
   *) usage; exit 2 ;;

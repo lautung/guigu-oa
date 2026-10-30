@@ -29,7 +29,9 @@ export default defineConfig({
     actionTimeout: 15_000,
     navigationTimeout: 20_000,
   },
-  expect: { timeout: 10_000 },
+  // 20s：冷栈上浏览器直传 MinIO（预签名 → PUT → complete → 列表刷新）偶发超过 10s；
+  // 0 重试口径下把等待上限放宽，而不是用重试掩盖。
+  expect: { timeout: 20_000 },
   projects: [
     {
       name: 'stack-chromium',

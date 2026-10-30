@@ -84,24 +84,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <testExcludes>
-                        <testExclude>**/auth/activiti/**</testExclude>
-                    </testExcludes>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>**/auth/TestMpDemo*.java</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
         </plugins>
         <!-- 正确打包：同时包含 java 目录下的 XML mapper 和 resources 目录下的所有配置 -->
         <resources>

@@ -67,7 +67,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 `./scripts/verify.sh`：客户端 `npm run verify` + 服务端 `mvn -pl service-oa -am test`。端到端与生产构建仍单独跑（见下）。
 
-五类测试（接口/功能/性能/安全/兼容性）一键复跑：`./scripts/test-round.sh all`（按类子命令与前置见 `--help`；方案与证据在 `docs/test/`）。
+五类测试（接口/功能/性能/安全/兼容性）一键复跑：`./scripts/test-round.sh all`（按类子命令与前置见 `--help`；方案与证据在 `docs/test/`）。常态化拓扑见 ADR 0030：PR 维持轻量，push main 跑栈回归，每周跑安全，性能只在本地。
 
 ### 后端测试
 

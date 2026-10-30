@@ -158,7 +158,7 @@
 4. **兼容性无真机**：WebKit 是 Safari 近似，不等于 iOS Safari 实机；不测 Edge/国产浏览器，不承诺平板宽度；模板图标依赖外部 CDN（`gw.alicdn.com`），受限网络下只显示文字选项。
 5. **接口套件依赖干净演示栈**：压测造数卷会被 `global-setup.ts` 拒绝；`sysMenu/doAssign` 的 legacy 静默跳过分支未覆盖。
 6. **功能套件可预期残留**：每轮留下 1 个已发布模板（ADR 0005 冻结不可删）；P1 失败只记缺陷不阻塞基线。
-7. **38 条从不执行的 `@Test`**（`**/auth/activiti/**` 30 条、`**/auth/TestMpDemo*` 8 条，Activiti 7 课程 demo）仍在源码里；#119 只完成复跑验证，删除或收编仍待地图后续决策。
+7. **38 条从不执行的 `@Test` 已删除**（Activiti 7 课程 demo，`**/auth/activiti/**` 30 条 + `**/auth/TestMpDemo*` 8 条），pom 排除一并移除；源码口径与执行口径一致（333），见 ADR 0030。
 8. **覆盖率只报告不卡红**：不设阈值，不影响构建结果。
 9. **生产部署前置**：必须启用 `prod` profile 并注入 ≥64 字节 `JWT_SECRET`；附件直传源与 `CSP_CONNECT_SRC` 成对配置；OpenAPI/Swagger 在非 `dev` profile 下关闭（#140）。
 
@@ -206,5 +206,5 @@
 
 - **#119 已完成**：干净环境五类复跑 69m55s 全绿，安全整轮 61/61 已补齐，一键入口 `scripts/test-round.sh` 入仓；详见 [`execution/2026-10-30-clean-rerun.md`](execution/2026-10-30-clean-rerun.md)。
 - **门限校准**：性能混合吞吐回归下限仍按 259 req/s 判定；#147 建议的 326 req/s 在午间窗口未复现（本轮中位 319），暂缓采用，或只在同窗口 3 轮中位数上校准。
-- **38 条死 `@Test` 的去留**（删除还是收编）与 **是否接入 CI 门禁/定时任务**（地图 Not yet specified）仍待决策。
+- **测试常态化已定**（[ADR 0030](../adr/0030-测试常态化按主干回归与周安全跑可复现子集.md)）：PR 维持轻量，push main 跑栈回归，每周跑安全，性能留在本地；38 条死 `@Test` 删除。
 - **静态资源本地化**：模板图标外部 CDN 是否改本地，取决于是否支持离线/内网部署。

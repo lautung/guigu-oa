@@ -1,0 +1,43 @@
+name: Regression
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  stack:
+    name: Stack regression (API, functional, compatibility)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+          cache-dependency-path: client/guigu-oa-client/package-lock.json
+      - run: npm ci
+        working-directory: client/guigu-oa-client
+      - run: npx playwright install --with-deps chromium webkit
+        working-directory: client/guigu-oa-client
+      # ADR 0030：push main 起干净 Compose 栈跑接口、功能与兼容矩阵；性能只在本地。
+      - name: Run stack regression
+        env:
+          OUT: ${{ runner.temp }}/test-evidence
+        run: ./scripts/test-round.sh ci-stack
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stack-regression-evidence
+          path: ${{ runner.temp }}/test-evidence
+          retention-days: 14
+          if-no-files-found: warn
