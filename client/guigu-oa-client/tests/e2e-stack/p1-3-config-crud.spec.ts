@@ -83,6 +83,7 @@ test('菜单：建（停用）、删', async ({ page }) => {
 
   // 服务端只允许维护配置菜单（子节点须挂在配置根下，ADR 0011 的授予闭包），
   // 顶层任意路径菜单会被 201「只能维护配置菜单」拒绝，所以这里在「审批查询」下加停用子节点。
+  // 菜单页必须自带组件路径（ADR 0036），默认类型是「菜单」，组件路径也要填。
   const parentRow = page.locator('.el-table__row', { hasText: '审批查询' }).first()
   await expect(parentRow).toBeVisible()
   await parentRow.getByRole('button', { name: '添加下级' }).click()
@@ -92,6 +93,10 @@ test('菜单：建（停用）、删', async ({ page }) => {
     .locator('.el-form-item', { hasText: '路由地址' })
     .locator('input')
     .fill(`stk-${name}`)
+  await dialog
+    .locator('.el-form-item', { hasText: '组件路径' })
+    .locator('input')
+    .fill('system/sysUser/list')
   await dialog.locator('.el-form-item', { hasText: '状态' }).getByText('停用').click()
   await dialog.getByRole('button', { name: '确定' }).click()
   await expect(dialog).toBeHidden()

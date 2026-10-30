@@ -203,7 +203,22 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (reservedPathIsChanging || reservedMenuIdentityIsChanging || reservedMenuIsBeingDisabled) {
             throw new GuiguException(201, "菜单路由不可重定义");
         }
+        // 请求里不发 component 即保留旧行，边界判不了目录转菜单后的最终形状，这里按落库结果判（ADR 0036）。
+        if (landsAsPageWithoutComponent(sysMenu, existingMenu)) {
+            throw new GuiguException(201, "类型为菜单时组件路径不能为空");
+        }
         updateById(sysMenu);
+    }
+
+    /** 更新落库后的最终形状：请求字段为空沿用旧行。目录转成菜单页而组件仍为空时拒绝。 */
+    private boolean landsAsPageWithoutComponent(SysMenu update, SysMenu existing) {
+        Integer type = update.getType() != null
+                ? update.getType()
+                : (existing == null ? null : existing.getType());
+        String component = update.getComponent() != null
+                ? update.getComponent()
+                : (existing == null ? null : existing.getComponent());
+        return Objects.equals(type, 1) && !StringUtils.hasText(component);
     }
 
     private boolean isProtectedMenuPath(String path) {

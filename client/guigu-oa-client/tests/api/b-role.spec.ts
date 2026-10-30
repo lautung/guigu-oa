@@ -10,6 +10,7 @@ import {
   deleteRole,
   deleteUser,
   expectCode,
+  expectCodeAndMessage,
   unique,
   type PageResult,
   type RoleRecord,
@@ -210,6 +211,33 @@ test.describe('B 角色管理', () => {
     } finally {
       await deleteRole(api, first.id)
       await deleteRole(api, second.id)
+    }
+  })
+
+  test('B24 save：角色名称/编码越界 201 字段文案（不落兜底，ADR 0036）', async ({ request }) => {
+    const api = new Api(request)
+
+    // 越过 sys_role.role_name/role_code 的 VARCHAR(20)：超长曾落到「执行全局异常处理...」。
+    const overLength = await api.envelope(ADMIN, 'post', '/admin/system/sysRole/save', {
+      roleName: '角'.repeat(21),
+      roleCode: 'c'.repeat(21),
+    })
+    expectCodeAndMessage(overLength.body, 201, '角色编码过长；角色名称过长', 'B24 越界')
+
+    // 恰好 20 字符仍可创建，证明上限与列宽一致；建了就删。
+    const roleName = unique('api-role').padEnd(20, '0')
+    await api.call(ADMIN, 'post', '/admin/system/sysRole/save', {
+      roleName,
+      roleCode: unique('api-code'),
+      description: '',
+    })
+    const roles = await api.call<RoleRecord[]>(ADMIN, 'get', '/admin/system/sysRole/findAll')
+    const created = roles.find((role) => role.roleName === roleName)
+    if (!created) throw new Error('B24 20 字符角色名创建后 findAll 查不到')
+    try {
+      expect(created.roleCode).toBeTruthy()
+    } finally {
+      await deleteRole(api, created.id)
     }
   })
 })

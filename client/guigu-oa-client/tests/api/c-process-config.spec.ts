@@ -10,6 +10,7 @@ import {
   publishTemplate,
   unique,
   expectCode,
+  expectCodeAndMessage,
   type PageResult,
   type TemplateRecord,
 } from './helpers/api'
@@ -289,5 +290,25 @@ test.describe('C 审批配置', () => {
       `/admin/process/processType/get/${created.id}`,
     )
     expect(detail).toBeNull()
+  })
+
+  test('C15 名称越界：字段文案 201（不落兜底，ADR 0036）', async () => {
+    // 越过 oa_process_type.name / oa_process_template.name 的 VARCHAR(50)：超长曾落到「执行全局异常处理...」。
+    const overType = await api.envelope(ADMIN, 'post', '/admin/process/processType/save', {
+      name: '型'.repeat(51),
+    })
+    expectCodeAndMessage(overType.body, 201, '审批类型名称过长', 'C15 类型名称越界')
+
+    const types = await api.call<{ id: number; name: string }[]>(
+      ADMIN,
+      'get',
+      '/admin/process/processType/findAll',
+    )
+    expect(types.length, 'C15 应有审批类型可挂模板').toBeGreaterThan(0)
+    const overTemplate = await api.envelope(ADMIN, 'post', '/admin/process/processTemplate/save', {
+      name: '模'.repeat(51),
+      processTypeId: types[0].id,
+    })
+    expectCodeAndMessage(overTemplate.body, 201, '审批模板名称过长', 'C15 模板名称越界')
   })
 })

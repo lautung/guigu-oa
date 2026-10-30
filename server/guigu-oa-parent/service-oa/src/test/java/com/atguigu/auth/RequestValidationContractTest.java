@@ -195,6 +195,73 @@ public class RequestValidationContractTest {
     }
 
     @Test
+    public void menuSaveWithAnOutOfRangeTypeIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentId\":1,\"name\":\"异常菜单\",\"type\":5,\"path\":\"odd\",\"component\":\"system/sysUser/list\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单类型只能为 0 或 1"));
+    }
+
+    @Test
+    public void menuSavePageWithoutComponentIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentId\":1,\"name\":\"无组件页\",\"type\":1,\"path\":\"barePage\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("类型为菜单时组件路径不能为空"));
+    }
+
+    @Test
+    public void menuSaveWithOnlyTypeJoinsTheComponentMessageInFieldOrder() throws Exception {
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value(
+                        "菜单名称不能为空；类型为菜单时组件路径不能为空；上级菜单不能为空；路由地址不能为空"));
+    }
+
+    @Test
+    public void menuUpdateWithABlankedComponentIsRejected() throws Exception {
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1,\"type\":1,\"component\":\"   \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("类型为菜单时组件路径不能为空"));
+    }
+
+    @Test
+    public void menuUpdateWithOverLengthNameIsRejected() throws Exception {
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1,\"name\":\"" + "菜".repeat(51) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单名称过长"));
+    }
+
+    @Test
+    public void menuUpdateWithAnOutOfRangeTypeIsRejected() throws Exception {
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1,\"type\":9}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单类型只能为 0 或 1"));
+    }
+
+    @Test
     public void sysUserSaveWithoutCredentialsReturnsTheValidationMessages() throws Exception {
         mockMvc.perform(post("/admin/system/sysUser/save")
                         .header("token", adminToken())
@@ -228,6 +295,18 @@ public class RequestValidationContractTest {
     }
 
     @Test
+    public void sysUserSaveWithOverLengthNameAndUsernameIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/system/sysUser/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + "a".repeat(21) + "\",\"password\":\"111111\","
+                                + "\"name\":\"" + "名".repeat(21) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("姓名过长；用户名过长"));
+    }
+
+    @Test
     public void sysRoleSaveWithoutNameOrCodeReturnsTheValidationMessages() throws Exception {
         mockMvc.perform(post("/admin/system/sysRole/save")
                         .header("token", adminToken())
@@ -236,6 +315,18 @@ public class RequestValidationContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("角色编码不能为空；角色名称不能为空"));
+    }
+
+    @Test
+    public void sysRoleSaveWithOverLengthNameAndCodeIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/system/sysRole/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roleName\":\"" + "角".repeat(21) + "\","
+                                + "\"roleCode\":\"" + "c".repeat(21) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("角色编码过长；角色名称过长"));
     }
 
     @Test
@@ -272,6 +363,17 @@ public class RequestValidationContractTest {
     }
 
     @Test
+    public void processTypeSaveWithTooLongNameIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/process/processType/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + "型".repeat(51) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("审批类型名称过长"));
+    }
+
+    @Test
     public void processTemplateSaveWithoutNameOrTypeReturnsTheValidationMessages() throws Exception {
         mockMvc.perform(post("/admin/process/processTemplate/save")
                         .header("token", adminToken())
@@ -291,6 +393,17 @@ public class RequestValidationContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("审批模板标识不能为空"));
+    }
+
+    @Test
+    public void processTemplateSaveWithTooLongNameIsRejected() throws Exception {
+        mockMvc.perform(post("/admin/process/processTemplate/save")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + "模".repeat(51) + "\",\"processTypeId\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("审批模板名称过长"));
     }
 
     private String adminToken() throws Exception {

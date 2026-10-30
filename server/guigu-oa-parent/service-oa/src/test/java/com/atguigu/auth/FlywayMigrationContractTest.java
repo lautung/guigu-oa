@@ -68,7 +68,7 @@ class FlywayMigrationContractTest {
     void clearConfigurationGrantFixtures() {
         jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id IN (101, 102, 103)");
         jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id IN (101, 102, 103)");
-        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (900, 901, 1000)");
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (900, 901, 1000, 1001)");
         jdbcTemplate.update("DELETE FROM sys_role WHERE id IN (101, 102, 103)");
         jdbcTemplate.update("DELETE FROM sys_user WHERE username IN ('user-manager', 'ordinary', 'no-config', 'menu-manager')");
     }
@@ -274,7 +274,8 @@ class FlywayMigrationContractTest {
         mockMvc.perform(post("/admin/system/sysMenu/save")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"角色管理\",\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"sysRole\"}"))
+                        .content("{\"name\":\"角色管理\",\"parentId\":" + systemRootId
+                                + ",\"type\":1,\"path\":\"sysRole\",\"component\":\"system/sysRole/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
@@ -288,9 +289,19 @@ class FlywayMigrationContractTest {
         mockMvc.perform(post("/admin/system/sysMenu/save")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"审计\",\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"audit\"}"))
+                        .content("{\"name\":\"审计\",\"parentId\":" + systemRootId
+                                + ",\"type\":1,\"path\":\"audit\",\"component\":\"system/audit/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
+        // 挂在非配置根（/work）下：type 合法且体良构，save 由授予闭包以「只能维护配置菜单」拒绝（ADR 0036 后仍走这条分支）。
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"办事子页\",\"parentId\":900,\"type\":1,\"path\":\"workChild\","
+                                + "\"component\":\"system/audit/list\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("只能维护配置菜单"));
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -305,6 +316,19 @@ class FlywayMigrationContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空"));
+        // 目录转菜单页而不发 component：请求为空即沿用旧行，service 按落库形状判（ADR 0036）。
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (1001, ?, '报表目录', 0, 'reports', '', 1, 0)",
+                systemRootId);
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1001,\"parentId\":" + systemRootId
+                                + ",\"type\":1,\"name\":\"报表页\",\"path\":\"reports\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("类型为菜单时组件路径不能为空"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = 1001 AND type = 0 AND is_deleted = 0"));
         mockMvc.perform(delete("/admin/system/sysMenu/remove/999")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token()))
                 .andExpect(status().isOk())
@@ -358,7 +382,7 @@ class FlywayMigrationContractTest {
                         .header("token", jwtHelper.createTokenPair(4L, "ordinary", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
-        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901)");
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901, 1001)");
     }
 
     private int count(String sql) {

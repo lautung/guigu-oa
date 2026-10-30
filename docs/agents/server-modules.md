@@ -29,7 +29,7 @@
 
 - 业务 `@RequestMapping` 前缀：`/admin/system/*`（认证与配置）、`/admin/process/*`（流程）、`/admin/attachments/*`。
 - 静态形状约束写请求 DTO 的 jsr303 注解 + `@Valid`；领域/状态判断留 service；登录在 `TokenLoginFilter` 里手工校验（ADR 0033）。
-- 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。
+- 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。长度上限对齐列宽、`sys_menu.type` 只收 0/1、菜单页必须自带组件路径（save 在 DTO、update 在 service 按落库形状判），见 ADR 0036。
 - 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门。
 - 表结构迁移只加不改：`service-oa/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。
 - `POST /admin/process/startUp` 的 `idempotencyKey` 可空，唯一索引 `uk_oa_process_idempotency_key` 按用户唯一（ADR 0032）：重复送达返回同一条审批；冲突后的重读必须在 `ApprovalWriter.startUp` 的事务之外（可重复读下事务内看不到对手已提交的行）。

@@ -8,13 +8,14 @@ import {
   createRole,
   deleteRole,
   expectCode,
+  expectCodeAndMessage,
   flattenMenus,
   unique,
   type MenuRecord,
 } from './helpers/api'
 
 /**
- * B 系统配置 / 菜单（#120 §6 B16–B21，#152 B22）。
+ * B 系统配置 / 菜单（#120 §6 B16–B21，#152 B22，#154 B25）。
  *
  * `sysMenu` 页授予才能调用；`sysMenu/toAssign` 与 `sysMenu/doAssign` 归 `sysRole` 页。
  * 配置菜单入口（sysUser/sysRole/sysMenu 与三个根）不可重定义、不可禁用、不可删除。
@@ -133,7 +134,8 @@ test.describe('B 菜单管理', () => {
         perms: 'api:test',
         status: 1,
       })
-      expectCode(nonConfig.body, 201, 'B19 非配置菜单（type 2）')
+      // type 只收 0/1（ADR 0036）：坏类型在校验边界就被拦下，不再借道「只能维护配置菜单」。
+      expectCodeAndMessage(nonConfig.body, 201, '菜单类型只能为 0 或 1', 'B19 type 非法（边界）')
     } finally {
       await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${page.id}`)
     }
@@ -245,7 +247,78 @@ test.describe('B 菜单管理', () => {
       name: '越权新增',
       type: 1,
       path: unique('apiDenied'),
+      component: 'system/sysUser/list',
     })
     expectCode(wellFormed.body, 205, 'B22 未授予 + 良构体')
+  })
+
+  test('B25 越界与缺组件：字段文案 201（不落兜底，ADR 0036）', async ({ request }) => {
+    const api = new Api(request)
+    const system = await findMenu(api, '/system')
+    expect(system, 'B25 应有 /system 根').toBeTruthy()
+
+    // 名称越过 sys_menu.name 的 VARCHAR(50)：超长曾落到「执行全局异常处理...」。
+    const tooLong = await api.envelope(ADMIN, 'post', '/admin/system/sysMenu/save', {
+      parentId: (system as MenuRecord).id,
+      name: '菜'.repeat(51),
+      type: 0,
+      path: unique('apiLen'),
+      component: '',
+      status: 1,
+    })
+    expectCodeAndMessage(tooLong.body, 201, '菜单名称过长', 'B25 名称越界')
+
+    // 类型为菜单必须自带组件路径，目录不受限。
+    const barePage = await api.envelope(ADMIN, 'post', '/admin/system/sysMenu/save', {
+      parentId: (system as MenuRecord).id,
+      name: '无组件页',
+      type: 1,
+      path: unique('apiBare'),
+      status: 1,
+    })
+    expectCodeAndMessage(barePage.body, 201, '类型为菜单时组件路径不能为空', 'B25 页面缺组件')
+
+    // 恰好 50 字符仍可创建，证明上限与列宽一致；建为停用并删除。
+    const boundaryName = '界'.repeat(50)
+    const boundary = await createMenu(api, {
+      parentId: (system as MenuRecord).id,
+      name: boundaryName,
+      type: 0,
+      path: unique('apiEdge'),
+      component: '',
+      status: 0,
+    })
+    try {
+      expect(boundary.name).toBe(boundaryName)
+    } finally {
+      await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${boundary.id}`)
+    }
+
+    // 目录转菜单页而不发组件：沿用旧行（空），service 按落库形状拒绝（ADR 0036）。
+    const dir = await createMenu(api, {
+      parentId: (system as MenuRecord).id,
+      name: `接口目录转页${unique('apiDir')}`,
+      type: 0,
+      path: unique('apiDirPg'),
+      component: '',
+      status: 0,
+    })
+    try {
+      const converted = await api.envelope(ADMIN, 'put', '/admin/system/sysMenu/update', {
+        id: dir.id,
+        parentId: (system as MenuRecord).id,
+        type: 1,
+        name: '转成菜单页',
+        path: dir.path,
+      })
+      expectCodeAndMessage(
+        converted.body,
+        201,
+        '类型为菜单时组件路径不能为空',
+        'B25 目录转页缺组件',
+      )
+    } finally {
+      await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${dir.id}`)
+    }
   })
 })

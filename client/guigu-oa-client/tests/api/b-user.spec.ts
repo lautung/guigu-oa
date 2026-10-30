@@ -7,6 +7,7 @@ import {
   createUser,
   deleteUser,
   expectCode,
+  expectCodeAndMessage,
   unique,
   type PageResult,
   type UserRecord,
@@ -170,6 +171,38 @@ test.describe('B 用户管理', () => {
       )
     } finally {
       await deleteUser(api, temp.id)
+    }
+  })
+
+  test('B23 save：用户名/姓名越界 201 字段文案（不落兜底，ADR 0036）', async ({ request }) => {
+    const api = new Api(request)
+
+    // 越过 sys_user.username/name 的 VARCHAR(20)：超长曾落到「执行全局异常处理...」。
+    const overLength = await api.envelope(ADMIN, 'post', '/admin/system/sysUser/save', {
+      username: 'a'.repeat(21),
+      name: '名'.repeat(21),
+      password: '111111',
+    })
+    expectCodeAndMessage(overLength.body, 201, '姓名过长；用户名过长', 'B23 越界')
+
+    // 恰好 20 字符仍可创建，证明上限与列宽一致；建了就删。
+    const username = unique('api-len').padEnd(20, '0')
+    await api.call(ADMIN, 'post', '/admin/system/sysUser/save', {
+      username,
+      name: '名'.repeat(20),
+      password: '111111',
+    })
+    const page = await api.call<PageResult<UserRecord>>(
+      ADMIN,
+      'get',
+      `/admin/system/sysUser/1/50?keyword=${encodeURIComponent(username)}`,
+    )
+    const created = page.records.find((record) => record.username === username)
+    if (!created) throw new Error('B23 20 字符用户名创建后列表查不到')
+    try {
+      expect(created.name).toBe('名'.repeat(20))
+    } finally {
+      await deleteUser(api, created.id)
     }
   })
 })
