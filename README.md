@@ -164,6 +164,8 @@ mvn -f server/guigu-oa-parent/pom.xml test
 - 指标以行和分支为准；方法/类覆盖只在 HTML 明细里参考。
 - `src/views/**` 用挂载测试覆盖主要交互；`npm run test:e2e` 的 Playwright 用例仍负责整链路行为，两者的覆盖不合并统计。
 
+五类测试（功能、接口、性能、安全、兼容性）的方案、执行记录与证据见 [docs/test/](docs/test/)：总方案在 [plan.md](docs/test/plan.md)，用例与阈值在 [plan/](docs/test/plan/)，每轮结果在 [execution/](docs/test/execution/)。
+
 ## 文档
 
 - [Compose 演示与种子数据](docs/development/compose-demo.md)
