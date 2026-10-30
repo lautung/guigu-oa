@@ -5,9 +5,12 @@ import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.process.service.OaProcessTemplateService;
+import com.atguigu.vo.process.ProcessTemplateSaveRequest;
+import com.atguigu.vo.process.ProcessTemplateUpdateRequest;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -56,16 +59,17 @@ public class OaProcessTemplateController {
     @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "新增")
     @PostMapping("save")
-    public Result save(@RequestBody ProcessTemplate processTemplate) {
-        processTemplateService.saveUnpublished(processTemplate);
+    public Result save(@Valid @RequestBody ProcessTemplateSaveRequest request) {
+        // save 只创建：请求体不给主键，改已有模板走 update（ADR 0034）。
+        processTemplateService.saveUnpublished(request.toEntity());
         return Result.ok();
     }
 
     @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
     @Operation(summary = "修改")
     @PutMapping("update")
-    public Result updateById(@RequestBody ProcessTemplate processTemplate) {
-        processTemplateService.saveUnpublished(processTemplate);
+    public Result updateById(@Valid @RequestBody ProcessTemplateUpdateRequest request) {
+        processTemplateService.saveUnpublished(request.toEntity());
         return Result.ok();
     }
 

@@ -5,9 +5,14 @@ import com.atguigu.model.process.ProcessType;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.process.service.OaProcessTypeService;
 import com.atguigu.common.result.Result;
+import com.atguigu.vo.process.ProcessTemplateSaveRequest;
+import com.atguigu.vo.process.ProcessTemplateUpdateRequest;
+import com.atguigu.vo.process.ProcessTypeSaveRequest;
+import com.atguigu.vo.process.ProcessTypeUpdateRequest;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -51,11 +57,23 @@ class ProcessAdminControllersTest {
 
         assertEquals(template, templateController.get(5L).getData());
 
-        templateController.save(template);
-        templateController.updateById(template);
+        ProcessTemplateSaveRequest save = new ProcessTemplateSaveRequest();
+        save.setName("请假");
+        save.setProcessTypeId(2L);
+        ProcessTemplateUpdateRequest update = new ProcessTemplateUpdateRequest();
+        update.setId(5L);
+        update.setProcessDefinitionPath("processes/sha256/abc.zip");
+
+        templateController.save(save);
+        templateController.updateById(update);
         templateController.remove(5L);
 
-        verify(templateService, org.mockito.Mockito.times(2)).saveUnpublished(template);
+        ArgumentCaptor<ProcessTemplate> written = ArgumentCaptor.forClass(ProcessTemplate.class);
+        verify(templateService, org.mockito.Mockito.times(2)).saveUnpublished(written.capture());
+        assertEquals("请假", written.getAllValues().get(0).getName());
+        assertEquals(2L, written.getAllValues().get(0).getProcessTypeId());
+        assertNull(written.getAllValues().get(0).getId());
+        assertEquals(5L, written.getAllValues().get(1).getId());
         verify(templateService).removeUnpublished(5L);
     }
 
@@ -110,12 +128,22 @@ class ProcessAdminControllersTest {
         assertEquals(200, typeController.index(1L, 10L).getCode());
         assertEquals(type, typeController.get(2L).getData());
 
-        typeController.save(type);
-        typeController.updateById(type);
+        ProcessTypeSaveRequest save = new ProcessTypeSaveRequest();
+        save.setName("请假类型");
+        ProcessTypeUpdateRequest update = new ProcessTypeUpdateRequest();
+        update.setId(2L);
+        update.setName("请假类型");
+
+        typeController.save(save);
+        typeController.updateById(update);
         typeController.remove(2L);
 
-        verify(typeService).save(type);
-        verify(typeService).updateById(type);
+        ArgumentCaptor<ProcessType> written = ArgumentCaptor.forClass(ProcessType.class);
+        verify(typeService).save(written.capture());
+        assertEquals("请假类型", written.getValue().getName());
+        assertNull(written.getValue().getId());
+        verify(typeService).updateById(org.mockito.ArgumentMatchers.argThat(
+                changed -> changed != null && Long.valueOf(2L).equals(changed.getId())));
         verify(typeService).removeById(2L);
     }
 }

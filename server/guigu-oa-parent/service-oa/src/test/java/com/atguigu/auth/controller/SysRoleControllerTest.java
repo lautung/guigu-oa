@@ -5,15 +5,19 @@ import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.vo.system.AssginRoleVo;
 import com.atguigu.vo.system.SysRoleQueryVo;
+import com.atguigu.vo.system.SysRoleSaveRequest;
+import com.atguigu.vo.system.SysRoleUpdateRequest;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -80,18 +84,30 @@ class SysRoleControllerTest {
 
     @Test
     void reportsWriteOutcomes() {
-        SysRole role = new SysRole();
-        role.setId(3L);
-
-        when(service.save(role)).thenReturn(true);
-        when(service.updateById(role)).thenReturn(false);
+        when(service.save(any())).thenReturn(true);
+        when(service.updateById(any())).thenReturn(false);
         when(service.removeById(3L)).thenReturn(true);
         when(service.removeByIds(List.of(3L, 4L))).thenReturn(false);
 
-        assertEquals(200, controller.save(role).getCode());
-        assertEquals(201, controller.update(role).getCode());
+        SysRoleSaveRequest save = new SysRoleSaveRequest();
+        save.setRoleName("审批员");
+        save.setRoleCode("approver");
+        SysRoleUpdateRequest update = new SysRoleUpdateRequest();
+        update.setId(3L);
+        update.setRoleName("审批员");
+
+        assertEquals(200, controller.save(save).getCode());
+        assertEquals(201, controller.update(update).getCode());
         assertEquals(200, controller.remove(3L).getCode());
         assertEquals(201, controller.batchRemove(List.of(3L, 4L)).getCode());
+
+        ArgumentCaptor<SysRole> created = ArgumentCaptor.forClass(SysRole.class);
+        ArgumentCaptor<SysRole> changed = ArgumentCaptor.forClass(SysRole.class);
+        verify(service).save(created.capture());
+        verify(service).updateById(changed.capture());
+        assertEquals("审批员", created.getValue().getRoleName());
+        assertNull(created.getValue().getId());
+        assertEquals(3L, changed.getValue().getId());
     }
 
     @Test

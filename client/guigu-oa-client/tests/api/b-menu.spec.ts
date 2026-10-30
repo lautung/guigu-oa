@@ -14,7 +14,7 @@ import {
 } from './helpers/api'
 
 /**
- * B 系统配置 / 菜单（#120 §6 B16–B21）。
+ * B 系统配置 / 菜单（#120 §6 B16–B21，#152 B22）。
  *
  * `sysMenu` 页授予才能调用；`sysMenu/toAssign` 与 `sysMenu/doAssign` 归 `sysRole` 页。
  * 配置菜单入口（sysUser/sysRole/sysMenu 与三个根）不可重定义、不可禁用、不可删除。
@@ -228,5 +228,24 @@ test.describe('B 菜单管理', () => {
       await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${child.id}`).catch(() => {})
       await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${dir.id}`).catch(() => {})
     }
+  })
+
+  test('B22 顺序契约：未授予 + 空体是字段文案 201（校验先于配置 gate）', async ({ request }) => {
+    const api = new Api(request)
+
+    const empty = await api.envelope(PLAIN_USER, 'post', '/admin/system/sysMenu/save', {})
+    expectCode(empty.body, 201, 'B22 未授予 + 空体')
+    expect(empty.body.message).toBe(
+      '菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空',
+    )
+
+    // 良构体才轮到配置 gate：205 仍是「没有配置权限」的唯一答案。
+    const wellFormed = await api.envelope(PLAIN_USER, 'post', '/admin/system/sysMenu/save', {
+      parentId: 1,
+      name: '越权新增',
+      type: 1,
+      path: unique('apiDenied'),
+    })
+    expectCode(wellFormed.body, 205, 'B22 未授予 + 良构体')
   })
 })

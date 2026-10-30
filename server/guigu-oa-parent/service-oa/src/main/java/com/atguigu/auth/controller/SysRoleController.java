@@ -6,12 +6,15 @@ import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysRole;
 import com.atguigu.vo.system.AssginRoleVo;
 import com.atguigu.vo.system.SysRoleQueryVo;
+import com.atguigu.vo.system.SysRoleSaveRequest;
+import com.atguigu.vo.system.SysRoleUpdateRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -44,7 +47,7 @@ public class SysRoleController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
     @Operation(summary = "为用户分配角色")
     @PostMapping("/doAssign")
-    public Result doAssign(@RequestBody AssginRoleVo assginRoleVo) {
+    public Result doAssign(@Valid @RequestBody AssginRoleVo assginRoleVo) {
         sysRoleService.doAssign(assginRoleVo);
         return Result.ok();
     }
@@ -98,9 +101,9 @@ public class SysRoleController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
     @Operation(summary = "添加角色")
     @PostMapping ("save")
-    public Result save(@RequestBody SysRole role) {
+    public Result save(@Valid @RequestBody SysRoleSaveRequest request) {
         //调用service的方法
-        boolean is_success = sysRoleService.save(role);
+        boolean is_success = sysRoleService.save(request.toEntity());
         if(is_success) {
             return Result.ok();
         } else {
@@ -121,9 +124,9 @@ public class SysRoleController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
     @Operation(summary = "修改角色")
     @PutMapping ("update")
-    public Result update(@RequestBody SysRole role) {
+    public Result update(@Valid @RequestBody SysRoleUpdateRequest request) {
         //调用service的方法
-        boolean is_success = sysRoleService.updateById(role);
+        boolean is_success = sysRoleService.updateById(request.toEntity());
         if(is_success) {
             return Result.ok();
         } else {

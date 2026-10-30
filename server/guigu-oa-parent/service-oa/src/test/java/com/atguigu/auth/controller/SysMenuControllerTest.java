@@ -4,13 +4,17 @@ import com.atguigu.auth.service.SysMenuService;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysMenu;
 import com.atguigu.vo.system.AssginMenuVo;
+import com.atguigu.vo.system.SysMenuSaveRequest;
+import com.atguigu.vo.system.SysMenuUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,13 +62,25 @@ class SysMenuControllerTest {
 
     @Test
     void savesAndUpdatesMenus() {
-        SysMenu menu = new SysMenu();
+        SysMenuSaveRequest save = new SysMenuSaveRequest();
+        save.setParentId(0L);
+        save.setName("审批类型");
+        save.setType(1);
+        save.setPath("processType");
+        SysMenuUpdateRequest update = new SysMenuUpdateRequest();
+        update.setId(7L);
+        update.setName("审批类型");
 
-        controller.save(menu);
-        controller.updateById(menu);
+        controller.save(save);
+        controller.updateById(update);
 
-        verify(service).saveMenu(menu);
-        verify(service).updateMenu(menu);
+        ArgumentCaptor<SysMenu> created = ArgumentCaptor.forClass(SysMenu.class);
+        ArgumentCaptor<SysMenu> changed = ArgumentCaptor.forClass(SysMenu.class);
+        verify(service).saveMenu(created.capture());
+        verify(service).updateMenu(changed.capture());
+        assertEquals("审批类型", created.getValue().getName());
+        assertNull(created.getValue().getId());
+        assertEquals(7L, changed.getValue().getId());
     }
 
     @Test

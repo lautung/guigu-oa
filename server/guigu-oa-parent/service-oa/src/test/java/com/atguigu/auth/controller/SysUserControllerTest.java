@@ -4,9 +4,12 @@ import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.vo.system.SysUserQueryVo;
+import com.atguigu.vo.system.SysUserSaveRequest;
+import com.atguigu.vo.system.SysUserUpdateRequest;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -69,19 +72,24 @@ class SysUserControllerTest {
     }
 
     @Test
-    void hashesANewPasswordOnSaveButLeavesBlankPasswordsAlone() {
+    void alwaysEncodesTheSubmittedPasswordOnSave() {
         when(passwordEncoder.encode("111111")).thenReturn("hashed");
 
-        SysUser withPassword = new SysUser();
-        withPassword.setPassword("111111");
-        controller.save(withPassword);
-        assertEquals("hashed", withPassword.getPassword());
+        SysUserSaveRequest request = new SysUserSaveRequest();
+        request.setUsername("new-user");
+        request.setPassword("111111");
+        request.setName("新用户");
+        controller.save(request);
 
-        SysUser withoutPassword = new SysUser();
-        controller.save(withoutPassword);
+        ArgumentCaptor<SysUser> saved = ArgumentCaptor.forClass(SysUser.class);
+        verify(service).save(saved.capture());
+        assertEquals("hashed", saved.getValue().getPassword());
+        assertEquals("new-user", saved.getValue().getUsername());
+        assertEquals("新用户", saved.getValue().getName());
+        // 创建不给主键：save 只创建（ADR 0034）。
+        assertNull(saved.getValue().getId());
+        // 空白密码在建账号处就被 201 挡下（RequestValidationContractTest），这里不再有跳过编码的分支。
         verify(passwordEncoder, never()).encode("");
-
-        verify(service, org.mockito.Mockito.times(2)).save(any());
     }
 
     @Test
@@ -91,22 +99,23 @@ class SysUserControllerTest {
         existing.setPassword("stored");
         when(service.getById(3L)).thenReturn(existing);
 
-        SysUser update = new SysUser();
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
         update.setId(3L);
         controller.updateById(update);
 
-        assertNull(update.getPassword());
+        ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
+        verify(service).updateById(written.capture());
+        assertNull(written.getValue().getPassword());
         // 公共字段由 CommonFieldsMetaObjectHandler 填（ADR 0031），控制器不再自己写 update_time。
-        assertNull(update.getUpdateTime());
-        assertNull(update.getTokenVersion());
+        assertNull(written.getValue().getUpdateTime());
+        assertNull(written.getValue().getTokenVersion());
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
-        verify(service).updateById(update);
     }
 
     @Test
     void doesNotWriteAPasswordForAMissingRow() {
-        SysUser update = new SysUser();
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
         update.setId(3L);
         update.setPassword("new-secret");
         when(service.getById(3L)).thenReturn(null);
@@ -127,16 +136,17 @@ class SysUserControllerTest {
         when(service.getById(3L)).thenReturn(existing);
         when(passwordEncoder.matches("new-secret", "stored")).thenReturn(false);
         when(passwordEncoder.encode("new-secret")).thenReturn("hashed-new");
-        SysUser update = new SysUser();
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
         update.setId(3L);
         update.setPassword("new-secret");
 
         controller.updateById(update);
 
-        assertNull(update.getPassword());
+        ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
         InOrder order = inOrder(service);
         order.verify(service).changePassword(3L, "hashed-new");
-        order.verify(service).updateById(update);
+        order.verify(service).updateById(written.capture());
+        assertNull(written.getValue().getPassword());
     }
 
     @Test
@@ -146,14 +156,16 @@ class SysUserControllerTest {
         existing.setPassword("stored-hash");
         when(service.getById(3L)).thenReturn(existing);
         when(passwordEncoder.matches("same", "stored-hash")).thenReturn(true);
-        SysUser update = new SysUser();
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
         update.setId(3L);
         update.setPassword("same");
 
         controller.updateById(update);
 
-        assertNull(update.getPassword());
-        assertNull(update.getTokenVersion());
+        ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
+        verify(service).updateById(written.capture());
+        assertNull(written.getValue().getPassword());
+        assertNull(written.getValue().getTokenVersion());
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
     }

@@ -7,11 +7,14 @@ import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.vo.system.AssginRoleVo;
 import com.atguigu.vo.system.SysUserQueryVo;
+import com.atguigu.vo.system.SysUserSaveRequest;
+import com.atguigu.vo.system.SysUserUpdateRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -91,10 +94,10 @@ public class SysUserController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
     @Operation(summary = "保存用户")
     @PostMapping("save")
-    public Result save(@RequestBody SysUser user) {
-        if (StringUtils.hasText(user.getPassword())) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        }
+    public Result save(@Valid @RequestBody SysUserSaveRequest request) {
+        SysUser user = request.toEntity();
+        // 密码必填由 DTO 保证；提交的明文一律编码后落库，不再有把空串写进密码列的分支（ADR 0034）。
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         service.save(user);
         return Result.ok();
@@ -103,7 +106,8 @@ public class SysUserController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
     @Operation(summary = "更新用户")
     @PutMapping("update")
-    public Result updateById(@RequestBody SysUser user) {
+    public Result updateById(@Valid @RequestBody SysUserUpdateRequest request) {
+        SysUser user = request.toEntity();
         SysUser existing = service.getById(user.getId());
         if (existing == null) {
             // Nothing to update; never write an unmasked request password to a row that shows up later.

@@ -228,56 +228,80 @@ class FlywayMigrationContractTest {
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
+                        .content("{\"id\":" + menuAdminMenuId + ",\"name\":\"角色管理\",\"parentId\":" + systemRootId
                                 + ",\"type\":1,\"path\":\"sysRole\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
+        // 配置入口不能改成办事路径：配置 gate 先于保护路径判定拒绝，所以文案是「只能维护配置菜单」。
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":" + systemRootId + ",\"parentId\":0,\"type\":0,\"path\":\"/work\"}"))
+                        .content("{\"id\":" + systemRootId + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/work\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("只能维护配置菜单"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
+        // 保护路由本身不能改名：换到另一个配置根也仍是「不可重定义」。
+        mockMvc.perform(put("/admin/system/sysMenu/update")
+                        .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + systemRootId + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/processSet\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + systemRootId
-                                + ",\"parentId\":0,\"type\":0,\"path\":\"/system\",\"status\":0}"))
+                                + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/system\",\"status\":0}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND status = 1 AND is_deleted = 0"));
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":" + menuAdminMenuId + ",\"parentId\":" + systemRootId
+                        .content("{\"id\":" + menuAdminMenuId + ",\"name\":\"菜单管理\",\"parentId\":" + systemRootId
                                 + ",\"type\":1,\"path\":\"sysMenu\",\"status\":0}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND status = 1 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/save")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"sysRole\"}"))
+                        .content("{\"name\":\"角色管理\",\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"sysRole\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(201));
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         mockMvc.perform(delete("/admin/system/sysMenu/remove/" + menuAdminMenuId)
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + menuAdminMenuId + " AND is_deleted = 0"));
+        // 未授权的判据用良构请求体：畸形体会在校验期就 201 返回，那样这条用例就不再证明 gate 拦住了谁（ADR 0034）。
         mockMvc.perform(post("/admin/system/sysMenu/save")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"name\":\"审计\",\"parentId\":" + systemRootId + ",\"type\":1,\"path\":\"audit\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"id\":" + menuAdminMenuId + ",\"name\":\"菜单管理\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
+        // 顺序契约：校验先于配置 gate，所以空体对未授权用户也是字段文案的 201（ADR 0034）。
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空"));
         mockMvc.perform(delete("/admin/system/sysMenu/remove/999")
                         .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token()))
                 .andExpect(status().isOk())

@@ -5,8 +5,11 @@ import com.atguigu.auth.service.SysMenuService;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.system.SysMenu;
 import com.atguigu.vo.system.AssginMenuVo;
+import com.atguigu.vo.system.SysMenuSaveRequest;
+import com.atguigu.vo.system.SysMenuUpdateRequest;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +44,7 @@ public class SysMenuController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
     @Operation(summary = "角色分配菜单")
     @PostMapping("/doAssign")
-    public Result doAssign(@RequestBody AssginMenuVo assginMenuVo) {
+    public Result doAssign(@Valid @RequestBody AssginMenuVo assginMenuVo) {
         sysMenuService.doAssign(assginMenuVo);
         return Result.ok();
     }
@@ -59,16 +62,16 @@ public class SysMenuController {
     @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
     @Operation(summary = "新增菜单")
     @PostMapping("save")
-    public Result save(@RequestBody SysMenu sysMenu) {
-        sysMenuService.saveMenu(sysMenu);
+    public Result save(@Valid @RequestBody SysMenuSaveRequest request) {
+        sysMenuService.saveMenu(request.toEntity());
         return Result.ok();
     }
 
     @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
     @Operation(summary = "修改菜单")
     @PutMapping("update")
-    public Result updateById(@RequestBody SysMenu sysMenu) {
-        sysMenuService.updateMenu(sysMenu);
+    public Result updateById(@Valid @RequestBody SysMenuUpdateRequest request) {
+        sysMenuService.updateMenu(request.toEntity());
         return Result.ok();
     }
 

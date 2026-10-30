@@ -5,9 +5,12 @@ import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.process.service.OaProcessTypeService;
+import com.atguigu.vo.process.ProcessTypeSaveRequest;
+import com.atguigu.vo.process.ProcessTypeUpdateRequest;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -58,16 +61,16 @@ public class OaProcessTypeController {
     @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "新增")
     @PostMapping("save")
-    public Result save(@RequestBody ProcessType processType) {
-        processTypeService.save(processType);
+    public Result save(@Valid @RequestBody ProcessTypeSaveRequest request) {
+        processTypeService.save(request.toEntity());
         return Result.ok();
     }
 
     @PreAuthorize("@configurationMenuGate.isGranted('processType')")
     @Operation(summary = "修改")
     @PutMapping("update")
-    public Result updateById(@RequestBody ProcessType processType) {
-        processTypeService.updateById(processType);
+    public Result updateById(@Valid @RequestBody ProcessTypeUpdateRequest request) {
+        processTypeService.updateById(request.toEntity());
         return Result.ok();
     }
 
