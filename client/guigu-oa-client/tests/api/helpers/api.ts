@@ -168,6 +168,20 @@ export function expectCode(result: Envelope, expected: number, context = ''): vo
   )
 }
 
+/**
+ * 负例专用：多条分支共用 201 时，只断言 code 会被更早的拒绝遮蔽。
+ * 传稳定的消息片段，确保走到的确实是命名分支。
+ */
+export function expectCodeAndMessage(
+  result: Envelope,
+  expected: number,
+  message: string,
+  context = '',
+): void {
+  expectCode(result, expected, context)
+  expect(result.message, `${context} message=${result.message ?? ''}`).toContain(message)
+}
+
 export class Api {
   private readonly tokens = new Map<string, string>()
 

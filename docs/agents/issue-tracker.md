@@ -18,6 +18,7 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 - `gh issue list` 的标签过滤是 `--label`（可重复），没有 `--labels`；写错时命令直接失败，不要当成网络问题重试。
 - `gh issue list --json … --jq` 的空输出表示没有匹配项（例如没有 open issue），不是失败；要复核时用 `--json number --jq length`。
 - 本机 GitHub API 偶发 `Post "https://api.github.com/graphql": EOF`；同一命令重试 3–5 次（间隔几秒）再判定失败。重试循环要保留每次的 stderr，否则错误会被吞掉。
+- GraphQL 连续 `EOF` 时，读操作改用 REST：`gh api repos/:owner/:repo/issues/<n>`、`gh api repos/:owner/:repo/issues/<n>/comments`；写操作仍用 `gh issue create/comment/close`。
 
 ## Pull requests as a triage surface
 

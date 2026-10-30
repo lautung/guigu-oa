@@ -38,6 +38,8 @@
 - `BaseMapper` 有重载，mock 时要类型化 matcher：`selectList(isNull())`、`insert(any(Entity.class))`、`update(isNull(), any())`；裸 `any()` 会编译歧义或匹配不到。
 - 文件上传用 `@TempDir` + `MockMultipartFile`；S3 相关 mock `S3Client` / `S3Presigner` 返回 `Presigned*Request` 的 mock，`url()` 直接 stub。
 - 真实 Spring 合同测试沿用现有 `@SpringBootTest` + H2 + 内存 Redis，不需要本地 MySQL/Redis。
+- 单类/多类：`mvn -pl service-oa -am test -Dtest=A,B -Dsurefire.failIfNoSpecifiedTests=false`；漏掉最后一个参数会因上游模块没有匹配用例而整轮失败。
+- 收紧入参规则（新增 `@Valid`/约束）时，grep `tests/api` 与 `tests/e2e-stack` 的负例载荷：仍返回 201 不代表走到了命名分支，必要时用 `expectCodeAndMessage` 钉住稳定消息片段。
 
 ## 覆盖率
 

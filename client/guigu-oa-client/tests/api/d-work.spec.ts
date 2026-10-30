@@ -12,6 +12,7 @@ import {
   deleteUser,
   demoTemplate,
   expectCode,
+  expectCodeAndMessage,
   startApproval,
   unique,
   type PageResult,
@@ -118,7 +119,7 @@ test.describe.serial('D 办事', () => {
         processTypeId: template.processTypeId,
         formValues: '{"formData":{}}',
       })
-      expectCode(unpublished.body, 201, 'D2 未发布模板')
+      expectCodeAndMessage(unpublished.body, 201, '未发布的审批模板不能发起', 'D2 未发布模板')
 
       const ghostCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
         processTemplateId: template.id,
@@ -126,7 +127,7 @@ test.describe.serial('D 办事', () => {
         formValues: '{"formData":{}}',
         ccUserIds: [999999],
       })
-      expectCode(ghostCc.body, 201, 'D2 抄送人不存在')
+      expectCodeAndMessage(ghostCc.body, 201, '抄送人不存在或已停用', 'D2 抄送人不存在')
 
       const disabled = await createUser(api, unique('api-cc-disabled'))
       try {
@@ -137,7 +138,7 @@ test.describe.serial('D 办事', () => {
           formValues: '{"formData":{}}',
           ccUserIds: [disabled.id],
         })
-        expectCode(disabledCc.body, 201, 'D2 抄送人停用')
+        expectCodeAndMessage(disabledCc.body, 201, '抄送人不存在或已停用', 'D2 抄送人停用')
       } finally {
         await deleteUser(api, disabled.id)
       }
