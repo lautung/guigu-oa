@@ -18,12 +18,15 @@
 - 挂载 view 的常规流程：`setupSession()` → `createTestRouter([...])` → `router.push(...)` + `isReady()` → `mount(View, mountOptions(pinia, router))`。
 - HTTP 用 axios adapter：`installHttp((config) => ok(data) / paged(records))`，每个 spec 的 `afterEach` 里 `http.restore()`。
 - 需要真实 Element Plus 渲染 `el-table`/`el-dialog` 插槽时：`vi.mock('element-plus', importOriginal)` 只替换 `ElMessage`/`ElMessageBox`，挂载时加 `plugins: [pinia, router, ElementPlus]` 与 `ensureDomApis()`。纯 stub 渲染不到 scoped slot，模板分支不会执行。
+- Element Plus 必须留在 `vite.config.js` 的 `test.server.deps.inline`：外置时其内部 import 的 async-validator 与测试侧形成两份实例，`el-form.validate()` 静默失真（空必填判 VALID、错误不上屏），生产 rollup 单实例无此问题。删掉 inline 会让依赖校验的视图测试变红，所以配置由套件自守；排障前先看 ADR 0038，别重查一遍。
+- EP 错误上屏走 100ms `refDebounced`：断言 `.el-form-item__error` 前真等 ~150ms 再 `flushPromises()`，`flushPromises` 本身不等真时间。
 - 状态机 view（编辑器、分配角色、详情、发起页）优先 mock 模块接缝（`vi.mock('@/config/template-editor', ...)`），用 `reactive` state + spy 驱动各 phase，不启动真实模块。
 - mock 工厂里不要引用顶层 `const`（TDZ）：先 `vi.hoisted(() => ({ holder: {} }))`，再在 `beforeEach` 里给 `holder.x` 赋值。
 
 ## e2e
 
 - 默认 `npm run test:e2e` 起 9530 的 Vite dev server；设置 `E2E_BASE_URL` 时指向已构建客户端并跳过 dev server（兼容性矩阵，见 `docs/test/plan/compatibility-matrix.md`）。
+- 验证未提交的本地改动时，Compose 客户端占着 9530，dev server 的 `strictPort` 起不来：先 `docker compose stop client`，跑完 `docker compose start client` 恢复；跑栈上的已构建产物才走 `E2E_BASE_URL`。
 - 种会话 cookie 一律用 `tests/e2e/helpers/base-url.ts` 的 `e2eCookieURL()`（它是 `E2E_BASE_URL` 的唯一解读者）。硬编码 `domain` 会让 `localhost` 与 `127.0.0.1` 两种入口表现不一致，失败点还会落在与该用例无关的断言上。
 - project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
 - **报告路径按 Playwright config 所在目录解析**：`tests/e2e-stack/` 与 `tests/security/` 的 JSON/JUnit 落在各自 `test-results/` 下，接口与 mock 套件在客户端根 `test-results/`。每次运行会清空自己的 outputDir，手工连着跑多套时先归档再跑下一套（`scripts/test-round.sh` 已内置归档顺序）。
