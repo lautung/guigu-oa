@@ -1,0 +1,5 @@
+time	step	seconds
+2026-10-31T01:28:37	stack: up --build --wait service-oa client	35
+2026-10-31T01:33:25	stack: up --build --wait service-oa client	21
+2026-10-31T01:33:43	api: round 1	18
+2026-10-31T01:34:05	api: round 2	22

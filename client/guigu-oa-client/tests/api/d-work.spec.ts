@@ -106,7 +106,7 @@ test.describe.serial('D 办事', () => {
     expect(alicePending.total).toBe(0)
   })
 
-  test('D2 startUp：正例已发起 / 未发布模板 201 / 抄送人无效 201', async () => {
+  test('D2 startUp：正例已发起 / 未发布模板 201 / 必填为空 201 / 抄送人无效 201', async () => {
     const template = await demoTemplate(api)
     expect(pendingProcess.status).toBe(1)
     const task = await pendingTask(pendingProcess.id)
@@ -121,10 +121,24 @@ test.describe.serial('D 办事', () => {
       })
       expectCodeAndMessage(unpublished.body, 201, '未发布的审批模板不能发起', 'D2 未发布模板')
 
-      const ghostCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
+      // 必填校验（#153）在任何写入之前，先于发生在写入后回滚兜底的抄送校验
+      const requiredEmpty = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
         processTemplateId: template.id,
         processTypeId: template.processTypeId,
         formValues: '{"formData":{}}',
+      })
+      expectCodeAndMessage(
+        requiredEmpty.body,
+        201,
+        '请假原因不能为空；请假天数不能为空',
+        'D2 必填为空',
+      )
+
+      const filled = '{"formData":{"reason":"api-cc","days":1}}'
+      const ghostCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
+        processTemplateId: template.id,
+        processTypeId: template.processTypeId,
+        formValues: filled,
         ccUserIds: [999999],
       })
       expectCodeAndMessage(ghostCc.body, 201, '抄送人不存在或已停用', 'D2 抄送人不存在')
@@ -135,7 +149,7 @@ test.describe.serial('D 办事', () => {
         const disabledCc = await api.envelope(ALICE, 'post', '/admin/process/startUp', {
           processTemplateId: template.id,
           processTypeId: template.processTypeId,
-          formValues: '{"formData":{}}',
+          formValues: filled,
           ccUserIds: [disabled.id],
         })
         expectCodeAndMessage(disabledCc.body, 201, '抄送人不存在或已停用', 'D2 抄送人停用')
