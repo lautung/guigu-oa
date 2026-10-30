@@ -24,6 +24,7 @@
 | `mixed.js` | 8 动作加权混合（读 70 / 写 25 / 登录 5），`TIER=smoke/baseline/stress` |
 | `attachment.js` | 附件独立场景：10 VU × 3min，上传/下载 1MB 各约 50% |
 | `seed.mjs` | 造数：API 走真实流程造 10k 实例（6k 待办 + 4k 已结束）+ 110 个附件 |
+| `ops/round.sh` | **一档执行器**：restore → 停 client → observe → k6 → 当档拷慢日志/行数 → 启 client |
 | `ops/snapshot.sh` | 快照：mysqldump + process-definitions / minio-data 卷 tar → `perf/snapshot/` |
 | `ops/restore.sh` | 恢复：down -v → 卷还原 → 导 dump → up --wait → 慢 SQL 开关 |
 | `ops/row-counts.sh` | `oa_process` / `oa_process_record` / `ACT_*` 行数 |
@@ -37,7 +38,7 @@
 ```sh
 # 0. 全新栈（首次造数用全新卷）
 docker compose down --volumes --remove-orphans
-docker compose up -d --build --wait
+MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose up -d --build --wait
 ./scripts/compose-baseline-check.sh
 
 # 1. 造数（10–15 分钟；若超 20 分钟降 TARGET=5000 并在 #124 记录取舍）
@@ -46,19 +47,34 @@ TARGET=10000 FINISHED=4000 node perf/seed.mjs
 # 2. 快照
 perf/ops/snapshot.sh
 
-# 3. 每轮压测前恢复快照（含慢 SQL 开关，可带慢日志文件名区分轮次）
+# 3. 每档一条命令（restore → k6 → 当档取证 → 恢复 client）
+perf/ops/round.sh smoke smoke
+perf/ops/round.sh baseline-1 baseline
+perf/ops/round.sh baseline-2 baseline
+perf/ops/round.sh baseline-3 baseline
+perf/ops/round.sh mid-1 mid
+perf/ops/round.sh stress-1 stress
+perf/ops/round.sh attachment-1 baseline perf/attachment.js   # 自动注入 S3_PUBLIC_ENDPOINT 覆写
+```
+
+`round.sh` 已内置：`restore.sh slow-<name>.log`、停 client、`observe.sh <name>` 采样、
+k6（`SUMMARY_NAME=<name>`）、**当档**拷出 `slow-<name>.log` 与 `rows-<name>.txt`、恢复 client、
+附件档的 `compose.override.yaml` 注入与清理。
+
+**取证顺序是硬约束**：每档 `restore.sh` 都会 `down -v` 重建数据卷，慢日志随卷销毁——
+整轮结束后再拷只能看到最后一档。GC 日志同理：若注入 GC 取证（见下），必须在**下一档
+restore 之前**拷出；`round.sh` 只自动拷慢 SQL，GC 需要人工介入时按手动步骤跑。
+
+### 手动跑单步（round.sh 的内核，调试/单步复现用）
+
+```sh
 perf/ops/restore.sh slow-baseline-1.log
-
-# 4. 压测期间：停 client，注入 GC 日志（compose.override.yaml，见下）
 docker compose stop client
-perf/ops/observe.sh baseline-1 400 &
-
-# 5. 跑 k6（-w 指向结果目录；SUMMARY_NAME 区分轮次）
+perf/ops/observe.sh baseline-1 420 &
 docker run --rm -i -w /results -v "$PWD/perf/results:/results" grafana/k6:latest run \
   -e PERF_BASE=http://host.docker.internal:8800 -e TIER=baseline \
   -e SUMMARY_NAME=baseline-1 - < perf/mixed.js 2>&1 | tee perf/results/baseline-1.txt
-
-# 6. 收尾：行数、GC 日志、慢 SQL、docker cp
+docker compose exec -T mysql sh -c 'cat /var/lib/mysql/slow-baseline-1.log' > perf/results/slow-baseline-1.log
 docker compose start client
 ```
 
@@ -78,6 +94,10 @@ services:
 取证：`docker compose exec service-oa sh -c 'gzip -c /tmp/gc.log.* > /tmp/gc-all.gz'` 再
 `docker compose cp service-oa:/tmp/gc-all.gz perf/results/`。压测结束后删除该文件并
 `docker compose up -d service-oa` 恢复。
+
+与 `round.sh` 配合：override 要在跑 `round.sh` **之前**放好（其内部 restore 会按 override 起栈），
+GC 取证必须在**下一档 restore 之前**完成（restore 会 `down -v`）。附件档的 `round.sh` 会改写同一个
+`compose.override.yaml`（注入 `S3_PUBLIC_ENDPOINT`），GC 与附件档不要同轮跑。
 
 ### 慢 SQL
 
