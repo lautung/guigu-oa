@@ -3,6 +3,7 @@ package com.atguigu.process.approval;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.common.result.ResultCodeEnum;
+import com.atguigu.common.validation.ValidationMessages;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
@@ -83,6 +84,10 @@ public class ApprovalWriter {
         ApprovalTemplate.PublishedApproval publication =
                 approvalTemplate.resolveForInitiation(processFormVo.getProcessTemplateId());
         ProcessTemplate processTemplate = publication.template();
+
+        // 已发布模板的动态必填（ADR 0035）：结构校验只保证 JSON 形状，这里才拿得到模板约束。
+        // 仍在任何写入之前，201 的含义是「什么都没发生」。
+        requireRequiredFieldsPresent(processTemplate.getFormProps(), processFormVo.getFormValues());
 
         Process process = new Process();
         BeanUtils.copyProperties(processFormVo, process);
@@ -171,6 +176,13 @@ public class ApprovalWriter {
     private static void requireWellFormedFormValues(String formValues) {
         if (!ProcessStartSupport.isValidFormValues(formValues)) {
             throw new GuiguException(201, "表单内容格式无效");
+        }
+    }
+
+    private static void requireRequiredFieldsPresent(String formProps, String formValues) {
+        List<String> messages = ProcessStartSupport.missingRequiredMessages(formProps, formValues);
+        if (!messages.isEmpty()) {
+            throw new GuiguException(201, ValidationMessages.join(messages));
         }
     }
 
