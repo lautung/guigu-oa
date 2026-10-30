@@ -258,6 +258,8 @@ test.describe.serial('D 办事', () => {
     )
     expect(page.total).toBeGreaterThan(0)
     expect(page.records.every((record) => record.userId === aliceId)).toBe(true)
+    // ADR 0031：公共字段由应用填，已发起列表的创建时间不能为空（曾经整列为空）。
+    expect(page.records.every((record) => !!record.createTime)).toBe(true)
 
     const overridden = await api.call<PageResult<ProcessRecord>>(
       ALICE,

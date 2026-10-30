@@ -114,6 +114,7 @@ export interface ProcessRecord {
   formValues?: string
   processTemplateName?: string
   currentAuditor?: string
+  createTime?: string
 }
 
 export interface AttachmentRecord {

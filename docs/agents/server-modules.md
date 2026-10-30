@@ -8,10 +8,10 @@
 | 模块 | 路径 | 关键类 / 内容 |
 |---|---|---|
 | `common/common-util` | `common/common-util/src/main/java/com/atguigu/common/` | `result/Result`（统一信封：`code`/`message`/`data`）、`result/ResultCodeEnum`（200/201/208/209/403）、`result/ResponseUtil`（过滤器写响应体，带 HTTP 状态重载）、`jwt/JwtHelper` |
-| `common/service-util` | `common/service-util/.../common/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405）、`observability/TraceIdFilter` |
+| `common/service-util` | `common/service-util/.../common/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405）、`config/mp/CommonFieldsMetaObjectHandler`（公共字段唯一写入者，ADR 0031）、`observability/TraceIdFilter` |
 | `common/spring-security` | `common/spring-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`filter/TokenAuthenticationFilter`（token→认证，失败 401+208）、`filter/TokenLoginFilter`（POST /login，签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
 | `model` | `model/src/main/java/com/atguigu/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`、`process/OaProcess|OaProcessRecord…` |
-| `service-oa` | `service-oa/src/main/java/com/atguigu/` | 业务实现与 HTTP 入口：`auth/`（index/login、sysUser/Role/Menu、`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`process/`（模板/审批/附件/`approval/ApprovalWriter`）、`db/migration/`（Flyway V1xx） |
+| `service-oa` | `service-oa/src/main/java/com/atguigu/` | 业务实现与 HTTP 入口：`auth/`（index/login、sysUser/Role/Menu、`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`process/`（模板/审批/附件/`approval/ApprovalWriter`）、`db/migration/`（Flyway V1xx）。迁移以 SQL 为主；需要"先查元数据再决定动不动手"的（如 `V104` 依赖引擎历史回填）写成 `src/main/java/db/migration/` 下的 Java 迁移 |
 
 ## 认证与错误语义（改安全相关代码前必读）
 

@@ -18,8 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
-
 /**
  * <p>
  * 用户表 前端控制器
@@ -119,9 +117,9 @@ public class SysUserController {
             service.changePassword(existing.getId(), passwordEncoder.encode(submittedPassword));
         }
         // The password column is written only by changePassword; a profile edit must not carry an
-        // old hash read before a concurrent change. update_time keeps the row update non-empty.
+        // old hash read before a concurrent change. update_time is filled by the common-field
+        // handler (ADR 0031), which also keeps the row update non-empty.
         user.setPassword(null);
-        user.setUpdateTime(new Date());
         service.updateById(user);
         return Result.ok();
     }

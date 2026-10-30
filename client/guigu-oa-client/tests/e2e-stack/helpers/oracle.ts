@@ -40,6 +40,7 @@ export interface ProcessRecord {
   processTemplateName?: string
   status: number
   formValues?: string
+  createTime?: string
 }
 
 export interface AttachmentRecord {

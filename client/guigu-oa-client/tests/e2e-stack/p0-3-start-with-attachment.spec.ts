@@ -36,6 +36,8 @@ test('alice 发起含附件的审批并出现在已发起', async ({ page, oracl
   const record = await oracle.findMarked('alice', 'started', reason)
   expect(record, 'oracle：已发起列表应能按标记找到这条审批').toBeTruthy()
   expect(record?.status).toBe(1)
+  // ADR 0031：公共字段由应用填，已发起列表的创建时间必须非空（曾经整列为空）。
+  expect(record?.createTime, '已发起列表的创建时间不能为空').toBeTruthy()
 
   const list = await oracle.attachments('alice', record!.id)
   expect(list.attachments.some((item) => item.fileName === `stk-${reason}.txt`)).toBe(true)

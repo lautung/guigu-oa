@@ -79,6 +79,9 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '2' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '5' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '102' AND success = TRUE"));
+        // ADR 0031：公共字段默认值与引擎历史回填都必须真的跑过。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '103' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '104' AND success = TRUE"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user WHERE token_version <> 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role WHERE role_code = 'config_admin' AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user_role ur JOIN sys_role r ON r.id = ur.role_id "

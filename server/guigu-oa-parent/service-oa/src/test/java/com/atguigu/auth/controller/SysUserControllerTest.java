@@ -12,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -97,7 +96,8 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         assertNull(update.getPassword());
-        assertNotNull(update.getUpdateTime());
+        // 公共字段由 CommonFieldsMetaObjectHandler 填（ADR 0031），控制器不再自己写 update_time。
+        assertNull(update.getUpdateTime());
         assertNull(update.getTokenVersion());
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());

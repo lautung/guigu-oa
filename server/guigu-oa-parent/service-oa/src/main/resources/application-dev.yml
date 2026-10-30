@@ -15,7 +15,9 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+    # sessionVariables 把会话时区钉成 +08:00（ADR 0031）：数据库 CURRENT_TIMESTAMP 兜底值、
+    # 引擎历史与 Jackson 输出必须同源，否则同一列里会出现两套时钟。
+    url: jdbc:mysql://localhost:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&sessionVariables=time_zone='%2B08:00'
     username: root
     password: root
     # #147：HikariCP 默认池 10 在 ~300 req/s 就饱和（连接等待，非 CPU/慢 SQL）。

@@ -1,6 +1,7 @@
 package com.atguigu.common.config.mp;
 
 import com.atguigu.common.page.PageWindow;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
@@ -24,5 +25,10 @@ public class MybatisPlusConfig {
         pagination.setMaxLimit(PageWindow.MAX_LIMIT);
         interceptor.addInnerInterceptor(pagination);
         return interceptor;
+    }
+
+    @Bean
+    public MetaObjectHandler commonFieldsMetaObjectHandler() {
+        return new CommonFieldsMetaObjectHandler();
     }
 }

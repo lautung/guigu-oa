@@ -1,5 +1,6 @@
 package com.atguigu.model.base;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -17,10 +18,12 @@ public class BaseEntity implements Serializable {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    @TableField("create_time")
+    // 公共字段由应用填（ADR 0031）：写入时刻必须和引擎历史、Jackson 输出同源，
+    // 不能取数据库会话时钟——同一个库里的 CURRENT_TIMESTAMP 可能与业务时间差一个时区。
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private Date createTime;
 
-    @TableField("update_time")
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     @TableLogic //逻辑删除

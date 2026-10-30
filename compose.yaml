@@ -1,6 +1,9 @@
 services:
   mysql:
     image: mysql:8.4
+    # 会话时区与应用同源（ADR 0031）：容器默认 UTC，会让 CURRENT_TIMESTAMP 兜底值
+    # 与业务时间差 8 小时，人工 mysql 排查时也会看到另一套时钟。
+    command: ["--default-time-zone=+08:00"]
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: guigu-oa
@@ -69,7 +72,7 @@ services:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-}
     environment:
       SPRING_PROFILES_ACTIVE: dev,demo
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&sessionVariables=time_zone='%2B08:00'
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_DATA_REDIS_HOST: redis
