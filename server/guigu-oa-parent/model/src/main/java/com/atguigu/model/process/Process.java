@@ -53,4 +53,8 @@ public class Process extends BaseEntity {
 	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：驳回）")
 	@TableField("status")
 	private Integer status;
+
+	@Schema(description = "发起提交标识（同一次提交重复送达时相同）")
+	@TableField("idempotency_key")
+	private String idempotencyKey;
 }

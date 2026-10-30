@@ -27,4 +27,7 @@ public class ProcessFormVo {
 	@Schema(description = "发起时抄送的用户 id")
 	private List<Long> ccUserIds;
 
+	@Schema(description = "发起提交标识，同一次提交重复送达时相同；缺省表示不去重")
+	private String idempotencyKey;
+
 }

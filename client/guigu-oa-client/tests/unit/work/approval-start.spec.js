@@ -129,6 +129,7 @@ describe('发起审批 interface', () => {
       ccUserIds: [7],
     })
     expect(sent.attachmentDraftId).toBeTruthy()
+    expect(sent.idempotencyKey).toBeTruthy()
     expect(h.adapter.remove).not.toHaveBeenCalled()
     expect(h.adapter.upload).not.toHaveBeenCalled()
     flight.resolve({ kind: 'started' })
@@ -137,6 +138,22 @@ describe('发起审批 interface', () => {
       ['notify', '发起成功', 'success'],
       ['navigate', '/work/started'],
     ])
+  })
+  it('keeps one submission key per attempt and mints a new one only after restart', async () => {
+    const h = harness({
+        start: vi
+          .fn()
+          .mockResolvedValueOnce({ kind: 'unconfirmed' })
+          .mockResolvedValue({ kind: 'started' }),
+      }),
+      page = await open(h)
+    await page.submit({ reason: 'original' })
+    await page.prepareStartAgain(true)
+    await page.submit({ reason: 'again' })
+    const [first, second] = h.adapter.start.mock.calls.map((call) => call[0])
+    expect(first.idempotencyKey).toBeTruthy()
+    expect(second.idempotencyKey).toBeTruthy()
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey)
   })
   it('blocks pending reads and never queues a submission', async () => {
     const read = deferred(),

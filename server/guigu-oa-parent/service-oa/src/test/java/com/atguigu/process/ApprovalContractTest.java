@@ -49,6 +49,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.jayway.jsonpath.JsonPath;
 
@@ -64,6 +66,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -136,6 +139,9 @@ public class ApprovalContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @BeforeEach
     public void deployPublishedTemplateEngineDefinition() throws IOException {
@@ -797,6 +803,116 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void startUpWithSameIdempotencyKeyReturnsTheOriginalApprovalAndKeepsOneRow() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm("submit-once"));
+        Approval.StartOutcome replayed = approval.startUp(alice, publishedLeaveForm("submit-once"));
+
+        assertEquals(first.processId(), replayed.processId());
+        assertEquals(first.processInstanceId(), replayed.processInstanceId());
+        assertEquals(first.currentTaskIds(), replayed.currentTaskIds());
+        assertEquals(1, processCount());
+        assertEquals(1, count("SELECT COUNT(*) FROM oa_process WHERE idempotency_key = 'submit-once'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM oa_process_record"));
+        assertEquals(1, historyService.createHistoricProcessInstanceQuery().count());
+        assertEquals(first.processId(), pending(zhangsan).getRecords().get(0).getId());
+    }
+
+    @Test
+    public void replayedIdempotencyKeyKeepsTheFirstSnapshotWhenContentDiffers() {
+        SysUser alice = user(2L, "alice", "小艾");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm("submit-once"));
+        ProcessFormVo changed = publishedLeaveForm("submit-once");
+        changed.setFormValues("{\"formData\":{\"days\":9},\"formShowData\":{\"请假天数\":9}}");
+        Approval.StartOutcome replayed = approval.startUp(alice, changed);
+
+        assertEquals(first.processId(), replayed.processId());
+        assertEquals(1, processCount());
+        assertEquals("{\"formData\":{\"days\":1},\"formShowData\":{\"请假天数\":1}}",
+                jdbcTemplate.queryForObject(
+                        "SELECT form_values FROM oa_process WHERE id = ?", String.class, first.processId()));
+    }
+
+    @Test
+    public void concurrentStartUpsWithSameIdempotencyKeyCreateExactlyOneApproval() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        CountDownLatch firstInserted = new CountDownLatch(1);
+        CountDownLatch allowCommit = new CountDownLatch(1);
+        CountDownLatch replayStarted = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        Future<Approval.StartOutcome> winner = executor.submit(() -> transaction.execute(status -> {
+            Approval.StartOutcome outcome = approval.startUp(alice, publishedLeaveForm("race-key"));
+            firstInserted.countDown();
+            await(allowCommit);
+            return outcome;
+        }));
+        try {
+            assertTrue(firstInserted.await(10, TimeUnit.SECONDS));
+            Future<Approval.StartOutcome> replay = executor.submit(() -> {
+                replayStarted.countDown();
+                return approval.startUp(alice, publishedLeaveForm("race-key"));
+            });
+            assertTrue(replayStarted.await(10, TimeUnit.SECONDS));
+            Thread.sleep(150);
+            assertFalse(replay.isDone(), "重复提交应等第一次提交落定后的唯一键结果");
+            allowCommit.countDown();
+            Approval.StartOutcome committed = winner.get(10, TimeUnit.SECONDS);
+            Approval.StartOutcome replayed = replay.get(10, TimeUnit.SECONDS);
+
+            assertEquals(committed.processId(), replayed.processId());
+            assertEquals(committed.processInstanceId(), replayed.processInstanceId());
+            assertEquals(1, processCount());
+            assertEquals(1, count("SELECT COUNT(*) FROM oa_process WHERE idempotency_key = 'race-key'"));
+            assertEquals(1, count("SELECT COUNT(*) FROM oa_process_record"));
+            assertEquals(1, historyService.createHistoricProcessInstanceQuery().count());
+        } finally {
+            allowCommit.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    public void sameIdempotencyKeyFromDifferentUsersCreatesSeparateApprovals() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser lisi = user(4L, "lisi", "李四");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm("shared-key"));
+        Approval.StartOutcome second = approval.startUp(lisi, publishedLeaveForm("shared-key"));
+
+        assertNotEquals(first.processId(), second.processId());
+        assertEquals(2, processCount());
+    }
+
+    @Test
+    public void differentIdempotencyKeysCreateSeparateApprovals() {
+        SysUser alice = user(2L, "alice", "小艾");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm("attempt-1"));
+        Approval.StartOutcome second = approval.startUp(alice, publishedLeaveForm("attempt-2"));
+
+        assertNotEquals(first.processId(), second.processId());
+        assertEquals(2, processCount());
+    }
+
+    @Test
+    public void invalidIdempotencyKeyIsRejectedWithoutCreatingAnApproval() {
+        SysUser alice = user(2L, "alice", "小艾");
+        ProcessFormVo blank = publishedLeaveForm();
+        blank.setIdempotencyKey("   ");
+        ProcessFormVo tooLong = publishedLeaveForm();
+        tooLong.setIdempotencyKey("x".repeat(65));
+
+        assertEquals(201, assertThrows(GuiguException.class, () -> approval.startUp(alice, blank)).getCode());
+        assertEquals(201, assertThrows(GuiguException.class, () -> approval.startUp(alice, tooLong)).getCode());
+        assertEquals(0, processCount());
+    }
+
+    @Test
     public void approveReturnsNextState() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");
@@ -1087,6 +1203,29 @@ public class ApprovalContractTest {
         form.setProcessTypeId(1L);
         form.setFormValues("{\"formData\":{\"days\":1},\"formShowData\":{\"请假天数\":1}}");
         return form;
+    }
+
+    private static ProcessFormVo publishedLeaveForm(String idempotencyKey) {
+        ProcessFormVo form = publishedLeaveForm();
+        form.setIdempotencyKey(idempotencyKey);
+        return form;
+    }
+
+    private int processCount() {
+        return count("SELECT COUNT(*) FROM oa_process");
+    }
+
+    private int count(String sql) {
+        return jdbcTemplate.queryForObject(sql, Integer.class);
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("并发合同等待超时");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("并发合同被中断", e);
+        }
     }
 
     private static byte[] approvalTwoStepZip() throws IOException {

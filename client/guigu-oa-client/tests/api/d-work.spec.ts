@@ -62,6 +62,20 @@ async function pendingTask(processId: number): Promise<ProcessRecord> {
   throw new Error(`bob 的待处理里找不到审批 ${processId}`)
 }
 
+async function countMarkedStarted(text: string): Promise<number> {
+  let count = 0
+  for (let page = 1; page <= 20; page += 1) {
+    const result = await api.call<PageResult<ProcessRecord>>(
+      ALICE,
+      'get',
+      `/admin/process/findStarted/${page}/100`,
+    )
+    count += result.records.filter((record) => (record.formValues ?? '').includes(text)).length
+    if (page * 100 >= result.total) break
+  }
+  return count
+}
+
 async function aliceUserId(): Promise<number> {
   const page = await api.call<PageResult<UserRecord>>(
     ADMIN,
@@ -130,6 +144,28 @@ test.describe.serial('D 办事', () => {
     } finally {
       await api.call(ADMIN, 'delete', `/admin/process/processTemplate/remove/${unpublishedId}`)
     }
+  })
+
+  test('D2b startUp：同一提交标识重复送达只产生一条审批', async () => {
+    const template = await demoTemplate(api)
+    const text = unique('api-idem')
+    const body = {
+      processTemplateId: template.id,
+      processTypeId: template.processTypeId,
+      formValues: JSON.stringify({
+        formData: { reason: text, days: 1 },
+        formShowData: { 请假原因: text, 请假天数: 1 },
+      }),
+      attachmentIds: [],
+      idempotencyKey: text,
+    }
+    const [first, second] = await Promise.all([
+      api.envelope(ALICE, 'post', '/admin/process/startUp', body),
+      api.envelope(ALICE, 'post', '/admin/process/startUp', body),
+    ])
+    expectCode(first.body, 200, 'D2b 第一次发起')
+    expectCode(second.body, 200, 'D2b 同键重复送达')
+    expect(await countMarkedStarted(text), 'D2b 已发起只多一条').toBe(1)
   })
 
   test('D3 getProcessTemplate：已发布可读 / 未发布返回 null', async () => {

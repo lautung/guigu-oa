@@ -29,3 +29,4 @@
 - 业务 `@RequestMapping` 前缀：`/admin/system/*`（认证与配置）、`/admin/process/*`（流程）、`/admin/attachments/*`。
 - 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门。
 - 表结构迁移只加不改：`service-oa/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。
+- `POST /admin/process/startUp` 的 `idempotencyKey` 可空，唯一索引 `uk_oa_process_idempotency_key` 按用户唯一（ADR 0032）：重复送达返回同一条审批；冲突后的重读必须在 `ApprovalWriter.startUp` 的事务之外（可重复读下事务内看不到对手已提交的行）。

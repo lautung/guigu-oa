@@ -482,6 +482,7 @@ export interface StartOptions {
   ccUserIds?: number[]
   templateId?: number
   processTypeId?: number
+  idempotencyKey?: string
 }
 
 /** 以某人身份发起一条带唯一标记的审批，返回已发起列表里的记录（含 id）。 */
@@ -506,6 +507,7 @@ export async function startApproval(
     attachmentIds: options.attachmentIds ?? [],
     ccUserIds: options.ccUserIds ?? [],
     ...(options.attachmentDraftId ? { attachmentDraftId: options.attachmentDraftId } : {}),
+    ...(options.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
   })
   const record = await poll(20_000, 300, () => findMarked(api, user, 'started', text))
   if (!record) throw new Error(`startUp 后已在已发起列表找不到标记 ${text}`)

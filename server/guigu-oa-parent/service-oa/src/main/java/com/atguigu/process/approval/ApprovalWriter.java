@@ -17,6 +17,9 @@ import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.process.service.OaProcessRecordService;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,9 +30,16 @@ import java.util.List;
 
 /**
  * 审批写入的唯一实现：账本、抄送、附件绑定、引擎命令的次序与事务边界都在这里。
+ *
+ * <p>发起带提交标识时，同一用户同一标识只对应一条审批。冲突兜底靠
+ * {@code uk_oa_process_idempotency_key}；命中唯一索引的调用方必须在本类事务之外
+ * 调用 {@link #startedOutcome}，否则新事务看不到对手已提交的行。
  */
 @Service
 public class ApprovalWriter {
+
+    private static final Logger log = LoggerFactory.getLogger(ApprovalWriter.class);
+    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
 
     private final ApprovalTemplate approvalTemplate;
     private final ApprovalEngine approvalEngine;
@@ -61,6 +71,12 @@ public class ApprovalWriter {
 
     @Transactional
     public Approval.StartOutcome startUp(SysUser user, ProcessFormVo processFormVo) {
+        String idempotencyKey = normalizeIdempotencyKey(processFormVo.getIdempotencyKey());
+        Process started = startedProcess(user, idempotencyKey);
+        if (started != null) {
+            return replayedOutcome(started);
+        }
+
         ApprovalTemplate.PublishedApproval publication =
                 approvalTemplate.resolveForInitiation(processFormVo.getProcessTemplateId());
         ProcessTemplate processTemplate = publication.template();
@@ -72,6 +88,7 @@ public class ApprovalWriter {
         process.setUserId(user.getId());
         process.setFormValues(processFormVo.getFormValues());
         process.setTitle(ProcessStartSupport.title(user.getName(), processTemplate.getName()));
+        process.setIdempotencyKey(idempotencyKey);
         processMapper.insert(process);
 
         carbonCopyWriter.copyAtStart(user, process.getId(), processFormVo.getCcUserIds());
@@ -96,6 +113,56 @@ public class ApprovalWriter {
                 process.getId(),
                 processInstanceId,
                 currentTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    /**
+     * 幂等命中后的读取：调用方必须已经脱离 {@link #startUp} 的事务（通常由
+     * {@code DuplicateKeyException} 触发），否则读不到对手已提交的那一行。
+     * 找不到返回 {@code null}，让调用方把原来的唯一约束异常抛出去。
+     */
+    @Transactional(readOnly = true)
+    public Approval.StartOutcome startedOutcome(SysUser user, String rawIdempotencyKey) {
+        if (user == null || user.getId() == null || rawIdempotencyKey == null) {
+            return null;
+        }
+        Process started = startedProcess(user, normalizeIdempotencyKey(rawIdempotencyKey));
+        return started == null ? null : replayedOutcome(started);
+    }
+
+    private Process startedProcess(SysUser user, String idempotencyKey) {
+        if (idempotencyKey == null || user == null || user.getId() == null) {
+            return null;
+        }
+        LambdaQueryWrapper<Process> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Process::getUserId, user.getId())
+                .eq(Process::getIdempotencyKey, idempotencyKey);
+        return processMapper.selectOne(wrapper);
+    }
+
+    private Approval.StartOutcome replayedOutcome(Process process) {
+        log.info("Start replay hit idempotency_key={} processId={}",
+                process.getIdempotencyKey(), process.getId());
+        List<ApprovalEngine.CurrentTask> currentTasks = StringUtils.hasText(process.getProcessInstanceId())
+                ? approvalEngine.currentTasks(process.getProcessInstanceId())
+                : List.of();
+        return new Approval.StartOutcome(
+                process.getId(),
+                process.getProcessInstanceId(),
+                currentTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    private static String normalizeIdempotencyKey(String rawIdempotencyKey) {
+        if (rawIdempotencyKey == null) {
+            return null;
+        }
+        String idempotencyKey = rawIdempotencyKey.trim();
+        if (idempotencyKey.isEmpty()) {
+            throw new GuiguException(201, "提交标识不能为空");
+        }
+        if (idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+            throw new GuiguException(201, "提交标识过长");
+        }
+        return idempotencyKey;
     }
 
     @Transactional

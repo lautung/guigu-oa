@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -57,7 +58,17 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
 
     @Override
     public Approval.StartOutcome startUp(SysUser user, ProcessFormVo processFormVo) {
-        return approvalWriter.startUp(user, processFormVo);
+        try {
+            return approvalWriter.startUp(user, processFormVo);
+        } catch (DuplicateKeyException duplicate) {
+            // 这一层没有事务：重读落在新事务里，才能看见唯一索引挡住的那次提交。
+            Approval.StartOutcome started =
+                    approvalWriter.startedOutcome(user, processFormVo.getIdempotencyKey());
+            if (started == null) {
+                throw duplicate;
+            }
+            return started;
+        }
     }
 
     @Override

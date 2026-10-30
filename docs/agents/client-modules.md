@@ -18,7 +18,7 @@
 | `src/config/template-editor.ts` | `createTemplateEditor(options)` → `open(id)`（`requestLeave` / `environmentChanged` / `dispose`） | 审批模板编辑的保存/待确认/占用；`occupancy()` 是端口 |
 | `src/work/work-list.ts` | `presentWorkList` / `workListDefinition` / `workListRequest` / `workListPerspectiveFromRoute` / `summaryFields` | 办事四种列表的呈现与视角；文案在这里，路径在 `router/paths` |
 | `src/work/form-values.ts` | `formFields` / `formFieldText` | 表单值转显示文本的唯一入口；用户输入只作字符（ADR 0028） |
-| `src/work/approval-start.ts` | `createApprovalStart(adapter)` → `open(templateId)`（`draft` / `edit` / `submit` / `add` / `remove`） | 发起草稿与附件草稿的 owner、phase；浏览器接线在 `approval-start-browser.ts` |
+| `src/work/approval-start.ts` | `createApprovalStart(adapter)` → `open(templateId)`（`draft` / `edit` / `submit` / `add` / `remove`） | 发起草稿与附件草稿的 owner、phase、每次尝试的提交标识（重新发起换新）；浏览器接线在 `approval-start-browser.ts` |
 | `src/work/approval-detail.ts` | `createApprovalDetail(adapter)` → `open(target)`（`decide` / `endRecovery` / `reloadAttachments`） | 审批详情与处理结果待确认；HTTP 接线在 `approval-detail-http.ts` |
 | `src/submission-outcome.ts` | `classifySubmissionFailure(error, action)` | 明确拒绝 vs 待确认的分类 |
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
@@ -37,7 +37,7 @@
 | module | interface | 职责 |
 |---|---|---|
 | `process.approval.ApprovalEngine` | `start` / `complete` / `rejectToEnd` + `pendingTasks` / `processedTasks` / inherited `currentTasks` / `hasHistoricAssignee` | 唯一的 Flowable 读写 port；`FlowableApprovalEngine` 是唯一实现，`ProcessEngineApproval` 是唯一 Flowable 调用点 |
-| `process.approval.ApprovalWriter` | `startUp` / `approve` | 写入次序、事务边界、附件绑定与回滚补偿 |
+| `process.approval.ApprovalWriter` | `startUp` / `startedOutcome` / `approve` | 写入次序、事务边界、附件绑定与回滚补偿；同一提交标识重复送达返回同一条审批（ADR 0032），冲突重读只在事务外调用 `startedOutcome` |
 | `process.membership.ApprovalMembership` / `ApprovalMembershipResolver` | `resolve(user, process)` → `canRead` / `canUpload` / `canAct` | 审批成员资格；证据接口 `MembershipEvidence` 由 engine 继承，扩展来自 `ProcessMembershipExtension` |
 | `auth.grant.ConfigurationGrant` | `snapshot(userId)` → `hasAnyPage` / `covers` / `entries`；`isConfigurationMenu` | 配置授予的唯一闭包；gate、`/info` 与角色授权共用 |
 | `auth.service.ConfigurationMenuGate` | `isGranted(...)` | 六个配置 controller 的方法级 gate |

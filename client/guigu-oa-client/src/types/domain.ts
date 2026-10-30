@@ -273,6 +273,8 @@ export interface StartProcessRequest {
   processTemplateId: EntityId
   processTypeId: EntityId
   formValues: string
+  /** 同一次提交的重复送达用同一个值；重新发起换新的值。 */
+  idempotencyKey?: string
   attachmentDraftId?: string
   attachmentIds?: EntityId[]
   ccUserIds?: EntityId[]

@@ -223,6 +223,7 @@ function payload(session: Session): StartProcessRequest {
     processTemplateId: template.id,
     processTypeId: template.processTypeId,
     formValues: JSON.stringify({ formData, formShowData }),
+    idempotencyKey: session.record.id,
     attachmentDraftId: session.record.draftId,
     attachmentIds: session.record.attachments.map((a) => a.id),
     ...(session.record.ccUserIds.length ? { ccUserIds: copy(session.record.ccUserIds) } : {}),
