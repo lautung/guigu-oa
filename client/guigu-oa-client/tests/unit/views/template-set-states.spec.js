@@ -13,9 +13,13 @@ vi.mock('element-plus', () => ({
   ElMessageBox: { confirm: confirmMock, close: vi.fn() },
 }))
 
-vi.mock('@/config/template-editor', () => ({
-  createTemplateEditor: () => holder.editor,
-}))
+vi.mock('@/config/template-editor', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createTemplateEditor: () => holder.editor,
+  }
+})
 
 import { PATHS } from '@/router/paths'
 import TemplateSet from '@/views/config/processTemplate/templateSet.vue'
@@ -25,6 +29,17 @@ const buttonStub = {
   name: 'ElButton',
   props: ['disabled', 'loading', 'type', 'link'],
   template: '<button :disabled="disabled"><slot /></button>',
+}
+
+const formStub = {
+  name: 'ElForm',
+  props: ['model', 'rules', 'disabled', 'labelWidth'],
+  template: '<form><slot /></form>',
+}
+const formItemStub = {
+  name: 'ElFormItem',
+  props: ['label', 'prop', 'for'],
+  template: '<div><slot /></div>',
 }
 
 function state(overrides = {}) {
@@ -236,5 +251,31 @@ describe('TemplateSet states', () => {
     const wrapper = await mountTemplateSet()
     wrapper.unmount()
     expect(holder.current.opening.dispose).toHaveBeenCalled()
+  })
+
+  it('wires the basic step to the local required rules', async () => {
+    const { pinia } = setupSession()
+    const router = templateSetRouter()
+    await router.push({ path: PATHS.PROCESS_SET_TEMPLATE_SET, query: { id: '8' } })
+    await router.isReady()
+    const options = mountOptions(pinia, router)
+    options.global.stubs = {
+      ...elementStubs,
+      'el-button': buttonStub,
+      'el-form': formStub,
+      'el-form-item': formItemStub,
+    }
+    const wrapper = mount(TemplateSet, options)
+    await flushPromises()
+
+    const itemProps = wrapper
+      .findAllComponents({ name: 'ElFormItem' })
+      .map((item) => item.props('prop'))
+    expect(itemProps).toContain('processTypeId')
+    expect(itemProps).toContain('name')
+
+    const rules = wrapper.findComponent({ name: 'ElForm' }).props('rules')
+    expect(rules.name[0].required).toBe(true)
+    expect(rules.processTypeId[0].required).toBe(true)
   })
 })

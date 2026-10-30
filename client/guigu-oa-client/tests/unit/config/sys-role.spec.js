@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { emptyMessageOf } from '../support/form-rules'
 import {
   assignRolesRequest,
   emptyForm,
+  formRules,
   getRequest,
   listRequest,
   presentForm,
@@ -124,6 +126,15 @@ describe('config/sys-role', () => {
         roleName: '审批人',
         roleCode: 'approver',
       })
+    })
+  })
+
+  describe('formRules', () => {
+    it('mirrors the server 必填 messages for name and code', () => {
+      const rules = formRules()
+      expect(Object.keys(rules).sort()).toEqual(['roleCode', 'roleName'])
+      expect(emptyMessageOf(rules.roleName[0])).toBe('角色名称不能为空')
+      expect(emptyMessageOf(rules.roleCode[0])).toBe('角色编码不能为空')
     })
   })
 })

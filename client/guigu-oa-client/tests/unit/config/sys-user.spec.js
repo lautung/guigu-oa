@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { emptyMessageOf } from '../support/form-rules'
 import {
   emptyForm,
+  formRules,
   getRequest,
   listRequest,
   presentForm,
@@ -159,6 +161,16 @@ describe('config/sys-user', () => {
         phone: '13800001111',
         status: 1,
       })
+    })
+  })
+
+  describe('formRules', () => {
+    it('mirrors the server 必填 messages and leaves phone optional', () => {
+      const rules = formRules()
+      expect(Object.keys(rules).sort()).toEqual(['name', 'password', 'username'])
+      expect(emptyMessageOf(rules.username[0])).toBe('用户名不能为空')
+      expect(emptyMessageOf(rules.password[0])).toBe('密码不能为空')
+      expect(emptyMessageOf(rules.name[0])).toBe('姓名不能为空')
     })
   })
 })

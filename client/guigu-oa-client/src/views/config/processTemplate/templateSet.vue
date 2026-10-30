@@ -40,8 +40,13 @@
     </div>
 
     <div v-show="state.step === 0" class="step-pane">
-      <el-form label-width="100px" :disabled="!state.canEdit">
-        <el-form-item label="审批类型" for="template-type">
+      <el-form
+        label-width="100px"
+        :disabled="!state.canEdit"
+        :model="state.form"
+        :rules="templateRules"
+      >
+        <el-form-item label="审批类型" for="template-type" prop="processTypeId">
           <el-select
             id="template-type"
             :model-value="state.form.processTypeId"
@@ -56,7 +61,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="审批名称" for="template-name">
+        <el-form-item label="审批名称" for="template-name" prop="name">
           <el-input
             id="template-name"
             :model-value="state.form.name"
@@ -138,7 +143,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createTemplateEditor, type TemplateEditorOpening } from '@/config/template-editor'
+import {
+  createTemplateEditor,
+  formRules,
+  type TemplateEditorOpening,
+} from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
 import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request-scope'
@@ -154,6 +163,7 @@ const state = computed(() => edit.value!.state)
 const inspectionDesign = computed(() => edit.value?.state.inspectionDesign)
 const wizardSteps = ['基本设置', '表单设置', '流程设置']
 const iconList = TEMPLATE_ICONS
+const templateRules = formRules()
 const recognition = userStore.recognition
 if (!recognition) throw new Error('认出 module 尚未接入')
 const editor = createTemplateEditor({

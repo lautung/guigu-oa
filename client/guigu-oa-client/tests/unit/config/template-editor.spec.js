@@ -1,6 +1,7 @@
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
-import { createTemplateEditor } from '@/config/template-editor'
+import { createTemplateEditor, formRules } from '@/config/template-editor'
+import { emptyMessageOf } from '../support/form-rules'
 
 function deferred() {
   let resolve, reject
@@ -889,4 +890,13 @@ it('保存中与待确认可往返核对完整提交快照，查看不读取设�
   expect(edit.state.canSave).toBe(false)
   expect(edit.state.snapshot).toEqual(snapshot)
   expect(edit.state.inspectionDesign.rule[0].title).toBe('核对原因')
+})
+
+describe('template formRules', () => {
+  it('mirrors the server 必填 messages for the basic step', () => {
+    const rules = formRules()
+    expect(Object.keys(rules).sort()).toEqual(['name', 'processTypeId'])
+    expect(emptyMessageOf(rules.name[0])).toBe('审批模板名称不能为空')
+    expect(emptyMessageOf(rules.processTypeId[0])).toBe('审批类型不能为空')
+  })
 })

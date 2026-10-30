@@ -35,9 +35,9 @@
       @size-change="list.handleSizeChange"
     />
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
-      <el-form label-width="80px">
-        <el-form-item label="类型名称">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="80px">
+        <el-form-item label="类型名称" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="描述">
@@ -62,6 +62,7 @@ import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import {
   emptyForm,
+  formRules,
   listRequest,
   presentForm,
   presentListRecord,
@@ -73,6 +74,7 @@ import type { NoListQuery } from '@/list-read'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, ProcessTypeRecord } from '@/types/domain'
+import type { FormInstance } from 'element-plus'
 
 export default defineComponent({
   name: 'ProcessTypeList',
@@ -100,6 +102,7 @@ export default defineComponent({
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
+      formRules: formRules(),
     }
   },
   computed: {
@@ -118,7 +121,16 @@ export default defineComponent({
       this.form = presentForm(response.data || {})
       this.dialogVisible = true
     },
+    validateForm(): Promise<boolean> {
+      const form = this.$refs.formRef as FormInstance | undefined
+      if (!form) return Promise.resolve(false)
+      return form
+        .validate()
+        .then(() => true)
+        .catch(() => false)
+    },
     async save() {
+      if (!(await this.validateForm())) return
       this.saving = true
       try {
         if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))

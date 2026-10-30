@@ -59,15 +59,15 @@
       @size-change="list.handleSizeChange"
     />
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
-      <el-form label-width="80px">
-        <el-form-item label="用户名">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="80px">
+        <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" />
         </el-form-item>
-        <el-form-item v-if="!form.id" label="密码">
+        <el-form-item v-if="!form.id" label="密码" prop="password">
           <el-input v-model="form.password" type="password" />
         </el-form-item>
-        <el-form-item label="姓名">
+        <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="手机">
@@ -94,12 +94,19 @@ import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
-import { emptyForm, listRequest, presentForm, presentListRecord } from '@/config/sys-user'
+import {
+  emptyForm,
+  formRules,
+  listRequest,
+  presentForm,
+  presentListRecord,
+} from '@/config/sys-user'
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
+import type { FormInstance } from 'element-plus'
 import AssignRolesDialog from './AssignRolesDialog.vue'
 
 interface AssignRolesDialogHandle {
@@ -177,6 +184,7 @@ export default defineComponent({
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
+      formRules: formRules(),
     }
   },
   computed: {
@@ -205,7 +213,16 @@ export default defineComponent({
       this.form = presentForm(response.data || {})
       this.dialogVisible = true
     },
+    validateForm(): Promise<boolean> {
+      const form = this.$refs.formRef as FormInstance | undefined
+      if (!form) return Promise.resolve(false)
+      return form
+        .validate()
+        .then(() => true)
+        .catch(() => false)
+    },
     async save() {
+      if (!(await this.validateForm())) return
       this.saving = true
       try {
         if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))

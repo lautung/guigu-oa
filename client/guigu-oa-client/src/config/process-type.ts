@@ -1,4 +1,5 @@
 import type { ApiRequestConfig, EntityId, ProcessTypeRecord } from '@/types/domain'
+import { requiredRule, type RequiredRule } from './form-rules'
 
 export interface ProcessTypeListItem extends ProcessTypeRecord {
   id: EntityId
@@ -85,5 +86,12 @@ export function presentForm(
     id: record.id || '',
     name: record.name || '',
     description: record.description || '',
+  }
+}
+
+/** 必填与文案镜像 ProcessTypeSaveRequest(ADR 0034);description 选填。 */
+export function formRules(): Record<'name', RequiredRule[]> {
+  return {
+    name: [requiredRule('审批类型名称不能为空')],
   }
 }

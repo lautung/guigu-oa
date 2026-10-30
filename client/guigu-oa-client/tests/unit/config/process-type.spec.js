@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { emptyMessageOf } from '../support/form-rules'
 import {
   emptyForm,
   findAllRequest,
+  formRules,
   getRequest,
   listRequest,
   presentForm,
@@ -125,6 +127,14 @@ describe('config/process-type', () => {
         name: '请假',
         description: '员工请假',
       })
+    })
+  })
+
+  describe('formRules', () => {
+    it('mirrors the server 必填 message and leaves description optional', () => {
+      const rules = formRules()
+      expect(Object.keys(rules)).toEqual(['name'])
+      expect(emptyMessageOf(rules.name[0])).toBe('审批类型名称不能为空')
     })
   })
 })

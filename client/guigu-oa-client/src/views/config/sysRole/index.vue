@@ -45,12 +45,12 @@
       @size-change="list.handleSizeChange"
     />
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
-      <el-form label-width="80px">
-        <el-form-item label="角色名称">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="80px">
+        <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="form.roleName" />
         </el-form-item>
-        <el-form-item label="角色编码">
+        <el-form-item label="角色编码" prop="roleCode">
           <el-input v-model="form.roleCode" />
         </el-form-item>
       </el-form>
@@ -70,13 +70,20 @@ import { defineComponent, onBeforeUnmount } from 'vue'
 import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
-import { emptyForm, listRequest, presentForm, presentListRecord } from '@/config/sys-role'
+import {
+  emptyForm,
+  formRules,
+  listRequest,
+  presentForm,
+  presentListRecord,
+} from '@/config/sys-role'
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
 import { assignAuthPath } from '@/router/paths'
 import { openRequestScope } from '@/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'
+import type { FormInstance } from 'element-plus'
 
 export default defineComponent({
   name: 'SysRoleList',
@@ -105,6 +112,7 @@ export default defineComponent({
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
+      formRules: formRules(),
     }
   },
   computed: {
@@ -136,7 +144,16 @@ export default defineComponent({
     openAssign(id: EntityId, roleName?: string) {
       this.$router.push(assignAuthPath(id, roleName))
     },
+    validateForm(): Promise<boolean> {
+      const form = this.$refs.formRef as FormInstance | undefined
+      if (!form) return Promise.resolve(false)
+      return form
+        .validate()
+        .then(() => true)
+        .catch(() => false)
+    },
     async save() {
+      if (!(await this.validateForm())) return
       this.saving = true
       try {
         if (await this.list.runWrite(() => saveOrUpdate(this.form), '操作成功'))

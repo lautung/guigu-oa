@@ -41,5 +41,13 @@ export default defineConfig({
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    server: {
+      deps: {
+        // element-plus 外置时,其内部 import 的 async-validator 会与测试侧形成两份实例,
+        // el-form 的校验链在单测里静默失真(空必填也判 VALID)。inline 进来保证单一实例,
+        // 与生产(rollup 单实例)语义一致。
+        inline: ['element-plus'],
+      },
+    },
   },
 })

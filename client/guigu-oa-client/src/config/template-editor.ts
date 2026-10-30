@@ -10,6 +10,7 @@ import type {
   ProcessTypeRecord,
   ProcessTemplateRecord,
 } from '@/types/domain'
+import { requiredRule, type RequiredRule } from './form-rules'
 import { emptyForm, zipUploadError } from './process-template'
 
 const API = '/admin/process/processTemplate'
@@ -511,4 +512,12 @@ export function createTemplateEditor(options: EditorOptions) {
   }
   return { open }
 }
+/** 基本设置两步的必填与文案镜像 ProcessTemplateSaveRequest(ADR 0034);拦截门仍在 canSave。 */
+export function formRules(): Record<'name' | 'processTypeId', RequiredRule[]> {
+  return {
+    name: [requiredRule('审批模板名称不能为空')],
+    processTypeId: [requiredRule('审批类型不能为空')],
+  }
+}
+
 export type TemplateEditorOpening = ReturnType<ReturnType<typeof createTemplateEditor>['open']>

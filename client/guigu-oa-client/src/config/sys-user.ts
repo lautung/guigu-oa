@@ -1,4 +1,5 @@
 import type { ApiRequestConfig, EntityId, UserForm, UserListItem, UserRecord } from '@/types/domain'
+import { requiredRule, type RequiredRule } from './form-rules'
 
 export function presentListRecord(record: UserRecord = {}): UserListItem {
   return {
@@ -118,5 +119,14 @@ export function presentForm(record: UserRecord = {}): UserForm {
     name: record.name || '',
     phone: record.phone || '',
     status: record.status == null ? 1 : record.status,
+  }
+}
+
+/** 必填与文案镜像 SysUserSaveRequest(ADR 0034);phone 选填。 */
+export function formRules(): Record<'username' | 'password' | 'name', RequiredRule[]> {
+  return {
+    username: [requiredRule('用户名不能为空')],
+    password: [requiredRule('密码不能为空')],
+    name: [requiredRule('姓名不能为空')],
   }
 }

@@ -190,6 +190,25 @@ describe('SysRole list page', () => {
     expect(reject).toHaveBeenCalled()
     expect(wrapper.vm.dialogVisible).toBe(false)
   })
+
+  it('blocks the save with local required messages before the request', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysRole, observeMount(pinia, testRouter()))
+    await flushPromises()
+
+    wrapper.vm.openCreate()
+    await flushPromises()
+    await wrapper.vm.save()
+    // Element Plus 用 100ms debounce 决定错误是否上屏，等过 debounce 再断言。
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysRoleApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toEqual([
+      '角色名称不能为空',
+      '角色编码不能为空',
+    ])
+  })
 })
 
 describe('ProcessType list page', () => {
@@ -222,6 +241,23 @@ describe('ProcessType list page', () => {
 
     await wrapper.vm.remove(2)
     expect(processTypeApi.removeById).not.toHaveBeenCalled()
+  })
+
+  it('blocks the save with the local required message before the request', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(ProcessType, observeMount(pinia, testRouter()))
+    await flushPromises()
+
+    wrapper.vm.openCreate()
+    await flushPromises()
+    await wrapper.vm.save()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(processTypeApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toEqual([
+      '审批类型名称不能为空',
+    ])
   })
 })
 

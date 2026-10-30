@@ -165,6 +165,26 @@ describe('SysUser list page', () => {
     expect(sysUserApi.removeById).toHaveBeenCalledWith(3)
   })
 
+  it('blocks the create with local required messages before the request', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    wrapper.vm.openCreate()
+    await flushPromises()
+    await wrapper.vm.save()
+    // Element Plus 用 100ms debounce 决定错误是否上屏，等过 debounce 再断言。
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysUserApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toEqual([
+      '用户名不能为空',
+      '密码不能为空',
+      '姓名不能为空',
+    ])
+  })
+
   it('opens, reopens, and closes the assign-roles dialog', async () => {
     const { pinia, user } = setupSession()
     const wrapper = mount(SysUser, realOptions(pinia, testRouter()))

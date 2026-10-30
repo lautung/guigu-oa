@@ -1,4 +1,5 @@
 import type { ApiRequestConfig, EntityId, RoleForm, RoleListItem, RoleRecord } from '@/types/domain'
+import { requiredRule, type RequiredRule } from './form-rules'
 
 export interface RoleAssignmentLists {
   allRolesList: RoleListItem[]
@@ -105,5 +106,13 @@ export function presentForm(record: RoleRecord = {}): RoleForm {
     id: record.id || '',
     roleName: record.roleName || '',
     roleCode: record.roleCode || '',
+  }
+}
+
+/** 必填与文案镜像 SysRoleSaveRequest(ADR 0034)。 */
+export function formRules(): Record<'roleName' | 'roleCode', RequiredRule[]> {
+  return {
+    roleName: [requiredRule('角色名称不能为空')],
+    roleCode: [requiredRule('角色编码不能为空')],
   }
 }
