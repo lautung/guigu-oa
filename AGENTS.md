@@ -58,7 +58,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 ### 前端检查与构建
 
-- `npm run verify`：lint + typecheck + format:check + test:unit + 文档检查（模块地图路径、Markdown 相对链接、证据体积）（提交前必跑）。
+- `npm run verify`：lint + typecheck + format:check + test:unit + 文档检查（模块地图路径、Markdown 相对链接、证据路径与体积）+ shell 检查（提交前必跑）。
 - `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动（兼容性矩阵）。
 - `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数数据（alice 已发起超过 2000 条）会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --wait`。
 - `npm run build:prod`：类型检查 + 生产构建。
@@ -66,6 +66,8 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 ### 仓库检查
 
 `./scripts/verify.sh`：客户端 `npm run verify` + 服务端 `mvn -pl service-oa -am test`。端到端与生产构建仍单独跑（见下）。
+
+五类测试（接口/功能/性能/安全/兼容性）一键复跑：`./scripts/test-round.sh all`（按类子命令与前置见 `--help`；方案与证据在 `docs/test/`）。
 
 ### 后端测试
 

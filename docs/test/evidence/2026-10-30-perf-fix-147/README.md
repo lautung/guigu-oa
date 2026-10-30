@@ -15,7 +15,7 @@ HikariCP 连接池调优（`maximum-pool-size` 10 → 25）后的整轮复跑证
 | `k6-console-baseline-1.txt` / `k6-console-stress-1.txt` | k6 控制台输出样本 |
 | `stats-*.csv.gz` | docker stats ~1Hz 采样（service-oa / mysql / redis / minio） |
 | `row-counts.md` | 收尾时 `oa_process` / `oa_process_record` / `ACT_*` 行数 |
-| `slow-attachment-1.log` | 最后一档慢 SQL 日志（仅两条 group-commit 等待，见执行记录 §5） |
+| `slow-attachment-1.txt` | 最后一档慢 SQL 日志（仅两条 group-commit 等待，见执行记录 §5；`.txt` 以避开 `*.log` 忽略规则） |
 
 ## 复跑
 

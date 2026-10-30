@@ -2,7 +2,7 @@
 
 测试怎么分层、挂载工具怎么用、服务端单元测试有哪些坑。命令与覆盖率口径见 README「测试与覆盖率」。
 
-五类测试（功能、接口、性能、安全、兼容性）的资产在 `docs/test/`：`plan.md` 定测什么与怎么判，`execution/` 一文件一轮，`report.md` 是结论与缺陷账本，`evidence/README.md` 是证据索引。性能资产见 `perf/README.md`。
+五类测试（功能、接口、性能、安全、兼容性）的资产在 `docs/test/`：`plan.md` 定测什么与怎么判，`execution/` 一文件一轮，`report.md` 是结论与缺陷账本，`evidence/README.md` 是证据索引。性能资产见 `perf/README.md`（压测命令以它为准；造数必须在宿主机 `localhost` 执行，容器改写预签名 Host 会 403）。一键复跑用 `./scripts/test-round.sh all`，按类子命令见 `--help`。
 
 ## 分层
 
@@ -23,6 +23,7 @@
 
 - 默认 `npm run test:e2e` 起 9530 的 Vite dev server；设置 `E2E_BASE_URL` 时指向已构建客户端并跳过 dev server（兼容性矩阵，见 `docs/test/plan/compatibility-matrix.md`）。
 - project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
+- **报告路径按 Playwright config 所在目录解析**：`tests/e2e-stack/` 与 `tests/security/` 的 JSON/JUnit 落在各自 `test-results/` 下，接口与 mock 套件在客户端根 `test-results/`。每次运行会清空自己的 outputDir，手工连着跑多套时先归档再跑下一套（`scripts/test-round.sh` 已内置归档顺序）。
 - 生产构建有 CSP（#139）：mock 预签名上传使用 `http://localhost:9000`（`connect-src` 默认放行源），不要再用 `objects.test` 之类的外部主机。
 - WebKit 会把 ResizeObserver 循环上报成 `pageerror`；用 `tests/e2e/helpers/known-noise.ts` 只过滤这一条，其他错误仍失败。
 

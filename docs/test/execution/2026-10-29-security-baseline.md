@@ -158,7 +158,8 @@ cd client/guigu-oa-client && npm run test:security && cd ../..
 node scripts/zap-baseline.mjs --out docs/test/evidence/<轮次>
 ```
 
-修复后复跑使用 `docs/test/evidence/2026-10-29-security-after-fix/`，并与本轮逐项对比。
+修复后复跑见 `docs/test/evidence/2026-10-29-security-fix-*`（逐缺陷分项）与
+`docs/test/evidence/2026-10-30-clean-rerun/security/`（61 条整轮 + ZAP），并与本轮逐项对比。
 
 ## 观察与残余风险
 

@@ -84,8 +84,8 @@ jobs:
       - name: Assert frontend coverage report
         if: always() && steps.frontend-verify.outcome == 'success'
         run: test -s coverage/coverage-summary.json
-      # WebKit 是兼容性矩阵的备选引擎（#114/#117）。矩阵是否每次 PR 都跑仍待定
-      # （地图「五类测试是否接入 CI 门禁」），所以 PR 门禁继续只跑 Chromium 两档。
+      # WebKit 是兼容性矩阵的备选引擎（#114/#117）。五类测试的 CI/定时入口
+      # 不在生产加固 effort 范围（见 docs/test/report.md §10），PR 门禁继续只跑 Chromium 两档。
       - run: npx playwright install --with-deps chromium webkit
       - name: Run Playwright smoke tests
         run: npx playwright test --project=desktop-chromium --project=mobile-chromium

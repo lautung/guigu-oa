@@ -127,13 +127,40 @@ function checkEvidenceSize() {
   return total
 }
 
+// 执行记录里用行内代码写的证据路径不会走 Markdown 链接检查；这里补上，
+// 并禁止 .log（被 .gitignore 忽略，会静默漏提交，证据日志用 .txt）。
+function checkEvidencePaths(markdownPath) {
+  const text = readFileSync(markdownPath, 'utf8')
+  let checked = 0
+
+  for (const match of text.matchAll(/`(docs\/test\/evidence\/[^`\n]+)`/g)) {
+    const target = match[1].trim()
+    if (/[<>*…]/.test(target)) continue
+    const line = lineOf(text, match.index)
+    if (target.endsWith('.log')) {
+      errors.push(
+        `${relative(root, markdownPath)}:${line} 证据日志用 .txt（*.log 被 .gitignore 忽略）：${target}`,
+      )
+      continue
+    }
+    if (!existsSync(join(root, target))) {
+      errors.push(`${relative(root, markdownPath)}:${line} 证据路径不存在：${target}`)
+    }
+    checked += 1
+  }
+  return checked
+}
+
 let markdownFiles = 0
 let linkCount = 0
+let evidencePathCount = 0
 
 walk(root, (path) => {
   if (!path.endsWith('.md')) return
   markdownFiles += 1
   linkCount += checkMarkdownLinks(path)
+  const rel = relative(root, path).split('\\').join('/')
+  if (rel.startsWith('docs/test/')) evidencePathCount += checkEvidencePaths(path)
 })
 
 const evidenceSize = checkEvidenceSize()
@@ -145,7 +172,7 @@ if (errors.length) {
 }
 
 console.log(
-  `docs ok (${markdownFiles} markdown files, ${linkCount} relative links, evidence ${formatSize(
+  `docs ok (${markdownFiles} markdown files, ${linkCount} relative links, ${evidencePathCount} evidence paths, evidence ${formatSize(
     evidenceSize,
   )})`,
 )
