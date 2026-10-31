@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 import {
   ADMIN,
   Api,
+  PASSWORD,
   PLAIN_USER,
   createUser,
   deleteUser,
@@ -204,5 +205,76 @@ test.describe('B 用户管理', () => {
     } finally {
       await deleteUser(api, created.id)
     }
+  })
+
+  test('B24 save：重名 201 命名拒绝 / 无授予 205（ADR 0042）', async ({ request }) => {
+    const api = new Api(request)
+    const temp = await createUser(api, unique('api-dup'))
+    try {
+      const dup = await api.envelope(ADMIN, 'post', '/admin/system/sysUser/save', {
+        username: temp.username,
+        name: temp.username,
+        password: PASSWORD,
+        status: 1,
+      })
+      expectCodeAndMessage(dup.body, 201, '用户名已存在', 'B24 重名新增')
+
+      // 顺序契约：查重判定在配置 gate 之后，未授予 + 重名 = 205，不是 201。
+      expect(
+        await api.code(PLAIN_USER, 'post', '/admin/system/sysUser/save', {
+          username: temp.username,
+          name: 'denied',
+          password: PASSWORD,
+          status: 1,
+        }),
+      ).toBe(205)
+    } finally {
+      await deleteUser(api, temp.id)
+    }
+  })
+
+  test('B25 update：改名撞他人 201 命名拒绝 / 改回自身 200（ADR 0042）', async ({ request }) => {
+    const api = new Api(request)
+    const a = await createUser(api, unique('api-ua'))
+    const b = await createUser(api, unique('api-ub'))
+    try {
+      const collide = await api.envelope(ADMIN, 'put', '/admin/system/sysUser/update', {
+        id: b.id,
+        username: a.username,
+      })
+      expectCodeAndMessage(collide.body, 201, '用户名已存在', 'B25 改名撞人')
+
+      await api.call(ADMIN, 'put', '/admin/system/sysUser/update', {
+        id: b.id,
+        username: b.username,
+        name: `${b.username}自名`,
+      })
+    } finally {
+      await deleteUser(api, a.id)
+      await deleteUser(api, b.id)
+    }
+  })
+
+  test('B26 remove：删除让位，同名可重建（ADR 0042）', async ({ request }) => {
+    const api = new Api(request)
+    const username = unique('api-reuse')
+    const first = await createUser(api, username)
+    await deleteUser(api, first.id)
+
+    // 软删行不再占名：同名重建放行，重建行是列表里唯一可见的那条。
+    await api.call(ADMIN, 'post', '/admin/system/sysUser/save', {
+      username,
+      name: username,
+      password: PASSWORD,
+      status: 1,
+    })
+    const page = await api.call<PageResult<UserRecord>>(
+      ADMIN,
+      'get',
+      `/admin/system/sysUser/1/50?keyword=${encodeURIComponent(username)}`,
+    )
+    const recreated = page.records.find((record) => record.username === username)
+    expect(recreated, 'B26 删除后同名重建可见').toBeTruthy()
+    await deleteUser(api, (recreated as UserRecord).id)
   })
 })

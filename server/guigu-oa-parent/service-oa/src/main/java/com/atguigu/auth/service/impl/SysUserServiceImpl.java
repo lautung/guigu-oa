@@ -1,13 +1,18 @@
 package com.atguigu.auth.service.impl;
 
+import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.auth.mapper.SysUserMapper;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.security.custom.LoginUserInfoHelper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,6 +51,58 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         wrapper.eq(SysUser::getUsername,username);
         SysUser sysUser = baseMapper.selectOne(wrapper);
         return sysUser;
+    }
+
+    //用户名唯一（ADR 0042）：查重先行给出命名拒绝，并发漏网由唯一索引兜底并翻译成同一文案。
+    @Override
+    public boolean save(SysUser user) {
+        ensureUsernameAvailable(user.getUsername(), null);
+        try {
+            return super.save(user);
+        } catch (DuplicateKeyException duplicate) {
+            throw duplicateUsername();
+        }
+    }
+
+    //username 为 null 即不改名（MyBatis-Plus 空值策略），不查重。
+    @Override
+    public boolean updateById(SysUser user) {
+        if (user.getUsername() != null) {
+            ensureUsernameAvailable(user.getUsername(), user.getId());
+        }
+        try {
+            return super.updateById(user);
+        } catch (DuplicateKeyException duplicate) {
+            throw duplicateUsername();
+        }
+    }
+
+    //删除让位（ADR 0042）：软删行对查询不可见但仍占唯一索引，同事务先置空用户名再软删。
+    @Transactional
+    @Override
+    public boolean removeById(Serializable id) {
+        LambdaUpdateWrapper<SysUser> free = new LambdaUpdateWrapper<>();
+        free.eq(SysUser::getId, id).set(SysUser::getUsername, null);
+        baseMapper.update(null, free);
+        return super.removeById(id);
+    }
+
+    private void ensureUsernameAvailable(String username, Long excludeId) {
+        if (username == null) {
+            return;
+        }
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysUser::getUsername, username);
+        if (excludeId != null) {
+            wrapper.ne(SysUser::getId, excludeId);
+        }
+        if (baseMapper.selectCount(wrapper) > 0) {
+            throw duplicateUsername();
+        }
+    }
+
+    private static GuiguException duplicateUsername() {
+        return new GuiguException(201, "用户名已存在");
     }
 
     @Override
