@@ -134,7 +134,7 @@ async function findStarted(token, marker) {
   const firstRecords = dataOf(first)?.records || []
   const found = firstRecords.find((record) => JSON.stringify(record).includes(marker))
   if (found) return found
-  // 已发起按创建顺序升序；演示库累积后新审批落在末页，从末页往回找。
+  // 已发起显式按创建时间倒序（#179）：刚发起的审批就在第一页；翻页循环只是防御性兜底。
   const pages = Math.ceil((dataOf(first)?.total || firstRecords.length) / 50)
   for (let page = pages; page >= 2; page -= 1) {
     const response = await call('get', `/admin/process/findStarted/${page}/50`, { token })

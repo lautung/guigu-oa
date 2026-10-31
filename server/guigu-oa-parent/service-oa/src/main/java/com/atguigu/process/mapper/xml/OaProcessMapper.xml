@@ -30,5 +30,7 @@
                 and a.create_time &lt;= #{vo.createTimeEnd}
             </if>
         </where>
+        <!-- 已发起与配置实例查询共用这条读：显式最新在前（#179），同刻由审批 id 决胜。 -->
+        order by a.create_time desc, a.id desc
     </select>
 </mapper>

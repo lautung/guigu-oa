@@ -371,6 +371,40 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void 已发起与配置实例查询显式按创建时间倒序最新在前() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        String aliceToken = loginToken("alice");
+        String adminToken = loginToken("admin");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm());
+        Approval.StartOutcome second = approval.startUp(alice, publishedLeaveForm());
+
+        // 已发起（办事）：最新发起的审批落在第一页最上（#179，与抄送我的对齐）。
+        mockMvc.perform(get("/admin/process/findStarted/1/10").header("token", aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(second.processId().intValue()))
+                .andExpect(jsonPath("$.data.records[1].id").value(first.processId().intValue()));
+
+        // 配置侧审批实例查询：同一排序契约，顺序确定可复现。
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(second.processId().intValue()))
+                .andExpect(jsonPath("$.data.records[1].id").value(first.processId().intValue()));
+
+        // 同刻发起：create_time 打平后由审批 id 决胜，最新发起的仍在前。
+        jdbcTemplate.update(
+                "UPDATE oa_process SET create_time = CURRENT_TIMESTAMP WHERE id IN (?, ?)",
+                first.processId(), second.processId());
+        mockMvc.perform(get("/admin/process/findStarted/1/10").header("token", aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].id").value(second.processId().intValue()))
+                .andExpect(jsonPath("$.data.records[1].id").value(first.processId().intValue()));
+    }
+
+    @Test
     public void 待处理已处理已发起KeepPagination() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");

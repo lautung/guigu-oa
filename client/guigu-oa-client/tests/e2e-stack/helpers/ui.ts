@@ -99,7 +99,7 @@ export async function fillDemoForm(
     .fill(fields.days ?? '1')
 }
 
-// 提交成功即跳已发起；行存在性由调用方的 oracle 断言（该列表无排序且随轮次增长，不靠翻页找新行）。
+// 提交成功即跳已发起；行存在性由调用方的 oracle 断言（该列表随轮次增长，不靠翻页找新行）。
 export async function submitStart(page: Page): Promise<void> {
   await page.getByRole('button', { name: '提交', exact: true }).click()
   await expect(page.getByRole('heading', { name: '已发起', level: 2 })).toBeVisible()
