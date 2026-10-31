@@ -42,7 +42,7 @@
 - MyBatis `Interceptor` 的签名覆盖以走真实 `Plugin` 装配的合同测试为准：单测直调 `intercept()` 绕过 `@Signature` 匹配，签名漏注册时照样全绿（#151 曾因此漏掉 `update` 签名，靠评审才抓住）。
 - 文件上传用 `@TempDir` + `MockMultipartFile`；S3 相关 mock `S3Client` / `S3Presigner` 返回 `Presigned*Request` 的 mock，`url()` 直接 stub。
 - 真实 Spring 合同测试沿用现有 `@SpringBootTest` + H2 + 内存 Redis，不需要本地 MySQL/Redis。
-- 要起真实服务做验证（非合同测试）时：连 Compose 栈已发布的 MySQL/Redis（3306/6379），`java -jar target/service-oa.jar --server.port=8801 --spring.flyway.validate-on-migrate=false`——Compose 镜像带 V100/101 而本地 main 已无，关校验后两边迁移互补、零写入。不动 8800 的栈，测完 DROP 自己建的临时库；空库/新库起不来（见 AGENTS.md「后端启动」第 3 条与 #158）。
+- 要起真实服务做验证（非合同测试）时：连 Compose 栈已发布的 MySQL/Redis（3306/6379），`java -jar target/service-oa.jar --server.port=8801 --spring.flyway.validate-on-migrate=false`——Compose 镜像带 V100/101 而本地 main 已无，关校验后两边迁移互补、零写入。不动 8800 的栈，测完 DROP 自己建的临时库。
 - 每份 H2 schema 只裁到该组用例需要的表，**不是全库**：`auth-contract-schema.sql` 只有 `sys_user` / `sys_menu`（没有角色与授予行，配置 gate 恒拒绝），所以逐字段校验用例放那里成立（校验先于 gate），正向路径要用 `FlywayMigrationContractTest`（真迁移 + 种子授予）。新增合同测试前先看它挂的 schema 有没有你要的表。
 - 单类/多类：`mvn -pl service-oa -am test -Dtest=A,B -Dsurefire.failIfNoSpecifiedTests=false`；漏掉最后一个参数会因上游模块没有匹配用例而整轮失败。
 - 收紧入参规则（新增 `@Valid`/约束）时，grep `tests/api` 与 `tests/e2e-stack` 的负例载荷：仍返回 201 不代表走到了命名分支，必要时用 `expectCodeAndMessage` 钉住稳定消息片段。

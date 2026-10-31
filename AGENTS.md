@@ -51,7 +51,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 2. `service-oa` 的 `pom.xml` 已把 `src/main/resources/**` 打进 jar。在 `service-oa` 目录先 `mvn -DskipTests install`，再：
    `java -jar target/service-oa.jar`
    若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
-3. Flowable 的 `ACT_*` 表由引擎按 `application-dev.yml` 的 `flowable.database-schema-update: true`、`flowable.history-level: full` 维护；**空库首启动当前在 MySQL 8.4 上失败**（误走 schema upgrade、0 张引擎表，#158），已有库不受影响。修复前本地起真实服务验证：连已有库 + `--spring.flyway.validate-on-migrate=false`，配方见 `docs/agents/testing.md` 服务端节。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
+3. Flowable 的 `ACT_*` 表由引擎按 `application-dev.yml` 的 `flowable.database-schema-update: true`、`flowable.history-level: full` 维护，空库首启动自动建表。坑史：Connector/J 8.x 起 `nullCatalogMeansCurrent` 默认 false，同服务器另一个库有 ACT_ 表时空库会被误判「引擎表已建」、误走 upgrade 链启动失败（#158）——已在 base `application.yml` 的 Hikari `data-source-properties` 钉回「当前库」语义，对所有 profile 与 URL 覆盖生效，删属性即复发。本地起真实服务验证：连已有库 + `--spring.flyway.validate-on-migrate=false`，配方见 `docs/agents/testing.md` 服务端节。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
 4. OpenAPI / Swagger UI：只在 `dev` profile 下无需登录可读（`/v3/api-docs`、`/swagger-ui.html`）。Compose 演示栈（`dev,demo`）与 `prod` 都关闭这两个端点（#140）。业务接口仍用请求头 `token`。
 5. Compose 构建：本机 `docker compose build service-oa` 直连 Maven Central 会被代理打断 TLS 握手，需带镜像源 `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose build service-oa`。
 

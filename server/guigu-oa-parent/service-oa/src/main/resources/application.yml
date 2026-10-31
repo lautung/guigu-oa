@@ -3,6 +3,16 @@ spring:
     name: service-oa
   profiles:
     active: dev
+  datasource:
+    hikari:
+      data-source-properties:
+        # #158：Connector/J 8.x 起 nullCatalogMeansCurrent 默认 false，catalog=null 的
+        # 元数据查询会匹配服务器上所有库——同服务器另一个库有 ACT_ 表时，Flowable
+        # 判表存在（isTablePresent）把空库误判成引擎表已建，走 upgrade 链启动失败。
+        # 这里钉回「当前库」语义；放 base 是因为它对所有 profile（dev/compose/prod）
+        # 与一切 URL 覆盖（环境变量注入、本地手敲）生效，prod 的 URL 部署方才拿得到。
+        # 删掉会复发，见 AGENTS.md「后端启动」第 3 条。
+        nullCatalogMeansCurrent: true
 
 guigu:
   oa:
