@@ -18,6 +18,8 @@ Issues live in this repo's GitHub Issues (via the `gh` CLI). See `docs/agents/is
 
 Canonical roles map 1:1 to tracker labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
+从 `needs-triage` 直接实现一个 issue 时，先用 `file:line` 对着代码核验它的事实主张，再定方案——主张可能就是错的（#156 写「空列表返回 200」，实际早已是 201 失败）。
+
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before exploring the codebase or naming domain concepts, read `docs/agents/domain.md`.
