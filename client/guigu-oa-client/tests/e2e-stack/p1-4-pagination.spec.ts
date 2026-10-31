@@ -1,7 +1,12 @@
 import { test, expect } from './helpers/fixtures'
 import { demoTemplate } from './helpers/oracle'
 import { marker } from './helpers/stack'
-import { openWorkList, uiLoginExpectWork } from './helpers/ui'
+import {
+  expectWorkListLoaded,
+  nextWorkListPage,
+  openWorkList,
+  uiLoginExpectWork,
+} from './helpers/ui'
 
 /**
  * P1-4（#121）：真实多页数据翻页（含末页与越界页）。
@@ -37,6 +42,9 @@ test('25 条真实数据翻页：末页不满、下一页禁用、越界为空',
 
   await uiLoginExpectWork(page, 'bob')
   await openWorkList(page, '待处理')
+  // 首轮扫描前等初始加载完成，翻页换等 find 响应（#169）：固定 sleep 在慢 runner
+  // 上会扫到空页/提前翻页，漏掉第 1 页或跳过目标行。
+  await expectWorkListLoaded(page)
 
   const seen = new Set<string>()
   for (let pageNo = 1; pageNo <= pages; pageNo++) {
@@ -50,8 +58,7 @@ test('25 条真实数据翻页：末页不满、下一页禁用、越界为空',
       })
     })
     if (pageNo < pages) {
-      await page.locator('.el-pagination .btn-next').click()
-      await page.waitForTimeout(500)
+      await nextWorkListPage(page)
     }
   }
   expect(seen.size, '翻完全部页应看到全部 25 条标记审批').toBe(25)

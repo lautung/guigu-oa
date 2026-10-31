@@ -23,13 +23,26 @@ export function workItem(page: Page, text: string): Locator {
   return page.locator('.work-list-item', { hasText: text })
 }
 
-/** 办事列表翻页找行：数据积累后目标行可能不在第 1 页（列表无排序保证，新行靠后）。 */
-async function goNextPage(page: Page): Promise<boolean> {
+/**
+ * 等当前办事列表初始加载完成（#169）：page-title 先于数据渲染，loading 中无行、
+ * 无分页器、无空态；首轮扫描前必须等正信号（行或空态出现）。
+ * 不能等 loading-mask 消失——注册时 mask 尚未挂载的话「不存在」会被 hidden
+ * 立即满足（TOCTOU）；visible 语义会持续等到元素将来出现，无此空窗。
+ */
+export async function expectWorkListLoaded(page: Page): Promise<void> {
+  await page
+    .locator('.work-list-item, .el-empty')
+    .first()
+    .waitFor({ state: 'visible', timeout: 15_000 })
+}
+
+/** 点下一页并等列表返回；返回 false 表示没有下一页。翻页过早会跳过目标行（#169）。 */
+export async function nextWorkListPage(page: Page): Promise<boolean> {
   const next = page.locator('.el-pagination .btn-next')
   if ((await next.count()) === 0 || (await next.isDisabled())) return false
   // 等列表请求真正返回再继续：固定 sleep 在慢 runner 上会提前翻下一页，跳过目标行。
   const response = page.waitForResponse(
-    (res) => /\/admin\/process\/find(?:Pending|Processed)\//.test(res.url()),
+    (res) => /\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(res.url()),
     { timeout: 15_000 },
   )
   await next.click()
@@ -42,11 +55,12 @@ async function goNextPage(page: Page): Promise<boolean> {
 }
 
 async function walkWorkList(page: Page, text: string, maxPages: number): Promise<Locator | null> {
+  await expectWorkListLoaded(page)
   for (let visited = 1; ; visited++) {
     const item = workItem(page, text)
     if ((await item.count()) > 0) return item.first()
     if (visited >= maxPages) return null
-    if (!(await goNextPage(page))) return null
+    if (!(await nextWorkListPage(page))) return null
   }
 }
 
