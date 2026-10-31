@@ -8,6 +8,12 @@ guigu:
   oa:
     # Bind this directory to persistent storage in containers; template paths are relative to it.
     process-definition-dir: ${GUIGU_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
+    # #151：慢 SQL 日志默认关闭，避免生产日志放大（与 springdoc 同款：base 关、dev 开）。
+    # dev/demo 打开；生产临时排障用 GUIGU_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
+    sql:
+      slow-sql:
+        enabled: false
+        threshold-ms: 500
 
 # 接口文档是本地开发工具，不是匿名可访问的产品面（#140）：默认关闭，只有
 # application-dev.yml 显式打开，新 profile 不会意外暴露端点、参数与数据模型。

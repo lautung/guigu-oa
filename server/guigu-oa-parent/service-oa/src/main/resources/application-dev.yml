@@ -44,6 +44,11 @@ guigu:
   jwt:
     secret: ${JWT_SECRET:local-development-jwt-secret-not-for-production-00000000000000000000000000000000}
   oa:
+    # #151：dev/demo 打开慢 SQL 观测，阈值沿用 base 的 500ms；压测时用
+    # GUIGU_OA_SQL_SLOW_SQL_THRESHOLD_MS 调低或置 0 全量输出。
+    sql:
+      slow-sql:
+        enabled: true
     attachments:
       endpoint: ${S3_ENDPOINT:http://localhost:9000}
       public-endpoint: ${S3_PUBLIC_ENDPOINT:http://localhost:9000}
