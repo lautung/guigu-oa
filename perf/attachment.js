@@ -94,9 +94,17 @@ export function setup() {
   if (!token) throw new Error('setup 登录失败')
 
   // 从 alice 已发起列表找已结束实例，收集 110 个 (processId, attachmentId)。
+  // 造数把附件挂在最老的已结束实例上（seed.mjs Phase C 同样尾页起翻）；
+  // 列表自 #179 起显式最新在前，旧的「第 1 页 = 最老实例」隐式顺序假设失效——
+  // 这里从最后一页向前翻，不依赖排序方向（#182）。
+  const PAGE_SIZE = 50
+  const first = api(token, 'get', `/admin/process/findStarted/1/${PAGE_SIZE}`)
+  if (first.envelope.code !== 200) throw new Error(`findStarted 第 1 页失败 code=${first.envelope.code}`)
+  const lastPage = Math.ceil((first.envelope.data.total || 0) / PAGE_SIZE)
   const pairs = []
-  for (let page = 1; page <= 30 && pairs.length < PAIRS_WANTED; page += 1) {
-    const { res, envelope } = api(token, 'get', `/admin/process/findStarted/${page}/50`)
+  for (let page = lastPage; page >= 1 && pairs.length < PAIRS_WANTED; page -= 1) {
+    const { res, envelope } =
+      page === 1 ? first : api(token, 'get', `/admin/process/findStarted/${page}/${PAGE_SIZE}`)
     if (envelope.code !== 200) throw new Error(`findStarted 第 ${page} 页失败 code=${envelope.code}`)
     for (const record of envelope.data.records || []) {
       if (record.status !== 2) continue
@@ -108,7 +116,6 @@ export function setup() {
       }
       if (pairs.length >= PAIRS_WANTED) break
     }
-    if ((envelope.data.records || []).length < 50) break
   }
   const oneMb = pairs.filter((p) => (p.size || 0) <= ONE_MB)
   console.log(`setup: 附件对 ${pairs.length} 对，其中 1MB 档 ${oneMb.length} 对`)

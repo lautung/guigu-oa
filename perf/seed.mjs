@@ -187,15 +187,20 @@ function formValues(index) {
 }
 
 // Phase C：附件（已结束实例，alice 是发起人即成员）
+// 附件挂最老的已结束实例，与 attachment.js 的「尾页起翻」发现逻辑配对；
+// 列表自 #179 起显式最新在前，旧的「第 1 页 = 最老实例」隐式顺序假设失效——
+// 从最后一页向前翻，不依赖排序方向（#182）。
 {
   const t0 = Date.now()
+  const PAGE_SIZE = 50
+  const first = await api(alice, 'get', `/admin/process/findStarted/1/${PAGE_SIZE}`)
+  const lastPage = Math.ceil((first.total || 0) / PAGE_SIZE)
   const finished = []
-  for (let page = 1; finished.length < ATTACH_SMALL + ATTACH_BIG; page += 1) {
-    const data = await api(alice, 'get', `/admin/process/findStarted/${page}/50`)
+  for (let page = lastPage; page >= 1 && finished.length < ATTACH_SMALL + ATTACH_BIG; page -= 1) {
+    const data = page === 1 ? first : await api(alice, 'get', `/admin/process/findStarted/${page}/${PAGE_SIZE}`)
     for (const record of data.records || []) {
       if (record.status === 2) finished.push(record.id)
     }
-    if ((data.records || []).length < 50) break
   }
   if (finished.length < ATTACH_SMALL + ATTACH_BIG) {
     throw new Error(`已结束实例只有 ${finished.length} 条，不够挂附件`)

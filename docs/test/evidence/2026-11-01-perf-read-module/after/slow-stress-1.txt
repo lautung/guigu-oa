@@ -1,0 +1,15 @@
+/usr/sbin/mysqld, Version: 8.4.13 (MySQL Community Server - GPL). started with:
+Tcp port: 3306  Unix socket: /var/run/mysqld/mysqld.sock
+Time                 Id Command    Argument
+# Time: 2026-10-31T19:45:40.886240Z
+# User@Host: root[root] @ localhost []  Id:   148
+# Query_time: 0.136266  Lock_time: 0.000003 Rows_sent: 8  Rows_examined: 0
+SET timestamp=1793475940;
+SELECT 'oa_process', COUNT(*) FROM `guigu-oa`.oa_process
+UNION ALL SELECT 'oa_process_record', COUNT(*) FROM `guigu-oa`.oa_process_record
+UNION ALL SELECT 'ACT_RU_TASK', COUNT(*) FROM `guigu-oa`.ACT_RU_TASK
+UNION ALL SELECT 'ACT_RU_IDENTITYLINK', COUNT(*) FROM `guigu-oa`.ACT_RU_IDENTITYLINK
+UNION ALL SELECT 'ACT_HI_TASKINST', COUNT(*) FROM `guigu-oa`.ACT_HI_TASKINST
+UNION ALL SELECT 'ACT_HI_PROCINST', COUNT(*) FROM `guigu-oa`.ACT_HI_PROCINST
+UNION ALL SELECT 'ACT_HI_ACTINST', COUNT(*) FROM `guigu-oa`.ACT_HI_ACTINST
+UNION ALL SELECT 'ACT_GE_BYTEARRAY', COUNT(*) FROM `guigu-oa`.ACT_GE_BYTEARRAY;

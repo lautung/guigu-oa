@@ -26,6 +26,7 @@
 | `2026-10-30-perf-fix-147/` | 连接池调优整轮复跑 | 同上（镜像含 `maximum-pool-size: 25`） | [`2026-10-30-perf-fix-147.md`](../execution/2026-10-30-perf-fix-147.md) |
 | `2026-10-29-compatibility/` | 五格关键页截图 + 控制台 JSON + JUnit | `E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e` | [`2026-10-29-compatibility.md`](../execution/2026-10-29-compatibility.md) |
 | `2026-10-30-clean-rerun/` | 干净环境五类复跑：`api/`、`functional/`、`perf/`、`security/`、`compat/`、`timings.tsv` | `./scripts/test-round.sh all`（或按类子命令） | [`2026-10-30-clean-rerun.md`](../execution/2026-10-30-clean-rerun.md) |
+| `2026-11-01-perf-read-module/` | 审批列表读 module k6 before/after（main `9f1e27c` vs spec-178 `358dbbd`，含回归 EXPLAIN 取证） | `perf/ops/round.sh <name> <tier>`（after 轮带 `COMPOSE_PROJECT_NAME=guigu-oa`） | [`2026-11-01-perf-read-module.md`](../execution/2026-11-01-perf-read-module.md) |
 
 ## 大件（不入仓）
 

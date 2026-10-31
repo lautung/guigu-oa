@@ -1,0 +1,24 @@
+/usr/sbin/mysqld, Version: 8.4.13 (MySQL Community Server - GPL). started with:
+Tcp port: 3306  Unix socket: /var/run/mysqld/mysqld.sock
+Time                 Id Command    Argument
+# Time: 2026-10-31T18:51:17.895126Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    46
+# Query_time: 0.187453  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+use guigu-oa;
+SET timestamp=1793472677;
+COMMIT;
+# Time: 2026-10-31T18:51:17.897017Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    49
+# Query_time: 0.180782  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793472677;
+COMMIT;
+# Time: 2026-10-31T18:52:19.232434Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    47
+# Query_time: 0.100968  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793472739;
+COMMIT;
+# Time: 2026-10-31T18:52:19.232435Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    48
+# Query_time: 0.101022  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793472739;
+COMMIT;

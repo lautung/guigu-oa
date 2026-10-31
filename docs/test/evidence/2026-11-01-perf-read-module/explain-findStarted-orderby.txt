@@ -1,0 +1,48 @@
+# EXPLAIN ANALYZE 取证：findStarted 显式排序代价（#182，回归缺陷 issue 附件）
+
+环境：after 栈（358dbbd）恢复快照后（list-reads-1 档收尾），MySQL 8.4.13，alice（user_id=3）
+名下 10,001 条 `oa_process`。SQL 与 mapper `OaProcessMapper.selectProcessPage`（#179/#181 后
+被 findStarted 与配置实例查询共用）同形状。
+
+## 有显式排序（after，#179 引入 ORDER BY create_time DESC, id DESC）
+
+```
+EXPLAIN: -> Limit: 10 row(s)  (actual time=16.4..16.4 rows=10 loops=1)
+    -> Sort: a.create_time DESC, a.id DESC, limit input to 10 row(s) per chunk  (actual time=16.4..16.4 rows=10 loops=1)
+        -> Stream results  (cost=420 rows=1480) (actual time=1.44..15.2 rows=10001 loops=1)
+            -> Nested loop left join  (cost=420 rows=1480) (actual time=1.44..13.1 rows=10001 loops=1)
+                -> Left hash join (b.id = a.process_template_id)  (cost=148 rows=1480) (actual time=0.756..10.3 rows=10001 loops=1)
+                    -> Nested loop left join  (cost=268 rows=493) (actual time=0.392..8.97 rows=10001 loops=1)
+                        -> Filter: (a.is_deleted = 0)  (cost=218 rows=493) (actual time=0.0605..6.42 rows=10001 loops=1)
+                            -> Index lookup on a using uk_oa_process_idempotency_key (user_id=3)  (cost=218 rows=4932) (actual time=0.0594..5.86 rows=10001 loops=1)
+                        -> Constant row from d  (cost=710e-6..710e-6 rows=1) (actual time=94.3e-6..113e-6 rows=1 loops=10001)
+                    -> Hash
+                        -> Table scan on b  (cost=0.00124 rows=3) (actual time=0.00504..0.00646 rows=3 loops=1)
+                -> Single-row index lookup on c using PRIMARY (id=a.process_type_id)  (cost=0.0834 rows=1) (actual time=85.4e-6..106e-6 rows=1 loops=10001)
+```
+
+关键行：`Sort: a.create_time DESC, a.id DESC … (actual time=16.4..16.4)`，上游
+`Stream results … rows=10001`——**全量 10,001 行进排序堆**。
+
+## 无显式排序（before 的隐式形态，LIMIT 短路）
+
+```
+EXPLAIN: -> Limit: 10 row(s)  (cost=420 rows=10) (actual time=0.0366..0.0437 rows=10 loops=1)
+    -> Nested loop left join  (cost=420 rows=1480) (actual time=0.0364..0.043 rows=10 loops=1)
+        -> Left hash join (b.id = a.process_template_id)  (cost=148 rows=1480) (actual time=0.0345..0.039 rows=10 loops=1)
+            -> Nested loop left join  (cost=268 rows=493) (actual time=0.0278..0.0314 rows=10 loops=1)
+                -> Filter: (a.is_deleted = 0)  (cost=218 rows=493) (actual time=0.0251..0.0267 rows=10 loops=1)
+                    -> Index lookup on a using uk_oa_process_idempotency_key (user_id=3)  (cost=218 rows=4932) (actual time=0.0247..0.0256 rows=10 loops=1)
+```
+
+关键行：`Limit: 10 row(s) (actual time=0.0366..0.0437)`——取 10 行即返回，**0.044ms**。
+
+## 结论
+
+同一条 SQL：排序 16.4ms vs 无排序 0.044ms（≈373×）；k6 观察到的端到端差
+（findStarted p95 23→149ms）= SQL 层差 × 连接池/线程排队放大。配置实例查询
+（无 user_id 过滤，同一 ORDER BY）同机制（p95 35→78ms）。
+
+`oa_process` 现有索引：`PRIMARY(id)`、`uk_oa_process_idempotency_key(user_id, idempotency_key)`
+——排序列（create_time, id）无索引可走；候选修复：`(user_id, is_deleted, create_time, id)` 或
+等价索引把排序变成索引序扫描（配置查询再评估无 user_id 前缀的形态）。
