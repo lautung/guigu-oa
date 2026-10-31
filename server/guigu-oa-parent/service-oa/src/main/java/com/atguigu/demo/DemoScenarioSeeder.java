@@ -6,6 +6,7 @@ import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.attachment.AttachmentMapper;
+import com.atguigu.process.read.ApprovalListReader;
 import com.atguigu.process.service.Approval;
 import com.atguigu.vo.process.ApprovalVo;
 import com.atguigu.vo.process.ProcessFormVo;
@@ -35,6 +36,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     private static final String ATTACHMENT_CONTENT = "Compose 演示附件：请假申请说明。\n";
 
     private final Approval approval;
+    private final ApprovalListReader approvalListReader;
     private final DemoApprovalPublisher demoApprovalPublisher;
     private final SysUserService userService;
     private final AttachmentMapper attachmentMapper;
@@ -44,6 +46,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
 
     public DemoScenarioSeeder(
             Approval approval,
+            ApprovalListReader approvalListReader,
             DemoApprovalPublisher demoApprovalPublisher,
             SysUserService userService,
             AttachmentMapper attachmentMapper,
@@ -51,6 +54,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
             S3Client attachmentS3Client,
             AttachmentS3Properties s3Properties) {
         this.approval = approval;
+        this.approvalListReader = approvalListReader;
         this.demoApprovalPublisher = demoApprovalPublisher;
         this.userService = userService;
         this.attachmentMapper = attachmentMapper;
@@ -82,8 +86,8 @@ public class DemoScenarioSeeder implements ApplicationRunner {
         }
         completeForBob(bob, ended);
 
-        long pendingCount = approval.findPending(bob, new Page<>(1, 50)).getTotal();
-        long processedCount = approval.findProcessed(bob, new Page<>(1, 50)).getTotal();
+        long pendingCount = approvalListReader.pending(new Page<>(1, 50), bob).getTotal();
+        long processedCount = approvalListReader.processed(new Page<>(1, 50), bob).getTotal();
         Long copiedCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(DISTINCT c.process_id) FROM oa_process_cc c JOIN sys_user u ON u.id = c.user_id "
                         + "WHERE u.username = 'carol' AND c.is_deleted = 0",
@@ -152,7 +156,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
         if (!Integer.valueOf(1).equals(process.getStatus())) {
             return;
         }
-        List<ProcessVo> pending = approval.findPending(bob, new Page<Process>(1, 100)).getRecords();
+        List<ProcessVo> pending = approvalListReader.pending(new Page<>(1, 100), bob).getRecords();
         ProcessVo task = pending.stream()
                 .filter(item -> process.getId().equals(item.getId()))
                 .findFirst()

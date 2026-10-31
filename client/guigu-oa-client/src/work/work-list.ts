@@ -147,6 +147,7 @@ function presentWorkListItem(
     title: record.title,
     name: record.name,
     processTypeName: record.processTypeName,
+    processTemplateName: record.processTemplateName,
     createTime: record.createTime,
     status: record.status,
     statusLabel: statusLabel(record.status),

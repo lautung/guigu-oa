@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -123,14 +125,19 @@ public class ProcessEngineApprovalTest {
     }
 
     @Test
-    public void businessKeyResolvesTheRunningInstanceOnly() {
+    public void businessKeysResolveRunningInstancesInOneBatch() {
         ProcessInstance instance = processEngine.getRuntimeService()
                 .startProcessInstanceByKey("approvalTwoStep", "12");
 
-        assertEquals("12", ProcessEngineApproval.businessKey(
-                processEngine.getRuntimeService(), instance.getId()));
-        assertNull(ProcessEngineApproval.businessKey(processEngine.getRuntimeService(), "missing"));
-        assertNull(ProcessEngineApproval.businessKey(processEngine.getRuntimeService(), null));
+        Map<String, String> keys = ProcessEngineApproval.businessKeys(
+                processEngine.getRuntimeService(),
+                Set.of(instance.getId(), "missing"));
+
+        assertEquals(Map.of(instance.getId(), "12"), keys,
+                "存在的实例按 id 映射 businessKey，缺失实例不进映射");
+        assertTrue(ProcessEngineApproval.businessKeys(
+                processEngine.getRuntimeService(), Set.of()).isEmpty());
+        assertTrue(ProcessEngineApproval.businessKeys(processEngine.getRuntimeService(), null).isEmpty());
     }
 
     @Test

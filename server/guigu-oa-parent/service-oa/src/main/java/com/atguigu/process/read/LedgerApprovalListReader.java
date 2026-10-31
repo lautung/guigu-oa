@@ -1,0 +1,128 @@
+package com.atguigu.process.read;
+
+import com.atguigu.common.page.PageWindow;
+import com.atguigu.model.system.SysUser;
+import com.atguigu.process.approval.ApprovalEngine;
+import com.atguigu.process.mapper.OaProcessMapper;
+import com.atguigu.vo.process.ProcessQueryVo;
+import com.atguigu.vo.process.ProcessVo;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * {@link ApprovalListReader} 的唯一实现。待处理/已处理由引擎分页与排序，账本行按页批量回查后
+ * 按引擎顺序重排（N+1 消除，#181）；已发起与配置实例查询共用一条 SQL；抄送我的走原生
+ * LIMIT/OFFSET（#122 口径）。窗口算术一律从 {@link PageWindow} 派生，不手算。
+ */
+@Service
+public class LedgerApprovalListReader implements ApprovalListReader {
+
+    private final ApprovalEngine approvalEngine;
+    private final OaProcessMapper processMapper;
+
+    public LedgerApprovalListReader(ApprovalEngine approvalEngine, OaProcessMapper processMapper) {
+        this.approvalEngine = approvalEngine;
+        this.processMapper = processMapper;
+    }
+
+    @Override
+    public IPage<ProcessVo> pending(Page<ProcessVo> page, SysUser user) {
+        List<ApprovalEngine.PendingTask> taskList = approvalEngine.pendingTasks(
+                user.getUsername(), PageWindow.firstResult(page), (int) page.getSize());
+        long totalCount = approvalEngine.pendingCount(user.getUsername());
+
+        // 跳过空 businessKey 与已删/缺失账本行的边界不变；回查按页批量一次取回。
+        Map<Long, ProcessVo> rowsById = rowsById(taskList.stream()
+                .map(ApprovalEngine.PendingTask::businessKey)
+                .filter(StringUtils::hasText)
+                .map(Long::parseLong)
+                .toList());
+        List<ProcessVo> records = new ArrayList<>();
+        for (ApprovalEngine.PendingTask task : taskList) {
+            if (!StringUtils.hasText(task.businessKey())) {
+                continue;
+            }
+            ProcessVo row = rowsById.get(Long.parseLong(task.businessKey()));
+            if (row == null) {
+                continue;
+            }
+            row.setTaskId(task.taskId());
+            records.add(row);
+        }
+        return pageOf(page, totalCount, records);
+    }
+
+    @Override
+    public IPage<ProcessVo> processed(Page<ProcessVo> page, SysUser user) {
+        List<ApprovalEngine.ProcessedTask> historicTasks = approvalEngine.processedTasks(
+                user.getUsername(), PageWindow.firstResult(page), (int) page.getSize());
+        long totalCount = approvalEngine.processedCount(user.getUsername());
+
+        // 行=已完成任务：同一审批处理过多个节点在此重复出现（现状钉住），按引擎顺序重排。
+        Map<String, ProcessVo> rowsByInstanceId = rowsByInstanceId(historicTasks.stream()
+                .map(ApprovalEngine.ProcessedTask::processInstanceId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList());
+        List<ProcessVo> records = new ArrayList<>();
+        for (ApprovalEngine.ProcessedTask historicTask : historicTasks) {
+            ProcessVo row = rowsByInstanceId.get(historicTask.processInstanceId());
+            if (row != null) {
+                records.add(row);
+            }
+        }
+        return pageOf(page, totalCount, records);
+    }
+
+    @Override
+    public IPage<ProcessVo> started(Page<ProcessVo> page, SysUser user) {
+        ProcessQueryVo query = new ProcessQueryVo();
+        query.setUserId(user.getId());
+        return processMapper.selectProcessPage(page, query);
+    }
+
+    @Override
+    public IPage<ProcessVo> carbonCopied(Page<ProcessVo> page, SysUser user) {
+        long offset = PageWindow.offset(page);
+        long total = processMapper.countCarbonCopiedRows(user.getId());
+        List<ProcessVo> records =
+                processMapper.selectCarbonCopiedRows(user.getId(), offset, page.getSize());
+        return pageOf(page, total, records);
+    }
+
+    @Override
+    public IPage<ProcessVo> instanceQuery(Page<ProcessVo> page, ProcessQueryVo query) {
+        return processMapper.selectProcessPage(page, query);
+    }
+
+    private Map<Long, ProcessVo> rowsById(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return processMapper.selectRowsByIds(ids).stream()
+                .collect(Collectors.toMap(ProcessVo::getId, Function.identity(), (first, second) -> first));
+    }
+
+    private Map<String, ProcessVo> rowsByInstanceId(List<String> instanceIds) {
+        if (instanceIds.isEmpty()) {
+            return Map.of();
+        }
+        return processMapper.selectRowsByInstanceIds(instanceIds).stream()
+                .collect(Collectors.toMap(
+                        ProcessVo::getProcessInstanceId, Function.identity(), (first, second) -> first));
+    }
+
+    private IPage<ProcessVo> pageOf(Page<ProcessVo> page, long total, List<ProcessVo> records) {
+        IPage<ProcessVo> result = new Page<>(page.getCurrent(), page.getSize(), total);
+        result.setRecords(records);
+        return result;
+    }
+}

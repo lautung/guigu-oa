@@ -186,6 +186,8 @@ export interface ProcessInstanceRecord {
   description?: string
   status?: number
   createTime?: string
+  /** 公共字段口径（ADR 0031）；抄送行自 #181 起补上。 */
+  updateTime?: string
   formValues?: string | ProcessFormValues
   taskId?: EntityId
 }
@@ -218,6 +220,7 @@ export interface PresentedWorkListRecord {
   title?: string
   name?: string
   processTypeName?: string
+  processTemplateName?: string
   createTime?: string
   status?: number
   statusLabel: string

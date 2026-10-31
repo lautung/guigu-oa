@@ -3,30 +3,18 @@ package com.atguigu.process;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
-import com.atguigu.vo.process.ProcessVo;
-import org.springframework.beans.BeanUtils;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 待处理 / 已处理 / 审批动作：把引擎任务与 oa_process 账本收成合同面字段。
+ * 审批动作与详情：把 oa_process 账本收成合同面字段。
+ * 列表行的组装在 {@code com.atguigu.process.read.LedgerApprovalListReader}（#181）。
  */
 public final class ProcessApprovalSupport {
 
     private ProcessApprovalSupport() {
-    }
-
-    public static ProcessVo toPendingVo(Process process, String taskId) {
-        ProcessVo vo = new ProcessVo();
-        BeanUtils.copyProperties(process, vo);
-        vo.setTaskId(taskId);
-        return vo;
-    }
-
-    public static ProcessVo toProcessedVo(Process process) {
-        return toPendingVo(process, null);
     }
 
     public static String recordDescription(Integer status) {

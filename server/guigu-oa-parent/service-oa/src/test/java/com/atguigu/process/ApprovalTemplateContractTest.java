@@ -8,6 +8,7 @@ import com.atguigu.model.system.SysUser;
 import com.atguigu.process.controller.OaProcessTemplateController;
 import com.atguigu.process.PublishedTemplateRedeployRunner;
 import com.atguigu.process.service.Approval;
+import com.atguigu.process.read.ApprovalListReader;
 import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
@@ -87,6 +88,9 @@ public class ApprovalTemplateContractTest {
 
     @Autowired
     private Approval approval;
+
+    @Autowired
+    private ApprovalListReader approvalListReader;
 
     @Autowired
     private RepositoryService repositoryService;
@@ -235,8 +239,8 @@ public class ApprovalTemplateContractTest {
         form.setProcessTemplateId(saved.getId());
         approval.startUp(alice, form);
 
-        assertEquals(1, approval.findStarted(alice, new Page<>(1, 10)).getRecords().size());
-        assertEquals(审批中, approval.findStarted(alice, new Page<>(1, 10)).getRecords().get(0).getStatus());
+        assertEquals(1, approvalListReader.started(new Page<>(1, 10), alice).getRecords().size());
+        assertEquals(审批中, approvalListReader.started(new Page<>(1, 10), alice).getRecords().get(0).getStatus());
         assertTrue(approvalTemplate.canInitiate(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
     }
@@ -575,7 +579,7 @@ public class ApprovalTemplateContractTest {
         ProcessFormVo alreadyPublishedQingjia = publishedLeaveForm();
         alreadyPublishedQingjia.setProcessTemplateId(2L);
         assertThrows(RuntimeException.class, () -> approval.startUp(alice, alreadyPublishedQingjia));
-        assertTrue(approval.findStarted(alice, new Page<>(1, 10)).getRecords().isEmpty());
+        assertTrue(approvalListReader.started(new Page<>(1, 10), alice).getRecords().isEmpty());
     }
 
     @Test
@@ -669,7 +673,7 @@ public class ApprovalTemplateContractTest {
         form.setFormValues("{\"formData\":{\"days\":1},\"formShowData\":{\"请假天数\":1}}");
 
         assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
-        assertTrue(approval.findStarted(alice, new Page<>(1, 10)).getRecords().isEmpty());
+        assertTrue(approvalListReader.started(new Page<>(1, 10), alice).getRecords().isEmpty());
         assertNull(LoginUserInfoHelper.getUserId());
     }
 
@@ -683,8 +687,8 @@ public class ApprovalTemplateContractTest {
 
         approval.startUp(alice, form);
 
-        assertEquals(1, approval.findStarted(alice, new Page<>(1, 10)).getRecords().size());
-        assertEquals(审批中, approval.findStarted(alice, new Page<>(1, 10)).getRecords().get(0).getStatus());
+        assertEquals(1, approvalListReader.started(new Page<>(1, 10), alice).getRecords().size());
+        assertEquals(审批中, approvalListReader.started(new Page<>(1, 10), alice).getRecords().get(0).getStatus());
     }
 
     private ProcessTemplate save病假申请() {

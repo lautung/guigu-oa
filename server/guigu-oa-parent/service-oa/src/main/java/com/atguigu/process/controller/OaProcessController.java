@@ -3,8 +3,7 @@ package com.atguigu.process.controller;
 
 import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
-import com.atguigu.model.process.Process;
-import com.atguigu.process.service.OaProcessService;
+import com.atguigu.process.read.ApprovalListReader;
 import com.atguigu.vo.process.ProcessQueryVo;
 import com.atguigu.vo.process.ProcessVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -31,9 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class OaProcessController {
 
     @Autowired
-    private OaProcessService processService;
+    private ApprovalListReader approvalListReader;
 
-    //审批管理列表
+    //审批管理列表（配置实例查询：与办事列表同一读 module，#181）
     @PreAuthorize("@configurationMenuGate.isGranted('process')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
@@ -42,8 +41,7 @@ public class OaProcessController {
                         ProcessQueryVo processQueryVo) {
         Page<ProcessVo> pageParam = PageWindow.of(page, limit);
         IPage<ProcessVo> pageModel =
-                processService.selectPage(pageParam,processQueryVo);
+                approvalListReader.instanceQuery(pageParam, processQueryVo);
         return Result.ok(pageModel);
     }
 }
-

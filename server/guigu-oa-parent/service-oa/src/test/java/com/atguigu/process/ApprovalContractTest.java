@@ -11,6 +11,7 @@ import com.atguigu.process.attachment.AttachmentMapper;
 import com.atguigu.process.attachment.TestAttachmentObjectStore;
 import com.atguigu.process.cc.CarbonCopyTrigger;
 import com.atguigu.process.cc.CarbonCopyWriter;
+import com.atguigu.process.read.ApprovalListReader;
 import com.atguigu.process.service.Approval;
 import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.common.config.exception.GuiguException;
@@ -103,6 +104,9 @@ public class ApprovalContractTest {
 
     @Autowired
     private Approval approval;
+
+    @Autowired
+    private ApprovalListReader approvalListReader;
 
     @Autowired
     private ApprovalTemplate approvalTemplate;
@@ -405,6 +409,166 @@ public class ApprovalContractTest {
     }
 
     @Test
+    public void 五种列表行形状一致且回查行带发起人与审批模板() throws Exception {
+        String aliceToken = loginToken("alice");
+        String zhangsanToken = loginToken("zhangsan");
+        String ccReaderToken = loginToken("cc-reader");
+        String adminToken = loginToken("admin");
+
+        // 同一审批给 cc-reader 两条抄送授权（发起抄送 + 任务规则抄送）：DISTINCT total 仍只计一次。
+        jdbcTemplate.update(
+                "INSERT INTO oa_process_cc_rule (process_definition_key, task_definition_key, user_id, is_deleted) "
+                        + "VALUES ('approvalTwoStep', 'first', 6, 0)");
+        mockMvc.perform(post("/admin/process/startUp")
+                        .header("token", aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processTemplateId\":1,\"processTypeId\":1,"
+                                + "\"formValues\":\"{\\\"formData\\\":{\\\"days\\\":2},"
+                                + "\\\"formShowData\\\":{\\\"请假天数\\\":2}}\","
+                                + "\"ccUserIds\":[6]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        // 待处理：回查行补发起人姓名、审批模板名、审批类型名（#181 additive），死字段不再出现。
+        expectApprovalRowShapeOnFirstRecord("/admin/process/findPending/1/10", zhangsanToken);
+
+        String pendingBody = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", zhangsanToken))
+                .andReturn().getResponse().getContentAsString();
+        String taskId = JsonPath.read(pendingBody, "$.data.records[0].taskId");
+        Object processId = JsonPath.read(pendingBody, "$.data.records[0].id");
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", zhangsanToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + taskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        String lisiPending = mockMvc.perform(get("/admin/process/findPending/1/10")
+                        .header("token", loginToken("lisi")))
+                .andReturn().getResponse().getContentAsString();
+        String nextTaskId = JsonPath.read(lisiPending, "$.data.records[0].taskId");
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", loginToken("lisi"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":" + processId + ",\"taskId\":\"" + nextTaskId + "\",\"status\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        // 已处理（逐任务回查）、已发起、抄送我的、配置实例查询：同一行形状。
+        expectApprovalRowShapeOnFirstRecord("/admin/process/findProcessed/1/10", zhangsanToken);
+        expectApprovalRowShapeOnFirstRecord("/admin/process/findStarted/1/10", aliceToken);
+        expectApprovalRowShapeOnFirstRecord("/admin/process/findCarbonCopied/1/10", ccReaderToken);
+        expectApprovalRowShapeOnFirstRecord("/admin/process/1/10", adminToken);
+
+        // 抄送行：双授权只出一条审批（DISTINCT total=去重审批数），并补 update_time（公共字段口径）。
+        mockMvc.perform(get("/admin/process/findCarbonCopied/1/10").header("token", ccReaderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records.length()").value(1))
+                .andExpect(jsonPath("$.data.records[0].updateTime").isNotEmpty());
+    }
+
+    private void expectApprovalRowShapeOnFirstRecord(String url, String token) throws Exception {
+        mockMvc.perform(get(url).header("token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[0].name").value("小艾"))
+                .andExpect(jsonPath("$.data.records[0].processTemplateName").value("请假申请"))
+                .andExpect(jsonPath("$.data.records[0].processTypeName").value("请假"))
+                .andExpect(jsonPath("$.data.records[0].formProps").doesNotExist())
+                .andExpect(jsonPath("$.data.records[0].formOptions").doesNotExist());
+    }
+
+    @Test
+    public void 已处理行单位钉住同一审批处理过两个节点重复出现() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO oa_process_template (id, name, process_type_id, status, is_deleted) "
+                        + "VALUES (210, '同人两步请假', 1, 0, 0)");
+        var uploaded = approvalTemplate.uploadProcessDefinition(new MockMultipartFile(
+                "file", "approvalSameApprover.zip", "application/zip", approvalSameApproverZip()));
+        ProcessTemplate template = approvalTemplate.read(210L);
+        template.setProcessDefinitionKey(uploaded.processDefinitionKey());
+        template.setProcessDefinitionPath(uploaded.processDefinitionPath());
+        approvalTemplate.saveUnpublished(template);
+        approvalTemplate.publish(210L);
+
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        ProcessFormVo form = publishedLeaveForm();
+        form.setProcessTemplateId(210L);
+        approval.startUp(alice, form);
+
+        // 同一用户先后处理同一审批的两个节点：已处理行=已完成任务，同审批重复出现，total=任务数。
+        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+
+        IPage<ProcessVo> processed = approvalListReader.processed(new Page<>(1, 10), zhangsan);
+        assertEquals(2, processed.getTotal());
+        assertEquals(2, processed.getRecords().size());
+        assertEquals(processed.getRecords().get(0).getId(), processed.getRecords().get(1).getId());
+    }
+
+    @Test
+    public void 配置实例查询按关键字状态与时间范围过滤() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        String adminToken = loginToken("admin");
+
+        Approval.StartOutcome first = approval.startUp(alice, publishedLeaveForm());
+        Approval.StartOutcome second = approval.startUp(alice, publishedLeaveForm());
+
+        jdbcTemplate.update("UPDATE oa_process SET title = '机房抢修特例' WHERE id = ?", first.processId());
+        jdbcTemplate.update(
+                "UPDATE oa_process SET create_time = TIMESTAMP '2026-01-01 08:00:00' WHERE id = ?",
+                first.processId());
+        jdbcTemplate.update(
+                "UPDATE oa_process SET create_time = TIMESTAMP '2026-06-01 08:00:00' WHERE id = ?",
+                second.processId());
+
+        // keyword 命中标题；未命中返回空。
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken).param("keyword", "特例"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(first.processId().intValue()));
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken).param("keyword", "不存在的标题"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        // 审批掉 second：status 过滤两侧各剩一条。
+        approve(user(3L, "zhangsan", "张三"), pending(user(3L, "zhangsan", "张三")).getRecords()
+                .stream().filter(row -> row.getId().equals(second.processId())).findFirst().orElseThrow());
+        approve(user(4L, "lisi", "李四"), pending(user(4L, "lisi", "李四")).getRecords().get(0));
+
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken).param("status", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(second.processId().intValue()));
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken).param("status", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(first.processId().intValue()));
+
+        // 时间范围：begin 只含 second，end 只含 first；组合过滤同时生效。
+        mockMvc.perform(get("/admin/process/1/10")
+                        .header("token", adminToken).param("createTimeBegin", "2026-03-01 00:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(second.processId().intValue()));
+        mockMvc.perform(get("/admin/process/1/10")
+                        .header("token", adminToken).param("createTimeEnd", "2026-03-01 00:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(first.processId().intValue()));
+        mockMvc.perform(get("/admin/process/1/10")
+                        .header("token", adminToken)
+                        .param("keyword", "特例")
+                        .param("status", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
     public void 待处理已处理已发起KeepPagination() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");
@@ -412,21 +576,21 @@ public class ApprovalContractTest {
         approval.startUp(alice, publishedLeaveForm());
         approval.startUp(alice, publishedLeaveForm());
 
-        IPage<ProcessVo> startedPage = approval.findStarted(alice, new Page<>(1, 1));
+        IPage<ProcessVo> startedPage = approvalListReader.started(new Page<>(1, 1), alice);
         assertEquals(1, startedPage.getRecords().size());
         assertEquals(2, startedPage.getTotal());
-        IPage<ProcessVo> startedPageTwo = approval.findStarted(alice, new Page<>(2, 1));
+        IPage<ProcessVo> startedPageTwo = approvalListReader.started(new Page<>(2, 1), alice);
         assertEquals(1, startedPageTwo.getRecords().size());
         assertNotEquals(startedPage.getRecords().get(0).getId(), startedPageTwo.getRecords().get(0).getId());
 
-        IPage<ProcessVo> pendingPage = approval.findPending(zhangsan, new Page<Process>(1, 1));
+        IPage<ProcessVo> pendingPage = approvalListReader.pending(new Page<>(1, 1), zhangsan);
         assertEquals(1, pendingPage.getRecords().size());
         assertEquals(2, pendingPage.getTotal());
 
         approve(zhangsan, pending(zhangsan).getRecords().get(0));
         approve(zhangsan, pending(zhangsan).getRecords().get(0));
 
-        IPage<ProcessVo> processedPage = approval.findProcessed(zhangsan, new Page<Process>(1, 1));
+        IPage<ProcessVo> processedPage = approvalListReader.processed(new Page<>(1, 1), zhangsan);
         assertEquals(1, processedPage.getRecords().size());
         assertEquals(2, processedPage.getTotal());
     }
@@ -1176,15 +1340,15 @@ public class ApprovalContractTest {
     }
 
     private IPage<ProcessVo> started(SysUser user) {
-        return approval.findStarted(user, new Page<>(1, 10));
+        return approvalListReader.started(new Page<>(1, 10), user);
     }
 
     private IPage<ProcessVo> pending(SysUser user) {
-        return approval.findPending(user, new Page<Process>(1, 10));
+        return approvalListReader.pending(new Page<>(1, 10), user);
     }
 
     private IPage<ProcessVo> processed(SysUser user) {
-        return approval.findProcessed(user, new Page<Process>(1, 10));
+        return approvalListReader.processed(new Page<>(1, 10), user);
     }
 
     private void approve(SysUser user, ProcessVo pending) {
@@ -1283,6 +1447,19 @@ public class ApprovalContractTest {
              ZipOutputStream zip = new ZipOutputStream(bytes)) {
             if (bpmn == null) throw new IOException("审批合同 BPMN 不存在");
             zip.putNextEntry(new ZipEntry("approval-two-step.bpmn20.xml"));
+            bpmn.transferTo(zip);
+            zip.closeEntry();
+        }
+        return bytes.toByteArray();
+    }
+
+    private static byte[] approvalSameApproverZip() throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (InputStream bpmn = ApprovalContractTest.class.getClassLoader()
+                     .getResourceAsStream("process/approval-same-approver-two-step.bpmn20.xml");
+             ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            if (bpmn == null) throw new IOException("同人两步合同 BPMN 不存在");
+            zip.putNextEntry(new ZipEntry("approval-same-approver-two-step.bpmn20.xml"));
             bpmn.transferTo(zip);
             zip.closeEntry();
         }

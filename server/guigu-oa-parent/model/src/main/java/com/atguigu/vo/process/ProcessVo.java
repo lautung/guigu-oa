@@ -2,7 +2,6 @@ package com.atguigu.vo.process;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.Date;
@@ -14,6 +13,9 @@ public class ProcessVo {
 	private Long id;
 
 	private Date createTime;
+
+	@Schema(description = "更新时间（公共字段口径，ADR 0031；#181 起进全部行形状）")
+	private Date updateTime;
 
 	@Schema(description = "审批code")
 	private String processCode;
@@ -35,12 +37,6 @@ public class ProcessVo {
 
 	@Schema(description = "描述")
 	private String description;
-
-	@Schema(description = "表单属性")
-	private String formProps;
-
-	@Schema(description = "表单选项")
-	private String formOptions;
 
 	@Schema(description = "表单属性值")
 	private String formValues;

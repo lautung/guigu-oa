@@ -3,11 +3,11 @@ package com.atguigu.process.controller.api;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.Result;
-import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.ApprovalTemplateSupport;
+import com.atguigu.process.read.ApprovalListReader;
 import com.atguigu.process.service.OaProcessService;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.process.cc.CarbonCopyService;
@@ -40,6 +40,9 @@ public class ProcessController {
     private OaProcessService processService;
 
     @Autowired
+    private ApprovalListReader approvalListReader;
+
+    @Autowired
     private SysUserService sysUserService;
 
     @Autowired
@@ -52,8 +55,8 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<Process> pageParam = PageWindow.of(page, limit);
-        IPage<ProcessVo> pageModel = processService.findPending(currentUser(), pageParam);
+        Page<ProcessVo> pageParam = PageWindow.of(page, limit);
+        IPage<ProcessVo> pageModel = approvalListReader.pending(pageParam, currentUser());
         return Result.ok(pageModel);
     }
 
@@ -103,8 +106,8 @@ public class ProcessController {
             @PathVariable Long page,
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
-        Page<Process> pageParam = PageWindow.of(page, limit);
-        IPage<ProcessVo> pageModel = processService.findProcessed(currentUser(), pageParam);
+        Page<ProcessVo> pageParam = PageWindow.of(page, limit);
+        IPage<ProcessVo> pageModel = approvalListReader.processed(pageParam, currentUser());
         return Result.ok(pageModel);
     }
 
@@ -116,7 +119,7 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<ProcessVo> pageParam = PageWindow.of(page, limit);
-        return Result.ok(carbonCopyService.findMine(pageParam, currentUser().getId()));
+        return Result.ok(approvalListReader.carbonCopied(pageParam, currentUser()));
     }
 
     @Operation(summary = "发起抄送人选项")
@@ -134,7 +137,7 @@ public class ProcessController {
             @Parameter(name = "limit", description = "每页记录数", required = true)
             @PathVariable Long limit) {
         Page<ProcessVo> pageParam = PageWindow.of(page, limit);
-        IPage<ProcessVo> pageModel = processService.findStarted(currentUser(), pageParam);
+        IPage<ProcessVo> pageModel = approvalListReader.started(pageParam, currentUser());
         return Result.ok(pageModel);
     }
 

@@ -2,16 +2,29 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.atguigu.process.mapper.OaProcessMapper">
 
+    <!--
+      审批行形状的唯一 owner（#181）：列、别名与 join 只写这一份，
+      五种取数（待处理/已处理回查、已发起、抄送我的、配置实例查询）全部 include。
+      ProcessVo 是唯一行类型；给行补一个字段只改这里。
+    -->
+    <sql id="approvalRowColumns">
+        a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.current_auditor,a.status,a.create_time,a.update_time,
+        d.name as name,
+        b.name as processTemplateName,
+        c.name as processTypeName
+    </sql>
+
+    <sql id="approvalRowJoins">
+        left join sys_user d on a.user_id = d.id
+        left join oa_process_template b on a.process_template_id = b.id
+        left join oa_process_type c on a.process_type_id = c.id
+    </sql>
+
     <select id="selectProcessPage" resultType="com.atguigu.vo.process.ProcessVo">
         select
-            a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.current_auditor,a.status,a.create_time,a.update_time,
-            b.name as processTemplateName,
-            c.name as processTypeName,
-            d.name
+            <include refid="approvalRowColumns"/>
         from oa_process a
-                 left join sys_user d on a.user_id =d.id
-                 left join oa_process_template b on a.process_template_id = b.id
-                 left join oa_process_type c on a.process_type_id = c.id
+            <include refid="approvalRowJoins"/>
         <where>
             <if test="vo.keyword != null and vo.keyword != ''">
                 and (a.process_code like CONCAT('%',#{vo.keyword},'%') or
@@ -24,7 +37,7 @@
                 and a.status = #{vo.status}
             </if>
             <if test="vo.createTimeBegin != null and vo.createTimeBegin != ''">
-                and a.create_time >= #{vo.createTimeBegin}
+                and a.create_time &gt;= #{vo.createTimeBegin}
             </if>
             <if test="vo.createTimeEnd != null and vo.createTimeEnd != ''">
                 and a.create_time &lt;= #{vo.createTimeEnd}
@@ -32,5 +45,52 @@
         </where>
         <!-- 已发起与配置实例查询共用这条读：显式最新在前（#179），同刻由审批 id 决胜。 -->
         order by a.create_time desc, a.id desc
+    </select>
+
+    <!-- 待处理回查：按 businessKey 集合一次取回整页行，跳过已删审批行，服务层按引擎顺序重排。 -->
+    <select id="selectRowsByIds" resultType="com.atguigu.vo.process.ProcessVo">
+        select
+            <include refid="approvalRowColumns"/>
+        from oa_process a
+            <include refid="approvalRowJoins"/>
+        where a.is_deleted = 0
+        and a.id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 已处理回查：按引擎历史任务的实例 id 集合一次取回整页行，同上跳过已删行。 -->
+    <select id="selectRowsByInstanceIds" resultType="com.atguigu.vo.process.ProcessVo">
+        select
+            <include refid="approvalRowColumns"/>
+        from oa_process a
+            <include refid="approvalRowJoins"/>
+        where a.is_deleted = 0
+        and a.process_instance_id in
+        <foreach collection="instanceIds" item="instanceId" open="(" separator="," close=")">
+            #{instanceId}
+        </foreach>
+    </select>
+
+    <!-- 抄送我的计数：total=去重审批数（同一审批多种来源抄送只计一次），原生 SQL 不走分页插件（#122 口径）。
+         授权表别名 g：共享列清单里 c 已被审批类型表占用。 -->
+    <select id="countCarbonCopiedRows" resultType="long">
+        select count(distinct g.process_id)
+        from oa_process_cc g
+                 join oa_process a on a.id = g.process_id
+        where g.user_id = #{userId} and g.is_deleted = 0 and a.is_deleted = 0
+    </select>
+
+    <!-- 抄送我的行：与全局行形状同源，原生 LIMIT/OFFSET 分页，最新在前。 -->
+    <select id="selectCarbonCopiedRows" resultType="com.atguigu.vo.process.ProcessVo">
+        select distinct
+            <include refid="approvalRowColumns"/>
+        from oa_process_cc g
+                 join oa_process a on a.id = g.process_id
+            <include refid="approvalRowJoins"/>
+        where g.user_id = #{userId} and g.is_deleted = 0 and a.is_deleted = 0
+        order by a.create_time desc, a.id desc
+        limit #{limit} offset #{offset}
     </select>
 </mapper>

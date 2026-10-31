@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:activiti="http://activiti.org/bpmn"
+             targetNamespace="http://www.activiti.org/processdef">
+  <!-- 已处理行单位合同：同一用户处理同一审批的两个节点（#181 钉现状，行=已完成任务）。 -->
+  <process id="approvalSameApprover" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="first" name="一审" activiti:assignee="zhangsan"/>
+    <userTask id="second" name="二审" activiti:assignee="zhangsan"/>
+    <endEvent id="end"/>
+    <sequenceFlow id="flow1" sourceRef="start" targetRef="first"/>
+    <sequenceFlow id="flow2" sourceRef="first" targetRef="second"/>
+    <sequenceFlow id="flow3" sourceRef="second" targetRef="end"/>
+  </process>
+</definitions>

@@ -17,6 +17,7 @@
         </div>
         <div class="item-meta">
           <span v-if="item.name">发起人：{{ item.name }}</span>
+          <span v-if="item.processTemplateName">审批模板：{{ item.processTemplateName }}</span>
           <span v-if="item.processTypeName">审批类型：{{ item.processTypeName }}</span>
         </div>
         <p v-if="item.relationLabel" class="item-relation">{{ item.relationLabel }}</p>

@@ -1,7 +1,5 @@
 package com.atguigu.vo.process;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -14,12 +12,6 @@ public class ProcessQueryVo {
 
 	@Schema(description = "用户id")
 	private Long userId;
-
-	@TableField("process_template_id")
-	private Long processTemplateId;
-
-	@Schema(description = "审批类型id")
-	private Long processTypeId;
 
 	private String createTimeBegin;
 	private String createTimeEnd;

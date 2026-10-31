@@ -1,14 +1,10 @@
 package com.atguigu.process.cc;
 
 import com.atguigu.common.config.exception.GuiguException;
-import com.atguigu.common.page.PageWindow;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.process.membership.ProcessMembershipExtension;
-import com.atguigu.vo.process.ProcessVo;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -65,52 +61,6 @@ public class CarbonCopyService implements CarbonCopyWriter, ProcessMembershipExt
                 "SELECT id, name FROM sys_user WHERE status = 1 AND is_deleted = 0 AND id <> ? ORDER BY name, id",
                 (result, row) -> new CarbonCopyRecipient(result.getLong("id"), result.getString("name")),
                 excludedUserId == null ? -1L : excludedUserId);
-    }
-
-    public IPage<ProcessVo> findMine(Page<ProcessVo> page, Long userId) {
-        long offset = PageWindow.offset(page);
-        Long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(DISTINCT c.process_id) FROM oa_process_cc c "
-                        + "JOIN oa_process p ON p.id = c.process_id "
-                        + "WHERE c.user_id = ? AND c.is_deleted = 0 AND p.is_deleted = 0",
-                Long.class,
-                userId);
-        List<ProcessVo> records = jdbcTemplate.query(
-                "SELECT DISTINCT p.id, p.create_time, p.process_code, p.user_id, u.name, "
-                        + "p.process_template_id, t.name AS process_template_name, "
-                        + "p.process_type_id, pt.name AS process_type_name, p.title, p.description, "
-                        + "p.form_values, p.process_instance_id, p.current_auditor, p.status "
-                        + "FROM oa_process_cc c JOIN oa_process p ON p.id = c.process_id "
-                        + "LEFT JOIN sys_user u ON u.id = p.user_id "
-                        + "LEFT JOIN oa_process_template t ON t.id = p.process_template_id "
-                        + "LEFT JOIN oa_process_type pt ON pt.id = p.process_type_id "
-                        + "WHERE c.user_id = ? AND c.is_deleted = 0 AND p.is_deleted = 0 "
-                        + "ORDER BY p.create_time DESC, p.id DESC LIMIT ? OFFSET ?",
-                (result, row) -> {
-                    ProcessVo process = new ProcessVo();
-                    process.setId(result.getLong("id"));
-                    process.setCreateTime(result.getTimestamp("create_time"));
-                    process.setProcessCode(result.getString("process_code"));
-                    process.setUserId(result.getLong("user_id"));
-                    process.setName(result.getString("name"));
-                    process.setProcessTemplateId(result.getLong("process_template_id"));
-                    process.setProcessTemplateName(result.getString("process_template_name"));
-                    process.setProcessTypeId(result.getLong("process_type_id"));
-                    process.setProcessTypeName(result.getString("process_type_name"));
-                    process.setTitle(result.getString("title"));
-                    process.setDescription(result.getString("description"));
-                    process.setFormValues(result.getString("form_values"));
-                    process.setProcessInstanceId(result.getString("process_instance_id"));
-                    process.setCurrentAuditor(result.getString("current_auditor"));
-                    process.setStatus(result.getInt("status"));
-                    return process;
-                },
-                userId,
-                page.getSize(),
-                offset);
-        IPage<ProcessVo> result = new Page<>(page.getCurrent(), page.getSize(), total == null ? 0 : total);
-        result.setRecords(records);
-        return result;
     }
 
     @Override

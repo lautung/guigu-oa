@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Flowable 8 待处理 / 已处理查询与审批完成动作。
@@ -28,9 +30,12 @@ public final class ProcessEngineApproval {
     }
 
     public static List<Task> pendingTasks(TaskService taskService, String username, int firstResult, int maxResults) {
+        // 主排序=任务创建时间倒序；同刻由任务 id 决胜，保证翻页稳定（tiebreaker 只求确定，不另设语义）。
         return taskService.createTaskQuery()
                 .taskAssignee(username)
                 .orderByTaskCreateTime()
+                .desc()
+                .orderByTaskId()
                 .desc()
                 .listPage(firstResult, maxResults);
     }
@@ -48,6 +53,8 @@ public final class ProcessEngineApproval {
                 .finished()
                 .orderByTaskCreateTime()
                 .desc()
+                .orderByTaskId()
+                .desc()
                 .listPage(firstResult, maxResults);
     }
 
@@ -58,14 +65,21 @@ public final class ProcessEngineApproval {
                 .count();
     }
 
-    public static String businessKey(RuntimeService runtimeService, String processInstanceId) {
-        if (!StringUtils.hasText(processInstanceId)) {
-            return null;
+    /**
+     * 按实例 id 集合一次取回 businessKey（#181 消除逐任务查询）：实例缺失或无业务键的
+     * 不进映射，调用方按 null 处理。Flowable 8 的集合查询有数量上限，这里上限是页大小（≤500）。
+     */
+    public static Map<String, String> businessKeys(
+            RuntimeService runtimeService, Set<String> processInstanceIds) {
+        if (processInstanceIds == null || processInstanceIds.isEmpty()) {
+            return Map.of();
         }
-        ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
-                .processInstanceId(processInstanceId)
-                .singleResult();
-        return processInstance == null ? null : processInstance.getBusinessKey();
+        return runtimeService.createProcessInstanceQuery()
+                .processInstanceIds(processInstanceIds)
+                .list().stream()
+                .filter(instance -> StringUtils.hasText(instance.getBusinessKey()))
+                .collect(Collectors.toMap(
+                        ProcessInstance::getId, ProcessInstance::getBusinessKey, (first, second) -> first));
     }
 
     public static boolean hasHistoricAssignee(

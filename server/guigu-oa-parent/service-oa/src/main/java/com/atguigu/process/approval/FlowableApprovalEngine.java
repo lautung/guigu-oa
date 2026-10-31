@@ -5,10 +5,12 @@ import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.task.api.Task;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * ApprovalEngine 的 Flowable 适配器。写入与读取证据都走 {@link ProcessEngineApproval}，
@@ -57,11 +59,16 @@ public class FlowableApprovalEngine implements ApprovalEngine {
 
     @Override
     public List<PendingTask> pendingTasks(String username, int firstResult, int maxResults) {
-        return ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults).stream()
+        List<Task> tasks = ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults);
+        // businessKey 按实例 id 集合一次取回（#181）：端口签名不变，批量化收在实现内部。
+        Map<String, String> businessKeys = ProcessEngineApproval.businessKeys(
+                runtimeService,
+                tasks.stream().map(Task::getProcessInstanceId).collect(Collectors.toSet()));
+        return tasks.stream()
                 .map(task -> new PendingTask(
                         task.getId(),
                         task.getProcessInstanceId(),
-                        ProcessEngineApproval.businessKey(runtimeService, task.getProcessInstanceId())))
+                        businessKeys.get(task.getProcessInstanceId())))
                 .toList();
     }
 

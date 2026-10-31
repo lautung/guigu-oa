@@ -4,8 +4,6 @@ import com.atguigu.common.config.exception.GuiguException;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessMapper;
-import com.atguigu.vo.process.ProcessVo;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DuplicateKeyException;
@@ -13,7 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
-import java.sql.Timestamp;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -107,43 +104,6 @@ class CarbonCopyServiceTest {
         CarbonCopyRecipient recipient = mapper.getValue().mapRow(resultSet, 0);
         assertEquals(2L, recipient.id());
         assertEquals("鲍勃", recipient.name());
-    }
-
-    @Test
-    void findMinePagesRowsAndMapsTheProjection() throws Exception {
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
-                .thenReturn(3L);
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<ProcessVo>>any(),
-                any(Object[].class)))
-                .thenReturn(List.of());
-
-        Page<ProcessVo> page = new Page<>(2, 10);
-        var result = service.findMine(page, 1L);
-
-        assertEquals(3L, result.getTotal());
-        ArgumentCaptor<RowMapper<ProcessVo>> mapper = ArgumentCaptor.forClass(RowMapper.class);
-        verify(jdbcTemplate).query(anyString(), mapper.capture(), any(Object[].class));
-        ResultSet resultSet = mock(ResultSet.class);
-        when(resultSet.getLong("id")).thenReturn(9L);
-        when(resultSet.getTimestamp("create_time")).thenReturn(new Timestamp(1L));
-        when(resultSet.getString("process_code")).thenReturn("P-9");
-        when(resultSet.getString("title")).thenReturn("请假");
-        when(resultSet.getInt("status")).thenReturn(1);
-        ProcessVo vo = mapper.getValue().mapRow(resultSet, 0);
-        assertEquals(9L, vo.getId());
-        assertEquals("请假", vo.getTitle());
-        assertEquals(1, vo.getStatus());
-    }
-
-    @Test
-    void findMineTreatsAMissingCountAsZero() {
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
-                .thenReturn(null);
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<ProcessVo>>any(),
-                any(Object[].class)))
-                .thenReturn(List.of());
-
-        assertEquals(0L, service.findMine(new Page<>(1, 10), 1L).getTotal());
     }
 
     @Test
