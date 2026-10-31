@@ -66,7 +66,8 @@ describe('route table', () => {
     expect(router.options.scrollBehavior()).toEqual({ top: 0 })
   })
 
-  it('resolves every lazily loaded route component', async () => {
+  // 全量并行时动态导入几十个组件会逼近 5s 默认线（单跑 ~3.3s），放宽超时。
+  it('resolves every lazily loaded route component', { timeout: 15_000 }, async () => {
     const loaders = []
     const walk = (routes) => {
       for (const route of routes) {
