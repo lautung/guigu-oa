@@ -35,6 +35,7 @@
 
 ## 服务端
 
+- 编译先行：改装配签名或贴着既有代码边界重构后，先 `mvn -pl service-oa -am compile`（秒级）再进全量 test——漏回构造参数、Edit 边界重复声明这类错不必等全量回环暴露。
 - 服务/控制器用纯 Mockito，不启动 Spring：`mock(Mapper.class)` + `ReflectionTestUtils.setField(service, "baseMapper", mapper)` 注入字段。
 - MyBatis-Plus 的 `LambdaQueryWrapper` 在纯单元测试里需要先初始化元数据，否则抛 `can not find lambda cache`：
   `TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), Entity.class)`。

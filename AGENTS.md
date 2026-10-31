@@ -66,6 +66,8 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 ### 前端检查与构建
 
+本节命令都在 `client/guigu-oa-client/` 下执行。
+
 - `npm run verify`：lint + typecheck + format:check + test:unit + 文档检查（模块地图路径、Markdown 相对链接、证据路径与体积）+ shell 检查（提交前必跑）。
 - `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动（兼容性矩阵）。
 - `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数数据（alice 已发起超过 2000 条）会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --build --wait`。改了服务端必须带 `--build` 起栈：直接 `up -d` 会沿用旧 jar，新用例红得莫名其妙、旧套件假绿；`./scripts/test-round.sh` 的套件阶段会自己重建。
