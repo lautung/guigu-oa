@@ -240,4 +240,17 @@ test.describe('B 角色管理', () => {
       await deleteRole(api, created.id)
     }
   })
+
+  test('B26 batchRemove：空列表 201 命名文案 / 无授予空列表 205（#156，ADR 0040）', async ({
+    request,
+  }) => {
+    const api = new Api(request)
+
+    // 空列表不是幂等无操作：由 service 明确拒绝，与单删删不到行同为 201 家族。
+    const empty = await api.envelope(ADMIN, 'delete', '/admin/system/sysRole/batchRemove', [])
+    expectCodeAndMessage(empty.body, 201, '删除列表不能为空', 'B26 空列表')
+
+    // gate 先于 service：未授予用户提交空列表仍是 205，不冒充校验文案（ADR 0034 顺序）。
+    expect(await api.code(PLAIN_USER, 'delete', '/admin/system/sysRole/batchRemove', [])).toBe(205)
+  })
 })

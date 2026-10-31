@@ -94,10 +94,23 @@ class SysRoleServiceImplTest {
     }
 
     @Test
-    void batchRemoveClearsGrantRowsAndInvalidatesTheMemberUnion() {
-        assertFalse(service.removeByIds(null));
-        assertFalse(service.removeByIds(List.of()));
+    void batchRemoveRejectsAnEmptyListWithANamedMessage() {
+        // 空列表（含全 null 元素）是明确拒绝而非幂等无操作，与单删删不到行同为 201 家族（#156，ADR 0040）。
+        GuiguException empty = assertThrows(GuiguException.class, () -> service.removeByIds(List.of()));
+        GuiguException nullList = assertThrows(GuiguException.class, () -> service.removeByIds(null));
+        GuiguException nullOnly = assertThrows(GuiguException.class, () -> service.removeByIds(Arrays.asList(null, null)));
 
+        assertEquals(201, empty.getCode());
+        assertEquals("删除列表不能为空", empty.getMessage());
+        assertEquals(201, nullList.getCode());
+        assertEquals("删除列表不能为空", nullList.getMessage());
+        assertEquals(201, nullOnly.getCode());
+        assertEquals("删除列表不能为空", nullOnly.getMessage());
+        verify(cacheInvalidator, never()).invalidateUsersAfterCommit(any());
+    }
+
+    @Test
+    void batchRemoveClearsGrantRowsAndInvalidatesTheMemberUnion() {
         when(cacheInvalidator.membersOfRole(3L)).thenReturn(Set.of(7L));
         when(cacheInvalidator.membersOfRole(4L)).thenReturn(Set.of(7L, 9L));
         when(roleMapper.deleteByIds(Arrays.asList(3L, 4L))).thenReturn(2);

@@ -70,17 +70,18 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional
     public boolean removeByIds(Collection<?> roleIds) {
-        if (roleIds == null || roleIds.isEmpty()) {
-            return false;
-        }
-        List<Long> ids = roleIds.stream()
+        // 空列表（含全 null 元素）是明确拒绝而非幂等无操作，与单删删不到行同为 201 家族（#156，ADR 0040）。
+        List<Long> ids = roleIds == null ? List.of() : roleIds.stream()
                 .filter(java.util.Objects::nonNull)
                 .map(roleId -> Long.valueOf(roleId.toString()))
                 .toList();
+        if (ids.isEmpty()) {
+            throw new GuiguException(201, "删除列表不能为空");
+        }
         // 同 removeById：成员枚举先于关系行删除（#146）。
         java.util.Set<Long> members = new java.util.LinkedHashSet<>();
         ids.forEach(id -> members.addAll(permissionCacheInvalidator.membersOfRole(id)));
-        boolean removed = !ids.isEmpty() && baseMapper.deleteByIds(ids) > 0;
+        boolean removed = baseMapper.deleteByIds(ids) > 0;
         if (removed) {
             ids.forEach(this::deleteRoleRelations);
             permissionCacheInvalidator.invalidateUsersAfterCommit(members);

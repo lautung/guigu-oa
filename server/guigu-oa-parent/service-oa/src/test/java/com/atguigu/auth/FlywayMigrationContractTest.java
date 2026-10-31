@@ -385,6 +385,36 @@ class FlywayMigrationContractTest {
         jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901, 1001)");
     }
 
+    @Test
+    void sysRoleBatchRemoveRejectsAnEmptyIdListAfterTheGate() throws Exception {
+        int roleMenuId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = 'sysRole'", Integer.class);
+        jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (101, 101, ?, 0)", roleMenuId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (101, 101, 2, 0)");
+
+        // 授予用户：空列表不是幂等无操作，由 service 明确拒绝并给出命名文案（#156，ADR 0040）。
+        mockMvc.perform(delete("/admin/system/sysRole/batchRemove")
+                        .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("删除列表不能为空"));
+
+        // gate 先于 service：未授予用户提交空列表仍是 205，不冒充校验文案（ADR 0034 顺序）。
+        jdbcTemplate.update(
+                "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (5, 'no-config', '', '无配置用户', 1, 0)");
+        mockMvc.perform(delete("/admin/system/sysRole/batchRemove")
+                        .header("token", jwtHelper.createTokenPair(5L, "no-config", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+    }
+
     private int count(String sql) {
         return jdbcTemplate.queryForObject(sql, Integer.class);
     }
