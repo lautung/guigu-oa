@@ -94,9 +94,12 @@ export function setup() {
   if (!token) throw new Error('setup 登录失败')
 
   // 从 alice 已发起列表找已结束实例，收集 110 个 (processId, attachmentId)。
-  // 造数把附件挂在最老的已结束实例上（seed.mjs Phase C 同样尾页起翻）；
-  // 列表自 #179 起显式最新在前，旧的「第 1 页 = 最老实例」隐式顺序假设失效——
-  // 这里从最后一页向前翻，不依赖排序方向（#182）。
+  // 造数把附件挂在最老的已结束实例上；列表自 #179 起显式最新在前，旧的
+  // 「第 1 页 = 最老实例」隐式顺序假设失效——这里从最后一页向前翻，不依赖排序方向（#182）。
+  // 下面这套尾页起翻逻辑与 perf/seed.mjs Phase C 是双份实现（#178 评审）：曾想抽到
+  // perf/lib/ 共享模块，但 round.sh 以 stdin 喂 k6 脚本且容器只挂 perf/results，
+  // 共享模块文件在 k6 容器内不可达——两处必须同步改，改掉 round.sh 的挂载与传参
+  // 协议后才具备抽共享条件。
   const PAGE_SIZE = 50
   const first = api(token, 'get', `/admin/process/findStarted/1/${PAGE_SIZE}`)
   if (first.envelope.code !== 200) throw new Error(`findStarted 第 1 页失败 code=${first.envelope.code}`)

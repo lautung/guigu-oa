@@ -1,5 +1,6 @@
 package com.atguigu.process;
 
+import com.atguigu.common.page.PageWindow;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.ProcessEngineConfiguration;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ProcessEngineApprovalTest {
@@ -138,6 +141,25 @@ public class ProcessEngineApprovalTest {
         assertTrue(ProcessEngineApproval.businessKeys(
                 processEngine.getRuntimeService(), Set.of()).isEmpty());
         assertTrue(ProcessEngineApproval.businessKeys(processEngine.getRuntimeService(), null).isEmpty());
+    }
+
+    @Test
+    public void businessKeysAcceptsExactlyThePageWindowLimitAndRejectsBeyondIt() {
+        Set<String> fullPage = new HashSet<>();
+        for (int i = 0; i < (int) PageWindow.MAX_LIMIT; i++) {
+            fullPage.add("missing-" + i);
+        }
+
+        // 恰好 MAX_LIMIT 放行：整页回查集合是唯一合法调用形态，缺失实例不进映射。
+        assertTrue(ProcessEngineApproval.businessKeys(
+                processEngine.getRuntimeService(), fullPage).isEmpty(),
+                "恰好一页上限的集合必须放行");
+
+        fullPage.add("over-limit");
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> ProcessEngineApproval.businessKeys(processEngine.getRuntimeService(), fullPage));
+        assertTrue(rejected.getMessage().contains(String.valueOf(PageWindow.MAX_LIMIT)),
+                "拒绝消息必须说明上限来源（PageWindow.MAX_LIMIT）");
     }
 
     @Test

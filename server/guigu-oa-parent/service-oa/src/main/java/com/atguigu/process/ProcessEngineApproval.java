@@ -1,5 +1,6 @@
 package com.atguigu.process;
 
+import com.atguigu.common.page.PageWindow;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
 import org.flowable.bpmn.model.FlowNode;
@@ -67,12 +68,20 @@ public final class ProcessEngineApproval {
 
     /**
      * 按实例 id 集合一次取回 businessKey（#181 消除逐任务查询）：实例缺失或无业务键的
-     * 不进映射，调用方按 null 处理。Flowable 8 的集合查询有数量上限，这里上限是页大小（≤500）。
+     * 不进映射，调用方按 null 处理。Flowable 8 的集合查询有数量上限，这里上限取一页窗口
+     * （{@value PageWindow#MAX_LIMIT}，调用方只传整页回查集合），超限显式拒绝，
+     * 不把「集合不大于页」留在注释级假设里。
      */
     public static Map<String, String> businessKeys(
             RuntimeService runtimeService, Set<String> processInstanceIds) {
         if (processInstanceIds == null || processInstanceIds.isEmpty()) {
             return Map.of();
+        }
+        if (processInstanceIds.size() > PageWindow.MAX_LIMIT) {
+            throw new IllegalArgumentException(
+                    "实例 id 集合大小 " + processInstanceIds.size()
+                            + " 超出批量取回上限 " + PageWindow.MAX_LIMIT
+                            + "（PageWindow.MAX_LIMIT，即一页窗口）：调用方只应传单页回查集合");
         }
         return runtimeService.createProcessInstanceQuery()
                 .processInstanceIds(processInstanceIds)

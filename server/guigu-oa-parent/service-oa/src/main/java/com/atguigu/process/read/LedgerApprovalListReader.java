@@ -40,21 +40,24 @@ public class LedgerApprovalListReader implements ApprovalListReader {
         long totalCount = approvalEngine.pendingCount(user.getUsername());
 
         // 跳过空 businessKey 与已删/缺失账本行的边界不变；回查按页批量一次取回。
-        Map<Long, ProcessVo> rowsById = rowsById(taskList.stream()
-                .map(ApprovalEngine.PendingTask::businessKey)
-                .filter(StringUtils::hasText)
-                .map(Long::parseLong)
-                .toList());
-        List<ProcessVo> records = new ArrayList<>();
+        // businessKey 只解析一次：空值跳过、非数字维持 NumberFormatException，建批查集合与
+        // 重排循环共用同一份解析结果，不重复 parseLong。
+        List<ApprovalEngine.PendingTask> keyedTasks = new ArrayList<>();
+        List<Long> keyedIds = new ArrayList<>();
         for (ApprovalEngine.PendingTask task : taskList) {
-            if (!StringUtils.hasText(task.businessKey())) {
-                continue;
+            if (StringUtils.hasText(task.businessKey())) {
+                keyedTasks.add(task);
+                keyedIds.add(Long.parseLong(task.businessKey()));
             }
-            ProcessVo row = rowsById.get(Long.parseLong(task.businessKey()));
+        }
+        Map<Long, ProcessVo> rowsById = rowsById(keyedIds);
+        List<ProcessVo> records = new ArrayList<>();
+        for (int i = 0; i < keyedTasks.size(); i++) {
+            ProcessVo row = rowsById.get(keyedIds.get(i));
             if (row == null) {
                 continue;
             }
-            row.setTaskId(task.taskId());
+            row.setTaskId(keyedTasks.get(i).taskId());
             records.add(row);
         }
         return pageOf(page, totalCount, records);

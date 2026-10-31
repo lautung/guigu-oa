@@ -12,7 +12,8 @@ import java.util.List;
 
 /**
  * 审批账本 Mapper。行形状唯一 owner 是同目录 xml 里的共享列清单（#181）：
- * 五种取数（已发起/配置查询、待处理回查、已处理回查、抄送我的）全部引用同一份列与 join。
+ * 四条行取数（已发起/配置查询、待处理回查、已处理回查、抄送我的行）全部引用同一份列与 join；
+ * 抄送我的计数（{@link #countCarbonCopiedRows}）是 count 聚合，不引用共享列清单。
  */
 public interface OaProcessMapper extends BaseMapper<Process> {
 
