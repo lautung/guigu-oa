@@ -51,7 +51,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 2. `service-oa` 的 `pom.xml` 已把 `src/main/resources/**` 打进 jar。在 `service-oa` 目录先 `mvn -DskipTests install`，再：
    `java -jar target/service-oa.jar`
    若本地 jar 仍读不到配置，可临时加 `--spring.config.additional-location=file:./src/main/resources/`。
-3. Flowable 的 `ACT_*` 表由引擎在空库上首启动时自动建（`application-dev.yml`: `flowable.database-schema-update: true`，`flowable.history-level: full`）。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
+3. Flowable 的 `ACT_*` 表由引擎按 `application-dev.yml` 的 `flowable.database-schema-update: true`、`flowable.history-level: full` 维护；**空库首启动当前在 MySQL 8.4 上失败**（误走 schema upgrade、0 张引擎表，#158），已有库不受影响。修复前本地起真实服务验证：连已有库 + `--spring.flyway.validate-on-migrate=false`，配方见 `docs/agents/testing.md` 服务端节。从 Activiti 7 切库见 `server/guigu-oa-parent/sql/flowable8-cutover.md`。
 4. OpenAPI / Swagger UI：只在 `dev` profile 下无需登录可读（`/v3/api-docs`、`/swagger-ui.html`）。Compose 演示栈（`dev,demo`）与 `prod` 都关闭这两个端点（#140）。业务接口仍用请求头 `token`。
 5. Compose 构建：本机 `docker compose build service-oa` 直连 Maven Central 会被代理打断 TLS 握手，需带镜像源 `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose build service-oa`。
 
@@ -61,7 +61,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 ```sh
 mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHARACTER SET utf8mb4;'
 ```
-首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`；`service-oa/src/main/java/db/migration/` 下还有 Java 迁移（如 V104），选下一个版本号时两个目录一起看。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`admin` 通过种子角色「配置管理员」获得配置菜单权限，`userId=1` 不再特殊）。配置类接口由服务端 `configurationMenuGate` 按菜单授予统一判定；`user` 种子没有配置角色，只用于办事。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
+首次启动 `service-oa` 时，Flyway 自动创建业务 `sys_*` / `oa_*` 表并写入基础种子，迁移位于 `server/guigu-oa-parent/service-oa/src/main/resources/db/migration/`；`service-oa/src/main/java/db/migration/` 下还有 Java 迁移（如 V104），选下一个版本号时两个目录一起看。这是空库启动路径；由旧初始化脚本创建的现有库不会自动 baseline，切换前需另行安排 baseline。`ACT_*` / `FLW_*` 引擎表仍由 Flowable 根据 `application-dev.yml` 自动创建（空库首启动的当前限制见「后端启动」第 3 条与 #158）。种子登录账号：**用户名 `admin` / 密码 `111111`**（初始密码使用 BCrypt；旧 MD5 密码会在首次成功登录后升级为 BCrypt；`admin` 通过种子角色「配置管理员」获得配置菜单权限，`userId=1` 不再特殊）。配置类接口由服务端 `configurationMenuGate` 按菜单授予统一判定；`user` 种子没有配置角色，只用于办事。生产环境需启用 `prod` profile，并通过 `JWT_SECRET` 注入至少 64 字节的 JWT 签名密钥。
 
 
 ### 前端检查与构建
@@ -79,7 +79,7 @@ mysql -uroot -proot -h127.0.0.1 -e 'CREATE DATABASE IF NOT EXISTS `guigu-oa` CHA
 
 ### 后端测试
 
-`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。改服务端校验或失败路径（消息、顺序、码）之前，先读 `docs/agents/testing.md` 的负例约定。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。单次运行会刷出数十 KB 结构化日志：重定向到文件后 `grep "Tests run:"` 看汇总；不要加 `-q`（会吞掉 surefire 汇总）。
+`cd server/guigu-oa-parent && mvn -pl service-oa -am test`。合同测试使用 H2 与内存中的 Redis，不需要本地 MySQL/Redis。跑或改服务端测试前先读 `docs/agents/testing.md`（`-Dtest` 跨模块 flag、合同测试 schema、MyBatis 拦截器签名覆盖都在里面；改校验或失败路径的消息/顺序/码之前尤其要读负例约定）。当前只有 `service-oa` 有测试目录；若其他模块新增测试，改用父目录的 `mvn test`。改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。单次运行会刷出数十 KB 结构化日志：重定向到文件后 `grep "Tests run:"` 看汇总；不要加 `-q`（会吞掉 surefire 汇总）。
 
 ### 测试覆盖率
 
