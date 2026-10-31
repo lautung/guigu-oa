@@ -23,4 +23,18 @@ public final class PageWindow {
         }
         return new Page<>(page, limit);
     }
+
+    /**
+     * 窗口派生的行起点，供 Flowable {@code listPage(firstResult, maxResults)} 等 int 入口使用。
+     */
+    public static int firstResult(Page<?> page) {
+        return (int) offset(page);
+    }
+
+    /**
+     * 窗口派生的 SQL OFFSET：第 {@code current} 页从 {@code (current - 1) * size} 行开始，永不小于 0。
+     */
+    public static long offset(Page<?> page) {
+        return Math.max(0L, (page.getCurrent() - 1) * page.getSize());
+    }
 }

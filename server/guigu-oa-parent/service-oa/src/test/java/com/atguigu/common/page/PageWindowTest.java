@@ -31,4 +31,25 @@ class PageWindowTest {
         assertEquals(2, page.getCurrent());
         assertEquals(PageWindow.MAX_LIMIT, page.getSize());
     }
+
+    @Test
+    void derivesTheFirstResultOfTheWindow() {
+        assertEquals(0, PageWindow.firstResult(PageWindow.of(1L, 10L)));
+        assertEquals(10, PageWindow.firstResult(PageWindow.of(2L, 10L)));
+        assertEquals(500, PageWindow.firstResult(PageWindow.of(6L, 100L)));
+    }
+
+    @Test
+    void derivesTheOffsetOfTheWindow() {
+        assertEquals(0L, PageWindow.offset(PageWindow.of(1L, 500L)));
+        assertEquals(500L, PageWindow.offset(PageWindow.of(6L, 100L)));
+    }
+
+    @Test
+    void neverDerivesANegativeOffsetEvenForADegenerateWindow() {
+        Page<Object> degenerate = new Page<>(0L, 10L);
+
+        assertEquals(0L, PageWindow.offset(degenerate));
+        assertEquals(0, PageWindow.firstResult(degenerate));
+    }
 }

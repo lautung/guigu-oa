@@ -1,6 +1,7 @@
 package com.atguigu.process.service.impl;
 
 import com.atguigu.common.config.exception.GuiguException;
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
@@ -74,10 +75,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     @Override
     public IPage<ProcessVo> findPending(SysUser user, Page<Process> pageParam) {
         String username = user.getUsername();
-        int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
         List<ApprovalEngine.PendingTask> taskList =
-                approvalEngine.pendingTasks(username, firstResult, maxResults);
+                approvalEngine.pendingTasks(username, PageWindow.firstResult(pageParam), maxResults);
         long totalCount = approvalEngine.pendingCount(username);
 
         List<ProcessVo> processVoList = new ArrayList<>();
@@ -139,10 +139,9 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     @Override
     public IPage<ProcessVo> findProcessed(SysUser user, Page<Process> pageParam) {
         String username = user.getUsername();
-        int firstResult = (int) ((pageParam.getCurrent() - 1) * pageParam.getSize());
         int maxResults = (int) pageParam.getSize();
         List<ApprovalEngine.ProcessedTask> historicTasks =
-                approvalEngine.processedTasks(username, firstResult, maxResults);
+                approvalEngine.processedTasks(username, PageWindow.firstResult(pageParam), maxResults);
         long totalCount = approvalEngine.processedCount(username);
 
         List<ProcessVo> processVoList = new ArrayList<>();

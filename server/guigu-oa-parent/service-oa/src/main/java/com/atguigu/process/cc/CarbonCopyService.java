@@ -1,6 +1,7 @@
 package com.atguigu.process.cc;
 
 import com.atguigu.common.config.exception.GuiguException;
+import com.atguigu.common.page.PageWindow;
 import com.atguigu.model.process.Process;
 import com.atguigu.model.system.SysUser;
 import com.atguigu.process.mapper.OaProcessMapper;
@@ -67,7 +68,7 @@ public class CarbonCopyService implements CarbonCopyWriter, ProcessMembershipExt
     }
 
     public IPage<ProcessVo> findMine(Page<ProcessVo> page, Long userId) {
-        long offset = Math.max(0, (page.getCurrent() - 1) * page.getSize());
+        long offset = PageWindow.offset(page);
         Long total = jdbcTemplate.queryForObject(
                 "SELECT COUNT(DISTINCT c.process_id) FROM oa_process_cc c "
                         + "JOIN oa_process p ON p.id = c.process_id "
