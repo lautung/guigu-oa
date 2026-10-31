@@ -1,17 +1,10 @@
 package com.atguigu.security.filter;
 
 import com.atguigu.common.jwt.JwtHelper;
-import com.atguigu.common.result.ResponseUtil;
-import com.atguigu.common.result.Result;
-import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.security.config.PublicApiPaths;
-import com.atguigu.security.custom.AccountStatus;
-import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.custom.LoginUserInfoHelper;
-import com.atguigu.security.custom.UserDetailsService;
-import com.atguigu.security.revocation.TokenRevocation;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
+import com.atguigu.security.response.AuthenticationRejections;
+import com.atguigu.security.session.SessionVerifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,35 +12,33 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
+/**
+ * 会话核验交给 {@link SessionVerifier}（#173），本过滤器只负责把认出结果接入
+ * Spring Security 上下文并从 Redis 组装权限，拒绝时经 AuthenticationRejections 写出。
+ */
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
+    private final SessionVerifier sessionVerifier;
     private final RedisTemplate<String, String> redisTemplate;
-    private final JwtHelper jwtHelper;
-    private final UserDetailsService userDetailsService;
-    private final TokenRevocation tokenRevocation;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TokenAuthenticationFilter(
-            RedisTemplate<String, String> redisTemplate,
-            JwtHelper jwtHelper,
-            UserDetailsService userDetailsService,
-            TokenRevocation tokenRevocation
+            SessionVerifier sessionVerifier,
+            RedisTemplate<String, String> redisTemplate
     ) {
+        this.sessionVerifier = sessionVerifier;
         this.redisTemplate = redisTemplate;
-        this.jwtHelper = jwtHelper;
-        this.userDetailsService = userDetailsService;
-        this.tokenRevocation = tokenRevocation;
     }
 
     @Override
@@ -62,55 +53,29 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            UsernamePasswordAuthenticationToken authentication = getAuthentication(request);
-            if (authentication != null) {
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                chain.doFilter(request, response);
-            } else {
-                ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                        Result.build(null, ResultCodeEnum.LOGIN_ERROR));
+            SessionVerifier.Outcome outcome =
+                    sessionVerifier.verify(SessionVerifier.TokenKind.ACCESS, request.getHeader("token"));
+            if (outcome instanceof SessionVerifier.Outcome.Rejected rejected) {
+                SecurityContextHolder.clearContext();
+                AuthenticationRejections.write(response, rejected.failure());
+                return;
             }
-        } catch (AccountDisabledException e) {
-            SecurityContextHolder.clearContext();
-            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
+            SecurityContextHolder.getContext().setAuthentication(
+                    buildAuthentication((SessionVerifier.Outcome.Recognized) outcome));
+            chain.doFilter(request, response);
         } finally {
             LoginUserInfoHelper.removeUserId();
             LoginUserInfoHelper.removeUsername();
         }
     }
 
-    private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request) {
-        String token = request.getHeader("token");
-        if (!StringUtils.hasText(token)) return null;
+    private UsernamePasswordAuthenticationToken buildAuthentication(
+            SessionVerifier.Outcome.Recognized recognized) {
+        JwtHelper.TokenClaims claims = recognized.claims();
+        LoginUserInfoHelper.setUserId(claims.userId());
+        LoginUserInfoHelper.setUsername(claims.username());
 
-        JwtHelper.TokenClaims claims = jwtHelper.readAccessToken(token);
-        if (claims == null || tokenRevocation.isRevoked(claims.sessionId())) return null;
-        String username = claims.username();
-        Long userId = claims.userId();
-        if (!StringUtils.hasText(username) || userId == null) return null;
-
-        CustomUser currentUser;
-        try {
-            currentUser = (CustomUser) userDetailsService.loadUserByUsername(username);
-        } catch (UsernameNotFoundException e) {
-            return null;
-        }
-        if (!Objects.equals(userId, currentUser.getSysUser().getId())) {
-            return null;
-        }
-        // A password change moves the row's token version, so every earlier token stops here.
-        if (!currentUser.getSysUser().acceptsTokenVersion(claims.tokenVersion())) {
-            return null;
-        }
-        if (!AccountStatus.isEnabled(currentUser.getSysUser().getStatus())) {
-            throw new AccountDisabledException();
-        }
-
-        LoginUserInfoHelper.setUserId(userId);
-        LoginUserInfoHelper.setUsername(username);
-
-        String authString = redisTemplate.opsForValue().get(username);
+        String authString = redisTemplate.opsForValue().get(claims.username());
         if (StringUtils.hasText(authString)) {
             try {
                 List<Map<String, String>> mapList = objectMapper.readValue(
@@ -119,14 +84,11 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 for (Map<String, String> map : mapList) {
                     authList.add(new SimpleGrantedAuthority(map.get("authority")));
                 }
-                return new UsernamePasswordAuthenticationToken(username, null, authList);
+                return new UsernamePasswordAuthenticationToken(claims.username(), null, authList);
             } catch (Exception e) {
-                return new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+                return new UsernamePasswordAuthenticationToken(claims.username(), null, new ArrayList<>());
             }
         }
-        return new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-    }
-
-    private static final class AccountDisabledException extends RuntimeException {
+        return new UsernamePasswordAuthenticationToken(claims.username(), null, new ArrayList<>());
     }
 }

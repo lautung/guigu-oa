@@ -1,8 +1,7 @@
 package com.atguigu.security.custom;
 
-import com.atguigu.common.result.ResponseUtil;
-import com.atguigu.common.result.Result;
-import com.atguigu.common.result.ResultCodeEnum;
+import com.atguigu.security.response.AuthenticationFailure;
+import com.atguigu.security.response.AuthenticationRejections;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.AuthenticationException;
@@ -18,7 +17,6 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) {
-        ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                Result.build(null, ResultCodeEnum.LOGIN_ERROR));
+        AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN);
     }
 }

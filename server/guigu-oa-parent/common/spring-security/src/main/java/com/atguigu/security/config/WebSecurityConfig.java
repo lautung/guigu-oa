@@ -13,6 +13,7 @@ import com.atguigu.security.login.RedisLoginAttemptLimiter;
 import com.atguigu.security.login.Slf4jLoginAudit;
 import com.atguigu.security.revocation.RedisTokenRevocation;
 import com.atguigu.security.revocation.TokenRevocation;
+import com.atguigu.security.session.SessionVerifier;
 import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -53,6 +54,16 @@ public class WebSecurityConfig {
         return new RedisTokenRevocation(redisTemplate);
     }
 
+    /** 会话核验 module（#173）：过滤器与续期端点共用的唯一凭证判定。 */
+    @Bean
+    public SessionVerifier sessionVerifier(
+            JwtHelper jwtHelper,
+            TokenRevocation tokenRevocation,
+            UserDetailsService userDetailsService
+    ) {
+        return new SessionVerifier(jwtHelper, tokenRevocation, userDetailsService);
+    }
+
     @Bean
     public Clock loginAttemptClock() {
         return Clock.systemUTC();
@@ -88,9 +99,8 @@ public class WebSecurityConfig {
             HttpSecurity http,
             RedisTemplate<String, String> redisTemplate,
             JwtHelper jwtHelper,
-            UserDetailsService userDetailsService,
+            SessionVerifier sessionVerifier,
             AuthenticationManager authenticationManager,
-            TokenRevocation tokenRevocation,
             LoginAttemptLimiter loginAttemptLimiter,
             Validator validator
     ) throws Exception {
@@ -108,7 +118,7 @@ public class WebSecurityConfig {
                         .authenticationEntryPoint(new RestAuthenticationEntryPoint())
                         .accessDeniedHandler(new RestAccessDeniedHandler()))
                 .addFilterBefore(
-                        new TokenAuthenticationFilter(redisTemplate, jwtHelper, userDetailsService, tokenRevocation),
+                        new TokenAuthenticationFilter(sessionVerifier, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper, loginAttemptLimiter, validator))
                 .sessionManagement(session ->

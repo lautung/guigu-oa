@@ -2,31 +2,43 @@ package com.atguigu.security;
 
 import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.model.system.SysUser;
-import com.atguigu.security.custom.CustomUser;
-import com.atguigu.security.custom.UserDetailsService;
 import com.atguigu.security.filter.TokenAuthenticationFilter;
-import com.atguigu.security.revocation.TokenRevocation;
+import com.atguigu.security.response.AuthenticationFailure;
+import com.atguigu.security.session.SessionVerifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class TokenAuthenticationFilterTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final SessionVerifier sessionVerifier = mock(SessionVerifier.class);
+    @SuppressWarnings("unchecked")
+    private final RedisTemplate<String, String> redisTemplate = mock(RedisTemplate.class);
+    @SuppressWarnings("unchecked")
+    private final ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
 
     @AfterEach
     public void clearSecurityContext() {
@@ -35,6 +47,7 @@ public class TokenAuthenticationFilterTest {
 
     @Test
     public void missingTokenOnProtectedApiReturnsLoginError() throws Exception {
+        rejected(AuthenticationFailure.INVALID_TOKEN);
         RecordingFilterChain chain = new RecordingFilterChain();
         MockHttpServletResponse response = filter("/admin/system/index/info", null, chain);
 
@@ -49,6 +62,8 @@ public class TokenAuthenticationFilterTest {
 
         assertEquals("", response.getContentAsString());
         assertEquals(1, chain.calls);
+        // Anonymous paths must not touch the verifier at all (#173).
+        verifyNoInteractions(sessionVerifier);
     }
 
     @Test
@@ -106,30 +121,58 @@ public class TokenAuthenticationFilterTest {
     }
 
     @Test
-    public void anAccessTokenFromAnEarlierTokenVersionIsRejected() throws Exception {
-        JwtHelper jwtHelper = new JwtHelper(
-                "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000");
-        String token = jwtHelper.createTokenPair(1L, "admin", 3L).token();
-        SysUser user = new SysUser();
-        user.setId(1L);
-        user.setUsername("admin");
-        user.setStatus(1);
-        user.setTokenVersion(4L);
-        UserDetailsService userDetailsService = mock(UserDetailsService.class);
-        when(userDetailsService.loadUserByUsername("admin"))
-                .thenReturn(new CustomUser(user, List.of()));
-        TokenRevocation revocation = mock(TokenRevocation.class);
+    public void aRejectedVerdictIsWrittenAsLoginError() throws Exception {
+        rejected(AuthenticationFailure.INVALID_TOKEN);
         RecordingFilterChain chain = new RecordingFilterChain();
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/system/index/info");
-        request.setRequestURI("/admin/system/index/info");
-        request.addHeader("token", token);
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
-        new TokenAuthenticationFilter(null, jwtHelper, userDetailsService, revocation)
-                .doFilter(request, response, chain);
+        MockHttpServletResponse response = filter("/admin/system/index/info", "stale-token", chain);
 
         assertLoginError(response);
         assertEquals(0, chain.calls);
+    }
+
+    @Test
+    public void aDisabledVerdictIsWrittenAsAccountDisabled() throws Exception {
+        rejected(AuthenticationFailure.ACCOUNT_DISABLED);
+        RecordingFilterChain chain = new RecordingFilterChain();
+        MockHttpServletResponse response = filter("/admin/system/index/info", "any-token", chain);
+
+        assertEquals(401, response.getStatus());
+        JsonNode body = OBJECT_MAPPER.readTree(response.getContentAsString());
+        assertEquals(209, body.get("code").asInt());
+        assertTrue(body.get("message").asString().contains("停用"));
+        assertEquals(0, chain.calls);
+    }
+
+    @Test
+    public void aRecognizedVerdictBuildsAuthenticationAndContinuesTheChain() throws Exception {
+        JwtHelper.TokenClaims claims = new JwtHelper.TokenClaims(1L, "alice", "sid-1", 7L, new Date());
+        when(sessionVerifier.verify(any(), any()))
+                .thenReturn(new SessionVerifier.Outcome.Recognized(claims, user()));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        RecordingFilterChain chain = new RecordingFilterChain();
+        MockHttpServletResponse response = filter("/admin/system/index/info", "valid-token", chain);
+
+        assertEquals("", response.getContentAsString());
+        assertEquals(1, chain.calls);
+        UsernamePasswordAuthenticationToken authentication = assertInstanceOf(
+                UsernamePasswordAuthenticationToken.class,
+                SecurityContextHolder.getContext().getAuthentication());
+        assertEquals("alice", authentication.getPrincipal());
+        assertTrue(authentication.getAuthorities().isEmpty());
+    }
+
+    private void rejected(AuthenticationFailure failure) {
+        when(sessionVerifier.verify(any(), any()))
+                .thenReturn(new SessionVerifier.Outcome.Rejected(failure));
+    }
+
+    private SysUser user() {
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername("alice");
+        user.setStatus(1);
+        user.setTokenVersion(7L);
+        return user;
     }
 
     private MockHttpServletResponse filter(String uri, String token, FilterChain chain) throws Exception {
@@ -139,7 +182,7 @@ public class TokenAuthenticationFilterTest {
             request.addHeader("token", token);
         }
         MockHttpServletResponse response = new MockHttpServletResponse();
-        new TokenAuthenticationFilter(null, null, null, null).doFilter(request, response, chain);
+        new TokenAuthenticationFilter(sessionVerifier, redisTemplate).doFilter(request, response, chain);
         return response;
     }
 

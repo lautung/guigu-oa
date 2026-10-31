@@ -5,15 +5,15 @@ import com.atguigu.auth.service.SysMenuService;
 import com.atguigu.auth.service.SysUserService;
 import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.Result;
-import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.model.system.SysUser;
-import com.atguigu.security.custom.AccountStatus;
+import com.atguigu.security.custom.LoginUserInfoHelper;
+import com.atguigu.security.response.AuthenticationRejections;
 import com.atguigu.security.revocation.TokenRevocation;
+import com.atguigu.security.session.SessionVerifier;
 import com.atguigu.vo.system.ConfigMenuVo;
 import com.atguigu.vo.system.RefreshTokenVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -49,16 +49,15 @@ public class IndexController {
     @Autowired
     private TokenRevocation tokenRevocation;
 
+    @Autowired
+    private SessionVerifier sessionVerifier;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping("info")
-    public Result info(HttpServletRequest request) {
-        JwtHelper.TokenClaims claims = jwtHelper.readAccessToken(request.getHeader("token"));
-        if (claims == null) {
-            return Result.build(null, ResultCodeEnum.LOGIN_ERROR);
-        }
-        Long userId = claims.userId();
-
+    public Result info() {
+        // /info 不是匿名路径：过滤器已完成会话核验并设置了当前用户（#173），这里不再重解析令牌。
+        Long userId = LoginUserInfoHelper.getUserId();
         SysUser sysUser = sysUserService.getById(userId);
         ConfigurationGrant.GrantedConfiguration grant = configurationGrant.snapshot(userId);
         List<ConfigMenuVo> configMenus = grant.entries().stream()
@@ -116,35 +115,21 @@ public class IndexController {
     @PostMapping("refresh")
     public ResponseEntity<Result> refresh(@RequestBody(required = false) RefreshTokenVo refreshTokenVo) {
         String refreshToken = refreshTokenVo == null ? null : refreshTokenVo.getRefreshToken();
-        JwtHelper.TokenClaims claims = jwtHelper.readRefreshToken(refreshToken);
-        if (claims == null || tokenRevocation.isRevoked(claims.sessionId())) {
-            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
+        SessionVerifier.Outcome outcome = sessionVerifier.verify(SessionVerifier.TokenKind.REFRESH, refreshToken);
+        if (outcome instanceof SessionVerifier.Outcome.Rejected rejected) {
+            return AuthenticationRejections.entity(rejected.failure());
         }
-        Long userId = claims.userId();
-        String username = claims.username();
-
-        SysUser user = sysUserService.getById(userId);
-        if (user == null || !username.equals(user.getUsername())) {
-            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
-        }
-        if (!user.acceptsTokenVersion(claims.tokenVersion())) {
-            return unauthorized(ResultCodeEnum.LOGIN_ERROR);
-        }
-        if (!AccountStatus.isEnabled(user.getStatus())) {
-            return unauthorized(ResultCodeEnum.ACCOUNT_DISABLED);
-        }
+        SessionVerifier.Outcome.Recognized recognized = (SessionVerifier.Outcome.Recognized) outcome;
+        JwtHelper.TokenClaims claims = recognized.claims();
+        SysUser user = recognized.user();
 
         String accessToken = jwtHelper.createAccessToken(
-                userId, username, claims.sessionId(), user.tokenVersionOrDefault());
+                claims.userId(), claims.username(), claims.sessionId(), user.tokenVersionOrDefault());
         Map<String, Object> tokenMap = new HashMap<>();
         tokenMap.put("token", accessToken);
         // Keep the refresh token's original 7-day expiry instead of extending it on each refresh.
         tokenMap.put("refreshToken", refreshToken);
         return ResponseEntity.ok(Result.ok(tokenMap));
-    }
-
-    private ResponseEntity<Result> unauthorized(ResultCodeEnum code) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.build(null, code));
     }
 
     private void refreshCachedAuthorities(String username, List<String> permsList) {

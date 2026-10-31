@@ -9,7 +9,7 @@
 |---|---|---|
 | `common/common-util` | `common/common-util/src/main/java/com/atguigu/common/` | `result/Result`（统一信封：`code`/`message`/`data`）、`result/ResultCodeEnum`（200/201/208/209/403）、`result/ResponseUtil`（过滤器写响应体，带 HTTP 状态重载）、`jwt/JwtHelper` |
 | `common/service-util` | `common/service-util/.../common/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405；参数校验 200+201，ADR 0033）、`config/mp/CommonFieldsMetaObjectHandler`（公共字段唯一写入者，ADR 0031）、`config/mp/SlowSqlLoggingConfiguration` + `observability/SlowSqlLoggingInterceptor`（慢 SQL WARN，默认关 dev 开，ADR 0041）、`observability/TraceIdFilter`、`observability/PhoneNumberMasker` + `PhoneNumberMaskingCustomizer`（结构化日志手机号打码，ADR 0039） |
-| `common/spring-security` | `common/spring-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`filter/TokenAuthenticationFilter`（token→认证，失败 401+208）、`filter/TokenLoginFilter`（POST /login，先校验入参再签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
+| `common/spring-security` | `common/spring-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`session/SessionVerifier`（会话核验 module：过滤器与续期共用的唯一凭证判定，ADR 0044）、`response/AuthenticationRejections`（401 认证家族写出的唯一出口）、`filter/TokenAuthenticationFilter`（接入核验结果并组装权限，失败 401+208）、`filter/TokenLoginFilter`（POST /login，先校验入参再签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
 | `model` | `model/src/main/java/com/atguigu/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`、`process/OaProcess|OaProcessRecord…`；请求 DTO 的 jsr303 约束（`com.atguigu.vo.*`，ADR 0033） |
 | `service-oa` | `service-oa/src/main/java/com/atguigu/` | 业务实现与 HTTP 入口：`auth/`（index/login、sysUser/Role/Menu、`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`process/`（模板/审批/附件/`approval/ApprovalWriter`）、`db/migration/`（Flyway V1xx）。迁移以 SQL 为主；需要"先查元数据再决定动不动手"的（如 `V104` 依赖引擎历史回填）写成 `src/main/java/db/migration/` 下的 Java 迁移 |
 
@@ -17,7 +17,7 @@
 
 请求经过的层，顺序即拒绝优先级：
 
-1. `TokenAuthenticationFilter`：`PublicApiPaths.permitsAnonymous(uri)` 的 URI 跳过校验；其余请求无有效 token → **401 + code 208**；停用账号 → 401 + 209。
+1. `TokenAuthenticationFilter`：`PublicApiPaths.permitsAnonymous(uri)` 的 URI 跳过校验；其余请求无有效 token → **401 + code 208**；停用账号 → 401 + 209。四连核验（吊销/身份/版本/停用）由 `SessionVerifier` 承担（ADR 0044），过滤器与续期端点共用同一实现。
 2. `TokenLoginFilter`：只接 `POST /admin/system/index/login`（POST-only 且不在白名单里，靠过滤器先于授权层接管）。空凭证/畸形体在限流计数之前拒绝（**401 + 208 + 字段消息**，不计入失败次数）；登录失败/锁定/停用 → **401 + 208/209**。
 3. `AuthorizationFilter`：白名单 `permitAll`，其余 `authenticated()`。未认证被拒 → `RestAuthenticationEntryPoint`（**401 + 208**，覆盖匿名路径上的错误方法）；已认证被拒 → `RestAccessDeniedHandler`（**403 + 205**）。
 4. `IndexController.refresh`：匿名白名单上的续期端点，失败由控制器自己写出认证家族语义（ADR 0037）——缺失/空白/无效/吊销的 refreshToken **401 + 208「认证失败」**，停用用户 **401 + 209**；畸形 JSON 仍按第 6 条的 200+201。

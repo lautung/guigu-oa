@@ -3,13 +3,14 @@ package com.atguigu.security.filter;
 import com.atguigu.common.jwt.JwtHelper;
 import com.atguigu.common.result.ResponseUtil;
 import com.atguigu.common.result.Result;
-import com.atguigu.common.result.ResultCodeEnum;
 import com.atguigu.common.validation.ValidationMessages;
 import com.atguigu.security.custom.AccountStatus;
 import com.atguigu.security.custom.CustomUser;
 import com.atguigu.security.login.ClientAddress;
 import com.atguigu.security.login.InvalidLoginInputException;
 import com.atguigu.security.login.LoginAttemptLimiter;
+import com.atguigu.security.response.AuthenticationFailure;
+import com.atguigu.security.response.AuthenticationRejections;
 import com.atguigu.vo.system.LoginVo;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -114,13 +115,12 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         String sourceAddress = ClientAddress.of(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // A concurrent request may have locked the account while this password was checked.
-            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED, tooFrequent());
+            AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN, TOO_FREQUENT_MESSAGE);
             return;
         }
         CustomUser customUser = (CustomUser) auth.getPrincipal();
         if (!AccountStatus.isEnabled(customUser.getSysUser().getStatus())) {
-            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    Result.build(null, ResultCodeEnum.ACCOUNT_DISABLED));
+            AuthenticationRejections.write(response, AuthenticationFailure.ACCOUNT_DISABLED);
             return;
         }
         loginAttemptLimiter.recordSuccess(username, sourceAddress);
@@ -141,22 +141,19 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                               AuthenticationException failed)
             throws IOException, ServletException {
         if (failed instanceof InvalidLoginInputException invalidInput) {
-            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    Result.build(null, ResultCodeEnum.LOGIN_ERROR).message(invalidInput.getMessage()));
+            AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN, invalidInput.getMessage());
             return;
         }
         if (failed instanceof LockedException) {
-            ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED, tooFrequent());
+            AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN, TOO_FREQUENT_MESSAGE);
             return;
         }
-        ResponseUtil.out(response, HttpServletResponse.SC_UNAUTHORIZED,
-                Result.build(null, ResultCodeEnum.LOGIN_ERROR));
+        AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN);
     }
 
-    private static Result<Object> tooFrequent() {
-        // Same code as a wrong password; only the advice differs, and the thresholds apply to
-        // unknown usernames too, so the message never reveals whether the user exists.
-        return Result.build(null, ResultCodeEnum.LOGIN_ERROR)
-                .message("登录尝试过于频繁，请稍后再试");
-    }
+    /**
+     * Same code as a wrong password; only the advice differs, and the thresholds apply to
+     * unknown usernames too, so the message never reveals whether the user exists.
+     */
+    private static final String TOO_FREQUENT_MESSAGE = "登录尝试过于频繁，请稍后再试";
 }
