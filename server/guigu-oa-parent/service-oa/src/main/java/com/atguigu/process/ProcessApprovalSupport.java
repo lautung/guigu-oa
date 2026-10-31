@@ -30,7 +30,11 @@ public final class ProcessApprovalSupport {
     }
 
     public static String recordDescription(Integer status) {
-        return status != null && status == 1 ? "已通过" : "驳回";
+        return switch (status) {
+            case 1 -> "已通过";
+            case -1 -> "已拒绝";
+            default -> throw new IllegalArgumentException("非法审批状态：" + status);
+        };
     }
 
     public static void applyOutcome(Process process, Integer status, List<String> nextApproverNames, boolean hasNextTask) {
@@ -44,7 +48,7 @@ public final class ProcessApprovalSupport {
             process.setStatus(2);
             return;
         }
-        process.setDescription("审批完成（驳回）");
+        process.setDescription("审批完成（拒绝）");
         process.setStatus(-1);
     }
 

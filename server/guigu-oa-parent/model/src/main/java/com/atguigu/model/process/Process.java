@@ -50,7 +50,7 @@ public class Process extends BaseEntity {
 	@TableField("current_auditor")
 	private String currentAuditor;
 
-	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：驳回）")
+	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：拒绝）")
 	@TableField("status")
 	private Integer status;
 

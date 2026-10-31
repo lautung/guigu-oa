@@ -124,7 +124,7 @@ public class TestApprovalEngine implements ApprovalEngine {
         if (expectedRecordlessProcessId != null) {
             Long decisionCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM oa_process_record WHERE process_id = ? "
-                            + "AND description IN ('已通过', '驳回')",
+                            + "AND description IN ('已通过', '已拒绝')",
                     Long.class,
                     expectedRecordlessProcessId);
             if (decisionCount == null || decisionCount != 0L) {
@@ -164,7 +164,7 @@ public class TestApprovalEngine implements ApprovalEngine {
                 Long decisionCount = jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM oa_process_record r "
                                 + "JOIN oa_process p ON p.id = r.process_id "
-                                + "WHERE p.process_instance_id = ? AND r.description IN ('已通过', '驳回')",
+                                + "WHERE p.process_instance_id = ? AND r.description IN ('已通过', '已拒绝')",
                         Long.class,
                         processInstanceId);
                 if (decisionCount == null || decisionCount == 0) {

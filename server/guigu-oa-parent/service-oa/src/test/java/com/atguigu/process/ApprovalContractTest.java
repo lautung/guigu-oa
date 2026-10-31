@@ -284,7 +284,7 @@ public class ApprovalContractTest {
         assertTrue(processed(alice).getRecords().isEmpty());
         assertTrue(pending(zhangsan).getRecords().isEmpty());
         assertTrue(pending(lisi).getRecords().isEmpty());
-        assertEquals(List.of("发起申请", "驳回"), recordDescriptions(zhangsan, pending.getId()));
+        assertEquals(List.of("发起申请", "已拒绝"), recordDescriptions(zhangsan, pending.getId()));
         assertFalse(canApprove(zhangsan, pending.getId()));
         assertFalse(canApprove(lisi, pending.getId()));
         assertFalse(canApprove(alice, pending.getId()));

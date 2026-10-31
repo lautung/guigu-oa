@@ -78,6 +78,29 @@ public class RequestValidationContractTest {
     }
 
     @Test
+    public void approveWithoutStatusReturnsTheValidationMessage() throws Exception {
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":1,\"taskId\":\"task-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("审批状态不能为空"));
+    }
+
+    @Test
+    public void approveWithAnOutOfRangeStatusIsRejected() throws Exception {
+        // status 非法在成员资格判定之前拒绝（校验先于授权，ADR 0034）：不带真实待办也应得到 201。
+        mockMvc.perform(post("/admin/process/approve")
+                        .header("token", adminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processId\":1,\"taskId\":\"task-1\",\"status\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("审批状态只能为 1（通过）或 -1（拒绝）"));
+    }
+
+    @Test
     public void attachmentUploadWithoutFileNameReturnsTheValidationMessage() throws Exception {
         mockMvc.perform(post("/admin/attachments/uploads")
                         .header("token", adminToken())

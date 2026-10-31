@@ -188,6 +188,7 @@ public class ApprovalWriter {
 
     @Transactional
     public Approval.DecisionOutcome approve(SysUser user, ApprovalVo approvalVo) {
+        requireStatusInDomain(approvalVo);
         Process process = requireCurrentApprover(user, approvalVo);
         if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
             approvalEngine.complete(approvalVo.getTaskId());
@@ -214,6 +215,13 @@ public class ApprovalWriter {
                 process.getId(),
                 process.getStatus(),
                 nextTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    private static void requireStatusInDomain(ApprovalVo approvalVo) {
+        Integer status = approvalVo == null ? null : approvalVo.getStatus();
+        if (status == null || (status != 1 && status != -1)) {
+            throw new GuiguException(201, "审批状态只能为 1（通过）或 -1（拒绝）");
+        }
     }
 
     private Process requireCurrentApprover(SysUser user, ApprovalVo approvalVo) {

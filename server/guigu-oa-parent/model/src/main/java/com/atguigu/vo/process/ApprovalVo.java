@@ -14,7 +14,8 @@ public class ApprovalVo {
     @NotBlank(message = "待办任务标识不能为空")
     private String taskId;
 
-    @Schema(description = "状态")
+    @NotNull(message = "审批状态不能为空")
+    @Schema(description = "状态（1：通过 -1：拒绝）")
     private Integer status;
 
     @Schema(description = "审批描述")
