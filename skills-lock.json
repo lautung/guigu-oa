@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "skills": {
+    "java-springboot": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/java-springboot/SKILL.md",
+      "computedHash": "f1b9c6b1277178fc33e5a612761c1cd1cf6ab5f946d05d69d52026d142c0a0c1"
+    },
+    "k6": {
+      "source": "grafana/skills",
+      "sourceType": "github",
+      "skillPath": "skills/grafana-k6/k6/SKILL.md",
+      "computedHash": "23b6128a86c4cf8fbe95e629ea4e5a01f63b1e9fcf9dab8cbacf10794a3c2244"
+    },
+    "pinia": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pinia/SKILL.md",
+      "computedHash": "b02c9f6c2e1ec051be0ca5025804d8262815221fd7f5020734b5a9ad87f15617"
+    },
+    "playwright-best-practices": {
+      "source": "currents-dev/playwright-best-practices-skill",
+      "sourceType": "github",
+      "skillPath": "playwright-best-practices/SKILL.md",
+      "computedHash": "7eb144f734450fee649dc1d209114775ddda07cbf45be84fe969d3d4f3971dce"
+    },
+    "springboot-patterns": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/springboot-patterns/SKILL.md",
+      "computedHash": "5902ed569b83996c1c3cc48d973f35702fadec46445a2988847d4ed725b488c5"
+    },
+    "springboot-security": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/springboot-security/SKILL.md",
+      "computedHash": "c518a86c3a473e0545c35065d82284d13a5d99d6f7a0e17780594f3a44af38ad"
+    },
+    "springboot-tdd": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/springboot-tdd/SKILL.md",
+      "computedHash": "37566744c3850a2bc683ea1734c4ecf67d84c7604e6b3df57b76e978479edfc8"
+    },
+    "sql-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/sql-optimization/SKILL.md",
+      "computedHash": "47c930907f25d67454ac8c2d155785eae3dce72242960d0c0e9ebf2ced9cd231"
+    },
+    "vue-best-practices": {
+      "source": "vuejs-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-best-practices/SKILL.md",
+      "computedHash": "2f4da0a95f19b225e784981413f727ff03bfdec7818a1e5bb0a477aab633095e"
+    },
+    "vue-testing-best-practices": {
+      "source": "vuejs-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-testing-best-practices/SKILL.md",
+      "computedHash": "58d365899f54be9e5fa2c2e455093f9567620600578ae92aaa2f31d9b19a59ad"
+    }
+  }
+}

@@ -11,6 +11,7 @@ const EVIDENCE_DIR_LIMIT = 5 * 1024 * 1024
 const SKIP_DIRS = new Set([
   '.git',
   '.zcode',
+  '.agents',
   'node_modules',
   'target',
   'dist',
