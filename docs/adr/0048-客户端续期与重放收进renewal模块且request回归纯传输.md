@@ -2,7 +2,7 @@
 
 `src/utils/request.ts` 在第三轮架构审查（#177，`163b0fb` 时点 279 行）时是全客户端最大的无专属测试 module，里面藏着一整套续期状态机：单飞去重（`refreshFlight`）、换头重放（`_authRefreshRetried` 标记 + 并发已刷新则直接换头）、信封谓词（`businessEnvelope`），外加错误分类与 axios 骨架。续期是 ADR 0037（#155）刚落过 401 家族语义、又最缺直接测试面的地方——三条规则只能借道 `recognition.spec` 的集成面碰。
 
-决定:**续期收进 `src/renewal.ts`，错误家族与信封谓词收进 `src/request-failure.ts`，`request.ts` 回归纯传输**（axios 实例、拦截器骨架、附头、`isInfo`、转发；279 → 112 行）。
+决定:**续期收进 `src/renewal.ts`，错误家族与信封谓词收进 `src/request-failure.ts`，`request.ts` 回归纯传输**（axios 实例、拦截器骨架、附头、`isInfo`、转发；279 → 108 行）。
 
 - `renewal.ts` 是续期状态机的唯一 owner:`createRenewal(recognition, resend)` → `onExpired(config, context)`。208 的决策与执行整体在这里:豁免（认证端点、已重试、`_isRelevant() === false`）返回 null 交回调用方按业务失败拒绝；并发已刷新则直接换头重放；否则单飞 refresh（裸 `axios.post` 打 `refreshUrl`，避开拦截器循环）后换头重放。refresh 失败先按上下文上报 `recognition.reject`，再以「原请求被明确拒绝」的形状抛 `BusinessRequestFailure`。
 - `isAuthentication` 随重放豁免归 renewal 导出（login 208 是凭证错、refresh 208 是续期本身、logout 是主动退出——不重放的理由在续期语义里）；`isInfo` 留 request.ts（silent capture 的理由是「身份读失败走认出恢复」，与续期无关）。两谓词分家，各随其消费语义。
