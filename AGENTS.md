@@ -45,6 +45,8 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 
 前端 Vite 把 `/dev-api` 代理到 `http://localhost:8800`，所以后端必须在 8800 运行。客户端可见前缀仍是 `/dev-api`（`VITE_APP_BASE_API`）。
 
+Compose 项目名随工作目录（worktree 下即目录名），接手他人在跑的栈先 `docker compose ls` 盘点再按项目 down；`perf/ops/restore.sh`/`snapshot.sh` 硬编码 `guigu-oa_*` 卷名，非主仓目录起栈要带 `COMPOSE_PROJECT_NAME=guigu-oa`，否则快照恢复静默落空。
+
 ### 后端启动
 
 1. **用 JDK 21 编译和运行**（`java.version` / `--release` 21）。

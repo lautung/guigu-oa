@@ -24,7 +24,7 @@
 5. MVC 参数解析：`@Valid` 在控制器方法调用前执行，所以**校验先于 `@PreAuthorize`**。未授权 + 畸形体得到校验失败（201），不是 205；良构体才轮到配置 gate。认证早于这一层，所以受保护路由上匿名 + 畸形体仍是 401+208（ADR 0034）。
 6. `@PreAuthorize`：拒绝 → `GlobalExceptionHandler` 的 `AccessDeniedException` 分支（**HTTP 200 + code 205**，历史约定）。未知路径 404、方法不匹配 405（均带 `code=201` 信封）；校验失败与缺体/畸形 JSON 是 HTTP 200 + `code=201` + 具体消息（ADR 0033）；其余业务失败 HTTP 200 + `code`。
 
-回归锚点：`LoginAuthContractTest`（401/208/209 全表，含 refresh 失败形状与缺失/空白/无体）、`HttpErrorSemanticsContractTest`（404/405/类型不匹配）、`RequestValidationContractTest`（参数校验 201 文案与顺序契约）、`FlywayMigrationContractTest`（配置 gate 的授予矩阵，用良构体触发）、接口套件 `tests/api/f-http-semantics.spec.ts`、`tests/api/b-menu.spec.ts`（B22 顺序契约）。
+回归锚点：`LoginAuthContractTest`（401/208/209 全表，含 refresh 失败形状与缺失/空白/无体）、`HttpErrorSemanticsContractTest`（404/405/类型不匹配）、`RequestValidationContractTest`（参数校验 201 文案与顺序契约）、`FlywayMigrationContractTest`（配置 gate 的授予矩阵，用良构体触发）、接口套件 `tests/api/f-http-semantics.spec.ts`、`tests/api/b-menu.spec.ts`（B22 顺序契约）。改本节描述的认证/校验优先级/错误语义家族（security 链、`@PreAuthorize`、201/205/208/209）的轮次，附带重跑安全扫描（`node scripts/security-scan.mjs`，打在跑的演示栈）并当轮定性红项——SEC-GATE 系载荷对这类改动敏感，陈旧红靠周检才发现就太迟（#184）。
 
 ## 行政约定
 
