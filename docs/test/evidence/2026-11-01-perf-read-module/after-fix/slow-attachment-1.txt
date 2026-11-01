@@ -1,0 +1,74 @@
+/usr/sbin/mysqld, Version: 8.4.13 (MySQL Community Server - GPL). started with:
+Tcp port: 3306  Unix socket: /var/run/mysqld/mysqld.sock
+Time                 Id Command    Argument
+# Time: 2026-11-01T11:34:57.795855Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    47
+# Query_time: 0.132751  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+use guigu-oa;
+SET timestamp=1793532897;
+COMMIT;
+# Time: 2026-11-01T11:34:57.797113Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    46
+# Query_time: 0.117706  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532897;
+COMMIT;
+# Time: 2026-11-01T11:34:57.797227Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    50
+# Query_time: 0.116203  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532897;
+COMMIT;
+# Time: 2026-11-01T11:35:28.483451Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    49
+# Query_time: 0.106828  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532928;
+COMMIT;
+# Time: 2026-11-01T11:35:59.201383Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    43
+# Query_time: 0.113738  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.202188Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    47
+# Query_time: 0.113048  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.212335Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    48
+# Query_time: 0.118159  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.215313Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    42
+# Query_time: 0.117931  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.215331Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    45
+# Query_time: 0.110838  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.215426Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    49
+# Query_time: 0.112079  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:35:59.215475Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    50
+# Query_time: 0.103214  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532959;
+COMMIT;
+# Time: 2026-11-01T11:36:10.971687Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    45
+# Query_time: 0.106092  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532970;
+COMMIT;
+# Time: 2026-11-01T11:36:29.934641Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    48
+# Query_time: 0.111102  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793532989;
+COMMIT;
+# Time: 2026-11-01T11:37:00.889957Z
+# User@Host: root[root] @  [172.20.0.5]  Id:    46
+# Query_time: 0.108694  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp=1793533020;
+COMMIT;

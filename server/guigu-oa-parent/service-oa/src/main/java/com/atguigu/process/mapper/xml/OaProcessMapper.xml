@@ -23,7 +23,10 @@
 
     <select id="selectProcessPage" resultType="com.atguigu.vo.process.ProcessVo">
         select
-            <include refid="approvalRowColumns"/>
+        <if test="vo.userId != null">
+            /*+ INDEX(a idx_oa_process_user_create_time) */
+        </if>
+        <include refid="approvalRowColumns"/>
         from oa_process a
             <include refid="approvalRowJoins"/>
         <where>
@@ -44,7 +47,12 @@
                 and a.create_time &lt;= #{vo.createTimeEnd}
             </if>
         </where>
-        <!-- 已发起与配置实例查询共用这条读：显式最新在前（#179），同刻由审批 id 决胜。 -->
+        <!-- 已发起与配置实例查询共用这条读：显式最新在前（#179），同刻由审批 id 决胜；
+             已发起侧排序由 idx_oa_process_user_create_time 反向扫描支撑（V108，#185）。
+             hint 只在 user_id 等值时注入：MySQL 8.4 优化器在 join 上下文里按 ref 成本选中
+             幂等键索引（两者仅差 0.45），不认反向扫描的排序收益，单表形状则无此问题
+             （EXPLAIN ANALYZE 实测 0.08ms vs 全量排序 19ms）；无 user_id 的配置实例查询
+             用不上该索引，hint 自然被忽略，计划不变。 -->
         order by a.create_time desc, a.id desc
     </select>
 

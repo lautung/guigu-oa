@@ -57,3 +57,20 @@ perf/ops/round.sh list-reads-1 baseline perf/list-reads.js
 
 原始大件（未裁剪 JSON、observe 日志）在两仓库的 `perf/results/`（不入仓）；
 快照在 `perf/snapshot/`（before 轮产物拷贝到 after 仓库目录复用）。
+
+## after-fix/（#185 修复轮，2026-11-01 晚间）
+
+`after/` 的回归由 V108 `idx_oa_process_user_create_time` + mapper 条件 hint 修复
+（执行记录：[`docs/test/execution/2026-11-01-perf-185-fix.md`](../../execution/2026-11-01-perf-185-fix.md)）。
+同快照同脚本八档全绿；findStarted 基线 p95 154→29ms。因时段与夜锚不同（凌晨→晚间），
+增跑 **anchor-evening**（`358dbbd` 无修复代码、同快照同脚本同时段 baseline 一档）作同条件
+对照：findStarted 157ms 证明回归原样复现、其余动作与修复轮逐点重合证明 +15~30% 的
+均匀膨胀是环境签名而非代码回退。
+
+| 文件 | 内容 |
+|---|---|
+| `k6-summary-<八档>.json` | 修复轮裁剪汇总（同上约定） |
+| `k6-summary-anchor-evening.json` | 晚锚裁剪汇总 |
+| `k6-console-{baseline-1,stress-1,list-reads-1,attachment-1,anchor-evening}.txt` | k6 控制台样本 |
+| `rows-<档位>.txt` / `slow-<档位>.txt` / `stats-<档位>.csv.gz` | 当档收尾取证（慢日志 `.txt` 后缀） |
+| `explain-findStarted-index.txt` | 修复机制取证：general_log 实发 SQL 原文 EXPLAIN ANALYZE——反向索引扫描 0.113ms、无 Sort；含优化器不自发选索引（join 上下文 ref 成本差 0.45）的 trace 证据与 hint 依据 |

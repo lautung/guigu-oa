@@ -1,0 +1,14 @@
+-- 已发起列表排序索引（#185）：#179 给 selectProcessPage 加的显式「最新在前」
+-- （order by create_time desc, id desc）无索引可走，findStarted 名下全量行进排序堆
+-- （10,001 行单条 16.4ms，p95 6.7×）。此索引使 user_id 等值 + 排序可走索引反向扫描，
+-- LIMIT 短路（FORCE INDEX 实测 0.11ms）。
+-- 列序 (user_id, create_time)：InnoDB 二级索引隐式以主键 id 结尾，(create_time, id) 决胜
+-- 精确匹配排序键；升序索引反向扫描覆盖 DESC（显式 DESC 列不影响优化器选择，实测等价）。
+-- 不含 is_deleted：selectProcessPage 现无 is_deleted 过滤（手写 XML 不吃 @TableLogic，
+-- 见 #198），排序路径上放一个无等值条件的列会破坏排序匹配；#198 补过滤后走残留条件，
+-- 近零已删行下成本可忽略，本索引不必改。配置实例查询无 user_id 前缀用不上此索引，
+-- 保持全表排序（p95 78ms，离 500ms 判定线余量大，#185 Q1 结论）。
+-- 注意：join 上下文里 MySQL 8.4 优化器按 ref 成本仍选 uk_oa_process_idempotency_key
+-- （两者仅差 0.45），不认反向扫描的排序收益——故 mapper 在 user_id 等值形状注入
+-- /*+ INDEX(a idx_oa_process_user_create_time) */（见 OaProcessMapper.xml，#185）。
+CREATE INDEX idx_oa_process_user_create_time ON oa_process(user_id, create_time);

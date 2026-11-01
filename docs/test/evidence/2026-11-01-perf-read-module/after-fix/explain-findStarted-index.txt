@@ -1,0 +1,48 @@
+# EXPLAIN ANALYZE 取证：#185 修复——排序索引 + 条件 hint 使 findStarted 走反向扫描
+
+环境：#185 修复栈（V108 `idx_oa_process_user_create_time(user_id, create_time)` +
+`OaProcessMapper.xml` 条件 hint），恢复同一份快照后（alice user_id=3 名下 10,001 条
+`oa_process`），MySQL 8.4.13。SQL 为 general_log 抓取的服务**实发语句原文**（非手拼）。
+
+## 优化器不选新索引的机制（为何需要 hint）
+
+`WHERE user_id=? ORDER BY create_time DESC, id DESC LIMIT 10` 单表形状优化器会选新索引
+反向扫描（EXPLAIN FORMAT=TREE cost=661）；但带三个 left join 的实发形状里，
+`uk_oa_process_idempotency_key(user_id, idempotency_key)` 的 ref 成本仅低 0.45
+（optimizer trace：新索引 `{"access_type":"ref","rows":4927,"cost":661.45,"chosen":false}`），
+优化器不认反向扫描的排序收益，仍选幂等键索引 + 全量排序（ANALYZE TABLE 后依旧；
+显式 `(user_id, create_time DESC, id DESC)` 降序索引同被拒）。故 mapper 在
+`vo.userId != null` 形状注入 `/*+ INDEX(a idx_oa_process_user_create_time) */`。
+
+## findStarted 实发 SQL（带 hint）：反向扫描，无 Sort，0.113ms
+
+```
+EXPLAIN: -> Limit: 10 row(s)  (cost=5359 rows=10) (actual time=0.0783..0.113 rows=10 loops=1)
+    -> Nested loop left join  (cost=5359 rows=14781) (actual time=0.0751..0.109 rows=10 loops=1)
+        -> Nested loop left join  (cost=2649 rows=14781) (actual time=0.0717..0.104 rows=10 loops=1)
+            -> Nested loop left join  (cost=1154 rows=4927) (actual time=0.0634..0.0794 rows=10 loops=1)
+                -> Index lookup on a using idx_oa_process_user_create_time (user_id=3) (reverse)  (cost=661 rows=4927) (actual time=0.029..0.0422 rows=10 loops=1)
+                -> Constant row from d  (cost=71e-6..71e-6 rows=1) (actual time=642e-6..658e-6 rows=1 loops=10)
+            ...（b/c 单行回查略）
+```
+
+关键行：`Index lookup ... (reverse) (actual time=0.029..0.0422 rows=10)`——**只读 10 行
+即返回，无 Sort 节点**。对比 #182 取证（同形状同快照）：无索引时全量 10,001 行进排序堆
+16.4ms；本修复 0.113ms。
+
+## 配置实例查询（无 user_id，hint 自然被忽略）：仍全表排序（接受，#185 Q1）
+
+```
+EXPLAIN: -> Limit: 10 row(s)  (cost=15309 rows=10) (actual time=8.3..8.32 rows=10 loops=1)
+    -> Nested loop left join  ...
+                -> Sort: a.create_time DESC, a.id DESC  (cost=3450 rows=9855) (actual time=8.27..8.27 rows=10 loops=1)
+                    -> Table scan on a  (cost=3450 rows=9855) (actual time=0.0135..3.41 rows=10001 loops=1)
+```
+
+无 user_id 前缀用不上该索引，hint 不改变计划（表扫 + 排序，8.3ms），与 Q1 决策一致
+（p95 78ms 离 500ms 判定线余量大）。
+
+## 结论
+
+SQL 层回归消除：findStarted 排序从「全量 10,001 行排序堆 16.4ms」变为「反向索引扫描
+0.113ms」；端到端收益见执行记录 k6 数字。
