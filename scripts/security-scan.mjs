@@ -1042,7 +1042,9 @@ defineCase({
       }
       const response = await call(method, endpoint, options)
       if (codeOf(response) !== 205) {
-        failures.push(`${method} ${endpoint} → code=${codeOf(response)}`)
+        // 校验失败（201）时消息直接点名缺哪个必填字段：良构体随 DTO 漂移后照消息修即可。
+        const detail = messageOf(response)
+        failures.push(`${method} ${endpoint} → code=${codeOf(response)}${detail ? `（${detail}）` : ''}`)
       }
     }
     return failures.length === 0

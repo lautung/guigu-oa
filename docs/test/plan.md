@@ -159,6 +159,8 @@
 | S4 | 体验、文案、建议类 |
 
 - 必填字段：复现步骤、期望/实际、环境（commit + Compose 栈 + 账号）、证据链接、影响面。
+  扫描类缺陷的失败清单从 `security-results.json` 的 failures 全量拷贝，不凭记忆枚举
+  （#184 正文凭记忆枚举漏了 sysMenu/processType 两个实体）。
 - 生命周期：`bug` 且无 `defect:fixed` = 待修；加 `defect:fixed` = 已修待回归；**closed = verified**。
 - 报告只放汇总表（issue 链接、级别、标题、状态、修复提交、回归证据），不复制明细。
 

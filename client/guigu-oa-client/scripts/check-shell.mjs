@@ -15,28 +15,42 @@ const files = []
 
 for (const dir of dirs) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.sh')) continue
+    if (!entry.isFile()) continue
     const path = join(dir, entry.name)
-    files.push(path)
 
-    try {
-      execFileSync('bash', ['-n', path], { stdio: 'pipe' })
-    } catch (error) {
-      const detail = error.stderr?.toString().trim() || error.message
-      errors.push(`${relative(root, path)} 语法检查失败：${detail}`)
-    }
+    if (entry.name.endsWith('.sh')) {
+      files.push(path)
 
-    const lines = readFileSync(path, 'utf8').split('\n')
-    lines.forEach((line, index) => {
-      if (line.trimStart().startsWith('#')) return
-      for (const match of line.matchAll(VAR_REFERENCE)) {
-        const next = line[match.index + match[0].length]
-        if (!next || next.charCodeAt(0) <= 0x7f) continue
-        errors.push(
-          `${relative(root, path)}:${index + 1} 变量名后紧跟非 ASCII 字符（写成 \${var}）：${match[0]}${next}`,
-        )
+      try {
+        execFileSync('bash', ['-n', path], { stdio: 'pipe' })
+      } catch (error) {
+        const detail = error.stderr?.toString().trim() || error.message
+        errors.push(`${relative(root, path)} 语法检查失败：${detail}`)
       }
-    })
+
+      const lines = readFileSync(path, 'utf8').split('\n')
+      lines.forEach((line, index) => {
+        if (line.trimStart().startsWith('#')) return
+        for (const match of line.matchAll(VAR_REFERENCE)) {
+          const next = line[match.index + match[0].length]
+          if (!next || next.charCodeAt(0) <= 0x7f) continue
+          errors.push(
+            `${relative(root, path)}:${index + 1} 变量名后紧跟非 ASCII 字符（写成 \${var}）：${match[0]}${next}`,
+          )
+        }
+      })
+    } else if (entry.name.endsWith('.mjs')) {
+      // 仓库根脚本工具（安全扫描、合同断言检查等）只在特定轮次执行，语法错误
+      // 若不在门禁拦截，就要到打真栈的那一轮才炸（retro 2026-11-01，#184 轮）。
+      files.push(path)
+
+      try {
+        execFileSync(process.execPath, ['--check', path], { stdio: 'pipe' })
+      } catch (error) {
+        const detail = error.stderr?.toString().trim() || error.message
+        errors.push(`${relative(root, path)} 语法检查失败：${detail}`)
+      }
+    }
   }
 }
 
