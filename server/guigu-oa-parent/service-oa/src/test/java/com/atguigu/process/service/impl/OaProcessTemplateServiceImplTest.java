@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -328,7 +329,13 @@ class OaProcessTemplateServiceImplTest {
         broken.setArtifactSha256(" ");
         when(publicationMapper.selectOne(any())).thenReturn(broken);
 
-        assertEquals(201, code(service::restorePublished));
+        GuiguException failure = assertThrows(GuiguException.class, service::restorePublished);
+
+        assertEquals(201, failure.getCode());
+        // 证据问题分支：停止文案逐字，「切库恢复停止：…（理由）」内嵌结构保留。
+        assertEquals("切库恢复停止：审批模板 1 暂不可发起，需核实原审批内容（缺少发布产物校验值）",
+                failure.getMessage());
+        verify(deploymentEngine, never()).deployVerified(anyString(), anyString(), anyString());
     }
 
     @Test
@@ -339,7 +346,10 @@ class OaProcessTemplateServiceImplTest {
 
         when(deploymentEngine.definitionById("def-1")).thenReturn(
                 new ProcessDeploymentEngine.DefinitionSnapshot("def-1", "other", "dep-1", false));
-        assertEquals(201, code(service::restorePublished));
+        GuiguException mismatched = assertThrows(GuiguException.class, service::restorePublished);
+        assertEquals(201, mismatched.getCode());
+        // 绑定不一致分支：停止文案逐字。
+        assertEquals("切库恢复停止：审批模板发布绑定与流程定义不一致", mismatched.getMessage());
 
         when(deploymentEngine.definitionById("def-1")).thenReturn(
                 new ProcessDeploymentEngine.DefinitionSnapshot("def-1", KEY, "dep-1", true));
@@ -347,7 +357,7 @@ class OaProcessTemplateServiceImplTest {
     }
 
     @Test
-    void restorePublishedBackfillsADeploymentIdOrRedeploys() {
+    void restorePublishedBackfillsTheDeploymentIdFromTheUsableVerdict() {
         ProcessTemplate template = publishable(3L);
         when(templateMapper.selectPublishedForUpdate()).thenReturn(List.of(template));
         ProcessTemplatePublication missingDeployment = publication(3L);
@@ -355,15 +365,47 @@ class OaProcessTemplateServiceImplTest {
         when(publicationMapper.selectOne(any())).thenReturn(missingDeployment);
 
         assertEquals(1, service.restorePublished());
-        verify(publicationMapper).updateById(missingDeployment);
 
-        when(deploymentEngine.definitionById("def-1")).thenReturn(null);
-        ProcessTemplatePublication missingDefinition = publication(3L);
+        // 可用且部署绑定空：按记录 definitionId 查得的引擎定义回填部署绑定（可靠依据非猜测）。
+        assertEquals("dep-1", missingDeployment.getDeploymentId());
+        assertEquals("def-1", missingDeployment.getProcessDefinitionId());
+        verify(publicationMapper).updateById(missingDeployment);
+        verify(deploymentEngine, never()).deployVerified(anyString(), anyString(), anyString());
+        // 编排不自拼比对：一次 verify 一次引擎查询，不再重复查。
+        verify(deploymentEngine, times(1)).definitionById(anyString());
+    }
+
+    @Test
+    void restorePublishedRedeploysThroughThePortWhenTheDefinitionIsMissing() {
+        ProcessTemplate template = publishable(4L);
+        when(templateMapper.selectPublishedForUpdate()).thenReturn(List.of(template));
+        ProcessTemplatePublication missingDefinition = publication(4L);
         when(publicationMapper.selectOne(any())).thenReturn(missingDefinition);
+        when(deploymentEngine.definitionById("def-1")).thenReturn(null);
+        when(deploymentEngine.deployVerified(anyString(), anyString(), anyString())).thenReturn(
+                new ProcessDeploymentEngine.DeploymentResult("dep-2", "def-2", SHA));
 
         assertEquals(1, service.restorePublished());
-        verify(publicationMapper, org.mockito.Mockito.times(2))
-                .updateById(any(ProcessTemplatePublication.class));
+
+        // 定义缺失：经 port 重部署，重取的部署与定义 id 落库。
+        verify(deploymentEngine).deployVerified(PATH, KEY, SHA);
+        assertEquals("dep-2", missingDefinition.getDeploymentId());
+        assertEquals("def-2", missingDefinition.getProcessDefinitionId());
+        verify(publicationMapper).updateById(missingDefinition);
+        verify(deploymentEngine, times(1)).definitionById(anyString());
+    }
+
+    @Test
+    void restorePublishedLeavesCompleteUsableBindingsUntouched() {
+        ProcessTemplate template = publishable(5L);
+        when(templateMapper.selectPublishedForUpdate()).thenReturn(List.of(template));
+        when(publicationMapper.selectOne(any())).thenReturn(publication(5L));
+
+        assertEquals(0, service.restorePublished());
+
+        verify(publicationMapper, never()).updateById(any(ProcessTemplatePublication.class));
+        verify(deploymentEngine, never()).deployVerified(anyString(), anyString(), anyString());
+        verify(deploymentEngine, times(1)).definitionById("def-1");
     }
 
     private int code(org.junit.jupiter.api.function.Executable executable) {

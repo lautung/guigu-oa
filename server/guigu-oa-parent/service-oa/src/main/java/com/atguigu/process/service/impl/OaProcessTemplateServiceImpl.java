@@ -205,6 +205,11 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         return new PublishedApproval(template, verdict.definition().id());
     }
 
+    /**
+     * 切库恢复（ADR 0003）：编排完全由发布判定 verdict 驱动——证据问题停止；
+     * 绑定不一致停止；可用且部署绑定空则按记录 definitionId 查得的引擎定义回填
+     * （可靠依据非猜测）；定义缺失经 port 重部署。停止文案逐字，批量全部成功才生效。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int restorePublished() {
@@ -212,22 +217,17 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         int restored = 0;
         for (ProcessTemplate template : templates) {
             ProcessTemplatePublication publication = publicationFor(template.getId());
-            String invalidReason = publicationVerifier.verify(template, publication).evidenceProblem();
-            if (invalidReason != null) {
+            PublicationVerifier.Verdict verdict = publicationVerifier.verify(template, publication);
+            if (verdict.evidenceProblem() != null) {
                 throw new GuiguException(201, "切库恢复停止：审批模板 " + template.getId()
-                        + " " + PUBLISHED_UNAVAILABLE + "（" + invalidReason + "）");
+                        + " " + PUBLISHED_UNAVAILABLE + "（" + verdict.evidenceProblem() + "）");
             }
-            ProcessDeploymentEngine.DefinitionSnapshot existing =
-                    deploymentEngine.definitionById(publication.getProcessDefinitionId());
-            if (existing != null) {
-                if (!publication.getProcessDefinitionKey().equals(existing.key())
-                        || (StringUtils.hasText(publication.getDeploymentId())
-                        && !publication.getDeploymentId().equals(existing.deploymentId()))
-                        || existing.suspended()) {
-                    throw new GuiguException(201, "切库恢复停止：审批模板发布绑定与流程定义不一致");
-                }
+            if (verdict.binding() instanceof PublicationVerifier.Binding.Inconsistent) {
+                throw new GuiguException(201, "切库恢复停止：审批模板发布绑定与流程定义不一致");
+            }
+            if (verdict.binding() instanceof PublicationVerifier.Binding.Usable usable) {
                 if (!StringUtils.hasText(publication.getDeploymentId())) {
-                    publication.setDeploymentId(existing.deploymentId());
+                    publication.setDeploymentId(usable.definition().deploymentId());
                     if (publicationMapper.updateById(publication) != 1) {
                         throw new GuiguException(201, "切库恢复停止：审批模板发布绑定写入失败");
                     }
@@ -235,6 +235,7 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
                 }
                 continue;
             }
+            // Binding.DefinitionMissing：定义缺失，按发布记录经 port 重部署重取绑定。
             ProcessDeploymentEngine.DeploymentResult deployed = deploymentEngine.deployVerified(
                     publication.getArtifactPath(),
                     publication.getProcessDefinitionKey(),
