@@ -248,18 +248,14 @@ class OaProcessTemplateServiceImplTest {
     }
 
     @Test
-    void canInitiateAndCanWriteRequireAStoredTemplate() {
+    void canWriteRequiresAStoredTemplate() {
         when(templateMapper.selectById(1L)).thenReturn(null);
-        assertFalse(service.canInitiate(1L));
         assertFalse(service.canWrite(1L));
 
         when(templateMapper.selectById(2L)).thenReturn(template(2L, ApprovalTemplateSupport.已发布));
-        when(publicationMapper.selectOne(any())).thenReturn(publication(2L));
-        assertTrue(service.canInitiate(2L));
         assertFalse(service.canWrite(2L));
 
         when(templateMapper.selectById(3L)).thenReturn(template(3L, ApprovalTemplateSupport.未发布));
-        assertFalse(service.canInitiate(3L));
         assertTrue(service.canWrite(3L));
     }
 

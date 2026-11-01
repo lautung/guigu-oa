@@ -138,10 +138,9 @@ public class ApprovalTemplateContractTest {
     }
 
     @Test
-    public void saveUnpublishedCannotInitiateAndStaysWritable() {
+    public void saveUnpublishedStaysWritableAndReadable() {
         ProcessTemplate saved = save病假申请();
 
-        assertFalse(approvalTemplate.canInitiate(saved.getId()));
         assertTrue(approvalTemplate.canWrite(saved.getId()));
         assertEquals("病假申请", approvalTemplate.read(saved.getId()).getName());
     }
@@ -153,7 +152,6 @@ public class ApprovalTemplateContractTest {
 
         approvalTemplate.saveUnpublished(template);
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertTrue(approvalTemplate.canWrite(template.getId()));
     }
 
@@ -166,7 +164,6 @@ public class ApprovalTemplateContractTest {
 
         assertTrue(ids.contains(1L));
         assertTrue(ids.contains(unpublished.getId()));
-        assertFalse(approvalTemplate.canInitiate(1L));
         assertEquals("暂不可发起，需核实原审批内容",
                 page.getRecords().stream().filter(item -> item.getId().equals(1L)).findFirst().orElseThrow()
                         .getAvailabilityMessage());
@@ -209,13 +206,11 @@ public class ApprovalTemplateContractTest {
         approvalTemplate.saveUnpublished(saved);
 
         assertEquals("病假申请改", approvalTemplate.read(saved.getId()).getName());
-        assertFalse(approvalTemplate.canInitiate(saved.getId()));
         assertTrue(approvalTemplate.canWrite(saved.getId()));
 
         approvalTemplate.removeUnpublished(saved.getId());
         assertNull(approvalTemplate.read(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
-        assertFalse(approvalTemplate.canInitiate(saved.getId()));
     }
 
     @Test
@@ -224,7 +219,6 @@ public class ApprovalTemplateContractTest {
 
         approvalTemplate.publish(saved.getId());
 
-        assertTrue(approvalTemplate.canInitiate(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
         assertEquals("病假申请", approvalTemplate.read(saved.getId()).getName());
     }
@@ -241,7 +235,6 @@ public class ApprovalTemplateContractTest {
 
         assertEquals(1, approvalListReader.started(new Page<>(1, 10), alice).getRecords().size());
         assertEquals(审批中, approvalListReader.started(new Page<>(1, 10), alice).getRecords().get(0).getStatus());
-        assertTrue(approvalTemplate.canInitiate(saved.getId()));
         assertFalse(approvalTemplate.canWrite(saved.getId()));
     }
 
@@ -260,7 +253,6 @@ public class ApprovalTemplateContractTest {
         approvalTemplate.saveUnpublished(template);
         approvalTemplate.publish(template.getId());
 
-        assertTrue(approvalTemplate.canInitiate(template.getId()));
         SysUser alice = user(2L, "alice", "小艾");
         ProcessFormVo form = publishedLeaveForm();
         form.setProcessTemplateId(template.getId());
@@ -311,7 +303,6 @@ public class ApprovalTemplateContractTest {
         approvalTemplate.saveUnpublished(template);
         approvalTemplate.publish(template.getId());
 
-        assertTrue(approvalTemplate.canInitiate(template.getId()));
         assertEquals(ProcessDefinitionStorage.sha256(processDirectory.resolve(relativePath)),
                 jdbcTemplate.queryForObject(
                         "SELECT artifact_sha256 FROM oa_process_template_publication WHERE process_template_id = ?",
@@ -325,7 +316,6 @@ public class ApprovalTemplateContractTest {
         assertTrue(repositoryService.createProcessDefinitionQuery()
                 .processDefinitionKey("uploadedApproval")
                 .count() > 0);
-        assertTrue(approvalTemplate.canInitiate(template.getId()));
     }
 
     @Test
@@ -479,8 +469,6 @@ public class ApprovalTemplateContractTest {
 
         Files.write(secondArchive, secondZip);
         assertEquals(2, approvalTemplate.restorePublished());
-        assertTrue(approvalTemplate.canInitiate(first.getId()));
-        assertTrue(approvalTemplate.canInitiate(second.getId()));
         assertNotEquals(firstOldDefinitionId, approvalTemplate.resolveForInitiation(first.getId()).processDefinitionId());
         assertNotEquals(secondOldDefinitionId, approvalTemplate.resolveForInitiation(second.getId()).processDefinitionId());
         long definitionCount = repositoryService.createProcessDefinitionQuery()
@@ -508,9 +496,7 @@ public class ApprovalTemplateContractTest {
         jdbcTemplate.update("UPDATE oa_process_template_publication SET deployment_id = NULL, process_definition_id = NULL "
                 + "WHERE process_template_id = ?", template.getId());
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertEquals(1, approvalTemplate.restorePublished());
-        assertTrue(approvalTemplate.canInitiate(template.getId()));
         assertNotNull(approvalTemplate.resolveForInitiation(template.getId()).processDefinitionId());
         assertEquals(path, jdbcTemplate.queryForObject(
                 "SELECT artifact_path FROM oa_process_template_publication WHERE process_template_id = ?",
@@ -535,7 +521,6 @@ public class ApprovalTemplateContractTest {
         form.setAttachmentDraftId("9d4ee9ae-a60f-4b07-859d-f9d43d98d261");
         form.setCcUserIds(List.of(5L));
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM oa_process", Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM oa_process_cc", Integer.class));
@@ -550,7 +535,6 @@ public class ApprovalTemplateContractTest {
                 () -> new PublishedTemplateRedeployRunner(processService, approvalTemplate)
                         .run(new org.springframework.boot.DefaultApplicationArguments()));
         assertEquals(1, approvalTemplate.read(1L).getStatus());
-        assertFalse(approvalTemplate.canInitiate(1L));
     }
 
     @Test
@@ -570,7 +554,6 @@ public class ApprovalTemplateContractTest {
 
         assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertTrue(approvalTemplate.canWrite(template.getId()));
         SysUser alice = user(2L, "alice", "小艾");
         ProcessFormVo unpublishedForm = publishedLeaveForm();
@@ -590,7 +573,6 @@ public class ApprovalTemplateContractTest {
 
         assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertTrue(approvalTemplate.canWrite(template.getId()));
         assertEquals("病假申请", approvalTemplate.read(template.getId()).getName());
     }
@@ -603,7 +585,6 @@ public class ApprovalTemplateContractTest {
 
         assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertTrue(approvalTemplate.canWrite(template.getId()));
     }
 
@@ -615,14 +596,12 @@ public class ApprovalTemplateContractTest {
 
         assertThrows(RuntimeException.class, () -> approvalTemplate.publish(template.getId()));
 
-        assertFalse(approvalTemplate.canInitiate(template.getId()));
         assertTrue(approvalTemplate.canWrite(template.getId()));
     }
 
     @Test
     public void 已发布CannotSaveDeleteOrRepublishButCanBeRead() {
         assertEquals("请假申请", approvalTemplate.read(1L).getName());
-        assertFalse(approvalTemplate.canInitiate(1L));
         assertEquals("暂不可发起，需核实原审批内容", approvalTemplate.read(1L).getAvailabilityMessage());
         assertFalse(approvalTemplate.canWrite(1L));
 
@@ -637,7 +616,6 @@ public class ApprovalTemplateContractTest {
         assertEquals("请假申请", approvalTemplate.read(1L).getName());
 
         assertThrows(RuntimeException.class, () -> approvalTemplate.publish(1L));
-        assertFalse(approvalTemplate.canInitiate(1L));
         assertFalse(approvalTemplate.canWrite(1L));
     }
 
@@ -650,7 +628,6 @@ public class ApprovalTemplateContractTest {
         form.setCcUserIds(List.of(5L));
 
         assertEquals("暂不可发起，需核实原审批内容", approvalTemplate.read(2L).getAvailabilityMessage());
-        assertFalse(approvalTemplate.canInitiate(2L));
         assertTrue(approvalTemplate.findStartable().isEmpty());
         assertThrows(RuntimeException.class, () -> approval.startUp(alice, form));
 

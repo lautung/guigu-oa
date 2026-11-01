@@ -28,8 +28,6 @@ public interface ApprovalTemplate {
 
     List<ProcessType> findStartable();
 
-    boolean canInitiate(Long id);
-
     boolean canWrite(Long id);
 
     UploadedProcessDefinition uploadProcessDefinition(MultipartFile file) throws IOException;

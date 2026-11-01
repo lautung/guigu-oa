@@ -177,12 +177,6 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
     }
 
     @Override
-    public boolean canInitiate(Long id) {
-        ProcessTemplate template = baseMapper.selectById(id);
-        return template != null && isAvailable(template);
-    }
-
-    @Override
     public boolean canWrite(Long id) {
         ProcessTemplate template = baseMapper.selectById(id);
         return template != null && ApprovalTemplateSupport.canWrite(template.getStatus());
