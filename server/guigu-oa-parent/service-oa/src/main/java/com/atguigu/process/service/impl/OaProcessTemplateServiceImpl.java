@@ -195,7 +195,7 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
             throw new GuiguException(201, "未发布的审批模板不能发起");
         }
         ProcessTemplatePublication publication = publicationFor(id);
-        if (publication == null || !StringUtils.hasText(publication.getDeploymentId())) {
+        if (!bindingComplete(publication)) {
             throw new GuiguException(201, PUBLISHED_UNAVAILABLE);
         }
         PublicationVerifier.Verdict verdict = publicationVerifier.verify(template, publication);
@@ -252,16 +252,22 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     /**
      * 读侧归并（ADR 0003）：证据问题与绑定问题由 verdict 区分，对外同一条
-     * 「暂不可发起，需核实原审批内容」。已记录的部署绑定仍需完整——发布即写入
-     * deploymentId，缺失说明记录不完整，恢复补齐前不可发起；verdict 对此判「可用」
-     * 是给切库恢复回填用的，不是给发起用的。
+     * 「暂不可发起，需核实原审批内容」；记录完整性先经 {@link #bindingComplete} 把关。
      */
     private boolean startable(ProcessTemplate template) {
         if (!ApprovalTemplateSupport.canInitiate(template.getStatus())) return false;
         ProcessTemplatePublication publication = publicationFor(template.getId());
-        return publication != null
-                && StringUtils.hasText(publication.getDeploymentId())
+        return bindingComplete(publication)
                 && publicationVerifier.verify(template, publication).usable();
+    }
+
+    /**
+     * 发布记录完整性守卫：已记录的部署绑定仍需完整——发布即写入 deploymentId，
+     * 缺失说明记录不完整，恢复补齐前不可发起；verdict 对此判「可用」是给切库
+     * 恢复回填用的，不是给发起用的。
+     */
+    private boolean bindingComplete(ProcessTemplatePublication publication) {
+        return publication != null && StringUtils.hasText(publication.getDeploymentId());
     }
 
     private void addAvailability(ProcessTemplate template) {

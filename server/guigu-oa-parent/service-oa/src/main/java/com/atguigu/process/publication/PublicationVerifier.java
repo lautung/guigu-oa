@@ -27,7 +27,7 @@ public class PublicationVerifier {
      * 绑定不一致的内部理由标记：只作 verdict 内部区分，不对外出现——
      * 「已绑定的流程定义当前不可用」降为内部理由标记（#189）。
      */
-    public static final String UNUSABLE_BINDING = "已绑定的流程定义当前不可用";
+    private static final String UNUSABLE_BINDING = "已绑定的流程定义当前不可用";
 
     private final ProcessDefinitionStorage processDefinitionStorage;
     private final ProcessDeploymentEngine deploymentEngine;
