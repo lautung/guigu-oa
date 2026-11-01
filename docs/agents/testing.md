@@ -28,8 +28,11 @@
 - 默认 `npm run test:e2e` 起 9530 的 Vite dev server；设置 `E2E_BASE_URL` 时指向已构建客户端并跳过 dev server（兼容性矩阵，见 `docs/test/plan/compatibility-matrix.md`）。
 - 验证未提交的本地改动时，Compose 客户端占着 9530，dev server 的 `strictPort` 起不来：先 `docker compose stop client`，跑完 `docker compose start client` 恢复；跑栈上的已构建产物才走 `E2E_BASE_URL`。
 - 种会话 cookie 一律用 `tests/e2e/helpers/base-url.ts` 的 `e2eCookieURL()`（它是 `E2E_BASE_URL` 的唯一解读者）。硬编码 `domain` 会让 `localhost` 与 `127.0.0.1` 两种入口表现不一致，失败点还会落在与该用例无关的断言上。
+- e2e helper 等**确认态正信号**——持久化完成后才出现的 UI 状态（如上传行内出现「删除」按钮与文件大小），不等上传开始时乐观渲染的名字；等错信号时守卫会静默拒绝，失败点落在后续无关断言上（#192）。
 - project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
 - **报告路径按 Playwright config 所在目录解析**：`tests/e2e-stack/` 与 `tests/security/` 的 JSON/JUnit 落在各自 `test-results/` 下，接口与 mock 套件在客户端根 `test-results/`。每次运行会清空自己的 outputDir，手工连着跑多套时先归档再跑下一套（`scripts/test-round.sh` 已内置归档顺序）。
+- **间歇用差异定性，不悬置**：套件内红、隔离单跑绿 ⇒ 顺序/并发依赖，直接进取证；套件内同用例两连红即停按「间歇」处理。「留观」必须带触发条件（再复现即根因）——#169 轮留观的 p0-3 附件竞态拖到 #192 轮才根因，多烧两轮套件。
+- **失败取证**：先看用例目录下的 `error-context.md`（页面快照 + 错误）；更深证据解 `test-results/<用例>/trace.zip`——`*-trace.network` 查请求是否发出与响应体、`*.trace` 查 console/pageError、`screencast/` 按文件名 epoch-ms 挑点击前后帧看 toast/校验错误。隔离复跑会覆盖 retain-on-failure 留下的 trace，取证前先拷走。
 - 生产构建有 CSP（#139）：mock 预签名上传使用 `http://localhost:9000`（`connect-src` 默认放行源），不要再用 `objects.test` 之类的外部主机。
 - WebKit 会把 ResizeObserver 循环上报成 `pageerror`；用 `tests/e2e/helpers/known-noise.ts` 只过滤这一条，其他错误仍失败。
 
