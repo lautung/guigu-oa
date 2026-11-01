@@ -27,6 +27,7 @@
 | `2026-10-29-compatibility/` | 五格关键页截图 + 控制台 JSON + JUnit | `E2E_BASE_URL=http://127.0.0.1:9530 npm run test:e2e` | [`2026-10-29-compatibility.md`](../execution/2026-10-29-compatibility.md) |
 | `2026-10-30-clean-rerun/` | 干净环境五类复跑：`api/`、`functional/`、`perf/`、`security/`、`compat/`、`timings.tsv` | `./scripts/test-round.sh all`（或按类子命令） | [`2026-10-30-clean-rerun.md`](../execution/2026-10-30-clean-rerun.md) |
 | `2026-11-01-perf-read-module/` | 审批列表读 module k6 before/after（main `9f1e27c` vs spec-178 `358dbbd`，含回归 EXPLAIN 取证） | `perf/ops/round.sh <name> <tier>`（after 轮带 `COMPOSE_PROJECT_NAME=guigu-oa`） | [`2026-11-01-perf-read-module.md`](../execution/2026-11-01-perf-read-module.md) |
+| `2026-11-01-publication-module/` | 发布一致性 spec #175 收尾回归四件套（api summary+junit、functional report+junit、timings） | `./scripts/test-round.sh api`、`./scripts/test-round.sh functional`（干净栈自重建） | [`2026-11-01-publication-module.md`](../execution/2026-11-01-publication-module.md) |
 
 ## 大件（不入仓）
 

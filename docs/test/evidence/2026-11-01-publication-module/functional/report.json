@@ -1,0 +1,1223 @@
+{
+  "config": {
+    "argv": [
+      "/Users/lautung/development/tools/node-v24.18.1-darwin-arm64/bin/node",
+      "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "tests/e2e-stack/playwright.config.ts"
+    ],
+    "configFile": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack/playwright.config.ts",
+    "rootDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "stack-chromium",
+        "name": "stack-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "stack-webkit-mobile",
+        "name": "stack-webkit-mobile",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "testIgnore": [],
+        "testMatch": [
+          "/p0-7-mobile-approval\\.spec\\.ts/"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "stack-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530",
+          "trace": "retain-on-failure",
+          "actionTimeout": 15000,
+          "navigationTimeout": 20000,
+          "browserName": "chromium",
+          "viewport": {
+            "width": 1280,
+            "height": 900
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "stack-chromium"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "stack-webkit-mobile",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/e2e-stack",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530",
+          "trace": "retain-on-failure",
+          "actionTimeout": 15000,
+          "navigationTimeout": 20000,
+          "browserName": "webkit"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "stack-webkit-mobile"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/e2e-stack/report.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/e2e-stack/report.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "guard-work-list-initial-load.spec.ts",
+      "file": "guard-work-list-initial-load.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "慢列表加载下首轮扫描仍能找到目标行",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3468,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:52.757Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0564a73531ddf9c7fd79-63455aacba8956bcf0de",
+          "file": "guard-work-list-initial-load.spec.ts",
+          "line": 15,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-1-auth.spec.ts",
+      "file": "p0-1-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "登录成功落到待处理",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 517,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:56.465Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-40b01727d20f5e5df264",
+          "file": "p0-1-auth.spec.ts",
+          "line": 9,
+          "column": 1
+        },
+        {
+          "title": "密码错误与用户不存在都提示认证失败（不区分）",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 553,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:56.988Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-d7eb5310485ffbbdc908",
+          "file": "p0-1-auth.spec.ts",
+          "line": 15,
+          "column": 1
+        },
+        {
+          "title": "停用的用户不能登录，恢复后可以",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1044,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:57.547Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-8480346d3a98a5e3a484",
+          "file": "p0-1-auth.spec.ts",
+          "line": 33,
+          "column": 1
+        },
+        {
+          "title": "退出后回到登录页",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 593,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:58.596Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-af38fa59c64e9773b281",
+          "file": "p0-1-auth.spec.ts",
+          "line": 50,
+          "column": 1
+        },
+        {
+          "title": "未登录直达办事 URL 被拦回登录页",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 253,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:59.194Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-79df48a26d24710b4279",
+          "file": "p0-1-auth.spec.ts",
+          "line": 57,
+          "column": 1
+        },
+        {
+          "title": "退出后直达办事 URL 同样被拦",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 684,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:37:59.453Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c6a5958bd195ed38ae0c-74801be65641f3ec31b1",
+          "file": "p0-1-auth.spec.ts",
+          "line": 64,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-2-sidebar-occupancy.spec.ts",
+      "file": "p0-2-sidebar-occupancy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "admin 侧栏有办事与配置两组",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 558,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:00.148Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d4afa8ba0ab66d14994-f56ab72c29703d900de8",
+          "file": "p0-2-sidebar-occupancy.spec.ts",
+          "line": 9,
+          "column": 1
+        },
+        {
+          "title": "user 侧栏只有办事组",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 513,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:00.711Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d4afa8ba0ab66d14994-d50aed5e8722050d29ab",
+          "file": "p0-2-sidebar-occupancy.spec.ts",
+          "line": 25,
+          "column": 1
+        },
+        {
+          "title": "user 直达配置 URL 落到待处理",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 670,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:01.230Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d4afa8ba0ab66d14994-64f9734e8233237dd723",
+          "file": "p0-2-sidebar-occupancy.spec.ts",
+          "line": 36,
+          "column": 1
+        },
+        {
+          "title": "admin 可以进入用户管理",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 669,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:01.905Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4d4afa8ba0ab66d14994-12032d834c0d64d3f330",
+          "file": "p0-2-sidebar-occupancy.spec.ts",
+          "line": 47,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-3-start-with-attachment.spec.ts",
+      "file": "p0-3-start-with-attachment.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "alice 发起含附件的审批并出现在已发起",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1466,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:02.582Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "7e04f783804c225ca749-631eb49109fad14eb237",
+          "file": "p0-3-start-with-attachment.spec.ts",
+          "line": 17,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-4-approve.spec.ts",
+      "file": "p0-4-approve.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "bob 通过一条审批，双视角状态一致",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1189,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:04.057Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dab27baf0084e190510b-77e8fb067e6459b8ef45",
+          "file": "p0-4-approve.spec.ts",
+          "line": 11,
+          "column": 1
+        },
+        {
+          "title": "bob 已处理列表出现刚通过的审批",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 942,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:05.252Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "dab27baf0084e190510b-79a16b4f00b4943e4f4d",
+          "file": "p0-4-approve.spec.ts",
+          "line": 31,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-5-reject.spec.ts",
+      "file": "p0-5-reject.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "bob 拒绝一条审批，双视角状态一致",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1163,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:06.202Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "47257f8f54bac5df5149-af8788cf10f9ef18040b",
+          "file": "p0-5-reject.spec.ts",
+          "line": 11,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-6-carbon-copy.spec.ts",
+      "file": "p0-6-carbon-copy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "carol 能看到抄送的完整内容并下载附件，但不能处理与补传",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1103,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:07.374Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a8583efa11f817c89afd-317f21cc7149287dfa27",
+          "file": "p0-6-carbon-copy.spec.ts",
+          "line": 12,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-7-mobile-approval.spec.ts",
+      "file": "p0-7-mobile-approval.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "手机视口完成登录到通过的全链路",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1113,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:08.486Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "113f255162817e684b08-fb3fde53a64dc7148188",
+          "file": "p0-7-mobile-approval.spec.ts",
+          "line": 19,
+          "column": 1
+        },
+        {
+          "title": "手机视口完成登录到通过的全链路",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-webkit-mobile",
+              "projectName": "stack-webkit-mobile",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1691,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:52.000Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "113f255162817e684b08-1b2a019c58f38db52361",
+          "file": "p0-7-mobile-approval.spec.ts",
+          "line": 19,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p0-8-start-again.spec.ts",
+      "file": "p0-8-start-again.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "发起结果不明后核实并重新发起，两条审批都真实存在",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 18364,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:09.607Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c10ba6a6d190ae4b7e90-3364a35d8a82befc516c",
+          "file": "p0-8-start-again.spec.ts",
+          "line": 15,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p1-1-template-publish.spec.ts",
+      "file": "p1-1-template-publish.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "未发布模板可改可删，发布后冻结",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3734,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:27.981Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "b2b87b2d1813c4086c22-bffa7f22ae70b4b316a4",
+          "file": "p1-1-template-publish.spec.ts",
+          "line": 14,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p1-2-assign-roles.spec.ts",
+      "file": "p1-2-assign-roles.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "分配配置角色后 user 的配置菜单生效，撤销后消失",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3419,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:31.724Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e01a108273ad5f8fa3d5-3e1e929fcc019e599dbb",
+          "file": "p1-2-assign-roles.spec.ts",
+          "line": 15,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p1-3-config-crud.spec.ts",
+      "file": "p1-3-config-crud.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "审批类型：建、改、删",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3708,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:35.153Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "00d9f4e2a9f63182f13d-7d317559d418308e8cfb",
+          "file": "p1-3-config-crud.spec.ts",
+          "line": 11,
+          "column": 1
+        },
+        {
+          "title": "角色：建、删",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2506,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:38.866Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "00d9f4e2a9f63182f13d-9456b153f5dd22dfb857",
+          "file": "p1-3-config-crud.spec.ts",
+          "line": 40,
+          "column": 1
+        },
+        {
+          "title": "用户：建、删",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2596,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:41.377Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "00d9f4e2a9f63182f13d-3f732060e1650e6c7e17",
+          "file": "p1-3-config-crud.spec.ts",
+          "line": 58,
+          "column": 1
+        },
+        {
+          "title": "菜单：建（停用）、删",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2533,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:43.978Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "00d9f4e2a9f63182f13d-d7e7ebc8a46eddb2f9cf",
+          "file": "p1-3-config-crud.spec.ts",
+          "line": 79,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p1-4-pagination.spec.ts",
+      "file": "p1-4-pagination.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "25 条真实数据翻页：末页不满、下一页禁用、越界为空",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2937,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:46.520Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0b1353328cd1d1974867-4a8f7aa94720985317d4",
+          "file": "p1-4-pagination.spec.ts",
+          "line": 18,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "p1-5-attachment-lifecycle.spec.ts",
+      "file": "p1-5-attachment-lifecycle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "附件发起前可在发起页删除",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1115,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:49.466Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a179c2abb808a26cd59c-3f8a2e2bcf507aee948b",
+          "file": "p1-5-attachment-lifecycle.spec.ts",
+          "line": 11,
+          "column": 1
+        },
+        {
+          "title": "附件发起后不可删、审批结束保留且可下载",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "stack-chromium",
+              "projectName": "stack-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1039,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-01T04:38:50.587Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a179c2abb808a26cd59c-2d239d72281f2f889657",
+          "file": "p1-5-attachment-lifecycle.spec.ts",
+          "line": 30,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-01T04:37:52.386Z",
+    "duration": 61632.539,
+    "expected": 28,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
