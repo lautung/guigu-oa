@@ -105,7 +105,7 @@ export async function submitStart(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: '已发起', level: 2 })).toBeVisible()
 }
 
-/** 发起页上传附件并等它出现在附件列表。 */
+/** 发起页上传附件并等它确认进入附件列表。 */
 export async function uploadStartAttachment(
   page: Page,
   file: { name: string; contentType: string; body: Buffer },
@@ -115,7 +115,11 @@ export async function uploadStartAttachment(
     mimeType: file.contentType,
     buffer: file.body,
   })
-  await expect(page.locator('.attachment-section').getByText(file.name)).toBeVisible()
+  // 文件名在上传开始即乐观渲染（未确认行也会出现，#192）；提交会撞 busy 守卫被静默拒绝，
+  // 必须等确认态正信号——行内出现「删除」按钮（未确认/中断行只有重新选择或继续未完成文件）。
+  const row = page.locator('.attachment-section li', { hasText: file.name })
+  await expect(row).toBeVisible()
+  await expect(row.getByRole('button', { name: '删除', exact: true })).toBeVisible()
 }
 
 /** 在详情页点「通过 / 拒绝」，等待跳转到已处理列表并出现结果文案。 */
