@@ -159,8 +159,10 @@ phase_api() {
   step "api: round 1" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:api
   step "api: round 2" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:api
   mkdir -p "$OUT/api"
-  cp "$client/test-results/api/report.json" "$OUT/api/report.json"
   cp "$client/test-results/api/junit.xml" "$OUT/api/junit.xml"
+  # raw report.json 按大件规范不入仓（#122），蒸馏成 stats+用例清单：76 例已 103KB 超限。
+  jq '{stats: .stats, tests: [.. | objects | select(has("ok")) | {title: .title, ok: .ok}]}' \
+    "$client/test-results/api/report.json" > "$OUT/api/summary.json"
 }
 
 phase_functional() {
@@ -170,8 +172,9 @@ phase_functional() {
   step "functional: e2e-stack" env DEMO_ORIGIN="$DEMO_ORIGIN" npm --prefix "$client" run test:e2e:stack
   # e2e-stack 的 config 在 tests/e2e-stack 下，JSON/JUnit 相对 config 目录落盘。
   mkdir -p "$OUT/functional"
-  cp "$client/tests/e2e-stack/test-results/e2e-stack/report.json" "$OUT/functional/report.json"
   cp "$client/tests/e2e-stack/test-results/e2e-stack/report.xml" "$OUT/functional/junit.xml"
+  jq '{stats: .stats, tests: [.. | objects | select(has("ok")) | {title: .title, ok: .ok}]}' \
+    "$client/tests/e2e-stack/test-results/e2e-stack/report.json" > "$OUT/functional/summary.json"
 }
 
 phase_perf() {
