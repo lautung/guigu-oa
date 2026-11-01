@@ -8,6 +8,7 @@ import com.atguigu.process.ApprovalTemplateSupport;
 import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.deployment.ProcessDeploymentEngine;
 import com.atguigu.process.mapper.OaProcessTemplateMapper;
+import com.atguigu.process.publication.PublicationVerifier;
 import com.atguigu.process.mapper.OaProcessTemplatePublicationMapper;
 import com.atguigu.process.service.OaProcessTypeService;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -66,6 +67,8 @@ class OaProcessTemplateServiceImplTest {
         ReflectionTestUtils.setField(service, "publicationMapper", publicationMapper);
         ReflectionTestUtils.setField(service, "processDefinitionStorage", storage);
         ReflectionTestUtils.setField(service, "deploymentEngine", deploymentEngine);
+        ReflectionTestUtils.setField(service, "publicationVerifier",
+                new PublicationVerifier(storage, deploymentEngine));
 
         when(deploymentEngine.definitionById(anyString())).thenReturn(
                 new ProcessDeploymentEngine.DefinitionSnapshot("def-1", KEY, "dep-1", false));
@@ -288,6 +291,34 @@ class OaProcessTemplateServiceImplTest {
 
         assertSame(template, approval.template());
         assertEquals("def-1", approval.processDefinitionId());
+    }
+
+    @Test
+    void resolveForInitiationRejectsIncompleteDeploymentBinding() {
+        ProcessTemplate template = publishable(7L);
+        template.setStatus(ApprovalTemplateSupport.已发布);
+        when(templateMapper.selectById(7L)).thenReturn(template);
+        ProcessTemplatePublication missingDeployment = publication(7L);
+        missingDeployment.setDeploymentId("");
+        when(publicationMapper.selectOne(any())).thenReturn(missingDeployment);
+
+        // 发布即写入部署绑定；缺失说明记录不完整，恢复补齐前不可发起（行为保持）。
+        assertEquals(201, code(() -> service.resolveForInitiation(7L)));
+    }
+
+    @Test
+    void findPageMarksPublishedTemplatesWithCompletePublicationAvailable() {
+        ProcessTemplate published = publishable(8L);
+        published.setStatus(ApprovalTemplateSupport.已发布);
+        Page<ProcessTemplate> page = new Page<>(1, 10);
+        page.setRecords(List.of(published));
+        when(templateMapper.selectPage(any(), isNull())).thenReturn(page);
+        when(publicationMapper.selectOne(any())).thenReturn(publication(8L));
+
+        service.findPage(new Page<>(1, 10));
+
+        assertTrue(published.getAvailableForInitiation());
+        assertNull(published.getAvailabilityMessage());
     }
 
     @Test

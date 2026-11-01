@@ -9,6 +9,7 @@ import com.atguigu.process.ProcessDefinitionStorage;
 import com.atguigu.process.deployment.ProcessDeploymentEngine;
 import com.atguigu.process.mapper.OaProcessTemplateMapper;
 import com.atguigu.process.mapper.OaProcessTemplatePublicationMapper;
+import com.atguigu.process.publication.PublicationVerifier;
 import com.atguigu.process.service.ApprovalTemplate;
 import com.atguigu.process.service.OaProcessTemplateService;
 import com.atguigu.process.service.OaProcessTypeService;
@@ -46,6 +47,9 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     @Autowired
     private ProcessDeploymentEngine deploymentEngine;
+
+    @Autowired
+    private PublicationVerifier publicationVerifier;
 
     @Override
     public IPage<ProcessTemplate> findPage(Page<ProcessTemplate> pageParam) {
@@ -156,7 +160,7 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
         List<ProcessTemplate> available = list(wrapper).stream()
-                .filter(this::isAvailable)
+                .filter(this::startable)
                 .filter(template -> template.getProcessTypeId() != null)
                 .collect(Collectors.toList());
         Map<Long, List<ProcessTemplate>> publishedByType = available.stream()
@@ -191,11 +195,14 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
             throw new GuiguException(201, "未发布的审批模板不能发起");
         }
         ProcessTemplatePublication publication = publicationFor(id);
-        if (unavailableReason(template, publication) != null) {
+        if (publication == null || !StringUtils.hasText(publication.getDeploymentId())) {
             throw new GuiguException(201, PUBLISHED_UNAVAILABLE);
         }
-        ProcessDeploymentEngine.DefinitionSnapshot definition = currentDefinition(publication);
-        return new PublishedApproval(template, definition.id());
+        PublicationVerifier.Verdict verdict = publicationVerifier.verify(template, publication);
+        if (!verdict.usable()) {
+            throw new GuiguException(201, PUBLISHED_UNAVAILABLE);
+        }
+        return new PublishedApproval(template, verdict.definition().id());
     }
 
     @Override
@@ -205,7 +212,7 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         int restored = 0;
         for (ProcessTemplate template : templates) {
             ProcessTemplatePublication publication = publicationFor(template.getId());
-            String invalidReason = publicationEvidenceProblem(template, publication);
+            String invalidReason = publicationVerifier.verify(template, publication).evidenceProblem();
             if (invalidReason != null) {
                 throw new GuiguException(201, "切库恢复停止：审批模板 " + template.getId()
                         + " " + PUBLISHED_UNAVAILABLE + "（" + invalidReason + "）");
@@ -242,53 +249,25 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         return restored;
     }
 
-    private boolean isAvailable(ProcessTemplate template) {
+    /**
+     * 读侧归并（ADR 0003）：证据问题与绑定问题由 verdict 区分，对外同一条
+     * 「暂不可发起，需核实原审批内容」。已记录的部署绑定仍需完整——发布即写入
+     * deploymentId，缺失说明记录不完整，恢复补齐前不可发起；verdict 对此判「可用」
+     * 是给切库恢复回填用的，不是给发起用的。
+     */
+    private boolean startable(ProcessTemplate template) {
         if (!ApprovalTemplateSupport.canInitiate(template.getStatus())) return false;
         ProcessTemplatePublication publication = publicationFor(template.getId());
-        return unavailableReason(template, publication) == null;
+        return publication != null
+                && StringUtils.hasText(publication.getDeploymentId())
+                && publicationVerifier.verify(template, publication).usable();
     }
 
     private void addAvailability(ProcessTemplate template) {
-        boolean available = isAvailable(template);
+        boolean available = startable(template);
         template.setAvailableForInitiation(available);
         template.setAvailabilityMessage(
                 !available && ApprovalTemplateSupport.canInitiate(template.getStatus()) ? PUBLISHED_UNAVAILABLE : null);
-    }
-
-    private String unavailableReason(ProcessTemplate template, ProcessTemplatePublication publication) {
-        String evidenceProblem = publicationEvidenceProblem(template, publication);
-        if (evidenceProblem != null) return evidenceProblem;
-        return currentDefinition(publication) == null ? "已绑定的流程定义当前不可用" : null;
-    }
-
-    private String publicationEvidenceProblem(ProcessTemplate template, ProcessTemplatePublication publication) {
-        if (publication == null) return "缺少原发布内容的可靠绑定";
-        if (!StringUtils.hasText(publication.getArtifactPath())) return "缺少发布产物路径";
-        if (!StringUtils.hasText(publication.getArtifactSha256())) return "缺少发布产物校验值";
-        if (!processDefinitionStorage.isContentAddressedPath(
-                publication.getArtifactPath(), publication.getArtifactSha256())) return "发布产物路径与校验值不一致";
-        if (!StringUtils.hasText(publication.getProcessDefinitionKey())
-                || !publication.getProcessDefinitionKey().equals(template.getProcessDefinitionKey())) return "流程定义 key 与模板记录不一致";
-        try {
-            if (!processDefinitionStorage.matchesSha256(publication.getArtifactPath(), publication.getArtifactSha256())) {
-                return "发布流程 zip 缺失或内容已变化";
-            }
-        } catch (IOException | IllegalArgumentException e) {
-            return "发布流程 zip 无法读取";
-        }
-        return null;
-    }
-
-    private ProcessDeploymentEngine.DefinitionSnapshot currentDefinition(ProcessTemplatePublication publication) {
-        if (!StringUtils.hasText(publication.getProcessDefinitionId())
-                || !StringUtils.hasText(publication.getDeploymentId())) return null;
-        ProcessDeploymentEngine.DefinitionSnapshot definition =
-                deploymentEngine.definitionById(publication.getProcessDefinitionId());
-        if (definition == null
-                || !publication.getProcessDefinitionKey().equals(definition.key())
-                || !publication.getDeploymentId().equals(definition.deploymentId())
-                || definition.suspended()) return null;
-        return definition;
     }
 
     private ProcessTemplatePublication publicationFor(Long templateId) {
