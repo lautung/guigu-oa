@@ -16,7 +16,8 @@
 - 共享工具 `tests/unit/support/harness.js`：`setupSession()`（pinia + 假 recognition）、`fakeRecognition()`、`installHttp(responder)`、`mountOptions(pinia, router)`、`elementStubs`。
 - 全局 setup `tests/unit/setup.js` 由 `test.setupFiles` 加载：已注册 auto-unmount 与 nprogress stub，**不要**在单个 spec 里再写 `enableAutoUnmount`。
 - 挂载 view 的常规流程：`setupSession()` → `createTestRouter([...])` → `router.push(...)` + `isReady()` → `mount(View, mountOptions(pinia, router))`。
-- HTTP 用 axios adapter：`installHttp((config) => ok(data) / paged(records))`，每个 spec 的 `afterEach` 里 `http.restore()`。
+- HTTP 用 axios adapter：`installHttp((config) => ok(data) / paged(records))`，每个 spec 的 `afterEach` 里 `http.restore()`。错误响应也归它：responder 抛 AxiosError 原样冒泡、抛其他错误包装成 `ERR_NETWORK`——#145/#155 的错误形状一处拥有（`renewal.spec` 是现成用例）。
+- mock 调用次数断言用 `toHaveBeenCalledTimes`：`toHaveLength` 查的是函数形参个数（`vi.fn((config) => …)` 的 `length` 恒为 1），在 mock 上会静默错断；数组长度仍用 `toHaveLength`。
 - 需要真实 Element Plus 渲染 `el-table`/`el-dialog` 插槽时：`vi.mock('element-plus', importOriginal)` 只替换 `ElMessage`/`ElMessageBox`，挂载时加 `plugins: [pinia, router, ElementPlus]` 与 `ensureDomApis()`。纯 stub 渲染不到 scoped slot，模板分支不会执行。
 - Element Plus 必须留在 `vite.config.js` 的 `test.server.deps.inline`：外置时其内部 import 的 async-validator 与测试侧形成两份实例，`el-form.validate()` 静默失真（空必填判 VALID、错误不上屏），生产 rollup 单实例无此问题。删掉 inline 会让依赖校验的视图测试变红，所以配置由套件自守；排障前先看 ADR 0038，别重查一遍。
 - EP 错误上屏走 100ms `refDebounced`：断言 `.el-form-item__error` 前真等 ~150ms 再 `flushPromises()`，`flushPromises` 本身不等真时间。
