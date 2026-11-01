@@ -31,7 +31,20 @@
 | `ops/observe.sh` | docker stats ~1Hz 采样到 CSV |
 
 `perf/results/`（k6 汇总、采样、造数摘要）与 `perf/snapshot/` 不入仓；
-证据摘要（≤100KB/文件）复制到 `docs/test/evidence/`。
+证据摘要（≤100KB/文件）复制到 `docs/test/evidence/`。k6 汇总裁剪约定：每指标只留
+`values` + `thresholds`（原始 `metrics` 之外的 setup_data/root_group 等不留）。
+
+## SQL 取证纪律（#185 retro）
+
+- **性能取证 SQL 必须用服务实发原文，禁手拼**：手拼与 mapper 实发形状差一个谓词就会污染
+  计划解释——#182 取证因此多带 `is_deleted=0`，2026-11-01 修复轮订正。抓取配方：
+  `SET GLOBAL log_output='TABLE'; SET GLOBAL general_log='ON';` → 冒烟触发目标端点一次 →
+  `SELECT argument FROM mysql.general_log WHERE argument LIKE '%<语句特征>%'` 捞原文 →
+  对原文跑 `EXPLAIN ANALYZE` → `SET GLOBAL general_log='OFF';`。
+- **建索引后必须验证实发 SQL 的执行计划**：优化器可能不选新索引——MySQL 8.4 在 join 上下文
+  按 ref 成本取舍（差 0.45 即反转，单表形状则选对），`ANALYZE TABLE`、显式 DESC 索引都扭转
+  不了；优化器不认排序收益时，mapper 按形状注入条件 hint 是合法兜底
+  （实例见 `OaProcessMapper.xml` selectProcessPage 与 V108，#185）。
 
 ## 一轮完整执行
 
