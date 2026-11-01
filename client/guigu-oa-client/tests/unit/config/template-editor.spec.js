@@ -510,7 +510,7 @@ it('保存中强制离开不确认，迟到成功不提示也不抢导航', asyn
 })
 
 it.each([208, 209])('明确拒绝 %s 恢复正常重试；重发后断网仍待确认', async (code) => {
-  const { BusinessRequestFailure } = await import('@/utils/request')
+  const { BusinessRequestFailure } = await import('@/request-failure')
   const h = harness()
   const edit = h.module.open('A')
   await flushPromises()

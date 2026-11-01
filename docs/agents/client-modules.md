@@ -7,6 +7,9 @@
 | module | interface / seam | 职责 |
 |---|---|---|
 | `src/recognition/index.ts` | `createRecognition(adapter)`；`capture()` / `assertCurrent()` / `recognize()` / `reject()` | 进入身份（generation + entryId）与迟到结果归属 |
+| `src/utils/request.ts` | `configureRequest(recognition)` → 默认导出 `request`；`createRequestClient` | 纯传输（ADR 0048）:axios 实例、附头、拦截器骨架、200 直通与转发；续期与失败分类外置 |
+| `src/renewal.ts` | `createRenewal(recognition, resend)` → `onExpired(config, context)`；`setRequestToken` / `isAuthentication` | 续期状态机唯一 owner:单飞去重、换头重放、认证端点豁免；208 的决策与执行（ADR 0048） |
+| `src/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；传输与续期共用的失败基座 |
 | `src/request-scope.ts` | `openRequestScope(recognition, { notifyNormalErrors })` → `request(config, isRelevant?)`、`current()` | 打开时捕获一次身份、按次相关性、错误策略；`ScopedRequestConfig` 只在传输层 |
 | `src/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
 | `src/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `list-page-browser.ts` |

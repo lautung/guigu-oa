@@ -1,4 +1,4 @@
-import { RequestFailure } from '@/utils/request'
+import { RequestFailure } from '@/request-failure'
 
 export type SubmissionAction =
   'start-approval' | 'process-approval' | 'save-template' | 'assign-roles'
