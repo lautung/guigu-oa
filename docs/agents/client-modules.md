@@ -37,7 +37,8 @@
 
 | module | interface | 职责 |
 |---|---|---|
-| `process.approval.ApprovalEngine` | `start` / `complete` / `rejectToEnd` + `pendingTasks` / `processedTasks` / inherited `currentTasks` / `hasHistoricAssignee` | 唯一的 Flowable 读写 port；`FlowableApprovalEngine` 是唯一实现，`ProcessEngineApproval` 是唯一 Flowable 调用点 |
+| `process.approval.ApprovalEngine` | `start` / `complete` / `rejectToEnd` + `pendingTasks` / `processedTasks` / inherited `currentTasks` / `hasHistoricAssignee` | 唯一的审批运行时 Flowable 读写 port；`FlowableApprovalEngine` 是唯一实现，`ProcessEngineApproval` 是运行时唯一 Flowable 调用点（部署期触点见 `process.deployment`，#188） |
+| `process.deployment.ProcessDeploymentEngine` | `definitionById` / `deployVerified` | 部署动作 port：按 definitionId 查定义、按路径与 key 校验部署（部署期摘要前后校验、内容寻址复查、定义计数、挂起检查与文案随迁在此，#188）；`FlowableProcessDeploymentEngine` 是唯一实现与部署期 Flowable 触点 |
 | `process.read.ApprovalListReader` | `pending` / `processed` / `started` / `carbonCopied` / `instanceQuery`（参数强类型） | 五种审批列表读的唯一入口：行形状（`OaProcessMapper.xml` 共享列清单，`ProcessVo` 唯一行类型）、窗口（`PageWindow`）、回查批量化、排序一处拥有；pending/processed 仍由引擎分页与计数，tiebreaker 与引擎 businessKey 批量收在 port 实现内（ADR 0045） |
 | `process.approval.ApprovalWriter` | `startUp` / `startedOutcome` / `approve` | 写入次序、事务边界、附件绑定与回滚补偿；同一提交标识重复送达返回同一条审批（ADR 0032），冲突重读只在事务外调用 `startedOutcome` |
 | `process.membership.ApprovalMembership` / `ApprovalMembershipResolver` | `resolve(user, process)` → `canRead` / `canUpload` / `canAct` | 审批成员资格；证据接口 `MembershipEvidence` 由 engine 继承，扩展来自 `ProcessMembershipExtension` |

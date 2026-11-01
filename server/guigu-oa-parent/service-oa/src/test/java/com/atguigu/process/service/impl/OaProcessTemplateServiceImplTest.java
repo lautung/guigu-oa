@@ -6,6 +6,7 @@ import com.atguigu.model.process.ProcessTemplatePublication;
 import com.atguigu.model.process.ProcessType;
 import com.atguigu.process.ApprovalTemplateSupport;
 import com.atguigu.process.ProcessDefinitionStorage;
+import com.atguigu.process.deployment.ProcessDeploymentEngine;
 import com.atguigu.process.mapper.OaProcessTemplateMapper;
 import com.atguigu.process.mapper.OaProcessTemplatePublicationMapper;
 import com.atguigu.process.service.OaProcessTypeService;
@@ -13,18 +14,12 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
-import org.flowable.engine.RepositoryService;
-import org.flowable.engine.repository.Deployment;
-import org.flowable.engine.repository.DeploymentBuilder;
-import org.flowable.engine.repository.ProcessDefinition;
-import org.flowable.engine.repository.ProcessDefinitionQuery;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -53,11 +48,7 @@ class OaProcessTemplateServiceImplTest {
     private final OaProcessTemplatePublicationMapper publicationMapper =
             mock(OaProcessTemplatePublicationMapper.class);
     private final ProcessDefinitionStorage storage = mock(ProcessDefinitionStorage.class);
-    private final RepositoryService repositoryService = mock(RepositoryService.class);
-    private final ProcessDefinitionQuery definitionQuery = mock(ProcessDefinitionQuery.class);
-    private final DeploymentBuilder deploymentBuilder = mock(DeploymentBuilder.class);
-    private final Deployment deployment = mock(Deployment.class);
-    private final ProcessDefinition definition = mock(ProcessDefinition.class);
+    private final ProcessDeploymentEngine deploymentEngine = mock(ProcessDeploymentEngine.class);
 
     private final OaProcessTemplateServiceImpl service = new OaProcessTemplateServiceImpl();
 
@@ -74,28 +65,16 @@ class OaProcessTemplateServiceImplTest {
         ReflectionTestUtils.setField(service, "processTypeService", typeService);
         ReflectionTestUtils.setField(service, "publicationMapper", publicationMapper);
         ReflectionTestUtils.setField(service, "processDefinitionStorage", storage);
-        ReflectionTestUtils.setField(service, "repositoryService", repositoryService);
+        ReflectionTestUtils.setField(service, "deploymentEngine", deploymentEngine);
 
-        when(repositoryService.createProcessDefinitionQuery()).thenReturn(definitionQuery);
-        when(definitionQuery.processDefinitionId(anyString())).thenReturn(definitionQuery);
-        when(definitionQuery.deploymentId(anyString())).thenReturn(definitionQuery);
-        when(definitionQuery.processDefinitionKey(anyString())).thenReturn(definitionQuery);
-        when(definitionQuery.singleResult()).thenReturn(definition);
-        when(definitionQuery.list()).thenReturn(List.of(definition));
-        when(repositoryService.createDeployment()).thenReturn(deploymentBuilder);
-        when(deploymentBuilder.addZipInputStream(any())).thenReturn(deploymentBuilder);
-        when(deploymentBuilder.name(anyString())).thenReturn(deploymentBuilder);
-        when(deploymentBuilder.deploy()).thenReturn(deployment);
-        when(deployment.getId()).thenReturn("dep-1");
-        when(definition.getId()).thenReturn("def-1");
-        when(definition.getKey()).thenReturn(KEY);
-        when(definition.getDeploymentId()).thenReturn("dep-1");
-        when(definition.isSuspended()).thenReturn(false);
+        when(deploymentEngine.definitionById(anyString())).thenReturn(
+                new ProcessDeploymentEngine.DefinitionSnapshot("def-1", KEY, "dep-1", false));
+        when(deploymentEngine.deployVerified(anyString(), anyString(), anyString())).thenReturn(
+                new ProcessDeploymentEngine.DeploymentResult("dep-1", "def-1", SHA));
 
         when(storage.sha256(anyString())).thenReturn(SHA);
         when(storage.isContentAddressedPath(anyString(), anyString())).thenReturn(true);
         when(storage.matchesSha256(anyString(), anyString())).thenReturn(true);
-        when(storage.open(anyString())).thenReturn(new ByteArrayInputStream(new byte[0]));
         when(publicationMapper.insert(any(ProcessTemplatePublication.class))).thenReturn(1);
         when(publicationMapper.updateById(any(ProcessTemplatePublication.class))).thenReturn(1);
     }
@@ -204,7 +183,7 @@ class OaProcessTemplateServiceImplTest {
 
         assertEquals(ApprovalTemplateSupport.已发布, template.getStatus());
         verify(publicationMapper).insert(any(ProcessTemplatePublication.class));
-        verify(repositoryService).createDeployment();
+        verify(deploymentEngine).deployVerified(PATH, KEY, SHA);
     }
 
     @Test
@@ -327,11 +306,12 @@ class OaProcessTemplateServiceImplTest {
         when(templateMapper.selectPublishedForUpdate()).thenReturn(List.of(template));
         when(publicationMapper.selectOne(any())).thenReturn(publication(2L));
 
-        when(definition.getKey()).thenReturn("other");
+        when(deploymentEngine.definitionById("def-1")).thenReturn(
+                new ProcessDeploymentEngine.DefinitionSnapshot("def-1", "other", "dep-1", false));
         assertEquals(201, code(service::restorePublished));
 
-        when(definition.getKey()).thenReturn(KEY);
-        when(definition.isSuspended()).thenReturn(true);
+        when(deploymentEngine.definitionById("def-1")).thenReturn(
+                new ProcessDeploymentEngine.DefinitionSnapshot("def-1", KEY, "dep-1", true));
         assertEquals(201, code(service::restorePublished));
     }
 
@@ -346,7 +326,7 @@ class OaProcessTemplateServiceImplTest {
         assertEquals(1, service.restorePublished());
         verify(publicationMapper).updateById(missingDeployment);
 
-        when(definitionQuery.singleResult()).thenReturn(null);
+        when(deploymentEngine.definitionById("def-1")).thenReturn(null);
         ProcessTemplatePublication missingDefinition = publication(3L);
         when(publicationMapper.selectOne(any())).thenReturn(missingDefinition);
 
