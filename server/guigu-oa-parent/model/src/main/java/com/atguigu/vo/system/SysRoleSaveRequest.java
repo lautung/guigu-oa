@@ -5,13 +5,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 新增角色的请求体（ADR 0034）。长度上限对齐 sys_role 列宽（ADR 0036）。
+ * 公共字段与 fill 在 {@link SysRoleRequest}。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "新增角色")
-public class SysRoleSaveRequest {
+public class SysRoleSaveRequest extends SysRoleRequest {
 
     @NotBlank(message = "角色名称不能为空")
     @Size(max = 20, message = "角色名称过长")
@@ -23,15 +26,11 @@ public class SysRoleSaveRequest {
     @Schema(description = "角色编码")
     private String roleCode;
 
-    @Size(max = 255, message = "角色描述过长")
-    @Schema(description = "描述")
-    private String description;
-
     public SysRole toEntity() {
         SysRole role = new SysRole();
         role.setRoleName(roleName);
         role.setRoleCode(roleCode);
-        role.setDescription(description);
+        fill(role);
         return role;
     }
 }

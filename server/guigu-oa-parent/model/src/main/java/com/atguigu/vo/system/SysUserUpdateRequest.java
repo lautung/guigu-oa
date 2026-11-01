@@ -5,14 +5,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 更新用户的请求体。只要求主键：其余字段为空即不覆盖，密码为空表示不改密（ADR 0034）；
- * 长度上限对齐 sys_user 列宽（ADR 0036）。
+ * 长度上限对齐 sys_user 列宽（ADR 0036）。公共字段与 fill 在 {@link SysUserRequest}。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "更新用户")
-public class SysUserUpdateRequest {
+public class SysUserUpdateRequest extends SysUserRequest {
 
     @NotNull(message = "用户标识不能为空")
     @Schema(description = "用户id")
@@ -29,21 +31,13 @@ public class SysUserUpdateRequest {
     @Schema(description = "姓名")
     private String name;
 
-    @Size(max = 20, message = "手机号过长")
-    @Schema(description = "手机")
-    private String phone;
-
-    @Schema(description = "状态（1：正常 0：停用）")
-    private Integer status;
-
     public SysUser toEntity() {
         SysUser user = new SysUser();
         user.setId(id);
         user.setUsername(username);
         user.setPassword(password);
         user.setName(name);
-        user.setPhone(phone);
-        user.setStatus(status);
+        fill(user);
         return user;
     }
 }

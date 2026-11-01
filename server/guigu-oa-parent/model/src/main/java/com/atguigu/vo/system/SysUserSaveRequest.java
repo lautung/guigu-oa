@@ -5,14 +5,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 新增用户的请求体。创建既不给主键，也不接受空密码：空白密码只会建出一个不能登录的账号（ADR 0034）；
  * 长度上限对齐 sys_user 列宽，越界给字段文案而不是落库兜底（ADR 0036）。
+ * 公共字段与 fill 在 {@link SysUserRequest}。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "新增用户")
-public class SysUserSaveRequest {
+public class SysUserSaveRequest extends SysUserRequest {
 
     @NotBlank(message = "用户名不能为空")
     @Size(max = 20, message = "用户名过长")
@@ -28,20 +31,12 @@ public class SysUserSaveRequest {
     @Schema(description = "姓名")
     private String name;
 
-    @Size(max = 20, message = "手机号过长")
-    @Schema(description = "手机")
-    private String phone;
-
-    @Schema(description = "状态（1：正常 0：停用）")
-    private Integer status;
-
     public SysUser toEntity() {
         SysUser user = new SysUser();
         user.setUsername(username);
         user.setPassword(password);
         user.setName(name);
-        user.setPhone(phone);
-        user.setStatus(status);
+        fill(user);
         return user;
     }
 }
