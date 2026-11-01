@@ -41,7 +41,7 @@ public class ProcessEngineCutoverTest {
     }
 
     @Test
-    public void dropEngineTablesThenRestartRebuildsSchemaWithEmptyPendingAndProcessed() throws Exception {
+    public void dropEngineTablesThenRestartRebuildsSchemaWithEmptyPending() throws Exception {
         String jdbcUrl = "jdbc:h2:mem:cutover-drop-" + System.nanoTime() + ";DB_CLOSE_DELAY=-1";
         ProcessEngine before = inMemoryEngine(jdbcUrl);
         try {
@@ -49,8 +49,6 @@ public class ProcessEngineCutoverTest {
             before.getRuntimeService().startProcessInstanceByKey("approvalTwoStep", "12");
             Task first = ProcessEngineApproval.pendingTasks(before.getTaskService(), "zhangsan", 0, 10).get(0);
             ProcessEngineApproval.complete(before.getTaskService(), first.getId());
-            assertEquals(1, ProcessEngineApproval.processedTasks(
-                    before.getHistoryService(), "zhangsan", 0, 10).size());
         } finally {
             before.close();
         }
@@ -68,16 +66,13 @@ public class ProcessEngineCutoverTest {
             assertTrue(ProcessEngineApproval.pendingTasks(
                     after.getTaskService(), "zhangsan", 0, 10).isEmpty());
             assertEquals(0L, ProcessEngineApproval.pendingCount(after.getTaskService(), "zhangsan"));
-            assertTrue(ProcessEngineApproval.processedTasks(
-                    after.getHistoryService(), "zhangsan", 0, 10).isEmpty());
-            assertEquals(0L, ProcessEngineApproval.processedCount(after.getHistoryService(), "zhangsan"));
         } finally {
             after.close();
         }
     }
 
     @Test
-    public void afterZipRedeployNewInstanceCanFlowAndProcessedOnlyShowsPostCutoverHistory() throws Exception {
+    public void afterZipRedeployNewInstanceCanFlow() throws Exception {
         String jdbcUrl = "jdbc:h2:mem:cutover-history-" + System.nanoTime() + ";DB_CLOSE_DELAY=-1";
         ProcessEngine before = inMemoryEngine(jdbcUrl);
         try {
@@ -111,12 +106,6 @@ public class ProcessEngineCutoverTest {
                     after.getTaskService(), "zhangsan", 0, 10).isEmpty());
             assertTrue(ProcessEngineApproval.pendingTasks(
                     after.getTaskService(), "lisi", 0, 10).isEmpty());
-            assertEquals(1, ProcessEngineApproval.processedTasks(
-                    after.getHistoryService(), "zhangsan", 0, 10).size());
-            assertEquals(1, ProcessEngineApproval.processedTasks(
-                    after.getHistoryService(), "lisi", 0, 10).size());
-            assertEquals(started.getId(), ProcessEngineApproval.processedTasks(
-                    after.getHistoryService(), "zhangsan", 0, 10).get(0).getProcessInstanceId());
         } finally {
             after.close();
         }

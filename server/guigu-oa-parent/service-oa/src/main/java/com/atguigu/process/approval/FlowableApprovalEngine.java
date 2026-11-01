@@ -78,18 +78,6 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     }
 
     @Override
-    public List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults) {
-        return ProcessEngineApproval.processedTasks(historyService, username, firstResult, maxResults).stream()
-                .map(task -> new ProcessedTask(task.getProcessInstanceId()))
-                .toList();
-    }
-
-    @Override
-    public long processedCount(String username) {
-        return ProcessEngineApproval.processedCount(historyService, username);
-    }
-
-    @Override
     public boolean hasHistoricAssignee(String processInstanceId, String username) {
         return ProcessEngineApproval.hasHistoricAssignee(historyService, processInstanceId, username);
     }

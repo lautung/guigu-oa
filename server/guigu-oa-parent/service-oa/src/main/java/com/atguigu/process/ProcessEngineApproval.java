@@ -11,7 +11,6 @@ import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
-import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -23,7 +22,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Flowable 8 待处理 / 已处理查询与审批完成动作。
+ * Flowable 8 待处理查询与审批完成动作。已处理列表的读证据不在这里（#186，ADR 0049：
+ * 已处理按账本动作记录供给），引擎历史只服务成员资格证据（{@link #hasHistoricAssignee}）。
  */
 public final class ProcessEngineApproval {
 
@@ -44,25 +44,6 @@ public final class ProcessEngineApproval {
     public static long pendingCount(TaskService taskService, String username) {
         return taskService.createTaskQuery()
                 .taskAssignee(username)
-                .count();
-    }
-
-    public static List<HistoricTaskInstance> processedTasks(
-            HistoryService historyService, String username, int firstResult, int maxResults) {
-        return historyService.createHistoricTaskInstanceQuery()
-                .taskAssignee(username)
-                .finished()
-                .orderByTaskCreateTime()
-                .desc()
-                .orderByTaskId()
-                .desc()
-                .listPage(firstResult, maxResults);
-    }
-
-    public static long processedCount(HistoryService historyService, String username) {
-        return historyService.createHistoricTaskInstanceQuery()
-                .taskAssignee(username)
-                .finished()
                 .count();
     }
 

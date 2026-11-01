@@ -17,6 +17,12 @@ public final class ProcessApprovalSupport {
     private ProcessApprovalSupport() {
     }
 
+    /**
+     * 发起申请流转记录的固定文案：它与审批动作记录（{@link #recordDescription}）共享 status=1，
+     * 只按文案区分（V107 订正同一事实）；「已处理」读按它排除发起记录（#186，ADR 0049）。
+     */
+    public static final String INITIATION_DESCRIPTION = "发起申请";
+
     public static String recordDescription(Integer status) {
         return switch (status) {
             case 1 -> "已通过";

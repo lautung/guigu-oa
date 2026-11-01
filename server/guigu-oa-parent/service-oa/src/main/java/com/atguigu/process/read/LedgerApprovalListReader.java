@@ -2,6 +2,7 @@ package com.atguigu.process.read;
 
 import com.atguigu.common.page.PageWindow;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.ProcessApprovalSupport;
 import com.atguigu.process.approval.ApprovalEngine;
 import com.atguigu.process.mapper.OaProcessMapper;
 import com.atguigu.vo.process.ProcessQueryVo;
@@ -18,9 +19,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * {@link ApprovalListReader} 的唯一实现。待处理/已处理由引擎分页与排序，账本行按页批量回查后
- * 按引擎顺序重排（N+1 消除，#181）；已发起与配置实例查询共用一条 SQL；抄送我的走原生
- * LIMIT/OFFSET（#122 口径）。窗口算术一律从 {@link PageWindow} 派生，不手算。
+ * {@link ApprovalListReader} 的唯一实现。待处理由引擎分页与排序，账本行按页批量回查后
+ * 按引擎顺序重排（N+1 消除，#181）；已处理按账本动作记录去重供给（#186，ADR 0049）；
+ * 已发起与配置实例查询共用一条 SQL；抄送我的与已处理走原生 LIMIT/OFFSET（#122 口径）。
+ * 窗口算术一律从 {@link PageWindow} 派生，不手算。
  */
 @Service
 public class LedgerApprovalListReader implements ApprovalListReader {
@@ -65,24 +67,13 @@ public class LedgerApprovalListReader implements ApprovalListReader {
 
     @Override
     public IPage<ProcessVo> processed(Page<ProcessVo> page, SysUser user) {
-        List<ApprovalEngine.ProcessedTask> historicTasks = approvalEngine.processedTasks(
-                user.getUsername(), PageWindow.firstResult(page), (int) page.getSize());
-        long totalCount = approvalEngine.processedCount(user.getUsername());
-
-        // 行=已完成任务：同一审批处理过多个节点在此重复出现（现状钉住），按引擎顺序重排。
-        Map<String, ProcessVo> rowsByInstanceId = rowsByInstanceId(historicTasks.stream()
-                .map(ApprovalEngine.ProcessedTask::processInstanceId)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .toList());
-        List<ProcessVo> records = new ArrayList<>();
-        for (ApprovalEngine.ProcessedTask historicTask : historicTasks) {
-            ProcessVo row = rowsByInstanceId.get(historicTask.processInstanceId());
-            if (row != null) {
-                records.add(row);
-            }
-        }
-        return pageOf(page, totalCount, records);
+        // 行=审批（GLOSSARY「已处理」）：该用户的处理动作记录按审批去重（同人两节点只出一行，#186），
+        // 「发起申请」流转记录不算处理；最近一次处理时间倒序、同刻由审批 id 决胜，total=去重审批数。
+        String excludeDescription = ProcessApprovalSupport.INITIATION_DESCRIPTION;
+        long total = processMapper.countProcessedRows(user.getId(), excludeDescription);
+        List<ProcessVo> records = processMapper.selectProcessedRows(
+                user.getId(), excludeDescription, PageWindow.offset(page), page.getSize());
+        return pageOf(page, total, records);
     }
 
     @Override
@@ -112,15 +103,6 @@ public class LedgerApprovalListReader implements ApprovalListReader {
         }
         return processMapper.selectRowsByIds(ids).stream()
                 .collect(Collectors.toMap(ProcessVo::getId, Function.identity(), (first, second) -> first));
-    }
-
-    private Map<String, ProcessVo> rowsByInstanceId(List<String> instanceIds) {
-        if (instanceIds.isEmpty()) {
-            return Map.of();
-        }
-        return processMapper.selectRowsByInstanceIds(instanceIds).stream()
-                .collect(Collectors.toMap(
-                        ProcessVo::getProcessInstanceId, Function.identity(), (first, second) -> first));
     }
 
     private IPage<ProcessVo> pageOf(Page<ProcessVo> page, long total, List<ProcessVo> records) {

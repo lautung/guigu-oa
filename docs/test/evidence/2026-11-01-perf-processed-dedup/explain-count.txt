@@ -1,0 +1,12 @@
+EXPLAIN ANALYZE 实发原文（general_log 捞取，bob/operate_user_id=4，数据 17,010 分组）
+—— countProcessedRows：total=去重审批数。17,010 次 oa_process PK 回表只为验
+a.is_deleted=0，单条 37.5ms；与抄送计数（countCarbonCopiedRows）同形状（ADR 0045
+钉住的 COUNT(DISTINCT)+join+is_deleted 口径），语义与行查询一致（total/行都排除
+已删审批），保留该形状；17ms 的索引扫描聚合是换供给的固有成本。
+
+-> Aggregate: count(distinct r.process_id)  (cost=984 rows=1) (actual time=37.5..37.5 rows=1 loops=1)
+    -> Nested loop inner join  (cost=966 rows=177) (actual time=0.188..33.9 rows=17010 loops=1)
+        -> Filter: ((r.is_deleted = 0) and (r.`description` <> '发起申请'))  (cost=346 rows=1771) (actual time=0.175..15.6 rows=17010 loops=1)
+            -> Index lookup on r using idx_oa_process_record_user_process (operate_user_id=4), with index condition: (r.process_id is not null)  (cost=346 rows=19681) (actual time=0.167..13.9 rows=17010 loops=1)
+        -> Filter: (a.is_deleted = 0)  (cost=0.25 rows=0.1) (actual time=863e-6..938e-6 rows=1 loops=17010)
+            -> Single-row index lookup on a using PRIMARY (id=r.process_id)  (cost=0.25 rows=1) (actual time=736e-6..761e-6 rows=1 loops=17010)

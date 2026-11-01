@@ -5,7 +5,6 @@ import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.ProcessEngineConfiguration;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
-import org.flowable.task.api.history.HistoricTaskInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,7 +68,7 @@ public class ProcessEngineApprovalTest {
     }
 
     @Test
-    public void completeMovesTaskFromPendingToProcessedForTheAssignee() {
+    public void completeMovesTaskFromPendingToNextAssignee() {
         processEngine.getRuntimeService().startProcessInstanceByKey("approvalTwoStep", "12");
         Task pending = ProcessEngineApproval.pendingTasks(
                 processEngine.getTaskService(), "zhangsan", 0, 10).get(0);
@@ -80,13 +79,6 @@ public class ProcessEngineApprovalTest {
                 processEngine.getTaskService(), "zhangsan", 0, 10).isEmpty());
         assertEquals(1, ProcessEngineApproval.pendingTasks(
                 processEngine.getTaskService(), "lisi", 0, 10).size());
-
-        List<HistoricTaskInstance> processed =
-                ProcessEngineApproval.processedTasks(processEngine.getHistoryService(), "zhangsan", 0, 10);
-        assertEquals(1, processed.size());
-        assertEquals(pending.getId(), processed.get(0).getId());
-        assertEquals(1L, ProcessEngineApproval.processedCount(processEngine.getHistoryService(), "zhangsan"));
-        assertEquals(0L, ProcessEngineApproval.processedCount(processEngine.getHistoryService(), "lisi"));
     }
 
     @Test
@@ -110,8 +102,6 @@ public class ProcessEngineApprovalTest {
                 .processInstanceId(rejected.getId())
                 .singleResult()
                 .getEndTime());
-        assertEquals(1, ProcessEngineApproval.processedTasks(
-                processEngine.getHistoryService(), "zhangsan", 0, 10).size());
 
         processEngine.getRuntimeService().startProcessInstanceByKey("approvalTwoStep", "13");
         Task nextFirst = ProcessEngineApproval.pendingTasks(

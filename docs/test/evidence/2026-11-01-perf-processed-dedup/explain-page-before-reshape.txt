@@ -1,0 +1,24 @@
+EXPLAIN ANALYZE 实发原文（general_log 捞取，bob/operate_user_id=4，数据 17,010 分组）
+—— 初版形状（载荷 join 在窗口外，2026-11-01 before 轮抓取）：17k 分组全体做
+oa_process/sys_user/oa_process_template/oa_process_type 四表 PK 回表后整体排序，
+单条 63.1ms；20 VU 下 findProcessed p95 150→383ms（after-dedup-1）。
+
+-> Limit: 10 row(s)  (actual time=63.1..63.1 rows=10 loops=1)
+    -> Sort: p.last_time DESC, a.id DESC, limit input to 10 row(s) per chunk  (actual time=63.1..63.1 rows=10 loops=1)
+        -> Stream results  (cost=151 rows=531) (actual time=20.3..59.2 rows=17010 loops=1)
+            -> Nested loop left join  (cost=151 rows=531) (actual time=20.2..49.3 rows=17010 loops=1)
+                -> Left hash join (b.id = a.process_template_id)  (cost=54 rows=531) (actual time=20.2..45.4 rows=17010 loops=1)
+                    -> Nested loop left join  (cost=884 rows=177) (actual time=20.2..43.5 rows=17010 loops=1)
+                        -> Nested loop inner join  (cost=822 rows=177) (actual time=20.2..39.7 rows=17010 loops=1)
+                            -> Filter: (p.process_id is not null)  (cost=543..202 rows=1771) (actual time=20.1..22.3 rows=17010 loops=1)
+                                -> Table scan on p  (cost=543..548 rows=198) (actual time=20.1..21.5 rows=17010 loops=1)
+                                    -> Materialize  (cost=543..543 rows=198) (actual time=20.1..20.1 rows=17010 loops=1)
+                                        -> Group aggregate: max(r.create_time)  (cost=523 rows=198) (actual time=0.233..16.7 rows=17010 loops=1)
+                                            -> Filter: ((r.is_deleted = 0) and (r.`description` <> '发起申请'))  (cost=346 rows=1771) (actual time=0.223..14 rows=17010 loops=1)
+                                                -> Index lookup on r using idx_oa_process_record_user_process (operate_user_id=4)  (cost=346 rows=19681) (actual time=0.217..12 rows=17010 loops=1)
+                            -> Filter: (a.is_deleted = 0)  (cost=0.25 rows=0.1) (actual time=842e-6..906e-6 rows=1 loops=17010)
+                                -> Single-row index lookup on a using PRIMARY (id=p.process_id)  (cost=0.25 rows=1) (actual time=743e-6..764e-6 rows=1 loops=17010)
+                        -> Single-row index lookup on d using PRIMARY (id=a.user_id)  (cost=0.251 rows=1) (actual time=86.5e-6..108e-6 rows=1 loops=17010)
+                    -> Hash
+                        -> Table scan on b  (cost=0.00645 rows=3) (actual time=0.00508..0.00575 rows=3 loops=1)
+                -> Single-row index lookup on c using PRIMARY (id=a.process_type_id)  (cost=0.0835 rows=1) (actual time=86e-6..107e-6 rows=1 loops=17010)

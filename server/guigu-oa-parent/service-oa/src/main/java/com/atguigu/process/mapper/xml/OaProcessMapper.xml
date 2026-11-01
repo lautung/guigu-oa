@@ -4,8 +4,8 @@
 
     <!--
       审批行形状的唯一 owner（#181）：列、别名与 join 只写这一份，
-      四条行取数（待处理/已处理回查、已发起、抄送我的行、配置实例查询）全部 include；
-      抄送我的计数是 count 聚合，不引用本清单。
+      四条行取数（待处理回查、已发起、抄送我的行、已处理行）全部 include；
+      两个计数（抄送我的、已处理）是 count 聚合，不引用本清单。
       ProcessVo 是唯一行类型；给行补一个字段只改这里。
     -->
     <sql id="approvalRowColumns">
@@ -69,17 +69,39 @@
         </foreach>
     </select>
 
-    <!-- 已处理回查：按引擎历史任务的实例 id 集合一次取回整页行，同上跳过已删行。 -->
-    <select id="selectRowsByInstanceIds" resultType="com.atguigu.vo.process.ProcessVo">
+    <!-- 已处理计数：total=去重审批数（同一审批处理过多个节点只计一次，#186），原生 SQL 不走分页插件（#122 口径）。
+         「发起申请」流转记录与审批动作记录共享 status=1，只按文案排除（与 ApprovalWriter 共享同一常量；
+         record 表值域见 V107 订正注释）。 -->
+    <select id="countProcessedRows" resultType="long">
+        select count(distinct r.process_id)
+        from oa_process_record r
+                 join oa_process a on a.id = r.process_id
+        where r.operate_user_id = #{userId} and r.is_deleted = 0 and a.is_deleted = 0
+          and r.description != #{excludeDescription}
+    </select>
+
+    <!-- 已处理行：处理动作记录按审批去重（最近一次处理时间倒序、同刻由审批 id 决胜，#186），
+         行与全局行形状同源，原生 LIMIT/OFFSET 分页（#122 口径）。
+         聚合别名 p：共享列清单里 c 已被审批类型表占用。
+         形状纪律（EXPLAIN ANALYZE 取证，#186）：窗口必须收在派生表内、先只聚合 id，
+         载荷 join 只碰当页行——否则 17k 分组全体做 oa_process/sys_user 等四表 PK 回表后再排序
+         （实测 p95 150→383ms）；聚合本身（该用户动作记录按审批分组取 max(create_time)）
+         约 17ms 不可再省（is_deleted/description 过滤需读行，V109 索引供扫描与分组键）。
+         极端情况（当页含已删审批行）页会缩一行，与回查跳过已删行的旧边界一致。 -->
+    <select id="selectProcessedRows" resultType="com.atguigu.vo.process.ProcessVo">
         select
             <include refid="approvalRowColumns"/>
-        from oa_process a
+        from (select r.process_id, max(r.create_time) as last_time
+              from oa_process_record r
+              where r.operate_user_id = #{userId} and r.is_deleted = 0
+                and r.description != #{excludeDescription}
+              group by r.process_id
+              order by last_time desc, r.process_id desc
+              limit #{limit} offset #{offset}) p
+                 join oa_process a on a.id = p.process_id
             <include refid="approvalRowJoins"/>
         where a.is_deleted = 0
-        and a.process_instance_id in
-        <foreach collection="instanceIds" item="instanceId" open="(" separator="," close=")">
-            #{instanceId}
-        </foreach>
+        order by p.last_time desc, a.id desc
     </select>
 
     <!-- 抄送我的计数：total=去重审批数（同一审批多种来源抄送只计一次），原生 SQL 不走分页插件（#122 口径）。

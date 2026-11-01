@@ -115,7 +115,7 @@ public class ApprovalWriter {
         process.setDescription(ProcessStartSupport.waitingDescription(nameList));
         processMapper.updateById(process);
 
-        processRecordService.record(process.getId(), 1, "发起申请", user);
+        processRecordService.record(process.getId(), 1, ProcessApprovalSupport.INITIATION_DESCRIPTION, user);
 
         return new Approval.StartOutcome(
                 process.getId(),

@@ -5,6 +5,7 @@ import com.atguigu.model.process.Process;
 import com.atguigu.model.process.ProcessRecord;
 import com.atguigu.model.process.ProcessTemplate;
 import com.atguigu.model.system.SysUser;
+import com.atguigu.process.ProcessApprovalSupport;
 import com.atguigu.process.approval.FlowableApprovalEngine;
 import com.atguigu.process.approval.TestApprovalEngine;
 import com.atguigu.process.attachment.AttachmentMapper;
@@ -481,7 +482,7 @@ public class ApprovalContractTest {
     }
 
     @Test
-    public void 已处理行单位钉住同一审批处理过两个节点重复出现() throws Exception {
+    public void 已处理行单位按审批去重且锚定最近一次处理() throws Exception {
         jdbcTemplate.update(
                 "INSERT INTO oa_process_template (id, name, process_type_id, status, is_deleted) "
                         + "VALUES (210, '同人两步请假', 1, 0, 0)");
@@ -498,16 +499,58 @@ public class ApprovalContractTest {
 
         ProcessFormVo form = publishedLeaveForm();
         form.setProcessTemplateId(210L);
-        approval.startUp(alice, form);
+        Approval.StartOutcome twiceProcessed = approval.startUp(alice, form);
+        Approval.StartOutcome onceProcessed = approval.startUp(alice, form);
 
-        // 同一用户先后处理同一审批的两个节点：已处理行=已完成任务，同审批重复出现，total=任务数。
-        approve(zhangsan, pending(zhangsan).getRecords().get(0));
-        approve(zhangsan, pending(zhangsan).getRecords().get(0));
+        // 同一用户先后处理同一审批的两个节点：行=审批（GLOSSARY「已处理」），只出一行，
+        // total=去重审批数（#186）；重复行不是另一份审批（GLOSSARY「审批」Avoid 口径）。
+        approve(zhangsan, pendingRow(zhangsan, twiceProcessed.processId()));
+        approve(zhangsan, pendingRow(zhangsan, onceProcessed.processId()));
+        approve(zhangsan, pendingRow(zhangsan, twiceProcessed.processId()));
+
+        // 排序锚点=最近一次处理（MAX）：twiceProcessed 两条记录分别锚在 01-01/06-01，
+        // onceProcessed 唯一记录锚在 03-01。MAX 语义下 twiceProcessed（06-01）排前；
+        // 若实现静默退化成最早一次（MIN，01-01），顺序反转为 [once, twice]——本断言钉死 MAX。
+        stampProcessingRecords(twiceProcessed.processId(), "2026-01-01 08:00:00");
+        stampProcessingRecords(onceProcessed.processId(), "2026-03-01 08:00:00");
+        stampLatestProcessingRecord(twiceProcessed.processId(), "2026-06-01 08:00:00");
 
         IPage<ProcessVo> processed = approvalListReader.processed(new Page<>(1, 10), zhangsan);
         assertEquals(2, processed.getTotal());
         assertEquals(2, processed.getRecords().size());
-        assertEquals(processed.getRecords().get(0).getId(), processed.getRecords().get(1).getId());
+        assertEquals(twiceProcessed.processId(), processed.getRecords().get(0).getId());
+        assertEquals(onceProcessed.processId(), processed.getRecords().get(1).getId());
+    }
+
+    @Test
+    public void 已处理按最近一次处理时间倒序同刻由审批id决胜() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        Approval.StartOutcome older = approval.startUp(alice, publishedLeaveForm());
+        Approval.StartOutcome newer = approval.startUp(alice, publishedLeaveForm());
+
+        approve(zhangsan, pending(zhangsan).getRecords().stream()
+                .filter(row -> row.getId().equals(older.processId())).findFirst().orElseThrow());
+        approve(zhangsan, pending(zhangsan).getRecords().stream()
+                .filter(row -> row.getId().equals(newer.processId())).findFirst().orElseThrow());
+
+        // 排序锚点=该审批最近一次处理时间（#186）：older 的处理时间更晚，时间压过 id 决胜、older 排前。
+        stampProcessingRecords(older.processId(), "2026-06-01 08:00:00");
+        stampProcessingRecords(newer.processId(), "2026-01-01 08:00:00");
+
+        IPage<ProcessVo> processed = approvalListReader.processed(new Page<>(1, 10), zhangsan);
+        assertEquals(2, processed.getTotal());
+        assertEquals(older.processId(), processed.getRecords().get(0).getId());
+        assertEquals(newer.processId(), processed.getRecords().get(1).getId());
+
+        // 同刻：两条审批最近一次处理时间相同，由审批 id 决胜（id 大在前，#179 口径）——顺序反转。
+        stampProcessingRecords(older.processId(), "2026-03-01 08:00:00");
+        stampProcessingRecords(newer.processId(), "2026-03-01 08:00:00");
+
+        IPage<ProcessVo> tied = approvalListReader.processed(new Page<>(1, 10), zhangsan);
+        assertEquals(newer.processId(), tied.getRecords().get(0).getId());
+        assertEquals(older.processId(), tied.getRecords().get(1).getId());
     }
 
     @Test
@@ -590,6 +633,8 @@ public class ApprovalContractTest {
         approve(zhangsan, pending(zhangsan).getRecords().get(0));
         approve(zhangsan, pending(zhangsan).getRecords().get(0));
 
+        // zhangsan 处理的是两个不同审批的各一个节点：行=审批（#186），total=去重审批数=2；
+        // 页大小 1 时 records=1，已处理供给的窗口语义由这一对断言钉住。
         IPage<ProcessVo> processedPage = approvalListReader.processed(new Page<>(1, 1), zhangsan);
         assertEquals(1, processedPage.getRecords().size());
         assertEquals(2, processedPage.getTotal());
@@ -1349,6 +1394,26 @@ public class ApprovalContractTest {
 
     private IPage<ProcessVo> processed(SysUser user) {
         return approvalListReader.processed(new Page<>(1, 10), user);
+    }
+
+    private ProcessVo pendingRow(SysUser user, Long processId) {
+        return pending(user).getRecords().stream()
+                .filter(row -> row.getId().equals(processId)).findFirst().orElseThrow();
+    }
+
+    /** 该审批全部处理动作记录的处理时间（fixture 用；「发起申请」流转记录不是处理动作，不碰）。 */
+    private void stampProcessingRecords(Long processId, String timestamp) {
+        jdbcTemplate.update("UPDATE oa_process_record SET create_time = TIMESTAMP '" + timestamp + "' "
+                + "WHERE process_id = ? AND description <> '" + ProcessApprovalSupport.INITIATION_DESCRIPTION + "'",
+                processId);
+    }
+
+    /** 只锚该审批最新一条处理动作记录（MAX(id)）：给同人两节点的两批记录设可区分时间用。 */
+    private void stampLatestProcessingRecord(Long processId, String timestamp) {
+        jdbcTemplate.update("UPDATE oa_process_record SET create_time = TIMESTAMP '" + timestamp + "' "
+                + "WHERE id = (SELECT MAX(id) FROM oa_process_record "
+                + "WHERE process_id = ? AND description <> '" + ProcessApprovalSupport.INITIATION_DESCRIPTION + "')",
+                processId);
     }
 
     private void approve(SysUser user, ProcessVo pending) {

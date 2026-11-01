@@ -21,13 +21,6 @@ public interface ApprovalEngine extends MembershipEvidence {
 
     long pendingCount(String username);
 
-    List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults);
-
-    long processedCount(String username);
-
     record PendingTask(String taskId, String processInstanceId, String businessKey) {
-    }
-
-    record ProcessedTask(String processInstanceId) {
     }
 }

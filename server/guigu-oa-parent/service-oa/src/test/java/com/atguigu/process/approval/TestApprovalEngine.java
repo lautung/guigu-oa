@@ -186,16 +186,6 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
-    public List<ProcessedTask> processedTasks(String username, int firstResult, int maxResults) {
-        return delegate.processedTasks(username, firstResult, maxResults);
-    }
-
-    @Override
-    public long processedCount(String username) {
-        return delegate.processedCount(username);
-    }
-
-    @Override
     public boolean hasHistoricAssignee(String processInstanceId, String username) {
         return delegate.hasHistoricAssignee(processInstanceId, username);
     }

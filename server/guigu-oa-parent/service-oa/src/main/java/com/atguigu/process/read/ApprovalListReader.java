@@ -16,7 +16,8 @@ public interface ApprovalListReader {
     /** 待处理：当前轮到该用户处理的审批，按引擎任务创建时间倒序（同刻由任务 id 决胜）。 */
     IPage<ProcessVo> pending(Page<ProcessVo> page, SysUser user);
 
-    /** 已处理：该用户已完成的任务（同一审批处理过多个节点会重复出现，total=任务数），按引擎任务创建时间倒序。 */
+    /** 已处理：该用户已经处理过的审批（GLOSSARY 口径）；同一审批处理过多个节点只出一行，total=去重审批数，
+     * 按最近一次处理时间倒序、同刻由审批 id 决胜（#186）。 */
     IPage<ProcessVo> processed(Page<ProcessVo> page, SysUser user);
 
     /** 已发起：该用户发起的审批，按创建时间倒序、同刻由审批 id 决胜（#179）。 */
