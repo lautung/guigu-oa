@@ -961,6 +961,27 @@ defineCase({
   },
 })
 
+/**
+ * SEC-GATE-01 写端点良构体（#184）：键为端点路径，必填字段以服务端各请求 DTO/Vo 的
+ * JSR303 注解为权威，id/外键用假值即可——@PreAuthorize 在 service 之前，gate 拒绝不依赖
+ * 数据存在，无需造数。sysMenu/save 用 type=0 规避「类型为菜单时组件路径不能为空」。
+ * 空体在这批端点会被校验先于 gate 拒成 201（模块地图第 5 条），不再作为 gate 用例载荷。
+ */
+const GATE_WRITE_BODIES = {
+  '/admin/system/sysUser/save': { username: 'sec', password: 'sec', name: 'sec' },
+  '/admin/system/sysUser/update': { id: 999999 },
+  '/admin/system/sysRole/save': { roleName: 'sec', roleCode: 'sec' },
+  '/admin/system/sysRole/update': { id: 999999 },
+  '/admin/system/sysRole/doAssign': { userId: 999999 },
+  '/admin/system/sysMenu/save': { parentId: 0, name: 'sec', type: 0, path: '/sec' },
+  '/admin/system/sysMenu/update': { id: 999999 },
+  '/admin/system/sysMenu/doAssign': { roleId: 999999 },
+  '/admin/process/processTemplate/save': { name: 'sec', processTypeId: 999999 },
+  '/admin/process/processTemplate/update': { id: 999999 },
+  '/admin/process/processType/save': { name: 'sec' },
+  '/admin/process/processType/update': { id: 999999 },
+}
+
 /** SEC-GATE：35 个配置端点对无配置权限账号一律 205。 */
 const GATE_ENDPOINTS = [
   ['PUT', '/admin/system/sysUser/updateStatus/999999/0'],
@@ -1017,7 +1038,7 @@ defineCase({
       } else if (endpoint.endsWith('/batchRemove')) {
         options.body = []
       } else if (['POST', 'PUT', 'DELETE'].includes(method)) {
-        options.body = {}
+        options.body = GATE_WRITE_BODIES[endpoint] ?? {}
       }
       const response = await call(method, endpoint, options)
       if (codeOf(response) !== 205) {

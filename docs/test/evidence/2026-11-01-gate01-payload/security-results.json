@@ -1,0 +1,903 @@
+{
+  "environment": {
+    "date": "2026-11-01T09:28:35.098Z",
+    "commit": "e4e82259f2db6b37440e4a93a208641166426766",
+    "origin": "http://localhost:9530",
+    "apiDirect": "http://localhost:8800",
+    "node": "v24.18.1",
+    "runId": "secmvxmgsa8",
+    "compose": "client Up 5 minutes\nminio Up 6 minutes\nmysql Up 6 minutes (healthy)\nredis Up 6 minutes (healthy)\nservice-oa Up 5 minutes (healthy)",
+    "startedAt": "2026-11-01T09:23:01.040Z"
+  },
+  "results": [
+    {
+      "id": "SEC-JWT-01",
+      "family": "SEC-JWT",
+      "title": "无 token 访问受保护接口被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-02",
+      "family": "SEC-JWT",
+      "title": "伪造 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-03",
+      "family": "SEC-JWT",
+      "title": "篡改 payload（userId→admin）但保留签名被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-04",
+      "family": "SEC-JWT",
+      "title": "alg=none 无签名令牌被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 6,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-05",
+      "family": "SEC-JWT",
+      "title": "refresh token 当作 access token 使用被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 94,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-06",
+      "family": "SEC-JWT",
+      "title": "access token 当作 refresh token 使用被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 96,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-07",
+      "family": "SEC-JWT",
+      "title": "登出后 access token 仍可访问（令牌未吊销）",
+      "severity": "S3",
+      "expected": "body.code=208（登出即失效）",
+      "actual": "code=208，登出后令牌失效",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 117,
+      "evidence": {
+        "logoutCode": 200,
+        "replayCode": 208,
+        "token": "eyJhbGci…(338)"
+      }
+    },
+    {
+      "id": "SEC-JWT-08",
+      "family": "SEC-JWT",
+      "title": "停用账号的存量 token 被拒",
+      "severity": "S2",
+      "expected": "body.code=209",
+      "actual": "code=209",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 37,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-09",
+      "family": "SEC-JWT",
+      "title": "过期 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 6,
+      "evidence": null
+    },
+    {
+      "id": "SEC-JWT-10",
+      "family": "SEC-JWT",
+      "title": "其他密钥签名的 token 被拒",
+      "severity": "S1",
+      "expected": "body.code=208",
+      "actual": "code=208",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-01",
+      "family": "SEC-IDOR",
+      "title": "非成员读取他人审批详情被拒",
+      "severity": "S1",
+      "expected": "body.code=403",
+      "actual": "code=403",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 19,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-02",
+      "family": "SEC-IDOR",
+      "title": "非成员处理他人审批被拒",
+      "severity": "S1",
+      "expected": "body.code=403",
+      "actual": "code=403",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 20,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-03",
+      "family": "SEC-IDOR",
+      "title": "非成员读取审批附件列表被拒",
+      "severity": "S1",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 14,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-04",
+      "family": "SEC-IDOR",
+      "title": "非成员签发他人附件下载凭证被拒",
+      "severity": "S2",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 15,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-05",
+      "family": "SEC-IDOR",
+      "title": "他人草稿附件列表按所有者隔离",
+      "severity": "S2",
+      "expected": "data=[]（看不到 alice 的草稿）",
+      "actual": "code=200, records=0",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 15,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-06",
+      "family": "SEC-IDOR",
+      "title": "他人待绑定附件不可删除",
+      "severity": "S2",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 13,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-07",
+      "family": "SEC-IDOR",
+      "title": "办事侧模板读只返回已发布模板",
+      "severity": "S2",
+      "expected": "data=null（未发布模板不外泄）",
+      "actual": "code=200, data=null",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 13,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-08",
+      "family": "SEC-IDOR",
+      "title": "抄送人不能处理审批",
+      "severity": "S1",
+      "expected": "body.code=403",
+      "actual": "code=403",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 18,
+      "evidence": null
+    },
+    {
+      "id": "SEC-IDOR-09",
+      "family": "SEC-IDOR",
+      "title": "他人未完成上传的附件不能代为完成",
+      "severity": "S2",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 17,
+      "evidence": null
+    },
+    {
+      "id": "SEC-MEM-01",
+      "family": "SEC-MEM",
+      "title": "申请人：可读、可补传、不可处理",
+      "severity": "S2",
+      "expected": "isApprove=false, canUpload=true, approve→403",
+      "actual": "{\"isApprove\":false,\"canUpload\":true,\"approveCode\":403}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 60,
+      "evidence": {
+        "isApprove": false,
+        "canUpload": true,
+        "approveCode": 403
+      }
+    },
+    {
+      "id": "SEC-MEM-02",
+      "family": "SEC-MEM",
+      "title": "当前处理人：可读、可上传、可处理",
+      "severity": "S2",
+      "expected": "isApprove=true, canUpload=true",
+      "actual": "{\"isApprove\":true,\"canUpload\":true}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 32,
+      "evidence": {
+        "isApprove": true,
+        "canUpload": true
+      }
+    },
+    {
+      "id": "SEC-MEM-03",
+      "family": "SEC-MEM",
+      "title": "抄送人：可读、只读（不可处理/不可上传）",
+      "severity": "S2",
+      "expected": "isApprove=false, canUpload=false",
+      "actual": "{\"isApprove\":false,\"canUpload\":false}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 39,
+      "evidence": {
+        "isApprove": false,
+        "canUpload": false
+      }
+    },
+    {
+      "id": "SEC-MEM-04",
+      "family": "SEC-MEM",
+      "title": "历史处理人：审批后可读、不可再处理",
+      "severity": "S2",
+      "expected": "isApprove=false，再次 approve→403",
+      "actual": "{\"approveCode\":200,\"isApprove\":false,\"canUpload\":false,\"replayCode\":403}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 77,
+      "evidence": {
+        "approveCode": 200,
+        "isApprove": false,
+        "canUpload": false,
+        "replayCode": 403
+      }
+    },
+    {
+      "id": "SEC-MEM-05",
+      "family": "SEC-MEM",
+      "title": "非成员：三类能力全部拒绝",
+      "severity": "S1",
+      "expected": "show/attachments/approve 全部拒绝（403/205）",
+      "actual": "{\"showCode\":403,\"attachmentsCode\":205,\"uploadCode\":205}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 49,
+      "evidence": {
+        "showCode": 403,
+        "attachmentsCode": 205,
+        "uploadCode": 205
+      }
+    },
+    {
+      "id": "SEC-GATE-01",
+      "family": "SEC-GATE",
+      "title": "35 个配置端点对无配置权限账号返回 205",
+      "severity": "S1",
+      "expected": "每个端点 body.code=205",
+      "actual": "35/35 端点 code=205",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 477,
+      "evidence": null
+    },
+    {
+      "id": "SEC-GATE-02",
+      "family": "SEC-GATE",
+      "title": "伪造 gate 参数不能绕过配置权限",
+      "severity": "S1",
+      "expected": "body.code=205",
+      "actual": "code=205",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 11,
+      "evidence": null
+    },
+    {
+      "id": "SEC-GATE-03",
+      "family": "SEC-GATE",
+      "title": "有配置权限账号可读配置端点（gate 未过度拒绝）",
+      "severity": "S2",
+      "expected": "6 个只读端点 code=200",
+      "actual": "6/6 code=200",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 97,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-01",
+      "family": "SEC-UPLOAD",
+      "title": "超过 50 MiB 的附件登记被拒",
+      "severity": "S3",
+      "expected": "body.code=201 且提示大小限制",
+      "actual": "code=201, message=附件超过大小限制",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 13,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-02",
+      "family": "SEC-UPLOAD",
+      "title": "预签名 PUT 的 Content-Type 与登记不一致时不能完成登记",
+      "severity": "S3",
+      "expected": "PUT 被拒或 complete 返回 201",
+      "actual": "{\"putStatus\":403,\"completeCode\":201}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 41,
+      "evidence": {
+        "putStatus": 403,
+        "completeCode": 201
+      }
+    },
+    {
+      "id": "SEC-UPLOAD-03",
+      "family": "SEC-UPLOAD",
+      "title": "对象实际大小与登记不一致时不能完成登记",
+      "severity": "S2",
+      "expected": "body.code=201",
+      "actual": "code=201, message=附件内容与登记信息不一致",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 34,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-04",
+      "family": "SEC-UPLOAD",
+      "title": "当前处理人可向审批补传附件",
+      "severity": "S2",
+      "expected": "code=200 且 canUpload=true",
+      "actual": "code=200, attachmentId=8",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 16,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-05",
+      "family": "SEC-UPLOAD",
+      "title": "抄送人不能向审批补传附件",
+      "severity": "S2",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 14,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-06",
+      "family": "SEC-UPLOAD",
+      "title": "非成员不能向审批上传附件",
+      "severity": "S2",
+      "expected": "body.code=205 或 403（拒绝）",
+      "actual": "code=205（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 21,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-07",
+      "family": "SEC-UPLOAD",
+      "title": "流程模板上传拒绝非 zip 后缀",
+      "severity": "S3",
+      "expected": "body.code=201 且提示必须是 zip",
+      "actual": "code=201, message=流程文件必须是 zip",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 9,
+      "evidence": null
+    },
+    {
+      "id": "SEC-UPLOAD-08",
+      "family": "SEC-UPLOAD",
+      "title": "流程 zip 文件名穿越路径被消解",
+      "severity": "S2",
+      "expected": "返回路径落在 processes/sha256 下，processDefinitionKey 不含路径分隔",
+      "actual": "{\"code\":200,\"processDefinitionPath\":\"processes/sha256/112be2619e5af19c124c8b39170267478b1d8791349925e510da389e27b1b708.zip\",\"processDefinitionKey\":\"sec-evil\"}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 12,
+      "evidence": {
+        "code": 200,
+        "processDefinitionPath": "processes/sha256/112be2619e5af19c124c8b39170267478b1d8791349925e510da389e27b1b708.zip",
+        "processDefinitionKey": "sec-evil"
+      }
+    },
+    {
+      "id": "SEC-UPLOAD-09",
+      "family": "SEC-UPLOAD",
+      "title": "未完成的上传凭证在过期后不能完成登记",
+      "severity": "S2",
+      "expected": "complete 返回 201（凭证已过期）",
+      "actual": "{\"putStatus\":403,\"completeCode\":201,\"message\":\"附件上传凭证已过期，请重新选择文件\"}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 318511,
+      "evidence": {
+        "putStatus": 403,
+        "completeCode": 201,
+        "message": "附件上传凭证已过期，请重新选择文件"
+      }
+    },
+    {
+      "id": "SEC-CSRF-01",
+      "family": "SEC-CSRF",
+      "title": "普通接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "无 ACAO 头",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 18,
+      "evidence": null
+    },
+    {
+      "id": "SEC-CSRF-02",
+      "family": "SEC-CSRF",
+      "title": "审批接口不回显恶意 Origin 的 CORS 头",
+      "severity": "S4",
+      "expected": "无 Access-Control-Allow-Origin",
+      "actual": "无 ACAO 头",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 16,
+      "evidence": {
+        "allowOrigin": null
+      }
+    },
+    {
+      "id": "SEC-CSRF-03",
+      "family": "SEC-CSRF",
+      "title": "跨源预检不授予带 token 头的写请求",
+      "severity": "S4",
+      "expected": "预检不返回允许 token 头的 ACAO",
+      "actual": "{\"status\":401,\"allowOrigin\":null,\"allowHeaders\":null}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5,
+      "evidence": {
+        "status": 401,
+        "allowOrigin": null,
+        "allowHeaders": null
+      }
+    },
+    {
+      "id": "SEC-CSRF-04",
+      "family": "SEC-CSRF",
+      "title": "GET updateStatus 不产生写副作用",
+      "severity": "S3",
+      "expected": "GET 不修改状态，写只由 POST/PUT 触发",
+      "actual": "{\"beforeStatus\":1,\"getCode\":201,\"afterStatus\":1,\"putCode\":200,\"writtenStatus\":0}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 74,
+      "evidence": {
+        "beforeStatus": 1,
+        "getCode": 201,
+        "afterStatus": 1,
+        "putCode": 200,
+        "writtenStatus": 0
+      }
+    },
+    {
+      "id": "SEC-CSRF-05",
+      "family": "SEC-CSRF",
+      "title": "GET publish 不再是写操作（源码事实）",
+      "severity": "S3",
+      "expected": "publish 只注册 POST，updateStatus 只注册 PUT",
+      "actual": "{\"publishMappings\":[\"Post\"],\"updateStatusMappings\":[\"Put\"]}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 1,
+      "evidence": {
+        "publishMappings": [
+          "Post"
+        ],
+        "updateStatusMappings": [
+          "Put"
+        ]
+      }
+    },
+    {
+      "id": "SEC-BRUTE-01",
+      "family": "SEC-BRUTE",
+      "title": "不存在用户与密码错误返回同一错误码与文案",
+      "severity": "S3",
+      "expected": "两者均 code=208 且 message 相同",
+      "actual": "{\"missingCode\":208,\"wrongCode\":208,\"sameMessage\":true}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 177,
+      "evidence": {
+        "missingCode": 208,
+        "wrongCode": 208,
+        "sameMessage": true
+      }
+    },
+    {
+      "id": "SEC-BRUTE-02",
+      "family": "SEC-BRUTE",
+      "title": "30 次失败后正确密码仍可登录（无限流/锁定）",
+      "severity": "S3",
+      "expected": "应有锁定或限流；无则记缺陷",
+      "actual": "{\"failedLogins\":30,\"correctLoginCode\":208}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 634,
+      "evidence": {
+        "failedLogins": 30,
+        "correctLoginCode": 208
+      }
+    },
+    {
+      "id": "SEC-LEAK-01",
+      "family": "SEC-LEAK",
+      "title": "用户分页不返回密码哈希",
+      "severity": "S2",
+      "expected": "records 不含 password",
+      "actual": "0/6 含 password",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 15,
+      "evidence": {
+        "total": 6,
+        "leaked": 0,
+        "samplePrefix": null
+      }
+    },
+    {
+      "id": "SEC-LEAK-02",
+      "family": "SEC-LEAK",
+      "title": "用户详情不返回密码哈希",
+      "severity": "S2",
+      "expected": "data 不含 password",
+      "actual": "无 password",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 11,
+      "evidence": {
+        "hasPassword": false,
+        "samplePrefix": null
+      }
+    },
+    {
+      "id": "SEC-LEAK-03",
+      "family": "SEC-LEAK",
+      "title": "OpenAPI 文档匿名可读",
+      "severity": "S4",
+      "expected": "不应匿名暴露",
+      "actual": "未暴露",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": {
+        "status": 404,
+        "hasOpenapi": false,
+        "paths": 0
+      }
+    },
+    {
+      "id": "SEC-LEAK-04",
+      "family": "SEC-LEAK",
+      "title": "Swagger UI 匿名可读",
+      "severity": "S4",
+      "expected": "不应匿名暴露",
+      "actual": "未暴露",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": {
+        "status": 404,
+        "length": 45
+      }
+    },
+    {
+      "id": "SEC-LEAK-05",
+      "family": "SEC-LEAK",
+      "title": "其他 actuator 端点匿名不可读",
+      "severity": "S4",
+      "expected": "body.code=208 或 HTTP 401/403",
+      "actual": "{\"status\":401,\"code\":208}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 6,
+      "evidence": {
+        "status": 401,
+        "code": 208
+      }
+    },
+    {
+      "id": "SEC-LEAK-06",
+      "family": "SEC-LEAK",
+      "title": "抄送人选项接口不向普通用户暴露账号名",
+      "severity": "S3",
+      "expected": "每条只含 id 与显示名",
+      "actual": "只含 id/name（5 个）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 11,
+      "evidence": {
+        "code": 200,
+        "count": 5,
+        "fields": [
+          "id",
+          "name"
+        ]
+      }
+    },
+    {
+      "id": "SEC-LEAK-07",
+      "family": "SEC-LEAK",
+      "title": "异常响应不返回堆栈或内部信息",
+      "severity": "S4",
+      "expected": "仅通用错误文案",
+      "actual": "code=201, message=执行全局异常处理...",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 13,
+      "evidence": null
+    },
+    {
+      "id": "SEC-LEAK-08",
+      "family": "SEC-LEAK",
+      "title": "服务端日志不含密码或完整 token",
+      "severity": "S2",
+      "expected": "日志中无 password/token 明文",
+      "actual": "{\"passwordHits\":0,\"jwtHits\":0}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 144,
+      "evidence": {
+        "passwordHits": 0,
+        "jwtHits": 0
+      }
+    },
+    {
+      "id": "SEC-LEAK-09",
+      "family": "SEC-LEAK",
+      "title": "客户端响应头暴露 nginx 版本",
+      "severity": "S4",
+      "expected": "不应暴露精确版本",
+      "actual": "Server=nginx",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 2,
+      "evidence": {
+        "server": "nginx"
+      }
+    },
+    {
+      "id": "SEC-HDR-01",
+      "family": "SEC-HDR",
+      "title": "客户端 HTML 响应带强制 CSP",
+      "severity": "S3",
+      "expected": "default-src 'self'、script-src 'self'、frame-ancestors 'none'；style-src 只放宽到 'self' 'unsafe-inline'",
+      "actual": "4/4 页带强制 CSP",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 8,
+      "evidence": {
+        "/": {
+          "status": 200,
+          "defaultSrc": "default-src 'self'",
+          "scriptSrc": "script-src 'self'",
+          "styleSrc": "style-src 'self' 'unsafe-inline'",
+          "frameAncestors": "frame-ancestors 'none'"
+        },
+        "/login": {
+          "status": 200,
+          "defaultSrc": "default-src 'self'",
+          "scriptSrc": "script-src 'self'",
+          "styleSrc": "style-src 'self' 'unsafe-inline'",
+          "frameAncestors": "frame-ancestors 'none'"
+        },
+        "/work/pending": {
+          "status": 200,
+          "defaultSrc": "default-src 'self'",
+          "scriptSrc": "script-src 'self'",
+          "styleSrc": "style-src 'self' 'unsafe-inline'",
+          "frameAncestors": "frame-ancestors 'none'"
+        },
+        "/nonexistent-sec-hdr": {
+          "status": 200,
+          "defaultSrc": "default-src 'self'",
+          "scriptSrc": "script-src 'self'",
+          "styleSrc": "style-src 'self' 'unsafe-inline'",
+          "frameAncestors": "frame-ancestors 'none'"
+        }
+      }
+    },
+    {
+      "id": "SEC-HDR-02",
+      "family": "SEC-HDR",
+      "title": "客户端 HTML 响应带 X-Frame-Options: DENY",
+      "severity": "S3",
+      "expected": "每个页面的 X-Frame-Options 都是 DENY",
+      "actual": "全部 DENY",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 9,
+      "evidence": {
+        "/": "DENY",
+        "/login": "DENY",
+        "/work/pending": "DENY",
+        "/nonexistent-sec-hdr": "DENY"
+      }
+    },
+    {
+      "id": "SEC-HDR-03",
+      "family": "SEC-HDR",
+      "title": "HTML 与静态资源带 X-Content-Type-Options: nosniff",
+      "severity": "S4",
+      "expected": "文档与构建产物都返回 nosniff",
+      "actual": "文档与静态资源都是 nosniff",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 18,
+      "evidence": {
+        "asset": "/static/index-D4D7lZu6.js",
+        "values": {
+          "/": "nosniff",
+          "/static/index-D4D7lZu6.js": "nosniff"
+        }
+      }
+    },
+    {
+      "id": "SEC-HDR-04",
+      "family": "SEC-HDR",
+      "title": "CSP 的 connect-src 放行预签名上传源",
+      "severity": "S3",
+      "expected": "connect-src 含 'self' 与 http(s) 源，且没有未展开的占位符",
+      "actual": "connect-src 放行 http://localhost:9000",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 3,
+      "evidence": {
+        "connectSrc": "connect-src 'self' http://localhost:9000"
+      }
+    },
+    {
+      "id": "SEC-HDR-05",
+      "family": "SEC-HDR",
+      "title": "CSP 生效时浏览器无安全策略违规",
+      "severity": "S3",
+      "expected": "登录、办事列表/详情、模板列表与表单设计器都无 securitypolicyviolation",
+      "actual": "Playwright：无违规",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 5966,
+      "evidence": {
+        "outputTail": "> guigu-oa-client@0.1.0 test:security\n> playwright test --config tests/security/playwright.security.config.ts --grep CSP\nRunning 1 test using 1 worker\n  ✓  1 [security-chromium] › tests/security/security-headers.spec.ts:24:1 › CSP 生效时主要页面无安全策略违规 (4.8s)\n  1 passed (5.5s)"
+      }
+    },
+    {
+      "id": "SEC-PAGE-01",
+      "family": "SEC-PAGE",
+      "title": "用户分页拒绝超大 limit",
+      "severity": "S3",
+      "expected": "body.code=201（ADR 0024：超过上限直接拒绝，不静默截断）",
+      "actual": "code=201（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 16,
+      "evidence": {
+        "code": 201,
+        "size": null,
+        "records": null,
+        "total": null,
+        "ms": 16
+      }
+    },
+    {
+      "id": "SEC-PAGE-02",
+      "family": "SEC-PAGE",
+      "title": "审批待处理分页拒绝超大 limit",
+      "severity": "S3",
+      "expected": "body.code=201（ADR 0024：超过上限直接拒绝，不静默截断）",
+      "actual": "code=201（拒绝）",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 9,
+      "evidence": {
+        "code": 201,
+        "size": null,
+        "records": null,
+        "total": null,
+        "ms": 9
+      }
+    },
+    {
+      "id": "SEC-PAGE-03",
+      "family": "SEC-PAGE",
+      "title": "负数/零分页参数被安全处理",
+      "severity": "S4",
+      "expected": "不返回 5xx 或异常数据",
+      "actual": "{\"negative\":{\"status\":200,\"code\":201},\"zero\":{\"status\":200,\"code\":201}}",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 26,
+      "evidence": {
+        "negative": {
+          "status": 200,
+          "code": 201
+        },
+        "zero": {
+          "status": 200,
+          "code": 201
+        }
+      }
+    },
+    {
+      "id": "SEC-XSS-01",
+      "family": "SEC-XSS",
+      "title": "审批表单字段存储型 XSS 不执行",
+      "severity": "S1",
+      "expected": "脚本不执行（window.__secXss 为空）",
+      "actual": "Playwright：未执行",
+      "pass": true,
+      "skipped": false,
+      "durationMs": 4835,
+      "evidence": {
+        "outputTail": "> guigu-oa-client@0.1.0 test:security\n> playwright test --config tests/security/playwright.security.config.ts --grep XSS\nRunning 1 test using 1 worker\n  ✓  1 [security-chromium] › tests/security/security-xss.spec.ts:85:1 › 审批表单字段的存储型 XSS 不执行 (3.9s)\n  1 passed (4.4s)",
+        "reportDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/test-results"
+      }
+    }
+  ]
+}
