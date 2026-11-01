@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
@@ -105,13 +105,23 @@ export function mountOptions(pinia, router) {
   }
 }
 
+/**
+ * Responder 返回响应体按 HTTP 200 送达；抛 AxiosError 原样冒泡，抛其他错误包装成
+ * ERR_NETWORK（axios adapter 语义）——错误响应形状（#145/#155）由此在共享工具一处拥有。
+ */
 export function installHttp(responder) {
   const original = axios.defaults.adapter
   const calls = []
   axios.defaults.adapter = async (config) => {
     calls.push(config)
-    const body = await responder(config, calls.length)
-    return { data: body, status: 200, statusText: 'OK', headers: {}, config }
+    try {
+      const body = await responder(config, calls.length)
+      return { data: body, status: 200, statusText: 'OK', headers: {}, config }
+    } catch (error) {
+      throw error instanceof AxiosError
+        ? error
+        : new AxiosError(error.message, 'ERR_NETWORK', config)
+    }
   }
   return {
     calls,

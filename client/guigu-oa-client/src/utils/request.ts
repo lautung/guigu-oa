@@ -5,6 +5,7 @@ import {
   businessFailure,
   rejectRequest,
   transportFailure,
+  type TransportScopeFields,
 } from '@/request-failure'
 import {
   createRenewal,
@@ -16,18 +17,9 @@ import type { ApiClient, ApiRequestConfig, ApiResponse } from '@/types/domain'
 
 const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'
 
-/** Transport-only scope fields; produce them through request-scope, never from domain code. */
-export interface ScopedRequestConfig extends ApiRequestConfig {
-  _recognition?: RequestContext
-  _isRelevant?: () => boolean
-  _notifyNormalErrors?: boolean
-}
+export interface ScopedRequestConfig extends ApiRequestConfig, TransportScopeFields {}
 
-type RefreshableRequestConfig = InternalAxiosRequestConfig & {
-  _recognition?: RequestContext
-  _isRelevant?: () => boolean
-  _notifyNormalErrors?: boolean
-}
+type RefreshableRequestConfig = InternalAxiosRequestConfig & TransportScopeFields
 
 /**
  * 业务信封的统一处理（#145 后两个入口共用）：HTTP 200 响应体与 401/404/405 等
@@ -62,7 +54,7 @@ export function createRequestClient(recognition: Recognition): ApiClient {
     recognition.assertCurrent(context)
     if (res?.code === 200) return res
     if (res?.code === 208) {
-      const replay = renewal.onExpired(config as RenewableRequestConfig, context)
+      const replay = renewal.onExpired(config, context)
       if (replay) return replay
     }
     throw rejectRequest(recognition, config, context, businessFailure(res || {}))

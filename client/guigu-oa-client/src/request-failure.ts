@@ -2,6 +2,14 @@ import axios from 'axios'
 import { RecognitionFailure, type Recognition, type RequestContext } from '@/recognition'
 import type { ApiResponse } from '@/types/domain'
 
+/** Transport-only scope fields stamped onto axios configs; produce them through request-scope, never from domain code. */
+export interface TransportScopeFields {
+  _recognition?: RequestContext
+  _isRelevant?: () => boolean
+  _notifyNormalErrors?: boolean
+  _authRefreshRetried?: boolean
+}
+
 export interface RequestFailureDetail {
   source: 'business' | 'http' | 'timeout' | 'network' | 'unexpected'
   operation: 'request' | 'refresh'
@@ -99,10 +107,18 @@ export function businessEnvelope(error: unknown): ApiResponse<unknown> | undefin
 /** 请求失败上报 recognition 的统一接线：按次相关性与错误策略从请求配置读取。 */
 export function rejectRequest(
   recognition: Pick<Recognition, 'reject'>,
-  config: { _isRelevant?: () => boolean; _notifyNormalErrors?: boolean },
+  config: Pick<TransportScopeFields, '_isRelevant' | '_notifyNormalErrors'>,
   context: RequestContext,
   error: unknown,
 ): RecognitionFailure {
   const silent = context.silent || config._isRelevant?.() === false
   return recognition.reject({ ...context, silent }, error, config._notifyNormalErrors !== false)
+}
+
+/** #155：refresh 失败以「原业务请求被明确拒绝」的形状上报，统一带上原始业务码。 */
+export function refreshRefusal(error: RequestFailure, code = 208): RequestFailure {
+  return new RequestFailure(error.kind, error.message, {
+    ...error.detail,
+    originalBusinessCode: code,
+  })
 }

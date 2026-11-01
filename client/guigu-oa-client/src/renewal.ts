@@ -5,19 +5,19 @@ import {
   RequestFailure,
   businessEnvelope,
   businessFailure,
+  refreshRefusal,
   rejectRequest,
   transportFailure,
+  type TransportScopeFields,
 } from '@/request-failure'
 import type { ApiResponse, LoginTokens } from '@/types/domain'
 
 const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'
 const refreshUrl = `${baseURL.replace(/\/$/, '')}/admin/system/index/refresh`
 
-/** Renewal 只读写这几个字段；其余传输 scope 字段归 request.ts。 */
-export interface RenewableRequestConfig extends InternalAxiosRequestConfig {
-  _authRefreshRetried?: boolean
-  _isRelevant?: () => boolean
-}
+/** Renewal 只读写重放标记与按次相关性；其余传输 scope 字段归 request.ts。 */
+export type RenewableRequestConfig = InternalAxiosRequestConfig &
+  Pick<TransportScopeFields, '_authRefreshRetried' | '_isRelevant'>
 
 /** 认证端点不重放：login 208 是凭证错，refresh 208 是续期本身，logout 是主动退出。 */
 export function isAuthentication(url = ''): boolean {
@@ -73,10 +73,7 @@ export function createRenewal(recognition: Recognition, resend: RenewalResend) {
           ? businessFailure(envelope, 'refresh')
           : transportFailure(error, 'refresh')
         if (reason instanceof RequestFailure) {
-          throw new RequestFailure(reason.kind, reason.message, {
-            ...reason.detail,
-            originalBusinessCode: 208,
-          })
+          throw refreshRefusal(reason)
         }
         throw reason
       })

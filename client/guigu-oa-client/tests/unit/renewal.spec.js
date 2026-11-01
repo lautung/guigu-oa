@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRecognition } from '@/recognition'
 import { createRenewal } from '@/renewal'
 import { BusinessRequestFailure } from '@/request-failure'
+import { installHttp } from './support/harness'
 
 const originalAdapter = axios.defaults.adapter
 const refreshUrl = '/dev-api/admin/system/index/refresh'
@@ -62,20 +63,18 @@ function renewalHarness(
     goToLogin: (path) => destinations.push(path),
     notify: (message) => notifications.push(message),
   })
-  const refreshCalls = []
-  axios.defaults.adapter = async (config) => {
-    refreshCalls.push(config)
-    try {
-      return { data: await respond(config), status: 200, statusText: 'OK', headers: {}, config }
-    } catch (error) {
-      throw error instanceof AxiosError
-        ? error
-        : new AxiosError(error.message, 'ERR_NETWORK', config)
-    }
-  }
+  const http = installHttp(respond)
   const resend = vi.fn(async (config) => ({ code: 200, data: null, config }))
   const renewal = createRenewal(recognition, resend)
-  return { state, recognition, renewal, resend, refreshCalls, notifications, destinations }
+  return {
+    state,
+    recognition,
+    renewal,
+    resend,
+    refreshCalls: http.calls,
+    notifications,
+    destinations,
+  }
 }
 
 afterEach(() => {
