@@ -1,4 +1,4 @@
-import { configPermission } from '@/config-permission'
+import { configPermission } from '@/config/permission'
 import {
   AUTH_WHITELIST,
   DESKTOP_CONFIG_HINT,

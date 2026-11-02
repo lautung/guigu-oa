@@ -14,7 +14,7 @@
 import { defineComponent } from 'vue'
 import type { PropType } from 'vue'
 
-import type { ListReadStatus } from '@/list-read'
+import type { ListReadStatus } from '@/list/list-read'
 
 export default defineComponent({
   name: 'ListLoadError',

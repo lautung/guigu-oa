@@ -8,7 +8,7 @@ import FcDesigner from '@form-create/designer'
 import App from './App.vue'
 import { setupStore } from './store'
 import router from './router'
-import { setupNavigation } from './permission'
+import { setupNavigation } from './router/guard'
 import { setupRecognition } from './recognition/browser-adapter'
 
 formCreate.use(autoImport)

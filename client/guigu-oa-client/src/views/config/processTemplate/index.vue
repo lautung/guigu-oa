@@ -84,9 +84,9 @@ import {
   publish,
   removeUnpublished,
 } from '@/config/process-template'
-import { createListPage } from '@/list-page'
-import { listPageEffects } from '@/list-page-browser'
-import type { NoListQuery } from '@/list-read'
+import { createListPage } from '@/list/list-page'
+import { listPageEffects } from '@/list/list-page-browser'
+import type { NoListQuery } from '@/list/list-read'
 import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'

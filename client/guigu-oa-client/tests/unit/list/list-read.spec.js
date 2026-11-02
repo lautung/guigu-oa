@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { isReadonly } from 'vue'
-import { createListRead } from '@/list-read'
+import { createListRead } from '@/list/list-read'
 
 function deferred() {
   let resolve, reject

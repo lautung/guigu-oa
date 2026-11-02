@@ -1,5 +1,5 @@
-import { configPermission } from '@/config-permission'
-import type { MenuGroup } from '@/config-permission'
+import { configPermission } from '@/config/permission'
+import type { MenuGroup } from '@/config/permission'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
 import { returnPathOfRoute } from '@/router/paths'
 import type { ConfigMenuEntry } from '@/types/domain'

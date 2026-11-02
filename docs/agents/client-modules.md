@@ -11,9 +11,9 @@
 | `src/request/renewal.ts` | `createRenewal(recognition, resend)` → `onExpired(config, context)`；`setRequestToken` / `isAuthentication` | 续期状态机唯一 owner:单飞去重、换头重放、认证端点豁免；208 的决策与执行（ADR 0048） |
 | `src/request/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` / `refreshRefusal` / `TransportScopeFields` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；传输 scope 字段一处拥有，传输与续期共用的失败基座 |
 | `src/request/request-scope.ts` | `openRequestScope(recognition, { notifyNormalErrors })` → `request(config, isRelevant?)`、`current()` | 打开时捕获一次身份、按次相关性、错误策略；`ScopedRequestConfig` 只在传输层 |
-| `src/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
-| `src/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `list-page-browser.ts` |
-| `src/config-permission.ts` | `configPermission(menus)` → `entryOf` / `canOccupy` / `grantedConfigMenus` | 配置授予的客户端投影；组归属来自 `router/routes.ts` |
+| `src/list/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
+| `src/list/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `src/list/list-page-browser.ts` |
+| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `canOccupy` / `grantedConfigMenus` | 配置授予的客户端投影；组归属来自 `router/routes.ts` |
 | `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径 |
 | `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |

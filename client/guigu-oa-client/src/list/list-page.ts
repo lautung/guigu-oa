@@ -4,7 +4,7 @@ import {
   type ListReadCommand,
   type ListReadQuery,
   type ListReadView,
-} from '@/list-read'
+} from '@/list/list-read'
 import type { RequestScope } from '@/request/request-scope'
 import type { ApiRequestConfig } from '@/types/domain'
 

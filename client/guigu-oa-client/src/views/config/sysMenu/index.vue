@@ -86,7 +86,7 @@ import { defineComponent } from 'vue'
 import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
 import ListLoadError from '@/components/ListLoadError.vue'
 import { emptyForm, formForCreate, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
-import { listPageEffects } from '@/list-page-browser'
+import { listPageEffects } from '@/list/list-page-browser'
 import type { EntityId, MenuNode } from '@/types/domain'
 
 const effects = listPageEffects()

@@ -15,7 +15,7 @@ vi.mock('element-plus', () => ({
   ElMessageBox: { confirm: confirmMock, close: closeMock },
 }))
 
-import { listPageEffects } from '@/list-page-browser'
+import { listPageEffects } from '@/list/list-page-browser'
 
 describe('listPageEffects', () => {
   beforeEach(() => {

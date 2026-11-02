@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createListPage } from '@/list-page'
+import { createListPage } from '@/list/list-page'
 
 function deferred() {
   let resolve, reject

@@ -101,8 +101,8 @@ import {
   presentForm,
   presentListRecord,
 } from '@/config/sys-user'
-import { createListPage } from '@/list-page'
-import { listPageEffects } from '@/list-page-browser'
+import { createListPage } from '@/list/list-page'
+import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, UserListItem, UserRecord } from '@/types/domain'

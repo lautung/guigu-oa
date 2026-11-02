@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App.vue'
 import { useUserStore } from '@/store/modules/user'
 import { setupRecognition } from '@/recognition/browser-adapter'
-import { setupNavigation } from '@/permission'
+import { setupNavigation } from '@/router/guard'
 import { getToken, getRefreshToken, getEntryId, removeToken, setToken } from '@/utils/auth'
 
 vi.mock('element-plus', async (importOriginal) => ({

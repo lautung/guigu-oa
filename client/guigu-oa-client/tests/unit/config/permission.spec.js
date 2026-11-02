@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { configPermission } from '@/config-permission'
+import { configPermission } from '@/config/permission'
 import { MOBILE_BREAKPOINT } from '@/navigation/constants'
 
 const DESKTOP_WIDTH = 1200

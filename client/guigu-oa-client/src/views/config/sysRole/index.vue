@@ -77,8 +77,8 @@ import {
   presentForm,
   presentListRecord,
 } from '@/config/sys-role'
-import { createListPage } from '@/list-page'
-import { listPageEffects } from '@/list-page-browser'
+import { createListPage } from '@/list/list-page'
+import { listPageEffects } from '@/list/list-page-browser'
 import { assignAuthPath } from '@/router/paths'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'

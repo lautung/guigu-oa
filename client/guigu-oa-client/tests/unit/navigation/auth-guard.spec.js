@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { resolveAuthGuard } from '@/navigation'
 import { AUTH_WHITELIST, ROUTES } from '@/navigation/constants'
-import { setupNavigation } from '@/permission'
+import { setupNavigation } from '@/router/guard'
 
 describe('认证守卫', () => {
   it('redirects unauthenticated users to login with the return path', () => {
