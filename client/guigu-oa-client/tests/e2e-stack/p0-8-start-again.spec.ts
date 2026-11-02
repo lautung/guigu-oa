@@ -7,7 +7,7 @@ import { fillDemoForm, openWorkList, submitStart, uiLoginExpectWork } from './he
  * P0-8（#121）：发起结果不明 → 核实 → 明确重新发起 → 两条审批都真实存在。
  * 对应 GLOSSARY「发起结果待确认」「重新发起」与 ADR 0008（重新发起可能另产生一条，不承诺幂等）。
  *
- * 真实栈触发方式：docker compose pause service-oa 冻结服务端——请求已送达但永远等不到响应，
+ * 真实栈触发方式：docker compose pause lautung-oa-server 冻结服务端——请求已送达但永远等不到响应，
  * 客户端 axios 15s 超时后进入「发起结果待确认」；解冻后服务端把积压的这次提交真实落库。
  * 全程没有伪造任何请求或响应。
  */

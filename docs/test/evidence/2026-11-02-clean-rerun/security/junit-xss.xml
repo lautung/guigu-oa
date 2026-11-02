@@ -1,0 +1,14 @@
+<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="8.821414">
+<testsuite name="security-headers.spec.ts" timestamp="2026-11-02T04:17:59.371Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="4.516" errors="0">
+<testcase name="CSP 生效时主要页面无安全策略违规" classname="security-headers.spec.ts" time="4.516">
+</testcase>
+</testsuite>
+<testsuite name="security-server-version.spec.ts" timestamp="2026-11-02T04:17:59.371Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="0.017" errors="0">
+<testcase name="客户端响应头不暴露 nginx 精确版本" classname="security-server-version.spec.ts" time="0.017">
+</testcase>
+</testsuite>
+<testsuite name="security-xss.spec.ts" timestamp="2026-11-02T04:17:59.371Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="3.824" errors="0">
+<testcase name="审批表单字段的存储型 XSS 不执行" classname="security-xss.spec.ts" time="3.824">
+</testcase>
+</testsuite>
+</testsuites>

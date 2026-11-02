@@ -1,0 +1,81 @@
+server:
+  port: 8800
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  # auth / process 的 mapper XML 随各自模块的 jar 发布：classpath* 才会扫遍所有 jar 根
+  # （classpath: 只取第一个 com/lautung/oa/ 根，拆分后会漏掉其它 jar 里的 XML）。
+  mapper-locations: classpath*:com/lautung/oa/*/mapper/xml/*.xml
+
+spring:
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # sessionVariables 把会话时区钉成 +08:00（ADR 0031）：数据库 CURRENT_TIMESTAMP 兜底值、
+    # 引擎历史与 Jackson 输出必须同源，否则同一列里会出现两套时钟。
+    url: jdbc:mysql://localhost:3306/guigu-oa?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&sessionVariables=time_zone='%2B08:00'
+    username: root
+    password: root
+    # #147：HikariCP 默认池 10 在 ~300 req/s 就饱和（连接等待，非 CPU/慢 SQL）。
+    # 25 在 Tomcat 200 线程之下、MySQL max_connections 之上留量，可用环境变量覆盖。
+    hikari:
+      maximum-pool-size: ${HIKARI_MAXIMUM_POOL_SIZE:25}
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 1800000
+    password:
+    jedis:
+      pool:
+        max-active: 20
+        max-wait: -1
+        max-idle: 5
+        min-idle: 0
+
+lautung:
+  jwt:
+    secret: ${JWT_SECRET:local-development-jwt-secret-not-for-production-00000000000000000000000000000000}
+  oa:
+    # #151：dev/demo 打开慢 SQL 观测，阈值沿用 base 的 500ms；压测时用
+    # LAUTUNG_OA_SQL_SLOW_SQL_THRESHOLD_MS 调低或置 0 全量输出。
+    sql:
+      slow-sql:
+        enabled: true
+    attachments:
+      endpoint: ${S3_ENDPOINT:http://localhost:9000}
+      public-endpoint: ${S3_PUBLIC_ENDPOINT:http://localhost:9000}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:guigu-oa-attachments}
+      access-key: ${S3_ACCESS_KEY:local-access-key}
+      secret-key: ${S3_SECRET_KEY:local-secret-key}
+      upload-url-ttl: ${S3_UPLOAD_URL_TTL:PT5M}
+      download-url-ttl: ${S3_DOWNLOAD_URL_TTL:PT15M}
+      pending-ttl: ${S3_PENDING_TTL:PT24H}
+      cleanup-interval: ${S3_CLEANUP_INTERVAL:PT1H}
+      max-file-size-bytes: ${ATTACHMENT_MAX_FILE_SIZE_BYTES:52428800}
+
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
+flowable:
+  database-schema-update: true
+  db-history-used: true
+  history-level: full
+  check-process-definitions: false
+
+# 切库后再部署已发布模板（不改模板状态）：启动时加 --lautung.oa.cutover.redeploy-published=true

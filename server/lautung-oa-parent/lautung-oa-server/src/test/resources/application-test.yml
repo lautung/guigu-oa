@@ -1,0 +1,39 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:guigu_oa_auth;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+mybatis-plus:
+  mapper-locations: classpath*:com/lautung/oa/*/mapper/xml/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+flowable:
+  database-schema-update: true
+  db-history-used: true
+  history-level: full
+  check-process-definitions: false
+  async-executor-activate: false
+
+lautung:
+  jwt:
+    secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000
+
+# root WARN keeps Flowable/Spring quiet; com.lautung.oa must stay INFO because
+# ObservabilityContractTest asserts the structured request log from TraceIdFilter.
+logging:
+  level:
+    root: WARN
+    com.lautung.oa: INFO

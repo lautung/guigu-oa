@@ -22,11 +22,11 @@ jobs:
           java-version: "21"
           cache: maven
           cache-dependency-path: |
-            server/guigu-oa-parent/pom.xml
-            server/guigu-oa-parent/**/pom.xml
+            server/lautung-oa-parent/pom.xml
+            server/lautung-oa-parent/**/pom.xml
       - name: Run backend tests
         id: backend-tests
-        run: mvn -B -f server/guigu-oa-parent/pom.xml test
+        run: mvn -B -f server/lautung-oa-parent/pom.xml test
       - name: Report backend coverage
         if: always()
         continue-on-error: true
@@ -37,15 +37,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: server/guigu-oa-parent/coverage-report/target/site/jacoco-aggregate
+          path: server/lautung-oa-parent/lautung-oa-coverage-report/target/site/jacoco-aggregate
           retention-days: 14
       - name: Assert backend coverage report
         if: always() && steps.backend-tests.outcome == 'success'
-        run: test -s server/guigu-oa-parent/coverage-report/target/site/jacoco-aggregate/jacoco.csv
+        run: test -s server/lautung-oa-parent/lautung-oa-coverage-report/target/site/jacoco-aggregate/jacoco.csv
       - name: Package backend image artifact
-        run: mvn -B -f server/guigu-oa-parent/pom.xml -DskipTests package
+        run: mvn -B -f server/lautung-oa-parent/pom.xml -DskipTests package
       - name: Build backend image
-        run: docker build --file server/guigu-oa-parent/service-oa/Dockerfile --tag guigu-oa-service-oa:ci server/guigu-oa-parent
+        run: docker build --file server/lautung-oa-parent/lautung-oa-server/Dockerfile --tag lautung-oa-server:ci server/lautung-oa-parent
 
   frontend:
     name: Frontend quality, smoke tests, and image

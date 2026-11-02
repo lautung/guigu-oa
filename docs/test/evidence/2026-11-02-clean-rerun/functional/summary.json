@@ -1,0 +1,124 @@
+{
+  "stats": {
+    "startTime": "2026-11-02T04:07:31.546Z",
+    "duration": 60189.729999999996,
+    "expected": 28,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "慢列表加载下首轮扫描仍能找到目标行",
+      "ok": true
+    },
+    {
+      "title": "登录成功落到待处理",
+      "ok": true
+    },
+    {
+      "title": "密码错误与用户不存在都提示认证失败（不区分）",
+      "ok": true
+    },
+    {
+      "title": "停用的用户不能登录，恢复后可以",
+      "ok": true
+    },
+    {
+      "title": "退出后回到登录页",
+      "ok": true
+    },
+    {
+      "title": "未登录直达办事 URL 被拦回登录页",
+      "ok": true
+    },
+    {
+      "title": "退出后直达办事 URL 同样被拦",
+      "ok": true
+    },
+    {
+      "title": "admin 侧栏有办事与配置两组",
+      "ok": true
+    },
+    {
+      "title": "user 侧栏只有办事组",
+      "ok": true
+    },
+    {
+      "title": "user 直达配置 URL 落到待处理",
+      "ok": true
+    },
+    {
+      "title": "admin 可以进入用户管理",
+      "ok": true
+    },
+    {
+      "title": "alice 发起含附件的审批并出现在已发起",
+      "ok": true
+    },
+    {
+      "title": "bob 通过一条审批，双视角状态一致",
+      "ok": true
+    },
+    {
+      "title": "bob 已处理列表出现刚通过的审批",
+      "ok": true
+    },
+    {
+      "title": "bob 拒绝一条审批，双视角状态一致",
+      "ok": true
+    },
+    {
+      "title": "carol 能看到抄送的完整内容并下载附件，但不能处理与补传",
+      "ok": true
+    },
+    {
+      "title": "手机视口完成登录到通过的全链路",
+      "ok": true
+    },
+    {
+      "title": "手机视口完成登录到通过的全链路",
+      "ok": true
+    },
+    {
+      "title": "发起结果不明后核实并重新发起，两条审批都真实存在",
+      "ok": true
+    },
+    {
+      "title": "未发布模板可改可删，发布后冻结",
+      "ok": true
+    },
+    {
+      "title": "分配配置角色后 user 的配置菜单生效，撤销后消失",
+      "ok": true
+    },
+    {
+      "title": "审批类型：建、改、删",
+      "ok": true
+    },
+    {
+      "title": "角色：建、删",
+      "ok": true
+    },
+    {
+      "title": "用户：建、删",
+      "ok": true
+    },
+    {
+      "title": "菜单：建（停用）、删",
+      "ok": true
+    },
+    {
+      "title": "25 条真实数据翻页：末页不满、下一页禁用、越界为空",
+      "ok": true
+    },
+    {
+      "title": "附件发起前可在发起页删除",
+      "ok": true
+    },
+    {
+      "title": "附件发起后不可删、审批结束保留且可下载",
+      "ok": true
+    }
+  ]
+}

@@ -122,8 +122,8 @@ require_stack_origin() {
 # 套件打的是正在跑的镜像。源码改过而没重建时，`up -d` 会沿用旧 jar：
 # 新用例红得莫名其妙，旧套件则对着旧代码假绿。带 --build 起一次，有层缓存时只是几秒。
 refresh_stack() {
-  step "stack: up --build --wait service-oa client" \
-    docker compose up -d --build --wait service-oa client
+  step "stack: up --build --wait lautung-oa-server client" \
+    docker compose up -d --build --wait lautung-oa-server client
 }
 
 snapshot_base() {

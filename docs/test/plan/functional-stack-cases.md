@@ -2,7 +2,7 @@
 
 来源：[确定功能测试的范围与用例设计口径 #121](https://github.com/lautung/guigu-oa/issues/121) 的 resolution。
 套件：`client/guigu-oa-client/tests/e2e-stack/`，命令 `npm run test:e2e:stack`（1 worker 串行、重试 0、
-不装 `page.route`，真实浏览器 + 真实 `service-oa` + 真实 MySQL/Redis/MinIO，环境地址 `DEMO_ORIGIN`）。
+不装 `page.route`，真实浏览器 + 真实 `lautung-oa-server` + 真实 MySQL/Redis/MinIO，环境地址 `DEMO_ORIGIN`）。
 数据策略：每轮运行生成 runId 写进请假原因与文件名，全部经真实 API/UI 造数，自清理可清理项。
 
 定位是**回归基线**（承接 #108）：只覆盖「只有真实栈能证明」的缺口；单测、mock e2e、MockMvc
@@ -19,7 +19,7 @@
 | P0-5 | bob 拒绝路径 | 同上（拒绝分支） | 双视角 status=-1（审批拒绝） |
 | P0-6 | carol 抄送我的：完整表单/流转记录可见、附件可下载、只读 | GLOSSARY「抄送」「审批成员资格」，ADR 0011 | 详情无通过/拒绝/补传入口；下载内容与上传一致；oracle `isApprove=false`、`canUpload=false` |
 | P0-7 | 手机 390 视口完成 登录 → 待处理 → 详情 → 通过 | GLOSSARY「统一客户端」（办事必须能在手机浏览器完成） | 全链路通过 + 无横向溢出 |
-| P0-8 | 发起结果不明 → 核实 → 明确重新发起 → 两条审批都真实存在 | GLOSSARY「发起结果待确认」「重新发起」，ADR 0008 | `docker compose pause service-oa` 冻结制造真实网络级「结果不明」（axios 超时），解冻后原提交落库，重新发起后两条都在 |
+| P0-8 | 发起结果不明 → 核实 → 明确重新发起 → 两条审批都真实存在 | GLOSSARY「发起结果待确认」「重新发起」，ADR 0008 | `docker compose pause lautung-oa-server` 冻结制造真实网络级「结果不明」（axios 超时），解冻后原提交落库，重新发起后两条都在 |
 
 **通过标准**（#121 §7）：P0 全部通过且无未关闭的 S1/S2 缺陷 = 功能回归基线通过。
 

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>lautung-oa-parent</artifactId>
+        <groupId>com.lautung</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>lautung-oa-auth</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-framework</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-security</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-model</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- 8 个 mapper XML 物理在 src/main/java 的包目录内，随包一起打进 jar -->
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <!-- OpenApiExposureConfigTest 断言 profile YAML 的生效路径；YAML 实体属于装配模块
+                 lautung-oa-server，这里只把 profile 配置复制到测试 classpath，不复制文件。 -->
+            <testResource>
+                <directory>${project.basedir}/../lautung-oa-server/src/main/resources</directory>
+                <includes>
+                    <include>application*.yml</include>
+                </includes>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
+    </build>
+</project>

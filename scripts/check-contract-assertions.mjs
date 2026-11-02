@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
  */
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const serverJava = join(root, 'server/guigu-oa-parent')
+const serverJava = join(root, 'server/lautung-oa-parent')
 const errors = []
 
 function walk(dir, filter, out = []) {
@@ -127,14 +127,14 @@ for (const path of walk(serverJava, (p) => p.endsWith('.java') && p.includes('/s
 
 // 规则 2：控制器不得把 MyBatis 实体当请求体。
 const entityNames = new Set()
-for (const path of walk(join(serverJava, 'model/src/main/java'), (p) => p.endsWith('.java'))) {
+for (const path of walk(join(serverJava, 'lautung-oa-model/src/main/java'), (p) => p.endsWith('.java'))) {
   const source = readFileSync(path, 'utf8')
   if (!source.includes('@TableName(')) continue
   const declaration = source.match(/public class (\w+)/)
   if (declaration) entityNames.add(declaration[1])
 }
 
-for (const path of walk(join(serverJava, 'service-oa/src/main/java'), (p) => p.endsWith('.java'))) {
+for (const path of walk(serverJava, (p) => p.endsWith('.java') && p.includes('/src/main/java/'))) {
   const source = readFileSync(path, 'utf8')
   if (!source.includes('@RequestBody')) continue
   const lineStarts = lineStartsOf(source)
@@ -149,7 +149,7 @@ for (const path of walk(join(serverJava, 'service-oa/src/main/java'), (p) => p.e
 }
 
 // 规则 3：Save 请求体不含 id。
-for (const path of walk(join(serverJava, 'model/src/main/java'), (p) => p.endsWith('SaveRequest.java'))) {
+for (const path of walk(join(serverJava, 'lautung-oa-model/src/main/java'), (p) => p.endsWith('SaveRequest.java'))) {
   const source = readFileSync(path, 'utf8')
   const lineStarts = lineStartsOf(source)
   const declaration = /private\s+[\w<>,.\s]+\s+id\s*;/.exec(source)

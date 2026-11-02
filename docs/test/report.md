@@ -170,7 +170,7 @@
 |---|---|---|---|
 | 五类一键 | `./scripts/test-round.sh all`（或 `clean|api|functional|perf|security|compat`） | 见脚本头部前置 | 69m55s（本轮含脚本复跑验证） |
 | 客户端静态检查 + 单测 | `cd client/guigu-oa-client && npm run verify` | `npm ci` | — |
-| 服务端测试 | `cd server/guigu-oa-parent && mvn -pl service-oa -am test` | — | — |
+| 服务端测试 | `cd server/lautung-oa-parent && mvn -pl lautung-oa-server -am test` | — | — |
 | 全仓检查 | `./scripts/verify.sh` | — | — |
 | 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 57 s |
 | 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 14–16 s/轮 |

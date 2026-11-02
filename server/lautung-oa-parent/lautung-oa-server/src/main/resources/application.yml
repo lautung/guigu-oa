@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: lautung-oa-server
+  profiles:
+    active: dev
+  datasource:
+    hikari:
+      data-source-properties:
+        # #158：Connector/J 8.x 起 nullCatalogMeansCurrent 默认 false，catalog=null 的
+        # 元数据查询会匹配服务器上所有库——同服务器另一个库有 ACT_ 表时，Flowable
+        # 判表存在（isTablePresent）把空库误判成引擎表已建，走 upgrade 链启动失败。
+        # 这里钉回「当前库」语义；放 base 是因为它对所有 profile（dev/compose/prod）
+        # 与一切 URL 覆盖（环境变量注入、本地手敲）生效，prod 的 URL 部署方才拿得到。
+        # 删掉会复发，见 AGENTS.md「后端启动」第 3 条。
+        nullCatalogMeansCurrent: true
+
+lautung:
+  oa:
+    # Bind this directory to persistent storage in containers; template paths are relative to it.
+    process-definition-dir: ${LAUTUNG_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
+    # #151：慢 SQL 日志默认关闭，避免生产日志放大（与 springdoc 同款：base 关、dev 开）。
+    # dev/demo 打开；生产临时排障用 LAUTUNG_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
+    sql:
+      slow-sql:
+        enabled: false
+        threshold-ms: 500
+
+# 接口文档是本地开发工具，不是匿名可访问的产品面（#140）：默认关闭，只有
+# application-dev.yml 显式打开，新 profile 不会意外暴露端点、参数与数据模型。
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      # 手机号打码在结构化输出层统一完成（ADR 0039）：message 与 stack_trace 经
+      # PhoneNumberMasker 渲染成 138****1234，覆盖所有 logger，含异常栈里的 rejected value。
+      customizer: com.lautung.oa.framework.observability.PhoneNumberMaskingCustomizer

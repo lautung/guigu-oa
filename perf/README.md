@@ -96,20 +96,20 @@ docker compose start client
 
 ### GC 日志注入（只在压测运行时）
 
-仓库根放一个临时 `compose.override.yaml`（不入仓），重建 service-oa：
+仓库根放一个临时 `compose.override.yaml`（不入仓），重建 lautung-oa-server：
 
 ```yaml
 services:
-  service-oa:
+  lautung-oa-server:
     environment:
       JAVA_TOOL_OPTIONS: >-
         -Xlog:gc*,safepoint:file=/tmp/gc.log:time,uptime,level,tags:filecount=5,filesize=20m
         -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp
 ```
 
-取证：`docker compose exec service-oa sh -c 'gzip -c /tmp/gc.log.* > /tmp/gc-all.gz'` 再
-`docker compose cp service-oa:/tmp/gc-all.gz perf/results/`。压测结束后删除该文件并
-`docker compose up -d service-oa` 恢复。
+取证：`docker compose exec lautung-oa-server sh -c 'gzip -c /tmp/gc.log.* > /tmp/gc-all.gz'` 再
+`docker compose cp lautung-oa-server:/tmp/gc-all.gz perf/results/`。压测结束后删除该文件并
+`docker compose up -d lautung-oa-server` 恢复。
 
 与 `round.sh` 配合：override 要在跑 `round.sh` **之前**放好（其内部 restore 会按 override 起栈），
 GC 取证必须在**下一档 restore 之前**完成（restore 会 `down -v`）。附件档的 `round.sh` 会改写同一个
@@ -150,6 +150,6 @@ TARGET=10000 FINISHED=4000 node perf/seed.mjs
 
 `seed.mjs` 会按 `MINIO_PUT_BASE` 改写预签名 URL 的 host，而 **host 参与 SigV4 签名**：
 在容器内用 `host.docker.internal:9000` 改写会让 MinIO 返回 `403 SignatureDoesNotMatch`
-（Phase A/B 已成功，Phase C 附件全失败并中止）。需要容器内造数时，必须同时把 `service-oa` 的
+（Phase A/B 已成功，Phase C 附件全失败并中止）。需要容器内造数时，必须同时把 `lautung-oa-server` 的
 `S3_PUBLIC_ENDPOINT` 指到同一个容器可达地址，不要只改 `MINIO_PUT_BASE`。
 宿主机 TUN 代理只污染 `host.docker.internal` 的解析，`localhost` 直连不受影响。

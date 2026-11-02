@@ -1,0 +1,18 @@
+time	step	seconds
+2026-11-02T12:05:48	ci-stack: down --volumes	2
+2026-11-02T12:06:23	ci-stack: up --build --wait	35
+2026-11-02T12:06:25	ci-stack: baseline-check	2
+2026-11-02T12:06:26	ci-stack: demo-smoke	1
+2026-11-02T12:06:40	stack: up --build --wait lautung-oa-server client	14
+2026-11-02T12:06:59	api: round 1	19
+2026-11-02T12:07:15	api: round 2	16
+2026-11-02T12:07:30	stack: up --build --wait lautung-oa-server client	14
+2026-11-02T12:08:31	functional: e2e-stack	60
+2026-11-02T12:09:30	compat: mock matrix	59
+2026-11-02T12:11:14	ci-security: down --volumes	2
+2026-11-02T12:11:46	ci-security: up --build --wait	32
+2026-11-02T12:11:49	ci-security: baseline-check	3
+2026-11-02T12:11:50	ci-security: demo-smoke	1
+2026-11-02T12:17:23	security: directed scan	333
+2026-11-02T12:17:58	security: zap passive	35
+2026-11-02T12:18:08	security: stored xss	10

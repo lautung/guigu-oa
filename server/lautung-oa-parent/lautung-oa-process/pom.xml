@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>lautung-oa-parent</artifactId>
+        <groupId>com.lautung</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>lautung-oa-process</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-framework</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-security</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-model</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- process → auth 直接边（3 个 SysUserService 调用点，ADR/地图决议保留，不抽端口模块） -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-auth</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter-process</artifactId>
+            <version>8.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.mybatis</groupId>
+                    <artifactId>mybatis</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- 8 个 mapper XML 物理在 src/main/java 的包目录内，随包一起打进 jar -->
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <!-- ProcessEngineCutoverTest 用装配模块的 BPMN 夹具起真实 Flowable 引擎；
+                 夹具实体留在 lautung-oa-server，这里只复制到测试 classpath。 -->
+            <testResource>
+                <directory>${project.basedir}/../lautung-oa-server/src/test/resources</directory>
+                <includes>
+                    <include>process/approval-two-step.bpmn20.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
+    </build>
+</project>

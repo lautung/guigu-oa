@@ -23,7 +23,7 @@ const wantBackend = !explicitScope || args.has('--backend') || args.has('--serve
 const frontendReport = join(root, 'client/guigu-oa-client/coverage/coverage-summary.json')
 const backendReport = join(
   root,
-  'server/guigu-oa-parent/coverage-report/target/site/jacoco-aggregate/jacoco.csv',
+  'server/lautung-oa-parent/lautung-oa-coverage-report/target/site/jacoco-aggregate/jacoco.csv',
 )
 
 function percent(covered, total) {
