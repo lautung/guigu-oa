@@ -1422,14 +1422,14 @@ defineCase({
     const controller = fs.readFileSync(
       path.join(
         REPO_ROOT,
-        'server/lautung-oa-parent/lautung-oa-process/src/main/java/com/atguigu/process/controller/OaProcessTemplateController.java',
+        'server/lautung-oa-parent/lautung-oa-process/src/main/java/com/lautung/oa/process/controller/OaProcessTemplateController.java',
       ),
       'utf8',
     )
     const sysUserController = fs.readFileSync(
       path.join(
         REPO_ROOT,
-        'server/lautung-oa-parent/lautung-oa-auth/src/main/java/com/atguigu/auth/controller/SysUserController.java',
+        'server/lautung-oa-parent/lautung-oa-auth/src/main/java/com/lautung/oa/auth/controller/SysUserController.java',
       ),
       'utf8',
     )
@@ -1637,7 +1637,7 @@ defineCase({
   async run() {
     let logs = ''
     try {
-      logs = execFileSync('docker', ['compose', 'logs', '--no-color', 'service-oa'], {
+      logs = execFileSync('docker', ['compose', 'logs', '--no-color', 'lautung-oa-server'], {
         cwd: REPO_ROOT,
         encoding: 'utf8',
         maxBuffer: 64 * 1024 * 1024,

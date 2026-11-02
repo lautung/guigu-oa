@@ -1,0 +1,42 @@
+package com.lautung.oa.vo.system;
+
+import com.lautung.oa.model.system.SysUser;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+/**
+ * 新增用户的请求体。创建既不给主键，也不接受空密码：空白密码只会建出一个不能登录的账号（ADR 0034）；
+ * 长度上限对齐 sys_user 列宽，越界给字段文案而不是落库兜底（ADR 0036）。
+ * 公共字段与 fill 在 {@link SysUserRequest}。
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "新增用户")
+public class SysUserSaveRequest extends SysUserRequest {
+
+    @NotBlank(message = "用户名不能为空")
+    @Size(max = 20, message = "用户名过长")
+    @Schema(description = "用户名")
+    private String username;
+
+    @NotBlank(message = "密码不能为空")
+    @Schema(description = "密码（明文，服务端编码后落库）")
+    private String password;
+
+    @NotBlank(message = "姓名不能为空")
+    @Size(max = 20, message = "姓名过长")
+    @Schema(description = "姓名")
+    private String name;
+
+    public SysUser toEntity() {
+        SysUser user = new SysUser();
+        user.setUsername(username);
+        user.setPassword(password);
+        user.setName(name);
+        fill(user);
+        return user;
+    }
+}

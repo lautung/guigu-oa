@@ -51,11 +51,11 @@ if [ "$ATTACHMENT" = 1 ]; then
   trap 'rm -f compose.override.yaml' EXIT
   cat > compose.override.yaml <<'YAML'
 services:
-  service-oa:
+  lautung-oa-server:
     environment:
       S3_PUBLIC_ENDPOINT: http://host.docker.internal:9000
 YAML
-  docker compose up -d --wait service-oa
+  docker compose up -d --wait lautung-oa-server
 fi
 
 echo ">> [$(date +%H:%M:%S)] k6 TIER=$TIER <- $SCRIPT"
@@ -70,7 +70,7 @@ docker compose start client > /dev/null
 
 if [ "$ATTACHMENT" = 1 ]; then
   rm -f compose.override.yaml
-  docker compose up -d --wait service-oa
+  docker compose up -d --wait lautung-oa-server
 fi
 
 echo ">> [$(date +%H:%M:%S)] 当档取证：行数 / 慢日志 / stats"

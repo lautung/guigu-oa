@@ -14,7 +14,7 @@ docker compose exec -T mysql sh -c "cat /var/lib/mysql/slow-${LABEL}.log 2>/dev/
   > "$OUT/slow-${LABEL}.log" || echo "（无 ${LABEL} 慢日志）" > "$OUT/slow-${LABEL}.log"
 
 # GC 日志（多轮共用一个容器，按时间窗口在分析期切分；此处抓当前全部）
-docker compose exec -T service-oa sh -c "gzip -c /tmp/gc.log /tmp/gc.log.* 2>/dev/null" \
+docker compose exec -T lautung-oa-server sh -c "gzip -c /tmp/gc.log /tmp/gc.log.* 2>/dev/null" \
   > "$OUT/gc-${LABEL}.log.gz" || echo "（无 GC 日志）" > "$OUT/gc-${LABEL}.log"
 
 # 行数

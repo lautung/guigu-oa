@@ -1,6 +1,6 @@
 spring:
   application:
-    name: service-oa
+    name: lautung-oa-server
   profiles:
     active: dev
   datasource:
@@ -14,12 +14,12 @@ spring:
         # 删掉会复发，见 AGENTS.md「后端启动」第 3 条。
         nullCatalogMeansCurrent: true
 
-guigu:
+lautung:
   oa:
     # Bind this directory to persistent storage in containers; template paths are relative to it.
-    process-definition-dir: ${GUIGU_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
+    process-definition-dir: ${LAUTUNG_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
     # #151：慢 SQL 日志默认关闭，避免生产日志放大（与 springdoc 同款：base 关、dev 开）。
-    # dev/demo 打开；生产临时排障用 GUIGU_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
+    # dev/demo 打开；生产临时排障用 LAUTUNG_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
     sql:
       slow-sql:
         enabled: false
@@ -50,4 +50,4 @@ logging:
     json:
       # 手机号打码在结构化输出层统一完成（ADR 0039）：message 与 stack_trace 经
       # PhoneNumberMasker 渲染成 138****1234，覆盖所有 logger，含异常栈里的 rejected value。
-      customizer: com.atguigu.common.observability.PhoneNumberMaskingCustomizer
+      customizer: com.lautung.oa.framework.observability.PhoneNumberMaskingCustomizer

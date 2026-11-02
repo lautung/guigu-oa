@@ -64,8 +64,8 @@
                         </goals>
                         <configuration>
                             <excludes>
-                                <exclude>com/atguigu/demo/**</exclude>
-                                <exclude>com/atguigu/model/**</exclude>
+                                <exclude>com/lautung/oa/demo/**</exclude>
+                                <exclude>com/lautung/oa/model/**</exclude>
                             </excludes>
                         </configuration>
                     </execution>

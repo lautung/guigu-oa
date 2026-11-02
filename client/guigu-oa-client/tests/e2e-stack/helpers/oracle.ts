@@ -1,7 +1,7 @@
 import type { APIRequestContext } from '@playwright/test'
 
 /**
- * 真实 API oracle（#121 §6）：直接调用 Compose 里的 service-oa（经 nginx 的 /dev-api），
+ * 真实 API oracle（#121 §6）：直接调用 Compose 里的 lautung-oa-server（经 nginx 的 /dev-api），
  * 用另一个账号的视角核对 UI 操作产生的持久化结果。不读 MySQL，不打 mock。
  *
  * body.code 是权威契约（见 #120 决议）：code !== 200 一律抛 ApiFailure。

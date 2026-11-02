@@ -1,4 +1,4 @@
-guigu:
+lautung:
   jwt:
     secret: ${JWT_SECRET}
 

@@ -44,14 +44,14 @@ cd server/lautung-oa-parent/sql
 - `flowable.database-schema-update: true`
 - `flowable.history-level: full`
 - `flowable.check-process-definitions: false`（不要靠 classpath 样例恢复模板）
-- `GUIGU_OA_PROCESS_DEFINITION_DIR` 指向持久保存流程 zip 的目录；数据库中的流程路径相对该目录解析。容器运行时要把这个目录挂到可写且跨重建保留的 volume。
+- `LAUTUNG_OA_PROCESS_DEFINITION_DIR` 指向持久保存流程 zip 的目录；数据库中的流程路径相对该目录解析。容器运行时要把这个目录挂到可写且跨重建保留的 volume。
 
 启动并再部署已发布模板（不改模板状态）：
 
 ```bash
 cd server/lautung-oa-parent/lautung-oa-server
 mvn -DskipTests install
-java -jar target/lautung-oa-server.jar --guigu.oa.cutover.redeploy-published=true
+java -jar target/lautung-oa-server.jar --lautung.oa.cutover.redeploy-published=true
 ```
 
 若 jar 内没有 yml，再加 `--spring.config.additional-location=file:./src/main/resources/`。
@@ -68,7 +68,7 @@ V4 不会为历史 `status=1` 行自动造发布绑定。只凭数据库当前�
 
 ### 4.1 找出待核实模板
 
-先停止应用写流量并备份业务库、Flowable 库和 `GUIGU_OA_PROCESS_DEFINITION_DIR`。记录数据库与归档目录备份位置，再执行：
+先停止应用写流量并备份业务库、Flowable 库和 `LAUTUNG_OA_PROCESS_DEFINITION_DIR`。记录数据库与归档目录备份位置，再执行：
 
 ```sql
 SELECT t.id, t.name, t.process_definition_key, t.process_definition_path, t.status
@@ -126,7 +126,7 @@ WHERE id = <模板ID> AND status = 1;
 
 ```bash
 cd server/lautung-oa-parent/lautung-oa-server
-java -jar target/lautung-oa-server.jar --guigu.oa.cutover.redeploy-published=true
+java -jar target/lautung-oa-server.jar --lautung.oa.cutover.redeploy-published=true
 ```
 
 成功后确认每个绑定都能精确关联 Flowable 定义与 deployment：

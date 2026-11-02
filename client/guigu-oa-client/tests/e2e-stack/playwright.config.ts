@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
 /**
- * 真实栈功能套件（#121 §2）：指向 Compose 统一客户端，真实 service-oa / MySQL / Redis / MinIO。
+ * 真实栈功能套件（#121 §2）：指向 Compose 统一客户端，真实 lautung-oa-server / MySQL / Redis / MinIO。
  * 不启动 webServer——先按 docs/development/compose-demo.md 把栈跑起来再执行。
  *
  *     npm run test:e2e:stack

@@ -6,7 +6,7 @@
 ## 环境要求
 
 - Docker Desktop（或等价 Docker 引擎）与 Compose v2。
-- 可用内存 8 GB 以上：`mysql`、`redis`、`minio`、`service-oa`、`client` 五个容器同时运行。
+- 可用内存 8 GB 以上：`mysql`、`redis`、`minio`、`lautung-oa-server`、`client` 五个容器同时运行。
 - 端口 `3306`、`6379`、`9000`、`9001`、`8800`、`9530` 空闲。这些端口与本地开发路径
   （`npm run dev` 的 9530、`java -jar` 的 8800、系统 MySQL 3306、系统 Redis 6379）**冲突**，
   跑 Compose 前先停掉本地开发进程与系统服务。
@@ -40,7 +40,7 @@ Flowable 首次启动时创建 `ACT_*` / `FLW_*` 引擎表。浏览器打开 `ht
 | redis | `redis:7.4-alpine` | Redis 7.4.12 |
 | minio | `bitnamilegacy/minio:2025.7.23-debian-12-r5` | MinIO DEVELOPMENT.2025-07-23T15-54-02Z |
 | minio-init | `bitnamilegacy/minio-client:2025.7.21-debian-12-r3` | mc 2025-07-21 |
-| service-oa | 本地构建（`server/lautung-oa-parent/lautung-oa-server/Dockerfile`） | JDK 21.0.12 / Spring Boot 4.1.0 / Flowable 8.0.0 |
+| lautung-oa-server | 本地构建（`server/lautung-oa-parent/lautung-oa-server/Dockerfile`） | JDK 21.0.12 / Spring Boot 4.1.0 / Flowable 8.0.0 |
 | client | 本地构建（`client/guigu-oa-client/Dockerfile`） | 构建镜像 node 22.18，运行镜像 nginx 1.31.8 |
 
 MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io 撤下（Docker Hub 返回
@@ -85,7 +85,7 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 
 ### 演示审批的发布
 
-演示迁移只把「演示请假申请」种成**未发布**（`status=0`）。`service-oa` 以 `dev,demo` 启动时，
+演示迁移只把「演示请假申请」种成**未发布**（`status=0`）。`lautung-oa-server` 以 `dev,demo` 启动时，
 `DemoApprovalPublisher` 先读 classpath 的 `processes/demo-approval.bpmn20.xml` 现打一个流程 zip
 写入 `process-definitions`，再走正常发布流程，把发布记录、Flowable 部署和 `status=1` 一次性补齐；
 随后 `DemoScenarioSeeder` 才生成待处理、已结束、抄送和附件场景。整个过程没有手工步骤。
@@ -127,7 +127,7 @@ npm run test:e2e:stack                                 # 真实栈套件（含 W
 `client` 的 nginx 对每个响应加 `Content-Security-Policy`、`X-Frame-Options: DENY` 和
 `X-Content-Type-Options: nosniff`（#139）。CSP 里的 `connect-src` 除了 `'self'` 还要放行浏览器
 直连的对象存储源——附件上传是浏览器拿着预签名 URL 直接 `fetch PUT` 到 MinIO，不在同源路径下。
-这个源由 `client` 的 `CSP_CONNECT_SRC` 提供，默认 `http://localhost:9000`，必须与 `service-oa`
+这个源由 `client` 的 `CSP_CONNECT_SRC` 提供，默认 `http://localhost:9000`，必须与 `lautung-oa-server`
 的 `S3_PUBLIC_ENDPOINT` 成对配置：
 
 ```bash
@@ -142,8 +142,8 @@ docker compose up -d --build client
 
 ## 跨域
 
-API 与客户端同源：浏览器只访问 9530，`/dev-api` 由客户端 nginx 反代到 `service-oa:8800`。
-所以 `service-oa` 不下发任何 CORS 响应头，也没有开启 Spring 的 CORS 处理（#141）；开发态的
+API 与客户端同源：浏览器只访问 9530，`/dev-api` 由客户端 nginx 反代到 `lautung-oa-server:8800`。
+所以 `lautung-oa-server` 不下发任何 CORS 响应头，也没有开启 Spring 的 CORS 处理（#141）；开发态的
 9530 同样经 Vite 代理访问 8800，不需要跨域。演示栈里唯一的跨源请求是附件直传 MinIO，由
 `minio` 服务的 `MINIO_API_CORS_ALLOW_ORIGIN` 单独放行。
 
@@ -173,7 +173,7 @@ Maven / npm 依赖的全量下载；使用上面的镜像源时，首次构建�
   `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:9530` 放行；实测 `OPTIONS` 预检返回 204 且带
   `Access-Control-Allow-Origin: http://localhost:9530`。
 - Compose 中的密码和 MinIO 凭据只用于本地演示，不要用于部署环境。
-- `service-oa` 的健康检查探测 `/actuator/health/readiness`，该路径与 `/actuator/health` 一样在匿名白名单内
+- `lautung-oa-server` 的健康检查探测 `/actuator/health/readiness`，该路径与 `/actuator/health` 一样在匿名白名单内
   （只放行 health 端点及其分组，不开放其他 actuator 端点，且 `show-details: never` 不返回明细）。
   就绪分组由 Spring Boot 的 `readinessState` 决定：只有 `ApplicationReadyEvent` 之后才返回
   `{"status":"UP"}`，因此 Flyway 迁移、Flowable 建表和演示审批播种（`DemoScenarioSeeder` 等

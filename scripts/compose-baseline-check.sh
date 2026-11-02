@@ -20,7 +20,7 @@ sql() {
 }
 
 echo "== 容器 =="
-for svc in mysql redis minio service-oa client; do
+for svc in mysql redis minio lautung-oa-server client; do
   state=$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$svc" '$1==s {print $2}')
   [ "$state" = "running" ] && ok "$svc running" || bad "$svc 未运行（${state}）"
 done

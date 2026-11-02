@@ -1,0 +1,2519 @@
+{
+  "note": "为满足入仓证据单文件 ≤100KB（#122），仅保留统计与用例结果；完整 Playwright JSON 不入仓，可用 ./scripts/test-round.sh ci-stack 重新生成。",
+  "stats": {
+    "startTime": "2026-11-02T04:08:32.557Z",
+    "duration": 57564.317,
+    "expected": 145,
+    "skipped": 44,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "errors": [],
+  "suites": [
+    {
+      "title": "approval-detail.spec.ts",
+      "file": "approval-detail.spec.ts",
+      "specs": [
+        {
+          "title": "通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 95,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 121,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 141,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已处理入口保持只读并返回原列表",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 164,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取 A 时返回并打开 B，A 迟到结果不覆盖 B",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 175,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 193,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 95,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 121,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 141,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已处理入口保持只读并返回原列表",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 164,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取 A 时返回并打开 B，A 迟到结果不覆盖 B",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 175,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 193,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 95,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 121,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 141,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已处理入口保持只读并返回原列表",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 164,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取 A 时返回并打开 B，A 迟到结果不覆盖 B",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 175,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 193,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 95,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "处理中可直接返回，迟到成功不抢导航，重新打开相同地址没有旧提示",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 121,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "整批附件补传时按钮禁用且不排队，补传结束后主动拒绝进入已处理",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 141,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已处理入口保持只读并返回原列表",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 164,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取 A 时返回并打开 B，A 迟到结果不覆盖 B",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 175,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "附件登记在途离开列表后重开同审批，保持互斥直至原登记结束且不排队",
+          "ok": true,
+          "file": "approval-detail.spec.ts",
+          "line": 193,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "approval-start.spec.ts",
+      "file": "approval-start.spec.ts",
+      "specs": [
+        {
+          "title": "删除在途阻止发起，完成后需要再次点击",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 139,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "提交在途锁定全部内容，离开后的成功不抢导航",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 158,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "明确拒绝保留内容解锁，修改后可再次发起",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 181,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结果不明跨刷新保留内容，核实后结束本次",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 201,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "重新选择替换不可用附件，无需再忽略旧引用",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 241,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "空列表不解锁，明确重新发起先核对不可用附件",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "删除在途阻止发起，完成后需要再次点击",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 139,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "提交在途锁定全部内容，离开后的成功不抢导航",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 158,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "明确拒绝保留内容解锁，修改后可再次发起",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 181,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结果不明跨刷新保留内容，核实后结束本次",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 201,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "重新选择替换不可用附件，无需再忽略旧引用",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 241,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "空列表不解锁，明确重新发起先核对不可用附件",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "删除在途阻止发起，完成后需要再次点击",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 139,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "提交在途锁定全部内容，离开后的成功不抢导航",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 158,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "明确拒绝保留内容解锁，修改后可再次发起",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 181,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结果不明跨刷新保留内容，核实后结束本次",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 201,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "重新选择替换不可用附件，无需再忽略旧引用",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 241,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "空列表不解锁，明确重新发起先核对不可用附件",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "删除在途阻止发起，完成后需要再次点击",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 139,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "提交在途锁定全部内容，离开后的成功不抢导航",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 158,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "明确拒绝保留内容解锁，修改后可再次发起",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 181,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结果不明跨刷新保留内容，核实后结束本次",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 201,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "重新选择替换不可用附件，无需再忽略旧引用",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 241,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "空列表不解锁，明确重新发起先核对不可用附件",
+          "ok": true,
+          "file": "approval-start.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "approval-template-availability.spec.ts",
+      "file": "approval-template-availability.spec.ts",
+      "specs": [
+        {
+          "title": "keeps unverified published templates frozen and blocks direct start URLs",
+          "ok": true,
+          "file": "approval-template-availability.spec.ts",
+          "line": 101,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "keeps unverified published templates frozen and blocks direct start URLs",
+          "ok": true,
+          "file": "approval-template-availability.spec.ts",
+          "line": 101,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "keeps unverified published templates frozen and blocks direct start URLs",
+          "ok": true,
+          "file": "approval-template-availability.spec.ts",
+          "line": 101,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "keeps unverified published templates frozen and blocks direct start URLs",
+          "ok": true,
+          "file": "approval-template-availability.spec.ts",
+          "line": 101,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "assign-roles.spec.ts",
+      "file": "assign-roles.spec.ts",
+      "specs": [
+        {
+          "title": "勾选并保存角色后关闭弹窗并刷新当前操作者",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 137,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 155,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 221,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "变成手机尺寸时强制离开配置并丢弃未保存勾选",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 249,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "勾选并保存角色后关闭弹窗并刷新当前操作者",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 137,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 155,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 221,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "变成手机尺寸时强制离开配置并丢弃未保存勾选",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 249,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "勾选并保存角色后关闭弹窗并刷新当前操作者",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 137,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 155,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 221,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "变成手机尺寸时强制离开配置并丢弃未保存勾选",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 249,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "勾选并保存角色后关闭弹窗并刷新当前操作者",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 137,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存结果待确认时冻结内容，刷新后从行内待核实恢复并只读取最新角色",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 155,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新资料与菜单",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 221,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "变成手机尺寸时强制离开配置并丢弃未保存勾选",
+          "ok": true,
+          "file": "assign-roles.spec.ts",
+          "line": 249,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "compatibility-pages.spec.ts",
+      "file": "compatibility-pages.spec.ts",
+      "specs": [
+        {
+          "title": "登录页在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 232,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "发起审批的模板列表与表单在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 240,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "待处理列表与审批详情在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 254,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-模板编辑：桌面可占用，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-分配角色：桌面可打开弹窗，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 285,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录页在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 232,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "发起审批的模板列表与表单在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 240,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "待处理列表与审批详情在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 254,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-模板编辑：桌面可占用，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-分配角色：桌面可打开弹窗，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 285,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录页在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 232,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "发起审批的模板列表与表单在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 240,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "待处理列表与审批详情在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 254,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-模板编辑：桌面可占用，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-分配角色：桌面可打开弹窗，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 285,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录页在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 232,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "发起审批的模板列表与表单在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 240,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "待处理列表与审批详情在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 254,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-模板编辑：桌面可占用，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-分配角色：桌面可打开弹窗，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 285,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录页在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 232,
+          "tests": [
+            {
+              "projectName": "desktop-1440-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "发起审批的模板列表与表单在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 240,
+          "tests": [
+            {
+              "projectName": "desktop-1440-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "待处理列表与审批详情在矩阵内可渲染",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 254,
+          "tests": [
+            {
+              "projectName": "desktop-1440-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-模板编辑：桌面可占用，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 269,
+          "tests": [
+            {
+              "projectName": "desktop-1440-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "配置-分配角色：桌面可打开弹窗，手机落回待处理",
+          "ok": true,
+          "file": "compatibility-pages.spec.ts",
+          "line": 285,
+          "tests": [
+            {
+              "projectName": "desktop-1440-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "recognition.spec.ts",
+      "file": "recognition.spec.ts",
+      "specs": [
+        {
+          "title": "首次认出临时失败可重试，保留原目标和进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 27,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已认出后的刷新网络故障保留原页面与进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 50,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "旧业务请求迟到失败不会提示或清掉新用户",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 79,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "另一标签的新进入结果不会被旧标签迟到刷新覆盖",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 120,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "首次认出临时失败可重试，保留原目标和进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 27,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已认出后的刷新网络故障保留原页面与进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 50,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "旧业务请求迟到失败不会提示或清掉新用户",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 79,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "另一标签的新进入结果不会被旧标签迟到刷新覆盖",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 120,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "首次认出临时失败可重试，保留原目标和进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 27,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已认出后的刷新网络故障保留原页面与进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 50,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "旧业务请求迟到失败不会提示或清掉新用户",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 79,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "另一标签的新进入结果不会被旧标签迟到刷新覆盖",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 120,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "首次认出临时失败可重试，保留原目标和进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 27,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已认出后的刷新网络故障保留原页面与进入结果",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 50,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "旧业务请求迟到失败不会提示或清掉新用户",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 79,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "另一标签的新进入结果不会被旧标签迟到刷新覆盖",
+          "ok": true,
+          "file": "recognition.spec.ts",
+          "line": 120,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "template-edit.spec.ts",
+      "file": "template-edit.spec.ts",
+      "specs": [
+        {
+          "title": "真实设计器往返三步后提交完整设计，保存仍为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 123,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 154,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 184,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 217,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "认证恢复重发保存后断网，仍进入待确认且不再次自动重发",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 274,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "上传逐请求采用刷新后的凭据，再上传新包使用当前身份",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 289,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "缺失记录不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "损坏设计不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "顶层不兼容不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "手机尺寸与缺少配置菜单时不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 329,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "有配置菜单的手机也不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 338,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "新建的合法空设计在有效上传后保存为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 347,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 371,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 398,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 436,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结束待确认编辑前说明重复写入风险，取消结束仍保留快照",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 455,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取在途离开后重开同地址，旧读取不覆盖本次内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 475,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "进入结果被替换时清理编辑，旧上传结果不影响重新进入",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 501,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "真实设计器往返三步后提交完整设计，保存仍为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 123,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 154,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 184,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 217,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "认证恢复重发保存后断网，仍进入待确认且不再次自动重发",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 274,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "上传逐请求采用刷新后的凭据，再上传新包使用当前身份",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 289,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "缺失记录不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "损坏设计不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "顶层不兼容不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "手机尺寸与缺少配置菜单时不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 329,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "有配置菜单的手机也不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 338,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "新建的合法空设计在有效上传后保存为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 347,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 371,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 398,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 436,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "结束待确认编辑前说明重复写入风险，取消结束仍保留快照",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 455,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "读取在途离开后重开同地址，旧读取不覆盖本次内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 475,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "进入结果被替换时清理编辑，旧上传结果不影响重新进入",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 501,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "真实设计器往返三步后提交完整设计，保存仍为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 123,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 154,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 184,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 217,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "认证恢复重发保存后断网，仍进入待确认且不再次自动重发",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 274,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "上传逐请求采用刷新后的凭据，再上传新包使用当前身份",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 289,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "缺失记录不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "损坏设计不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "顶层不兼容不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "手机尺寸与缺少配置菜单时不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 329,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "有配置菜单的手机也不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 338,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "新建的合法空设计在有效上传后保存为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 347,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 371,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 398,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 436,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "结束待确认编辑前说明重复写入风险，取消结束仍保留快照",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 455,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "读取在途离开后重开同地址，旧读取不覆盖本次内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 475,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "进入结果被替换时清理编辑，旧上传结果不影响重新进入",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 501,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "真实设计器往返三步后提交完整设计，保存仍为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 123,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "已有旧包时，新上传在途与失败均不能保存，明确恢复后才采用旧包",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 154,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 184,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 217,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "认证恢复重发保存后断网，仍进入待确认且不再次自动重发",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 274,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "上传逐请求采用刷新后的凭据，再上传新包使用当前身份",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 289,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "缺失记录不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "损坏设计不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "顶层不兼容不会降级为空白新建或覆盖",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 318,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "手机尺寸与缺少配置菜单时不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 329,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "有配置菜单的手机也不能占用模板编辑页",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 338,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "新建的合法空设计在有效上传后保存为未发布",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 347,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "B 成功后 C 返回不完整结果，明确恢复时采用最近成功的 B",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 371,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "保存中冻结内容，确认离开后重新进入同地址不接受旧保存成功",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 398,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 436,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "结束待确认编辑前说明重复写入风险，取消结束仍保留快照",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 455,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "读取在途离开后重开同地址，旧读取不覆盖本次内容",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 475,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        },
+        {
+          "title": "进入结果被替换时清理编辑，旧上传结果不影响重新进入",
+          "ok": true,
+          "file": "template-edit.spec.ts",
+          "line": 501,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "skipped",
+              "expectedStatus": "skipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "workflow-smoke.spec.ts",
+      "file": "workflow-smoke.spec.ts",
+      "specs": [
+        {
+          "title": "登录、发起含附件审批并通过",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并拒绝",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "desktop-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并通过",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并拒绝",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "mobile-chromium",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并通过",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并拒绝",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "desktop-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并通过",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        },
+        {
+          "title": "登录、发起含附件审批并拒绝",
+          "ok": true,
+          "file": "workflow-smoke.spec.ts",
+          "line": 176,
+          "tests": [
+            {
+              "projectName": "mobile-webkit",
+              "status": "expected",
+              "expectedStatus": "passed"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -16,7 +16,7 @@ spring:
         enabled: false
 
 mybatis-plus:
-  mapper-locations: classpath*:com/atguigu/*/mapper/xml/*.xml
+  mapper-locations: classpath*:com/lautung/oa/*/mapper/xml/*.xml
   configuration:
     map-underscore-to-camel-case: true
 
@@ -27,13 +27,13 @@ flowable:
   check-process-definitions: false
   async-executor-activate: false
 
-guigu:
+lautung:
   jwt:
     secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000
 
-# root WARN keeps Flowable/Spring quiet; com.atguigu must stay INFO because
+# root WARN keeps Flowable/Spring quiet; com.lautung.oa must stay INFO because
 # ObservabilityContractTest asserts the structured request log from TraceIdFilter.
 logging:
   level:
     root: WARN
-    com.atguigu: INFO
+    com.lautung.oa: INFO

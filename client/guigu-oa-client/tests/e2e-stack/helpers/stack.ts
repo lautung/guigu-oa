@@ -26,9 +26,9 @@ export function marker(tag: string): string {
 const COMPOSE_DIR =
   process.env.STACK_COMPOSE_DIR ?? fileURLToPath(new URL('../../../../', import.meta.url))
 
-/** 控制演示栈里的 service-oa（P0-8 冻结服务制造「发起结果不明」）。 */
+/** 控制演示栈里的 lautung-oa-server（P0-8 冻结服务制造「发起结果不明」）。 */
 export function composeService(action: 'pause' | 'unpause'): void {
-  execFileSync('docker', ['compose', action, 'service-oa'], {
+  execFileSync('docker', ['compose', action, 'lautung-oa-server'], {
     cwd: COMPOSE_DIR,
     stdio: 'pipe',
     timeout: 60_000,

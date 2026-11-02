@@ -45,7 +45,7 @@ jobs:
       - name: Package backend image artifact
         run: mvn -B -f server/lautung-oa-parent/pom.xml -DskipTests package
       - name: Build backend image
-        run: docker build --file server/lautung-oa-parent/lautung-oa-server/Dockerfile --tag guigu-oa-service-oa:ci server/lautung-oa-parent
+        run: docker build --file server/lautung-oa-parent/lautung-oa-server/Dockerfile --tag lautung-oa-server:ci server/lautung-oa-parent
 
   frontend:
     name: Frontend quality, smoke tests, and image

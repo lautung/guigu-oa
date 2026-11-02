@@ -52,7 +52,7 @@
 
 | 项 | 约定 |
 |---|---|
-| 栈 | Docker Compose 演示栈：`mysql` 8.4 / `redis` 7.4 / `minio`（bitnami 2025.7.23）/ `service-oa`（JDK 21、Spring Boot 4.1.0、Flowable 8.0.0）/ `client`（nginx 生产构建） |
+| 栈 | Docker Compose 演示栈：`mysql` 8.4 / `redis` 7.4 / `minio`（bitnami 2025.7.23）/ `lautung-oa-server`（JDK 21、Spring Boot 4.1.0、Flowable 8.0.0）/ `client`（nginx 生产构建） |
 | 起栈 | `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose up -d --build --wait`（受限网络才需要镜像源；全新卷先 `down --volumes --remove-orphans`） |
 | 入口 | 客户端 `http://localhost:9530`，API 经 nginx `/dev-api` 代理到 `8800`；后端直连 `http://localhost:8800` |
 | 环境变量 | `DEMO_ORIGIN`（接口/功能/冒烟，默认 9530）；`E2E_BASE_URL`（浏览器套件页面 baseURL，默认取 `DEMO_ORIGIN`）；`API_BASE_URL`（接口套件完整前缀覆盖，直连 8800 时用） |

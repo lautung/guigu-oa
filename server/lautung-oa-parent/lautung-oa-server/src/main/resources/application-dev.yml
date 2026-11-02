@@ -10,8 +10,8 @@ mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   # auth / process 的 mapper XML 随各自模块的 jar 发布：classpath* 才会扫遍所有 jar 根
-  # （classpath: 只取第一个 com/atguigu/ 根，拆分后会漏掉其它 jar 里的 XML）。
-  mapper-locations: classpath*:com/atguigu/*/mapper/xml/*.xml
+  # （classpath: 只取第一个 com/lautung/oa/ 根，拆分后会漏掉其它 jar 里的 XML）。
+  mapper-locations: classpath*:com/lautung/oa/*/mapper/xml/*.xml
 
 spring:
   datasource:
@@ -42,12 +42,12 @@ spring:
         max-idle: 5
         min-idle: 0
 
-guigu:
+lautung:
   jwt:
     secret: ${JWT_SECRET:local-development-jwt-secret-not-for-production-00000000000000000000000000000000}
   oa:
     # #151：dev/demo 打开慢 SQL 观测，阈值沿用 base 的 500ms；压测时用
-    # GUIGU_OA_SQL_SLOW_SQL_THRESHOLD_MS 调低或置 0 全量输出。
+    # LAUTUNG_OA_SQL_SLOW_SQL_THRESHOLD_MS 调低或置 0 全量输出。
     sql:
       slow-sql:
         enabled: true
@@ -78,4 +78,4 @@ flowable:
   history-level: full
   check-process-definitions: false
 
-# 切库后再部署已发布模板（不改模板状态）：启动时加 --guigu.oa.cutover.redeploy-published=true
+# 切库后再部署已发布模板（不改模板状态）：启动时加 --lautung.oa.cutover.redeploy-published=true
