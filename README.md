@@ -168,6 +168,7 @@ mvn -f server/lautung-oa-parent/pom.xml test
 
 ## 文档
 
+- [本地启动与数据库](docs/development/local-dev.md)
 - [Compose 演示与种子数据](docs/development/compose-demo.md)
 - [面试作品化改造规格](docs/spec/面试作品化改造规格.md)
 - [领域词汇](GLOSSARY.md)

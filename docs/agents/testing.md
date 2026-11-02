@@ -1,10 +1,30 @@
 # Testing
 
-测试怎么分层、挂载工具怎么用、服务端单元测试有哪些坑。命令与覆盖率口径见 README「测试与覆盖率」。
+测试怎么分层、挂载工具怎么用、服务端单元测试有哪些坑。命令见下节「命令」；覆盖率口径见 README「测试与覆盖率」。
 
 五类测试（功能、接口、性能、安全、兼容性）的资产在 `docs/test/`：`plan.md` 定测什么与怎么判，`execution/` 一文件一轮，`report.md` 是结论与缺陷账本，`evidence/README.md` 是证据索引。性能资产见 `perf/README.md`（压测命令以它为准；造数必须在宿主机 `localhost` 执行，容器改写预签名 Host 会 403）。一键复跑用 `./scripts/test-round.sh all`，按类子命令见 `--help`。常态化拓扑见 ADR 0030：PR 维持轻量，push main 跑栈回归，每周跑安全，性能只在本地。
 
 手工打栈的登录与调用范式见 `scripts/compose-demo-smoke.mjs`。可发起的模板只由 `/admin/process/findStartable` 回答：`oa_process_template.status = 1` 只是「已发布」，发布产物不可核验时仍不可发起。
+
+## 命令
+
+前端（都在 `client/guigu-oa-client/` 下执行）：
+
+- `npm run verify`：lint + typecheck + format:check + 文档检查（模块地图、Markdown 相对链接、证据路径与体积）+ 旧品牌词检查 + shell 检查 + 合同断言 + 测试工具检查 + 单测（提交前必跑）。
+- `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动。
+- `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --build --wait`。改了服务端必须带 `--build`：直接 `up -d` 会沿用旧 jar，新用例红得莫名其妙、旧套件假绿。
+- `npm run build:prod`：类型检查 + 生产构建。
+
+仓库：
+
+- `./scripts/verify.sh`：客户端 `npm run verify` + 服务端 `mvn -pl lautung-oa-server -am test`。
+- `./scripts/test-round.sh all`：五类测试一键复跑（按类子命令见 `--help`；方案与证据在 `docs/test/`）。常态化拓扑见 ADR 0030：PR 轻量，push main 跑栈回归，每周跑安全，性能只在本地。
+
+服务端（`server/lautung-oa-parent/`）：
+
+- `mvn -pl lautung-oa-server -am test`：合同测试用 H2 + 内存 Redis，不需要本地 MySQL/Redis；纯单测随域模块，`@SpringBootTest` 集中在 `lautung-oa-server`，`-am` 会带上全部上游模块的测试（全量等价于父目录 `mvn test`）。
+- 改过 `src/test/resources` 后先 `mvn clean test`：Maven 不会清理 `target/test-classes` 里已删除的资源，旧配置会继续生效。
+- 单次运行会刷出数十 KB 结构化日志：重定向到文件后 `grep "Tests run:"` 看汇总；不要加 `-q`（会吞掉 surefire 汇总）。
 
 ## 分层
 
@@ -76,4 +96,5 @@
 
 - `./scripts/coverage.sh`：两端一起跑并打印汇总；CI 用它同一份 `scripts/coverage-summary.mjs` 输出 summary。
 - 覆盖率只报告、不卡红；`npm run verify` 与 `scripts/verify.sh` 不包含覆盖率步骤。
+- 服务端 JaCoCo 聚合报告在 `lautung-oa-coverage-report/target/site/jacoco-aggregate/`；分母口径与排除项见 README「测试与覆盖率」。
 - `@vitest/coverage-v8` 必须与 `vitest` 同版本，`npm run check:test-tooling` 会校验。
