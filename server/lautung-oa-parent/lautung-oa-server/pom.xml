@@ -76,6 +76,12 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- ArchUnit 规则在装配模块跑：这里能看见全部业务模块的主代码类 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

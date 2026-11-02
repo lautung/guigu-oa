@@ -33,6 +33,7 @@
         <springdoc.version>3.1.0</springdoc.version>
         <aws-sdk.version>2.55.14</aws-sdk.version>
         <jacoco.version>0.8.13</jacoco.version>
+        <archunit.version>1.4.1</archunit.version>
     </properties>
 
     <dependencyManagement>
@@ -73,6 +74,11 @@
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>s3</artifactId>
                 <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
