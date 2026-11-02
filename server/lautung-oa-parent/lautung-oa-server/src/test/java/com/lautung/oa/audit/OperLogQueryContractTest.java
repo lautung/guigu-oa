@@ -137,6 +137,12 @@ class OperLogQueryContractTest {
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.records[*].id", hasItems(501, 504)));
 
+        // 操作人 id 是 #214 的补充过滤：501/504 的 oper_id=301，502=302、503=303。
+        mockMvc.perform(list(1L, 1, 10).param("operId", "301"))
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.records[*].id", hasItems(501, 504)))
+                .andExpect(jsonPath("$.data.records[*].id", org.hamcrest.Matchers.not(hasItems(502, 503))));
+
         mockMvc.perform(list(1L, 1, 10).param("title", "用户管理"))
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.records[*].id", hasItems(501, 503)));

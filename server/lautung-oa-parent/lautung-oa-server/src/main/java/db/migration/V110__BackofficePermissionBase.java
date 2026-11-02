@@ -22,6 +22,9 @@ import java.util.List;
  * 建表用 {@code CREATE TABLE IF NOT EXISTS}；加列/删列先查元数据；菜单行的移动靠
  * {@code WHERE 旧值} 判定，第二次执行自然不再命中；按钮/角色/授予种子在
  * {@code db/seed/backoffice_permission_v110.sql} 里用 {@code WHERE NOT EXISTS} 保持幂等。
+ *
+ * <p>删 {@code sys_user.post_id} 前先把非空/非零的旧值回填进 {@code sys_user_post}：
+ * 先建表、再 insert-select（{@code NOT EXISTS} 防重），最后才删列；列已不存在时整段跳过。
  */
 public class V110__BackofficePermissionBase extends BaseJavaMigration {
 
@@ -83,12 +86,30 @@ public class V110__BackofficePermissionBase extends BaseJavaMigration {
     public void migrate(Context context) throws Exception {
         Connection connection = context.getConnection();
         addColumnIfMissing(connection, "sys_role", "data_scope", "TINYINT DEFAULT 5");
-        dropColumnIfExists(connection, "sys_user", "post_id");
         for (String ddl : TABLES) {
             execute(connection, ddl);
         }
+        migrateUserPosts(connection);
         migrateProcessMenus(connection);
         ScriptUtils.executeSqlScript(connection, new ClassPathResource(SEED_RESOURCE));
+    }
+
+    /** 单岗位旧列 → 多岗位表：表已在 {@link #TABLES} 建好，回填后删列。 */
+    private void migrateUserPosts(Connection connection) throws SQLException {
+        if (!hasColumn(connection, "sys_user", "post_id")) {
+            return;
+        }
+        execute(connection, """
+                INSERT INTO sys_user_post (user_id, post_id, create_time, update_time, is_deleted)
+                SELECT u.id, u.post_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+                FROM sys_user u
+                WHERE u.post_id IS NOT NULL AND u.post_id <> 0
+                  AND NOT EXISTS (SELECT 1 FROM sys_user_post up
+                                  WHERE up.user_id = u.id
+                                    AND up.post_id = u.post_id
+                                    AND up.is_deleted = 0)
+                """);
+        dropColumnIfExists(connection, "sys_user", "post_id");
     }
 
     private void migrateProcessMenus(Connection connection) throws SQLException {

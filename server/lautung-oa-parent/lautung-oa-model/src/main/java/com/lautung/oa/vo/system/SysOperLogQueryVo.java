@@ -15,6 +15,9 @@ public class SysOperLogQueryVo implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** 操作人 id，精确匹配 {@code oper_id}（#214 的补充过滤，便于按人排障）。 */
+    private Long operId;
+
     /** 操作人姓名，模糊匹配 {@code oper_name}。 */
     private String operName;
 

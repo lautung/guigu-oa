@@ -36,6 +36,9 @@ public class SysOperLogService {
     public IPage<SysOperLog> page(Page<SysOperLog> page, SysOperLogQueryVo query, DataScope scope) {
         LambdaQueryWrapper<SysOperLog> wrapper = new LambdaQueryWrapper<>();
         if (query != null) {
+            if (query.getOperId() != null) {
+                wrapper.eq(SysOperLog::getOperId, query.getOperId());
+            }
             if (StringUtils.hasText(query.getOperName())) {
                 wrapper.like(SysOperLog::getOperName, query.getOperName());
             }

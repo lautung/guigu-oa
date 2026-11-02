@@ -35,6 +35,9 @@ import java.util.UUID;
  * <p>绑定判据：只有「上传人是当前编辑者」或「已经绑定在本公告」的图片可以被正文引用；
  * 别人上传的未绑定图片不能被绑走，避免借公告把他人图片变成可读。
  *
+ * <p>读判据：上传人对自己的图片始终可读（草稿绑定也要能预览）；其他登录用户只能读
+ * 「绑定在已发布且未删除公告」的图片。
+ *
  * <p>对象删除都放在事务 {@code afterCommit}：行回滚时对象还在，重试仍可复用；提交后删对象
  * 失败只留 WARN，孤儿对象不阻塞业务。
  */
@@ -110,7 +113,8 @@ public class NoticeImageService {
     }
 
     /**
-     * 读图片：登录即可，但只允许「已绑定已发布且未删除公告」或「未绑定且请求者就是上传人」。
+     * 读图片：登录即可。上传人对自己的图片始终可读（含草稿绑定，编辑器预览依赖它）；
+     * 其他登录用户只允许读「绑定在已发布且未删除公告」的图片。
      * 其余情况按无权处理（205）；行不存在按不存在处理（201）。
      */
     public NoticeImageContent read(Long userId, Long imageId) {
@@ -118,13 +122,15 @@ public class NoticeImageService {
         if (image == null) {
             throw new BusinessException(201, "图片不存在");
         }
-        if (image.getNoticeId() != null) {
+        if (!Objects.equals(image.getUploaderId(), userId)) {
+            if (image.getNoticeId() == null) {
+                throw new BusinessException(205, "没有操作权限");
+            }
+            // selectById 带 @TableLogic：软删公告等同不存在，不需要额外判断 is_deleted。
             Notice notice = noticeMapper.selectById(image.getNoticeId());
             if (notice == null || !Integer.valueOf(Notice.STATUS_PUBLISHED).equals(notice.getStatus())) {
                 throw new BusinessException(205, "没有操作权限");
             }
-        } else if (!Objects.equals(image.getUploaderId(), userId)) {
-            throw new BusinessException(205, "没有操作权限");
         }
         if (!NoticeImageTypes.isAllowed(image.getContentType())) {
             throw new BusinessException(201, "图片类型不支持");

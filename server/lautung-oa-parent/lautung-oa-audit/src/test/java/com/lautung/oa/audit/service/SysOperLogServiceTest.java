@@ -38,6 +38,21 @@ class SysOperLogServiceTest {
     }
 
     @Test
+    void pageFiltersByOperId() {
+        Page<SysOperLog> page = new Page<>(1, 10);
+        when(operLogMapper.selectPage(any(Page.class), any(Wrapper.class))).thenReturn(page);
+        SysOperLogQueryVo query = new SysOperLogQueryVo();
+        query.setOperId(301L);
+
+        service.page(page, query, DataScope.unrestricted());
+
+        ArgumentCaptor<Wrapper<SysOperLog>> wrapper = ArgumentCaptor.forClass(Wrapper.class);
+        verify(operLogMapper).selectPage(any(Page.class), wrapper.capture());
+        String sql = wrapper.getValue().getSqlSegment();
+        assertTrue(sql.contains("oper_id ="), "missing oper_id filter in " + sql);
+    }
+
+    @Test
     void pageOrdersByCreateTimeThenId() {
         Page<SysOperLog> page = new Page<>(1, 10);
         when(operLogMapper.selectPage(any(Page.class), any(Wrapper.class))).thenReturn(page);

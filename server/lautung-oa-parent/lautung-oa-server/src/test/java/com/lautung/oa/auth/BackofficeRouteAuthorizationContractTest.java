@@ -32,8 +32,10 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -46,7 +48,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -117,7 +118,10 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:unlock", "unlock");
         // 通知公告（#218）：读（列表/详情）只走页面授予；写各要按钮点，没有 :query 读权限。
         expect(NoticeAdminController.class, "/system/notice", null, "page", "detail");
-        expect(NoticeAdminController.class, "/system/notice", "system:notice:add", "create", "upload");
+        expect(NoticeAdminController.class, "/system/notice", "system:notice:add", "create");
+        // 上传是新增与编辑共用的编辑器：add 或 edit 任一按钮点都可以（ADR 0055 修订）。
+        expectEither(NoticeAdminController.class, "/system/notice",
+                "system:notice:add", "system:notice:edit", "upload");
         expect(NoticeAdminController.class, "/system/notice", "system:notice:edit", "update");
         expect(NoticeAdminController.class, "/system/notice", "system:notice:remove", "delete");
         expect(NoticeAdminController.class, "/system/notice", "system:notice:publish", "publish", "withdraw");
@@ -192,10 +196,10 @@ class BackofficeRouteAuthorizationContractTest {
             assertNotNull(gate, "missing backoffice gate on " + key);
 
             if (isWrite(entry.getKey())) {
-                assertNotNull(gate.permission(),
+                assertFalse(gate.permissions().isEmpty(),
                         "backoffice write route must declare a button point: " + key);
             } else {
-                assertNull(gate.permission(),
+                assertTrue(gate.permissions().isEmpty(),
                         "backoffice read route must pass only the page: " + key);
             }
 
@@ -208,13 +212,13 @@ class BackofficeRouteAuthorizationContractTest {
                             + "(SELECT parent_id FROM sys_menu WHERE id = " + pageId + ") AND p.type = 1"),
                     key + " must target a visible page, not a hidden page: " + gate.page());
 
-            if (gate.permission() != null) {
+            for (String permission : gate.permissions()) {
                 Integer buttonParent = jdbcTemplate.queryForObject(
                         "SELECT parent_id FROM sys_menu WHERE perms = ? AND type = 2 AND is_deleted = 0",
                         Integer.class,
-                        gate.permission());
+                        permission);
                 assertEquals(pageId, buttonParent,
-                        key + " button " + gate.permission() + " must hang under " + gate.page());
+                        key + " button " + permission + " must hang under " + gate.page());
             }
         }
     }
@@ -520,11 +524,24 @@ class BackofficeRouteAuthorizationContractTest {
         if (gate == null) {
             return null;
         }
-        Matcher matcher = GATE.matcher(gate.value());
-        if (!matcher.matches()) {
-            return null;
+        // 一个端点可以接受「add 或 edit」两个按钮点（上传端点），仍必须服务同一个页面。
+        String page = null;
+        List<String> permissions = new ArrayList<>();
+        for (String expression : gate.value().split(" or ")) {
+            Matcher matcher = GATE.matcher(expression.trim());
+            if (!matcher.matches()) {
+                return null;
+            }
+            if (page == null) {
+                page = matcher.group(1);
+            } else if (!page.equals(matcher.group(1))) {
+                return null;
+            }
+            if (matcher.group(2) != null) {
+                permissions.add(matcher.group(2));
+            }
         }
-        return new Gate(matcher.group(1), matcher.group(2));
+        return page == null ? null : new Gate(page, permissions);
     }
 
     private static String keyOf(HandlerMethod handler) {
@@ -541,6 +558,16 @@ class BackofficeRouteAuthorizationContractTest {
         }
     }
 
-    private record Gate(String page, String permission) {
+    /** 同一页面上的两个等价按钮点：端点接受任一即可。 */
+    private static void expectEither(Class<?> controller, String page,
+                                     String first, String second, String... methods) {
+        String gate = "@backofficeGate.isAllowed('" + page + "','" + first + "') or "
+                + "@backofficeGate.isAllowed('" + page + "','" + second + "')";
+        for (String method : methods) {
+            EXPECTED_GATES.put(controller.getSimpleName() + "#" + method, gate);
+        }
+    }
+
+    private record Gate(String page, List<String> permissions) {
     }
 }

@@ -135,6 +135,7 @@ describe('操作日志列表页', () => {
     ])
     expect(http.calls.at(-1).url).toBe('/admin/system/sysOperLog/1/10')
 
+    wrapper.vm.query.operId = 301
     wrapper.vm.query.operName = 'admin'
     wrapper.vm.query.businessType = 0
     wrapper.vm.query.status = 0
@@ -142,6 +143,7 @@ describe('操作日志列表页', () => {
     wrapper.vm.search()
     await flushPromises()
     expect(http.calls.at(-1).params).toEqual({
+      operId: 301,
       operName: 'admin',
       businessType: 0,
       status: 0,

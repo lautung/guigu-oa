@@ -31,6 +31,7 @@ export const OPER_LOG_PERMISSIONS = {
 } as const
 
 export interface OperLogQuery {
+  operId?: number
   operName?: string
   title?: string
   businessType?: number | ''
@@ -55,6 +56,7 @@ export function operLogStatusTagType(value: number | null | undefined): AuditTag
 /** 空字段不进查询串；0 是合法的业务类型/状态，不能被当成空值丢掉。 */
 export function presentQuery(query: OperLogQuery = {}): Record<string, string | number> {
   const params: Record<string, string | number> = {}
+  if (query.operId != null) params.operId = query.operId
   if (query.operName) params.operName = query.operName
   if (query.title) params.title = query.title
   if (query.businessType !== '' && query.businessType != null) {
@@ -71,6 +73,7 @@ export function presentQuery(query: OperLogQuery = {}): Record<string, string | 
 
 export function emptyQuery(): OperLogQuery {
   return {
+    operId: undefined,
     operName: '',
     title: '',
     businessType: '',

@@ -5,6 +5,16 @@
     </div>
 
     <el-form :inline="true" class="filter-form" @submit.prevent="search">
+      <el-form-item label="操作人ID">
+        <el-input-number
+          v-model="query.operId"
+          class="filter-number"
+          :min="1"
+          :precision="0"
+          :controls="false"
+          placeholder="操作人ID"
+        />
+      </el-form-item>
       <el-form-item label="操作人">
         <el-input v-model="query.operName" placeholder="操作人" clearable />
       </el-form-item>
@@ -254,6 +264,10 @@ export default defineComponent({
 
 .filter-form {
   margin-bottom: 12px;
+}
+
+.filter-number {
+  width: 140px;
 }
 
 .action-row {

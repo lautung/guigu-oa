@@ -69,19 +69,34 @@ test('管理页草稿→发布→铃铛→撤回→删除，含图片上传与�
       mimeType: 'image/png',
       buffer: PNG_1X1,
     })
-    await expect(page.locator('.ql-editor img')).toHaveAttribute(
-      'src',
-      /^\/admin\/notices\/images\/\d+$/,
-    )
+    // 编辑器里的原生 img 带不上 token：水合成 blob 预览，服务端地址留在 data-notice-src。
+    const editorImage = page.locator('.ql-editor img')
+    await expect(editorImage).toHaveAttribute('data-notice-src', /^\/admin\/notices\/images\/\d+$/)
+    await expect(editorImage).toHaveAttribute('src', /^blob:/)
+    await expect
+      .poll(() => editorImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0)
 
     await page.getByRole('tab', { name: '预览' }).click()
-    await expect(page.locator('.notice-content img')).toHaveAttribute('src', /^blob:/)
+    const previewImage = page.locator('.notice-content img')
+    await expect(previewImage).toHaveAttribute('src', /^blob:/)
+    await expect
+      .poll(() => previewImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0)
 
     await page.getByRole('button', { name: '保存草稿', exact: true }).click()
     await expect(page).toHaveURL(/\/system\/notice\/edit\/\d+$/)
     await expect(page.locator('.notice-meta-row')).toContainText('草稿')
     noticeId = Number(/\/system\/notice\/edit\/(\d+)$/.exec(page.url())?.[1])
     expect(noticeId).toBeGreaterThan(0)
+    // 保存载荷只写服务端地址，绝不能把 blob 地址落库。
+    const saved = await oracle.call<{ content: string }>(
+      'admin',
+      'get',
+      `/admin/system/notices/${noticeId}`,
+    )
+    expect(saved.content).toMatch(/\/admin\/notices\/images\/\d+/)
+    expect(saved.content).not.toContain('blob:')
 
     await page.getByRole('button', { name: '发布', exact: true }).click()
     await confirmMessageBox(page)
@@ -100,7 +115,11 @@ test('管理页草稿→发布→铃铛→撤回→删除，含图片上传与�
     await expect(page).toHaveURL(new RegExp(`/notice/${noticeId}$`))
     await expect(page.getByRole('heading', { name: title })).toBeVisible()
     await expect(page.locator('.notice-content')).toContainText(`正文 ${title}`)
-    await expect(page.locator('.notice-content img')).toHaveAttribute('src', /^blob:/)
+    const detailImage = page.locator('.notice-content img')
+    await expect(detailImage).toHaveAttribute('src', /^blob:/)
+    await expect
+      .poll(() => detailImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0)
     await expect(badge).toBeHidden()
 
     await logout(page)

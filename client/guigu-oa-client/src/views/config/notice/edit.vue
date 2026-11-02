@@ -64,6 +64,7 @@
             :model-value="state.form.content"
             :readonly="!state.canEdit"
             :show-image="canUploadImage"
+            :load-image="fetchNoticeImage"
             placeholder="请输入公告正文"
             @update:model-value="updateForm({ content: $event })"
             @image="chooseImage"
@@ -139,7 +140,7 @@ import ListLoadError from '@/components/ListLoadError.vue'
 import NoticeContent from '@/notice/NoticeContent.vue'
 import QuillEditor from '@/notice/QuillEditor.vue'
 import { createNoticeEditorPage } from '@/notice/admin-browser'
-import { uploadNoticeImage } from '@/notice/api'
+import { fetchNoticeImage, uploadNoticeImage } from '@/notice/api'
 import {
   NOTICE_PERMISSIONS,
   NOTICE_TYPES,
@@ -168,7 +169,9 @@ const uploading = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const quillRef = ref<{ insertImage(url: string): void } | null>(null)
 
-const canUploadImage = computed(() => hasPermission(permissions.add))
+const canUploadImage = computed(
+  () => hasPermission(permissions.add) || hasPermission(permissions.edit),
+)
 const canCreate = computed(() => state.id !== '' || hasPermission(permissions.add))
 const statusLabel = computed(() => noticeStatusLabel(state.status))
 const statusTagType = computed(() => noticeStatusTagType(state.status))

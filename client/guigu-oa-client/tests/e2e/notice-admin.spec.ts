@@ -290,7 +290,12 @@ test('图片上传插入服务端 URL，预览按认证取回显示 blob', async
     buffer: Buffer.from([137, 80, 78, 71]),
   })
   await expect.poll(() => state.uploads).toBe(1)
-  await expect(page.locator('.ql-editor img')).toHaveAttribute('src', '/admin/notices/images/9')
+  // 编辑器内的 img 用认证取回换成 blob，服务端地址留在 data-notice-src 供序列化回写。
+  await expect(page.locator('.ql-editor img')).toHaveAttribute(
+    'data-notice-src',
+    '/admin/notices/images/9',
+  )
+  await expect(page.locator('.ql-editor img')).toHaveAttribute('src', /^blob:/)
 
   await page.getByRole('tab', { name: '预览' }).click()
   await expect(page.locator('.notice-content img')).toHaveAttribute('src', /^blob:/)
@@ -335,8 +340,8 @@ test('按钮点权限决定列表动作与图片按钮可见性', async ({ page 
 
   await draftRow.getByRole('button', { name: '编辑', exact: true }).click()
   await expect(page.getByRole('heading', { name: '编辑公告' })).toBeVisible()
-  // 上传端点要 system:notice:add；只有 edit 时隐藏图片按钮，而不是让上传撞 205。
-  await expect(page.locator('.ql-toolbar .ql-image')).toHaveCount(0)
+  // 上传端点接受 add 或 edit；只有 edit 的编辑者也显示图片按钮。
+  await expect(page.locator('.ql-toolbar .ql-image')).toHaveCount(1)
 })
 
 test('有 publish 权限时列表显示发布/撤回按钮', async ({ page }) => {

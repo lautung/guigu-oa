@@ -3,8 +3,8 @@
  * 有序/无序列表、引用、代码块、链接、图片、清除格式。字体颜色/字号/背景/对齐/
  * 表格/视频一律不开；`formats` 同时收口粘贴内容，避免粘贴把未开放格式带进正文。
  *
- * 图片按钮受服务端 `system:notice:add` 约束（上传端点复用 add 按钮点），只有 edit
- * 权限时由调用方传 `image: false` 隐藏按钮，而不是让上传撞 205。
+ * 图片按钮受服务端 `system:notice:add` 或 `system:notice:edit` 约束（上传端点接受任一
+ * 按钮点），两者都没有时由调用方传 `image: false` 隐藏按钮，而不是让上传撞 205。
  */
 
 export type NoticeQuillToolbarItem = string | Record<string, unknown>

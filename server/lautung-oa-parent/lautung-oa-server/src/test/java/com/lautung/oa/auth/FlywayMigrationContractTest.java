@@ -1,6 +1,8 @@
 package com.lautung.oa.auth;
 
 import db.migration.V110__BackofficePermissionBase;
+import db.migration.V113__AuditOperLogMenu;
+import db.migration.V115__AuditLoginLogMenu;
 import db.migration.V116__NoticeSchemaAndMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
@@ -9,10 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -260,17 +260,16 @@ class FlywayMigrationContractTest {
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
         int grants = count("SELECT COUNT(*) FROM sys_role_menu");
         int userRoles = count("SELECT COUNT(*) FROM sys_user_role");
+        int userPosts = count("SELECT COUNT(*) FROM sys_user_post");
         int roles = count("SELECT COUNT(*) FROM sys_role");
 
         try (Connection connection = dataSource.getConnection()) {
             Context context = mock(Context.class);
             when(context.getConnection()).thenReturn(connection);
             new V110__BackofficePermissionBase().migrate(context);
-            // 日志管理种子是纯 SQL：重复执行也不得多出菜单/按钮/授予行。
-            ScriptUtils.executeSqlScript(connection,
-                    new ClassPathResource("db/migration/V113__audit_oper_log_menu.sql"));
-            ScriptUtils.executeSqlScript(connection,
-                    new ClassPathResource("db/migration/V115__audit_login_log_menu.sql"));
+            // 日志管理种子是 db/seed 下的纯 SQL，经 Java 迁移执行；重复执行也不得多出菜单/按钮/授予行。
+            new V113__AuditOperLogMenu().migrate(context);
+            new V115__AuditLoginLogMenu().migrate(context);
             // 通知公告（#218）：Java 迁移的建表/索引与 SQL 种子都必须可重复执行。
             new V116__NoticeSchemaAndMenu().migrate(context);
         }
@@ -279,8 +278,35 @@ class FlywayMigrationContractTest {
         assertEquals(buttons, count("SELECT COUNT(*) FROM sys_menu WHERE type = 2"));
         assertEquals(grants, count("SELECT COUNT(*) FROM sys_role_menu"));
         assertEquals(userRoles, count("SELECT COUNT(*) FROM sys_user_role"));
+        assertEquals(userPosts, count("SELECT COUNT(*) FROM sys_user_post"));
         assertEquals(roles, count("SELECT COUNT(*) FROM sys_role"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE path IN ('/processSet', '/processMgr') AND is_deleted = 0"));
+    }
+
+    @Test
+    void v110BackfillsLegacyPostsBeforeDroppingTheColumnAndReplaysIdempotently() throws Exception {
+        // 模拟 V110 之前的库：旧列还在、有一行非空 post_id；迁移必须先建 sys_user_post、
+        // 回填再删列，第二次重放时列已不存在，整段跳过且不重复写。
+        jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN post_id BIGINT DEFAULT NULL");
+        jdbcTemplate.update("INSERT INTO sys_user "
+                + "(id, username, password, name, status, post_id, is_deleted) "
+                + "VALUES (981, 'legacy-post', '', '旧岗位用户', 1, 77, 0)");
+
+        try (Connection connection = dataSource.getConnection()) {
+            Context context = mock(Context.class);
+            when(context.getConnection()).thenReturn(connection);
+            new V110__BackofficePermissionBase().migrate(context);
+            new V110__BackofficePermissionBase().migrate(context);
+
+            assertEquals(1, count("SELECT COUNT(*) FROM sys_user_post "
+                    + "WHERE user_id = 981 AND post_id = 77 AND is_deleted = 0"));
+            assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE LOWER(TABLE_NAME) = 'sys_user' AND LOWER(COLUMN_NAME) = 'post_id'"));
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE sys_user DROP COLUMN IF EXISTS post_id");
+            jdbcTemplate.update("DELETE FROM sys_user_post WHERE user_id = 981");
+            jdbcTemplate.update("DELETE FROM sys_user WHERE id = 981");
+        }
     }
 
     @Test

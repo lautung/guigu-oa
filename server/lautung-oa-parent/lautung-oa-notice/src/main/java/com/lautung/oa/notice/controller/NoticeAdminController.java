@@ -31,7 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
  * {@code system:notice:add/edit/remove/publish}。没有 {@code :query} 读权限——页面授予覆盖读。
  *
  * <p>状态机：草稿(0) → 已发布(1) → 已撤回(2)。发布显式；撤回可再发布；任意状态可软删。
- * 图片上传复用 {@code add} 按钮点（新增与编辑共用同一编辑器）。
+ * 图片上传接受 {@code add} 或 {@code edit} 按钮点：新增与编辑共用同一编辑器，
+ * 只有 edit 的编辑者也要能上传（ADR 0055 修订）。
  */
 @Tag(name = "通知公告管理")
 @RestController
@@ -107,7 +108,8 @@ public class NoticeAdminController {
         return Result.ok(noticeService.withdraw(id));
     }
 
-    @PreAuthorize("@backofficeGate.isAllowed('/system/notice','system:notice:add')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/notice','system:notice:add') "
+            + "or @backofficeGate.isAllowed('/system/notice','system:notice:edit')")
     @OperLog(title = "通知公告·上传图片", businessType = BusinessType.CREATE)
     @Operation(summary = "上传公告图片（≤5MB，jpeg/png/gif/webp）")
     @PostMapping("/images")

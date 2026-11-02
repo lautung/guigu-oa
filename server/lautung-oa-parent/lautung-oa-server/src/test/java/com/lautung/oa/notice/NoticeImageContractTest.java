@@ -49,7 +49,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@code S3NoticeImageStore}，不需要 MinIO。
  *
  * <p>钉住：5MB 上限与容器 multipart 配置的边界、Content-Type + 魔数（含 SVG 拒绝）、
- * 读权限（已绑定已发布 / 未绑定上传人）、保存时绑定/解绑重算、删公告清对象、孤儿清理。
+ * 上传按钮点（add 或 edit，页面授予仍必需）、读权限（上传人始终可读自己的图片，
+ * 其他人只读已绑定已发布公告）、保存时绑定/解绑重算、删公告清对象、孤儿清理。
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_notice_image_contract;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @AutoConfigureMockMvc
@@ -61,6 +62,10 @@ class NoticeImageContractTest {
     private static final String UPLOADER = "notice-img-uploader";
     private static final long OTHER_ID = 402L;
     private static final String OTHER = "notice-image-other";
+    private static final long EDITOR_ID = 403L;
+    private static final String EDITOR = "notice-image-editor";
+    private static final long PAGE_ONLY_ID = 404L;
+    private static final String PAGE_ONLY = "notice-img-pageonly";
 
     @Autowired
     private MockMvc mockMvc;
@@ -86,17 +91,30 @@ class NoticeImageContractTest {
         imageStore.clear();
         insertUser(UPLOADER_ID, UPLOADER);
         insertUser(OTHER_ID, OTHER);
+        insertUser(EDITOR_ID, EDITOR);
+        insertUser(PAGE_ONLY_ID, PAGE_ONLY);
 
-        jdbcTemplate.update("INSERT INTO sys_role (id, role_name, role_code, is_deleted) "
-                + "VALUES (801, 'notice-image', 'notice_image', 0)");
         Integer pageId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system/notice' AND type = 1", Integer.class);
         Integer addId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE perms = 'system:notice:add' AND type = 2", Integer.class);
-        jdbcTemplate.update("INSERT INTO sys_role_menu (role_id, menu_id, is_deleted) VALUES (801, ?, 0)", pageId);
-        jdbcTemplate.update("INSERT INTO sys_role_menu (role_id, menu_id, is_deleted) VALUES (801, ?, 0)", addId);
-        jdbcTemplate.update("INSERT INTO sys_user_role (user_id, role_id, is_deleted) VALUES (?, 801, 0)",
-                UPLOADER_ID);
+        Integer editId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE perms = 'system:notice:edit' AND type = 2", Integer.class);
+        // 801 add-only / 802 edit-only / 803 仅页面授予（两个按钮都没有）。
+        grantRole(801, "notice_image_add", UPLOADER_ID, pageId, addId);
+        grantRole(802, "notice_image_edit", EDITOR_ID, pageId, editId);
+        grantRole(803, "notice_image_page", PAGE_ONLY_ID, pageId);
+    }
+
+    private void grantRole(int roleId, String roleCode, long userId, Integer... menuIds) {
+        jdbcTemplate.update("INSERT INTO sys_role (id, role_name, role_code, is_deleted) "
+                + "VALUES (?, ?, ?, 0)", roleId, roleCode, roleCode);
+        for (Integer menuId : menuIds) {
+            jdbcTemplate.update("INSERT INTO sys_role_menu (role_id, menu_id, is_deleted) VALUES (?, ?, 0)",
+                    roleId, menuId);
+        }
+        jdbcTemplate.update("INSERT INTO sys_user_role (user_id, role_id, is_deleted) VALUES (?, ?, 0)",
+                userId, roleId);
     }
 
     @AfterEach
@@ -163,13 +181,25 @@ class NoticeImageContractTest {
     }
 
     @Test
+    void uploadAcceptsAddOrEditButtonButStillRequiresThePageGrant() throws Exception {
+        // add-only：可以上传。
+        expectUploadCode(token(UPLOADER_ID, UPLOADER), 200);
+        // edit-only：编辑者用同一个编辑器，也可以上传。
+        expectUploadCode(token(EDITOR_ID, EDITOR), 200);
+        // 有页面授予但两个按钮都没有：205，且不留元数据行。
+        expectUploadCode(token(PAGE_ONLY_ID, PAGE_ONLY), 205, "没有操作权限");
+        assertEquals(2, imageRowCount(), "被拒绝的上传不得留下元数据行");
+    }
+
+    @Test
     void imageReadRequiresPublishedBindingOrOwnership() throws Exception {
         byte[] content = pngBytes(16);
-        long imageId = upload(adminToken(), "a.png", "image/png", content);
+        String uploaderToken = token(UPLOADER_ID, UPLOADER);
+        long imageId = upload(uploaderToken, "a.png", "image/png", content);
         String url = "/admin/notices/images/" + imageId;
 
         // 未绑定：上传人可读，其他登录用户 205，匿名 401。
-        mockMvc.perform(get(url).header("token", adminToken()))
+        mockMvc.perform(get(url).header("token", uploaderToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "image/png"))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
@@ -182,8 +212,15 @@ class NoticeImageContractTest {
         mockMvc.perform(get(url))
                 .andExpect(status().isUnauthorized());
 
-        // 绑定并发布后，任何登录用户可读。
-        long noticeId = createNoticeWithImages(adminToken(), "绑图公告", url);
+        // 绑定到上传人的草稿：上传人仍可读（编辑器预览），其他人不可读。
+        long noticeId = createNoticeWithImages(uploaderToken, "绑图公告", url);
+        mockMvc.perform(get(url).header("token", uploaderToken))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertArrayEquals(content, result.getResponse().getContentAsByteArray()));
+        mockMvc.perform(get(url).header("token", token(OTHER_ID, OTHER)))
+                .andExpect(jsonPath("$.code").value(205));
+
+        // 发布后，任何登录用户可读。
         mockMvc.perform(post("/admin/system/notices/" + noticeId + "/publish").header("token", adminToken()))
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(get(url).header("token", token(OTHER_ID, OTHER)))
@@ -191,11 +228,14 @@ class NoticeImageContractTest {
                 .andExpect(header().string("Content-Type", "image/png"))
                 .andExpect(result -> assertArrayEquals(content, result.getResponse().getContentAsByteArray()));
 
-        // 撤回：读不到。
+        // 撤回：其他登录用户读不到，上传人仍可读。
         mockMvc.perform(post("/admin/system/notices/" + noticeId + "/withdraw").header("token", adminToken()))
                 .andExpect(jsonPath("$.code").value(200));
         mockMvc.perform(get(url).header("token", token(OTHER_ID, OTHER)))
                 .andExpect(jsonPath("$.code").value(205));
+        mockMvc.perform(get(url).header("token", uploaderToken))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertArrayEquals(content, result.getResponse().getContentAsByteArray()));
 
         // 删除：图片行与对象一起消失，按不存在处理。
         mockMvc.perform(post("/admin/system/notices/" + noticeId + "/publish").header("token", adminToken()))
@@ -207,7 +247,7 @@ class NoticeImageContractTest {
 
         assertEquals(0, imageRowCount());
         assertFalse(imageStore.keys().contains(objectKey), "删除公告必须删除绑定的图片对象");
-        mockMvc.perform(get(url).header("token", adminToken()))
+        mockMvc.perform(get(url).header("token", uploaderToken))
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("图片不存在"));
     }
@@ -298,6 +338,23 @@ class NoticeImageContractTest {
         mockMvc.perform(multipart("/admin/system/notices/images")
                         .file(new MockMultipartFile("file", "sample", contentType, content))
                         .header("token", adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.message").value(message));
+    }
+
+    private void expectUploadCode(String token, int code) throws Exception {
+        mockMvc.perform(multipart("/admin/system/notices/images")
+                        .file(new MockMultipartFile("file", "sample.png", "image/png", pngBytes(8)))
+                        .header("token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code));
+    }
+
+    private void expectUploadCode(String token, int code, String message) throws Exception {
+        mockMvc.perform(multipart("/admin/system/notices/images")
+                        .file(new MockMultipartFile("file", "sample.png", "image/png", pngBytes(8)))
+                        .header("token", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.message").value(message));

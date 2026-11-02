@@ -63,6 +63,7 @@ describe('config/oper-log', () => {
     it('maps the create-time range to begin/end parameters', () => {
       expect(
         presentQuery({
+          operId: 301,
           operName: '张三',
           title: '用户管理',
           businessType: 1,
@@ -70,6 +71,7 @@ describe('config/oper-log', () => {
           createTimes: ['2026-01-01 00:00:00', '2026-01-31 23:59:59'],
         }),
       ).toEqual({
+        operId: 301,
         operName: '张三',
         title: '用户管理',
         businessType: 1,

@@ -6,14 +6,17 @@
  * 只认同源路径 `/admin/notices/images/{id}`——与服务端消毒的白名单一致（ADR 0055）。
  * 外部图、`data:`、SVG 都不碰，保持原 `src`。取回失败保留原 `src`，不弹提示。
  *
- * 复用面：`NoticeContent.vue` 是当前唯一调用方；#220 的 Quill 预览可以直接用
- * `createNoticeImageHydrator` 走同一条路径。
+ * 复用面：`NoticeContent.vue`（只读渲染）与 `QuillEditor.vue`（编辑器内的 blob 预览）。
+ * 编辑器传 `originAttribute`，水合时把服务端地址留在该属性上，序列化才能回写；撤销后
+ * 也能从该属性重新识别图片，不必依赖已被替换成 `blob:` 的 `src`。
  */
 
 export interface NoticeImageHydrationOptions {
   loadImage: (id: number) => Promise<Blob>
   createObjectUrl: (blob: Blob) => string
   revokeObjectUrl: (url: string) => void
+  /** 水合后把服务端地址写到该属性（Quill 编辑器序列化用）；默认不写。 */
+  originAttribute?: string
 }
 
 export interface NoticeImageHydrator {
@@ -44,12 +47,30 @@ export function createNoticeImageHydrator(
   let generation = 0
   let disposed = false
 
+  function originOf(element: Element): string | null {
+    const attribute = options.originAttribute
+    return attribute ? element.getAttribute(attribute) : null
+  }
+
+  /** 当前元素指向的公告图片：优先 `src`，其次（编辑器）保留的服务端地址。 */
+  function sourceOf(element: Element): { id: number | null; origin: string | null } {
+    const src = element.getAttribute('src')
+    const fromSrc = noticeImageId(src)
+    if (fromSrc != null) return { id: fromSrc, origin: src }
+    const origin = originOf(element)
+    return { id: noticeImageId(origin), origin }
+  }
+
   function apply(root: ParentNode): void {
     for (const element of root.querySelectorAll('img')) {
-      const id = noticeImageId(element.getAttribute('src'))
+      const { id, origin } = sourceOf(element)
       if (id == null) continue
       const url = urls.get(id)
-      if (url) element.setAttribute('src', url)
+      if (!url) continue
+      if (options.originAttribute && origin && !originOf(element)) {
+        element.setAttribute(options.originAttribute, origin)
+      }
+      if (element.getAttribute('src') !== url) element.setAttribute('src', url)
     }
   }
 
@@ -58,7 +79,7 @@ export function createNoticeImageHydrator(
     const current = generation
     apply(root)
     for (const element of root.querySelectorAll('img')) {
-      const id = noticeImageId(element.getAttribute('src'))
+      const { id } = sourceOf(element)
       if (id == null || urls.has(id) || pending.has(id)) continue
       pending.add(id)
       options
