@@ -1,5 +1,6 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext } from '@playwright/test'
 
+import { expectWorkItemVisible } from '../helpers/work-list'
 import { PASSWORD, uiLogin } from './helpers'
 
 /**
@@ -70,27 +71,14 @@ async function startApprovalWithPayload(
   expect(body.code, `发起审批：${body.message ?? ''}`).toBe(200)
 }
 
-async function findWorkItem(page: Page, marker: string): Promise<Locator | null> {
-  for (let visited = 1; visited <= 40; visited += 1) {
-    const item = page.locator('.work-list-item', { hasText: marker })
-    if ((await item.count()) > 0) return item.first()
-    const next = page.locator('.el-pagination .btn-next')
-    if ((await next.count()) === 0 || (await next.isDisabled())) return null
-    await next.click()
-    await page.waitForTimeout(400)
-  }
-  return null
-}
-
 test('审批表单字段的存储型 XSS 不执行', async ({ page, request }, testInfo) => {
   const marker = `secxss-${runId()}`
   const aliceToken = await login(request, 'alice')
   await startApprovalWithPayload(request, aliceToken, marker)
 
   await uiLogin(page, 'bob')
-  const item = await findWorkItem(page, marker)
-  expect(item, `待处理列表翻页后找不到 ${marker}`).not.toBeNull()
-  await expect(item as Locator).toBeVisible()
+  // 共享 helper 先等列表初始加载正信号再扫描，翻页等 find 响应（#169 / #226）。
+  const item = await expectWorkItemVisible(page, marker)
   await page.waitForTimeout(1_500)
 
   const listFlag = await page.evaluate(() => (window as { __secXss?: number }).__secXss ?? null)
@@ -99,12 +87,12 @@ test('审批表单字段的存储型 XSS 不执行', async ({ page, request }, t
     contentType: 'application/json',
   })
   expect.soft(listFlag, '列表页 v-html 执行了脚本').toBeNull()
-  await expect(item as Locator).toContainText(PAYLOAD)
+  await expect(item).toContainText(PAYLOAD)
 
   await page.evaluate(() => {
     ;(window as { __secXss?: number }).__secXss = undefined
   })
-  await (item as Locator).click()
+  await item.click()
   await expect(page.locator('.form-field p').first()).toBeVisible()
   await expect(page.locator('.form-field', { hasText: PAYLOAD })).toHaveCount(1)
   await page.waitForTimeout(1_500)

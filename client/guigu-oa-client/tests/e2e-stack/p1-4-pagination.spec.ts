@@ -6,6 +6,7 @@ import {
   nextWorkListPage,
   openWorkList,
   uiLoginExpectWork,
+  workListItems,
 } from './helpers/ui'
 
 /**
@@ -48,7 +49,7 @@ test('25 条真实数据翻页：末页不满、下一页禁用、越界为空',
 
   const seen = new Set<string>()
   for (let pageNo = 1; pageNo <= pages; pageNo++) {
-    const rows = page.locator('.work-list-item')
+    const rows = workListItems(page)
     const count = await rows.count()
     expect(count, `第 ${pageNo} 页行数不超过页大小`).toBeLessThanOrEqual(10)
     const texts = await rows.allInnerTexts()

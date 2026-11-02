@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -14,6 +14,44 @@ if (!vitest || !coverage) {
 
 if (vitest !== coverage) {
   console.error(`@vitest/coverage-v8 (${coverage}) 必须与 vitest (${vitest}) 同版本`)
+  process.exit(1)
+}
+
+// #226：办事列表行选择器只允许出现在共享 helper 里。security-xss 曾复制一份没有
+// #169 首轮正信号的裸扫，在慢 runner 上间歇红；禁止第三次复制。
+const WORK_LIST_SELECTOR = '.work-list-item'
+const WORK_LIST_HELPER = 'tests/helpers/work-list.ts'
+const TEST_EXTENSIONS = new Set(['.ts', '.js', '.vue'])
+const SKIP_DIRS = new Set(['node_modules', 'test-results', 'playwright-report'])
+
+const violations = []
+
+function scan(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) scan(path)
+      continue
+    }
+    if (!TEST_EXTENSIONS.has(extname(entry.name))) continue
+    const relPath = relative(root, path).split('\\').join('/')
+    if (relPath === WORK_LIST_HELPER) continue
+    readFileSync(path, 'utf8')
+      .split('\n')
+      .forEach((line, index) => {
+        if (line.includes(WORK_LIST_SELECTOR)) {
+          violations.push(`${relPath}:${index + 1}: ${line.trim()}`)
+        }
+      })
+  }
+}
+
+scan(join(root, 'tests'))
+
+if (violations.length > 0) {
+  console.error(
+    `办事列表行选择器 ${WORK_LIST_SELECTOR} 只能出现在 ${WORK_LIST_HELPER}（#226），以下位置请改用共享 helper：\n${violations.join('\n')}`,
+  )
   process.exit(1)
 }
 
