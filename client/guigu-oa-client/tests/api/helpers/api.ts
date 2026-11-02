@@ -93,6 +93,20 @@ export interface MenuRecord {
   children?: MenuRecord[]
 }
 
+/** 登录日志行（ADR 0054，#216）：一行即全貌，没有详情端点。 */
+export interface LoginLogRecord {
+  id: number
+  username?: string
+  userId?: number | null
+  deptId?: number | null
+  ip?: string
+  browser?: string | null
+  os?: string | null
+  status?: number
+  msg?: string | null
+  createTime?: string
+}
+
 export interface BackofficeMenu {
   path: string
   parentPath?: string | null

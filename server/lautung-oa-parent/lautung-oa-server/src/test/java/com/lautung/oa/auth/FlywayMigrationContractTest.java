@@ -69,7 +69,8 @@ class FlywayMigrationContractTest {
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
-            "system:operLog:remove", "system:operLog:clean");
+            "system:operLog:remove", "system:operLog:clean",
+            "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -118,6 +119,8 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '113' AND success = TRUE"));
         // 登录日志表（#215，ADR 0054）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '114' AND success = TRUE"));
+        // 登录日志页与按钮点（#216）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '115' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = 'log' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
@@ -131,6 +134,18 @@ class FlywayMigrationContractTest {
                 + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
                 + "AND (m.path IN ('log', '/system/log/operLog') "
                 + "OR m.perms IN ('system:operLog:remove', 'system:operLog:clean'))"));
+        // 登录日志页复用同一个 log 目录，按钮点三个（#216）。
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/log/loginLog' AND c.type = 1 "
+                + "AND c.component = 'system/loginLog/list' AND p.path = 'log' AND p.type = 0"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/log/loginLog' "
+                + "AND b.perms IN ('system:loginLog:remove', 'system:loginLog:clean', 'system:loginLog:unlock')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/log/loginLog' "
+                + "OR m.perms IN ('system:loginLog:remove', 'system:loginLog:clean', 'system:loginLog:unlock'))"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 1 AND path IN "
                 + "('sysUser', 'sysRole', 'sysMenu', 'assignAuth') AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
@@ -208,7 +223,8 @@ class FlywayMigrationContractTest {
                         "/system/processMgr",
                         "/system/processMgr/process",
                         "/system/log",
-                        "/system/log/operLog")))
+                        "/system/log/operLog",
+                        "/system/log/loginLog")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -230,6 +246,8 @@ class FlywayMigrationContractTest {
             // 日志管理种子是纯 SQL：重复执行也不得多出菜单/按钮/授予行。
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("db/migration/V113__audit_oper_log_menu.sql"));
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("db/migration/V115__audit_login_log_menu.sql"));
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

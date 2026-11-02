@@ -1,5 +1,6 @@
 package com.lautung.oa.auth;
 
+import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
 import com.lautung.oa.auth.controller.SysMenuController;
@@ -68,7 +69,8 @@ class BackofficeRouteAuthorizationContractTest {
             OaProcessTypeController.class,
             OaProcessTemplateController.class,
             OaProcessController.class,
-            SysOperLogController.class);
+            SysOperLogController.class,
+            SysLoginLogController.class);
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
@@ -106,6 +108,11 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysOperLogController.class, "/system/log/operLog", null, "index", "get");
         expect(SysOperLogController.class, "/system/log/operLog", "system:operLog:remove", "remove");
         expect(SysOperLogController.class, "/system/log/operLog", "system:operLog:clean", "clean");
+        // 登录日志（#216）：读走页面授予，删除/清空/解锁各要自己的按钮点。
+        expect(SysLoginLogController.class, "/system/log/loginLog", null, "index");
+        expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:remove", "remove");
+        expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:clean", "clean");
+        expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:unlock", "unlock");
     }
 
     @Autowired
@@ -275,7 +282,8 @@ class BackofficeRouteAuthorizationContractTest {
                         "process:type:add", "process:type:edit", "process:type:remove",
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
-                        "system:operLog:remove", "system:operLog:clean")))
+                        "system:operLog:remove", "system:operLog:clean",
+                        "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock")))
                 .andExpect(jsonPath("$.data.menus[*].path", hasItems(
                         "/system",
                         "/system/sysUser",
@@ -288,7 +296,8 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system/processMgr",
                         "/system/processMgr/process",
                         "/system/log",
-                        "/system/log/operLog")))
+                        "/system/log/operLog",
+                        "/system/log/loginLog")))
                 .andExpect(jsonPath("$.data.menus[*].type", not(hasItem(2))))
                 .andExpect(jsonPath("$.data.menus[?(@.path == '/system/sysUser')].parentPath",
                         hasItem("/system")))
