@@ -1,10 +1,10 @@
 package com.lautung.oa.process.controller;
 
 
-import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.process.read.ApprovalListReader;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.process.ProcessQueryVo;

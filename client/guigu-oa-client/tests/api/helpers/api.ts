@@ -62,6 +62,24 @@ export interface RoleRecord {
   description?: string
 }
 
+/** 操作日志行（ADR 0054，#214）：查询面只读物理表，没有 is_deleted。 */
+export interface OperLogRecord {
+  id: number
+  title: string
+  businessType?: number
+  operId?: number
+  operName?: string
+  deptId?: number
+  deptName?: string
+  operParam?: string | null
+  resultCode?: number | null
+  resultMessage?: string | null
+  status?: number
+  errorMsg?: string | null
+  costTime?: number
+  createTime?: string
+}
+
 export interface MenuRecord {
   id: number
   parentId: number

@@ -1,4 +1,4 @@
-package com.lautung.oa.auth.datascope;
+package com.lautung.oa.model.system;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;

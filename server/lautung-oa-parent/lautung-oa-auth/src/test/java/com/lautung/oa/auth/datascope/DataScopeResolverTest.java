@@ -7,6 +7,7 @@ import com.lautung.oa.auth.mapper.SysRoleDeptMapper;
 import com.lautung.oa.auth.mapper.SysRoleMapper;
 import com.lautung.oa.auth.mapper.SysUserMapper;
 import com.lautung.oa.auth.mapper.SysUserRoleMapper;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.model.system.SysRoleDept;

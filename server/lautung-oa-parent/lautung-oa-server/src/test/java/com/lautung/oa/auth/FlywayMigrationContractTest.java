@@ -8,8 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -65,7 +67,8 @@ class FlywayMigrationContractTest {
             "system:menu:add", "system:menu:edit", "system:menu:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
-            "process:template:upload", "process:template:publish");
+            "process:template:upload", "process:template:publish",
+            "system:operLog:remove", "system:operLog:clean");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -110,6 +113,21 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '111' AND success = TRUE"));
         // 操作日志表（#213，ADR 0054）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '112' AND success = TRUE"));
+        // 日志管理菜单与操作日志按钮点（#214）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '113' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = 'log' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/log/operLog' AND c.type = 1 "
+                + "AND c.component = 'system/operLog/list' AND p.path = 'log' AND p.type = 0"));
+        assertEquals(2, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/log/operLog' "
+                + "AND b.perms IN ('system:operLog:remove', 'system:operLog:clean')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path IN ('log', '/system/log/operLog') "
+                + "OR m.perms IN ('system:operLog:remove', 'system:operLog:clean'))"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 1 AND path IN "
                 + "('sysUser', 'sysRole', 'sysMenu', 'assignAuth') AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
@@ -185,7 +203,9 @@ class FlywayMigrationContractTest {
                         "/system/processSet/processTemplate",
                         "/system/processSet/templateSet",
                         "/system/processMgr",
-                        "/system/processMgr/process")))
+                        "/system/processMgr/process",
+                        "/system/log",
+                        "/system/log/operLog")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -204,6 +224,9 @@ class FlywayMigrationContractTest {
             Context context = mock(Context.class);
             when(context.getConnection()).thenReturn(connection);
             new V110__BackofficePermissionBase().migrate(context);
+            // 日志管理种子是纯 SQL：重复执行也不得多出菜单/按钮/授予行。
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("db/migration/V113__audit_oper_log_menu.sql"));
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

@@ -1,9 +1,9 @@
 package com.lautung.oa.auth.controller;
 
 
-import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysUserService;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.framework.operlog.BusinessType;
 import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;

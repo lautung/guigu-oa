@@ -6,11 +6,13 @@ import com.lautung.oa.auth.mapper.SysRoleDeptMapper;
 import com.lautung.oa.auth.mapper.SysRoleMapper;
 import com.lautung.oa.auth.mapper.SysUserMapper;
 import com.lautung.oa.auth.mapper.SysUserRoleMapper;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.model.system.SysRoleDept;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.model.system.SysUserRole;
+import com.lautung.oa.security.datascope.DataScopeProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
@@ -29,9 +31,12 @@ import java.util.stream.Collectors;
  * 任一角色 {@code 5} → 设本人行。没有角色、或只有 {@code 3/4} 但本人无部门，得到空集 → 零行。
  *
  * <p>只返回值对象，不猜业务列：部门列与本人列由四个接入查询各自回答。
+ *
+ * <p>实现放在 auth（读角色与组织表），消费方只依赖 security 的 {@link DataScopeProvider}：
+ * audit 这类下游模块不能反向依赖 auth（ADR 0054 的模块边）。
  */
 @Component
-public class DataScopeResolver {
+public class DataScopeResolver implements DataScopeProvider {
 
     private static final int ALL = 1;
     private static final int CUSTOM_DEPARTMENTS = 2;
@@ -60,6 +65,7 @@ public class DataScopeResolver {
     /**
      * 解析该用户可见范围。未认证（{@code userId == null}）按零行处理，调用方仍需先过认证与 gate。
      */
+    @Override
     public DataScope resolve(Long userId) {
         if (userId == null) {
             return DataScope.of(Set.of(), null);

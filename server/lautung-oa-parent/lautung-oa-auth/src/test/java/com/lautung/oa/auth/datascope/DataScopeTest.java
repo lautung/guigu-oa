@@ -1,5 +1,6 @@
 package com.lautung.oa.auth.datascope;
 
+import com.lautung.oa.model.system.DataScope;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashSet;

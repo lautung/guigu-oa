@@ -1,6 +1,6 @@
 package com.lautung.oa.process.mapper;
 
-import com.lautung.oa.auth.datascope.DataScope;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.process.Process;
 import com.lautung.oa.vo.process.ProcessQueryVo;
 import com.lautung.oa.vo.process.ProcessVo;

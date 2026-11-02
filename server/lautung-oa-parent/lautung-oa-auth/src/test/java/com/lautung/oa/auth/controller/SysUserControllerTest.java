@@ -1,9 +1,9 @@
 package com.lautung.oa.auth.controller;
 
-import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.SysUserQueryVo;

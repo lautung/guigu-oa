@@ -1,6 +1,6 @@
 package com.lautung.oa.process;
 
-import com.lautung.oa.auth.datascope.DataScope;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.vo.process.ProcessQueryVo;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

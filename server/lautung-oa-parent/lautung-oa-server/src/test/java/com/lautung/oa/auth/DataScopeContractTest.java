@@ -1,6 +1,6 @@
 package com.lautung.oa.auth;
 
-import com.lautung.oa.auth.datascope.DataScope;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.common.jwt.JwtHelper;
 import org.junit.jupiter.api.AfterEach;
