@@ -56,7 +56,21 @@
 | `process.approval.ApprovalWriter` | `startUp` / `startedOutcome` / `approve` | 写入次序、事务边界、附件绑定与回滚补偿；同一提交标识重复送达返回同一条审批（ADR 0032），冲突重读只在事务外调用 `startedOutcome` |
 | `process.membership.ApprovalMembership` / `ApprovalMembershipResolver` | `resolve(user, process)` → `canRead` / `canUpload` / `canAct` | 审批成员资格；证据接口 `MembershipEvidence` 由 engine 继承，扩展来自 `ProcessMembershipExtension` |
 | `auth.grant.BackofficeGrant` | `snapshot(userId)` → `hasAnyPage` / `covers` / `allows` / `menus` / `permissions`；`isBackofficeMenu` / `isGrantableBackofficeMenu` / `visiblePageParentId` | 后台授予的唯一闭包：页面绝对路径 + 仅随已授页面生效的按钮点；`visiblePageParentId` 供授予保存判定隐藏页能否落库；gate、`/info` 与角色授权共用 |
-| `auth.service.BackofficeGate` | `isAllowed(pagePath[, permission])` | 六个后台 controller 的方法级 gate：读只判页面，写加判按钮点 |
+| `auth.service.BackofficeGate` | `isAllowed(pagePath[, permission])` | 各后台 controller 的方法级 gate：读只判页面，写加判按钮点 |
+
+## 服务端公告（#218 的稳定合同，供 #219/#220）
+
+公告只做了服务端；客户端 notice 模块与 `NoticeContent.vue` 的唯一 `v-html` 渲染面由 #219/#220 落地（ADR 0055/0028）。客户端按下面形状接线，不要在页面里重新猜字段：
+
+- 读侧（登录即有，不设页面授予、不套数据范围）：
+  - `GET /admin/notices/feed?page=1&limit=20&unreadOnly=false` → `{code,message,data:{current,size,total,records:[{id,title,type,publisherName,publishTime,read}]}}`；排序 `publishTime DESC, id DESC`；`limit` 上限 500；列表没有 `content`。
+  - `GET /admin/notices/unread` → `data:[…同上行…]`，最多 5 条未读。
+  - `GET /admin/notices/unread-count` → `data:<number>`（撤回/删除立即排除）。
+  - `GET /admin/notices/{id}` → `data:{id,title,type,content,publisherId,publisherName,publishTime,read}`；撤回/删除/不存在时没有 `data`（信封仍是 200）。GET 不写回执。
+  - `POST /admin/notices/{id}/read` → 打开详情成功后显式调用；幂等；撤回/删除返回 201「公告不存在」。
+  - `GET /admin/notices/images/{id}` → 二进制，`Content-Type` 是存储类型且带 `X-Content-Type-Options: nosniff`；无权 205、不存在 201。正文里的图片地址只允许 `/admin/notices/images/{id}`。
+- 管理侧（页面 `/system/notice`；按钮 `system:notice:add|edit|remove|publish`，`publish` 同时管撤回，没有 `:query`）：`GET /admin/system/notices`（`page/limit/title/type/status`，行不含 `content`）、`GET /admin/system/notices/{id}`（含草稿正文，编辑页必需）、`POST /admin/system/notices`、`PUT /admin/system/notices/{id}`、`DELETE /admin/system/notices/{id}`、`POST .../{id}/publish`、`POST .../{id}/withdraw`、`POST /admin/system/notices/images`（multipart 字段 `file`，响应 `{id,url}`）。
+- 类型固定 `1 通知 / 2 公告`；状态 `0 草稿 / 1 已发布 / 2 已撤回`。已发布可编辑；已撤回不可编辑，只能再发布（刷新 `publishTime` 与发布人快照）；删除等价于隐式撤回。
 
 ## 约定
 

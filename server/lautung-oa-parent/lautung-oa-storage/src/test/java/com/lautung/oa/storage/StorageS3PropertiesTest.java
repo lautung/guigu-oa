@@ -1,4 +1,4 @@
-package com.lautung.oa.process.attachment;
+package com.lautung.oa.storage;
 
 import org.junit.jupiter.api.Test;
 
@@ -6,11 +6,11 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AttachmentS3PropertiesTest {
+class StorageS3PropertiesTest {
 
     @Test
     void exposesDefaultsForLocalDevelopment() {
-        AttachmentS3Properties properties = new AttachmentS3Properties();
+        StorageS3Properties properties = new StorageS3Properties();
 
         assertEquals("http://localhost:9000", properties.getEndpoint());
         assertEquals("http://localhost:9000", properties.getPublicEndpoint());
@@ -27,7 +27,7 @@ class AttachmentS3PropertiesTest {
 
     @Test
     void bindsEveryConfiguredValue() {
-        AttachmentS3Properties properties = new AttachmentS3Properties();
+        StorageS3Properties properties = new StorageS3Properties();
 
         properties.setEndpoint("http://s3.test");
         properties.setPublicEndpoint("https://public.s3.test");

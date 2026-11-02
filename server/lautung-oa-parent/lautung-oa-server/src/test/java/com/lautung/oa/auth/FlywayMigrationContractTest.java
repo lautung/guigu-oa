@@ -1,6 +1,7 @@
 package com.lautung.oa.auth;
 
 import db.migration.V110__BackofficePermissionBase;
+import db.migration.V116__NoticeSchemaAndMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +61,9 @@ class FlywayMigrationContractTest {
             "oa_process",
             "oa_process_record",
             "oa_attachment",
+            "oa_notice",
+            "oa_notice_read",
+            "oa_notice_image",
             "sys_oper_log",
             "sys_login_log");
     private static final List<String> BUTTON_PERMS = List.of(
@@ -70,7 +74,8 @@ class FlywayMigrationContractTest {
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
             "system:operLog:remove", "system:operLog:clean",
-            "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock");
+            "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
+            "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -121,6 +126,23 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '114' AND success = TRUE"));
         // 登录日志页与按钮点（#216）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '115' AND success = TRUE"));
+        // 通知公告三张表、菜单页与按钮点（#218，ADR 0055）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '116' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/notice' AND c.type = 1 "
+                + "AND c.component = 'system/notice/list' AND p.path = '/system' AND p.type = 0"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/notice' "
+                + "AND b.perms IN ('system:notice:add', 'system:notice:edit', "
+                + "'system:notice:remove', 'system:notice:publish')"));
+        // ADR 0056：读由页面授予覆盖，不种 system:notice:query。
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE perms = 'system:notice:query'"));
+        assertEquals(5, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/notice' "
+                + "OR m.perms IN ('system:notice:add', 'system:notice:edit', "
+                + "'system:notice:remove', 'system:notice:publish'))"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = 'log' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
@@ -224,7 +246,8 @@ class FlywayMigrationContractTest {
                         "/system/processMgr/process",
                         "/system/log",
                         "/system/log/operLog",
-                        "/system/log/loginLog")))
+                        "/system/log/loginLog",
+                        "/system/notice")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -248,6 +271,8 @@ class FlywayMigrationContractTest {
                     new ClassPathResource("db/migration/V113__audit_oper_log_menu.sql"));
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("db/migration/V115__audit_login_log_menu.sql"));
+            // 通知公告（#218）：Java 迁移的建表/索引与 SQL 种子都必须可重复执行。
+            new V116__NoticeSchemaAndMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

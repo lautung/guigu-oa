@@ -7,6 +7,7 @@ import com.lautung.oa.auth.controller.SysMenuController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.notice.controller.NoticeAdminController;
 import com.lautung.oa.process.controller.OaProcessController;
 import com.lautung.oa.process.controller.OaProcessTemplateController;
 import com.lautung.oa.process.controller.OaProcessTypeController;
@@ -70,7 +71,8 @@ class BackofficeRouteAuthorizationContractTest {
             OaProcessTemplateController.class,
             OaProcessController.class,
             SysOperLogController.class,
-            SysLoginLogController.class);
+            SysLoginLogController.class,
+            NoticeAdminController.class);
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
@@ -113,6 +115,12 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:remove", "remove");
         expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:clean", "clean");
         expect(SysLoginLogController.class, "/system/log/loginLog", "system:loginLog:unlock", "unlock");
+        // 通知公告（#218）：读（列表/详情）只走页面授予；写各要按钮点，没有 :query 读权限。
+        expect(NoticeAdminController.class, "/system/notice", null, "page", "detail");
+        expect(NoticeAdminController.class, "/system/notice", "system:notice:add", "create", "upload");
+        expect(NoticeAdminController.class, "/system/notice", "system:notice:edit", "update");
+        expect(NoticeAdminController.class, "/system/notice", "system:notice:remove", "delete");
+        expect(NoticeAdminController.class, "/system/notice", "system:notice:publish", "publish", "withdraw");
     }
 
     @Autowired

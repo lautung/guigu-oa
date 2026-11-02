@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import com.lautung.oa.process.attachment.AttachmentS3Properties;
+import com.lautung.oa.storage.StorageS3Properties;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -42,7 +42,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     private final AttachmentMapper attachmentMapper;
     private final JdbcTemplate jdbcTemplate;
     private final S3Client s3Client;
-    private final AttachmentS3Properties s3Properties;
+    private final StorageS3Properties s3Properties;
 
     public DemoScenarioSeeder(
             Approval approval,
@@ -52,7 +52,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
             AttachmentMapper attachmentMapper,
             JdbcTemplate jdbcTemplate,
             S3Client attachmentS3Client,
-            AttachmentS3Properties s3Properties) {
+            StorageS3Properties s3Properties) {
         this.approval = approval;
         this.approvalListReader = approvalListReader;
         this.demoApprovalPublisher = demoApprovalPublisher;

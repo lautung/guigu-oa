@@ -1,5 +1,6 @@
 package com.lautung.oa.process.attachment;
 
+import com.lautung.oa.storage.StorageS3Properties;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
@@ -29,7 +30,7 @@ class S3AttachmentObjectStoreTest {
 
     private final S3Client client = mock(S3Client.class);
     private final S3Presigner presigner = mock(S3Presigner.class);
-    private final AttachmentS3Properties properties = new AttachmentS3Properties();
+    private final StorageS3Properties properties = new StorageS3Properties();
     private final S3AttachmentObjectStore store =
             new S3AttachmentObjectStore(client, presigner, properties);
 

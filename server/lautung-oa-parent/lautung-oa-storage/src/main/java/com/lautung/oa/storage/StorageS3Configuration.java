@@ -1,4 +1,4 @@
-package com.lautung.oa.process.attachment;
+package com.lautung.oa.storage;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -13,12 +13,18 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 
+/**
+ * 私有对象存储的装配（原 {@code com.lautung.oa.process.attachment.AttachmentS3Configuration}，
+ * #218 抽到共享模块）。bean 名保持 {@code attachmentS3Client}/{@code attachmentS3Presigner}，
+ * 现有注入点（process 的 {@code S3AttachmentObjectStore}、server 的 demo seeder）随类一起
+ * 改 import，不动配置键与 bean 名。
+ */
 @Configuration
-@EnableConfigurationProperties(AttachmentS3Properties.class)
-public class AttachmentS3Configuration {
+@EnableConfigurationProperties(StorageS3Properties.class)
+public class StorageS3Configuration {
 
     @Bean(destroyMethod = "close")
-    public S3Client attachmentS3Client(AttachmentS3Properties properties) {
+    public S3Client attachmentS3Client(StorageS3Properties properties) {
         var builder = S3Client.builder()
                 .region(Region.of(properties.getRegion()))
                 .credentialsProvider(credentials(properties))
@@ -30,7 +36,7 @@ public class AttachmentS3Configuration {
     }
 
     @Bean(destroyMethod = "close")
-    public S3Presigner attachmentS3Presigner(AttachmentS3Properties properties) {
+    public S3Presigner attachmentS3Presigner(StorageS3Properties properties) {
         var builder = S3Presigner.builder()
                 .region(Region.of(properties.getRegion()))
                 .credentialsProvider(credentials(properties))
@@ -44,7 +50,7 @@ public class AttachmentS3Configuration {
         return builder.build();
     }
 
-    private StaticCredentialsProvider credentials(AttachmentS3Properties properties) {
+    private StaticCredentialsProvider credentials(StorageS3Properties properties) {
         return StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()));
     }

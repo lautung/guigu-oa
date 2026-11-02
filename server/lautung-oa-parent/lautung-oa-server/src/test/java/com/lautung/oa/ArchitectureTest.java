@@ -16,9 +16,11 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  * <pre>
  * common ← framework
  * common, model ← security
+ * common ← storage
  * common, framework, security, model ← audit
  * common, framework, security, model ← auth
- * common, framework, security, model, auth ← process
+ * common, framework, security, model, storage ← notice
+ * common, framework, security, model, auth, storage ← process
  * 全模块 ← server
  * </pre>
  */
@@ -33,8 +35,11 @@ class ArchitectureTest {
             .layer("Security").definedBy("com.lautung.oa.security..")
             // vo 是 model 模块里的请求 DTO 包，与 model 同属数据层
             .layer("Model").definedBy("com.lautung.oa.model..", "com.lautung.oa.vo..")
+            // 私有对象存储的共享缝（#218）：只接 common，不依赖任何域模块
+            .layer("Storage").definedBy("com.lautung.oa.storage..")
             .layer("Audit").definedBy("com.lautung.oa.audit..")
             .layer("Auth").definedBy("com.lautung.oa.auth..")
+            .layer("Notice").definedBy("com.lautung.oa.notice..")
             .layer("Process").definedBy("com.lautung.oa.process..")
             // 启动类在 com.lautung.oa 包根，demo seeder 在 com.lautung.oa.demo
             .layer("Server").definedBy("com.lautung.oa", "com.lautung.oa.demo..")
@@ -42,17 +47,25 @@ class ArchitectureTest {
             .whereLayer("Framework").mayOnlyAccessLayers("Common")
             .whereLayer("Security").mayOnlyAccessLayers("Common", "Model")
             .whereLayer("Model").mayNotAccessAnyLayer()
+            .whereLayer("Storage").mayOnlyAccessLayers("Common")
             // 审计只接 framework/model/security 的端口，不依赖任何域模块，所以登录/业务路径不动（ADR 0054）
             .whereLayer("Audit").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Auth").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
-            .whereLayer("Process").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Auth")
-            .whereLayer("Server").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Audit", "Auth", "Process")
-            .whereLayer("Common").mayOnlyBeAccessedByLayers("Framework", "Security", "Audit", "Auth", "Process", "Server")
-            .whereLayer("Framework").mayOnlyBeAccessedByLayers("Audit", "Auth", "Process", "Server")
-            .whereLayer("Security").mayOnlyBeAccessedByLayers("Audit", "Auth", "Process", "Server")
-            .whereLayer("Model").mayOnlyBeAccessedByLayers("Security", "Audit", "Auth", "Process", "Server")
+            .whereLayer("Notice").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Storage")
+            .whereLayer("Process").mayOnlyAccessLayers(
+                    "Common", "Framework", "Security", "Model", "Auth", "Storage")
+            .whereLayer("Server").mayOnlyAccessLayers(
+                    "Common", "Framework", "Security", "Model", "Storage", "Audit", "Auth", "Notice", "Process")
+            .whereLayer("Common").mayOnlyBeAccessedByLayers(
+                    "Framework", "Security", "Storage", "Audit", "Auth", "Notice", "Process", "Server")
+            .whereLayer("Framework").mayOnlyBeAccessedByLayers("Audit", "Auth", "Notice", "Process", "Server")
+            .whereLayer("Security").mayOnlyBeAccessedByLayers("Audit", "Auth", "Notice", "Process", "Server")
+            .whereLayer("Model").mayOnlyBeAccessedByLayers(
+                    "Security", "Audit", "Auth", "Notice", "Process", "Server")
+            .whereLayer("Storage").mayOnlyBeAccessedByLayers("Notice", "Process", "Server")
             .whereLayer("Audit").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Auth").mayOnlyBeAccessedByLayers("Process", "Server")
+            .whereLayer("Notice").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Process").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Server").mayNotBeAccessedByAnyLayer()
             // 新顶层包必须先归入某个层，否则会静默绕过上面的全部边

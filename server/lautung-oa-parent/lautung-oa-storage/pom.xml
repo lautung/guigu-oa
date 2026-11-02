@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>lautung-oa-parent</artifactId>
+        <groupId>com.lautung</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>lautung-oa-storage</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 私有附件桶的唯一 S3 接入点：客户端与预签名器由本模块装配，process 与 notice
+             共用同一个桶（ADR 0055 明确不新增桶、不改桶策略）。 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
