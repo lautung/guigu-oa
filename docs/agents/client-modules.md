@@ -38,8 +38,8 @@
 |---|---|---|
 | `common.jwt.JwtHelper` | `createTokenPair` / `createAccessToken` / `readAccessToken` / `readRefreshToken` → `TokenClaims(userId, username, sessionId, tokenVersion, expiresAt)` | 一次登录的一对 access/refresh 共享 sessionId 与用户行的 token_version；无 sessionId 的令牌不可鉴权 |
 | `security.revocation.TokenRevocation` | `isRevoked(sessionId)` / `revoke(sessionId)` | 退出的按会话吊销表；`RedisTokenRevocation` 是唯一实现，标记 TTL 与 refresh 同寿，过滤器与 refresh 共用 |
-| `security.login.LoginAttemptLimiter` | `isBlocked(username, source)` / `recordFailure` / `recordSuccess` | 登录失败的两个计数维度（提交的账号、来源地址）；`RedisLoginAttemptLimiter` 是唯一实现，策略在 `LoginAttemptPolicy` |
-| `security.login.LoginAudit` | `loginFailed` / `loginLocked` / `loginUnlocked` | 失败、锁定、解锁的审计轨迹；`Slf4jLoginAudit` 写结构化应用日志，字段脱敏且不含密码或令牌 |
+| `security.login.LoginAttemptLimiter` | `isBlocked(username, source)` / `recordFailure(username, source, userAgent)` / `recordSuccess` / `unlockAccount(username)` | 登录失败的两个计数维度（提交的账号、来源地址）；`unlockAccount` 只清账号维度的三个键并审计，来源维度不提供人工解锁；`RedisLoginAttemptLimiter` 是唯一实现，策略在 `LoginAttemptPolicy` |
+| `security.login.LoginAudit` | `record(LoginEvent)` / `recordLogOnly(LoginEvent)`；`LoginEvent(type, username, sourceAddress, userAgent, msg)`，`LoginEventType` 四值 0 成功/1 失败/2 锁定/3 解锁 | 登录审计端口：`record` 持久化（库是查询真相），`recordLogOnly` 只写应用日志（被锁定挡下的尝试）；DB 实现在 audit（`CompositeLoginAudit` = `DatabaseLoginAudit` + `Slf4jLoginAudit` 兜底），security 单独使用时退回日志实现 |
 
 ## 服务端审批
 

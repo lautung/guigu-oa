@@ -78,6 +78,8 @@ public class LoginAuthContractTest {
 
     @AfterEach
     public void removeContractUser() {
+        jdbcTemplate.update("DELETE FROM sys_login_log WHERE username IN (?, ?, ?, ?)",
+                "new-contract-user", "lock-contract-user", "reset-contract-user", "blank-contract-user");
         jdbcTemplate.update("DELETE FROM sys_user WHERE username IN (?, ?, ?, ?)",
                 "new-contract-user", "lock-contract-user", "reset-contract-user", "blank-contract-user");
     }
@@ -557,6 +559,7 @@ public class LoginAuthContractTest {
         String adminToken = loginToken("admin", "111111");
         saveContractUser(adminToken, "lock-contract-user", "111111");
         String source = "203.0.113.10";
+        jdbcTemplate.update("DELETE FROM sys_login_log WHERE username = ?", "lock-contract-user");
 
         loginClock.useFixed(Instant.parse("2026-10-29T00:00:00Z"));
         for (int failure = 1; failure <= 5; failure += 1) {
@@ -572,12 +575,13 @@ public class LoginAuthContractTest {
         String locked = loginBody("lock-contract-user", "111111", source);
         assertEquals(208, JsonPath.<Integer>read(locked, "$.code").intValue());
         assertTrue(JsonPath.<String>read(locked, "$.message").contains("频繁"));
+        assertEquals(1, loginLogCount("lock-contract-user", 2, "账号锁定"), "lock is a database row");
+        // 被锁定挡下的尝试只留应用日志，不写库（ADR 0054）。
+        assertTrue(output.getOut().contains("login audit event=locked"));
 
         loginClock.advance(Duration.ofMinutes(15).minusSeconds(31));
         assertLoginCode("lock-contract-user", "111111", source, 200);
-
-        assertTrue(output.getOut().contains("login audit event=locked"));
-        assertTrue(output.getOut().contains("login audit event=unlocked"));
+        assertEquals(1, loginLogCount("lock-contract-user", 3, "账号解锁"), "lazy unlock is a database row");
     }
 
     @Test
@@ -681,6 +685,12 @@ public class LoginAuthContractTest {
             throws Exception {
         String body = loginBody(username, password, source);
         assertEquals(expectedCode, JsonPath.<Integer>read(body, "$.code").intValue(), body);
+    }
+
+    private int loginLogCount(String username, int status, String msg) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_login_log WHERE username = ? AND status = ? AND msg = ?",
+                Integer.class, username, status, msg);
     }
 
     private String loginBody(String username, String password, String source) throws Exception {

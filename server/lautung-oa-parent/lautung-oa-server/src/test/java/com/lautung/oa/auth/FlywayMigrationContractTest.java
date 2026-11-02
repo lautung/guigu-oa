@@ -60,7 +60,8 @@ class FlywayMigrationContractTest {
             "oa_process",
             "oa_process_record",
             "oa_attachment",
-            "sys_oper_log");
+            "sys_oper_log",
+            "sys_login_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
@@ -115,6 +116,8 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '112' AND success = TRUE"));
         // 日志管理菜单与操作日志按钮点（#214）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '113' AND success = TRUE"));
+        // 登录日志表（#215，ADR 0054）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '114' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = 'log' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
