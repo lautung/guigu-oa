@@ -47,13 +47,15 @@ const LEGACY_TERMS = [
   { label: 'service-oa 服务名', pattern: /(?<![A-Za-z0-9_-])service-oa(?![A-Za-z0-9_-])/ },
 ]
 
-const files = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+const files = execFileSync('git', ['ls-files', '--full-name', '-z'], { cwd: root, encoding: 'utf8' })
   .split('\0')
   .filter(Boolean)
 
 const errors = []
 
 for (const file of files) {
+  // 检查器自身含旧词模式字面量，不参与扫描。
+  if (file.endsWith('check-legacy-terms.mjs')) continue
   if (ALLOWED_PREFIXES.some((prefix) => file.startsWith(prefix))) continue
   const extension = extname(file)
   if (!TEXT_EXTENSIONS.has(extension) && !TEXT_FILENAMES.has(basename(file))) continue
