@@ -1,11 +1,15 @@
 package com.lautung.oa.auth.service.impl;
 
+import com.lautung.oa.auth.mapper.SysDeptMapper;
+import com.lautung.oa.auth.mapper.SysRoleDeptMapper;
 import com.lautung.oa.auth.mapper.SysRoleMapper;
 import com.lautung.oa.auth.service.PermissionCacheInvalidator;
 import com.lautung.oa.auth.service.SysRoleMenuService;
 import com.lautung.oa.auth.service.SysUserRoleService;
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysRole;
+import com.lautung.oa.model.system.SysRoleDept;
 import com.lautung.oa.model.system.SysUserRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -37,13 +41,17 @@ class SysRoleServiceImplTest {
     private final SysRoleMapper roleMapper = mock(SysRoleMapper.class);
     private final SysUserRoleService userRoleService = mock(SysUserRoleService.class);
     private final SysRoleMenuService roleMenuService = mock(SysRoleMenuService.class);
+    private final SysRoleDeptMapper roleDeptMapper = mock(SysRoleDeptMapper.class);
+    private final SysDeptMapper deptMapper = mock(SysDeptMapper.class);
     private final PermissionCacheInvalidator cacheInvalidator = mock(PermissionCacheInvalidator.class);
     private final SysRoleServiceImpl service = new SysRoleServiceImpl();
 
     @BeforeAll
     static void registerTableMetadata() {
-        TableInfoHelper.initTableInfo(
-                new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUserRole.class);
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, SysUserRole.class);
+        TableInfoHelper.initTableInfo(assistant, SysRoleDept.class);
+        TableInfoHelper.initTableInfo(assistant, SysDept.class);
     }
 
     @BeforeEach
@@ -51,6 +59,8 @@ class SysRoleServiceImplTest {
         ReflectionTestUtils.setField(service, "baseMapper", roleMapper);
         ReflectionTestUtils.setField(service, "sysUserRoleService", userRoleService);
         ReflectionTestUtils.setField(service, "sysRoleMenuService", roleMenuService);
+        ReflectionTestUtils.setField(service, "sysRoleDeptMapper", roleDeptMapper);
+        ReflectionTestUtils.setField(service, "sysDeptMapper", deptMapper);
         ReflectionTestUtils.setField(service, "permissionCacheInvalidator", cacheInvalidator);
     }
 
@@ -183,6 +193,99 @@ class SysRoleServiceImplTest {
         verify(userRoleService).remove(any());
         verify(userRoleService, never()).save(any(SysUserRole.class));
         verify(cacheInvalidator).invalidateUserAfterCommit(7L);
+    }
+
+    @Test
+    void saveRoleRejectsCustomScopeWithoutDepartmentsBeforeWriting() {
+        SysRole role = role(null);
+        role.setDataScope(2);
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.saveRole(role, List.of()));
+
+        assertEquals(201, error.getCode());
+        assertEquals("自定部门不能为空", error.getMsg());
+        verify(roleMapper, never()).insert(any(SysRole.class));
+        verify(roleDeptMapper, never()).insert(any(SysRoleDept.class));
+    }
+
+    @Test
+    void saveRoleWritesCustomDepartmentRows() {
+        SysRole role = role(null);
+        role.setDataScope(2);
+        SysDept dept = new SysDept();
+        dept.setId(7L);
+        when(deptMapper.selectBatchIds(List.of(7L))).thenReturn(List.of(dept));
+        when(roleMapper.insert(role)).thenAnswer(invocation -> {
+            role.setId(3L);
+            return 1;
+        });
+
+        service.saveRole(role, List.of(7L, 7L));
+
+        verify(roleDeptMapper).delete(any());
+        verify(roleDeptMapper, org.mockito.Mockito.times(1)).insert(any(SysRoleDept.class));
+    }
+
+    @Test
+    void updateRoleClearsCustomDepartmentsWhenTheScopeIsNotTwo() {
+        SysRole existing = role(3L);
+        existing.setDataScope(2);
+        SysRole update = role(3L);
+        update.setDataScope(3);
+        when(roleMapper.selectById(3L)).thenReturn(existing);
+        when(roleMapper.updateById(update)).thenReturn(1);
+
+        service.updateRole(update, null);
+
+        verify(roleDeptMapper).delete(any());
+        verify(roleDeptMapper, never()).insert(any(SysRoleDept.class));
+    }
+
+    @Test
+    void updateRoleReplacesCustomDepartmentsWhenTheScopeIsTwo() {
+        SysRole existing = role(3L);
+        existing.setDataScope(2);
+        SysRole update = role(3L);
+        update.setDataScope(2);
+        SysDept first = new SysDept();
+        first.setId(7L);
+        SysDept second = new SysDept();
+        second.setId(8L);
+        when(roleMapper.selectById(3L)).thenReturn(existing);
+        when(roleMapper.updateById(update)).thenReturn(1);
+        when(deptMapper.selectBatchIds(List.of(7L, 8L))).thenReturn(List.of(first, second));
+
+        service.updateRole(update, List.of(7L, 8L));
+
+        verify(roleDeptMapper).delete(any());
+        verify(roleDeptMapper, org.mockito.Mockito.times(2)).insert(any(SysRoleDept.class));
+    }
+
+    @Test
+    void updateRoleKeepsCustomDepartmentsWhenNeitherScopeNorDeptIdsAreSent() {
+        SysRole existing = role(3L);
+        existing.setDataScope(2);
+        SysRole update = role(3L);
+        when(roleMapper.selectById(3L)).thenReturn(existing);
+        when(roleMapper.updateById(update)).thenReturn(1);
+
+        service.updateRole(update, null);
+
+        verify(roleDeptMapper, never()).delete(any());
+    }
+
+    @Test
+    void updateRoleRejectsAnUnknownRoleWithANamedMessage() {
+        SysRole update = role(3L);
+        when(roleMapper.selectById(3L)).thenReturn(null);
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.updateRole(update, null));
+
+        assertEquals(201, error.getCode());
+        assertEquals("角色不存在", error.getMsg());
+        verify(roleMapper, never()).updateById(any(SysRole.class));
     }
 
     private SysRole role(Long id) {

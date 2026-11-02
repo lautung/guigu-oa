@@ -5,6 +5,8 @@ import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
+import com.lautung.oa.vo.system.SysDeptOptionVo;
+import com.lautung.oa.vo.system.SysRoleDetailVo;
 import com.lautung.oa.vo.system.SysRoleQueryVo;
 import com.lautung.oa.vo.system.SysRoleSaveRequest;
 import com.lautung.oa.vo.system.SysRoleUpdateRequest;
@@ -102,13 +104,8 @@ public class SysRoleController {
     @Operation(summary = "添加角色")
     @PostMapping ("save")
     public Result save(@Valid @RequestBody SysRoleSaveRequest request) {
-        //调用service的方法
-        boolean is_success = sysRoleService.save(request.toEntity());
-        if(is_success) {
-            return Result.ok();
-        } else {
-            return Result.fail();
-        }
+        sysRoleService.saveRole(request.toEntity(), request.getDeptIds());
+        return Result.ok();
     }
 
     //修改角色-根据id查询
@@ -116,8 +113,17 @@ public class SysRoleController {
     @Operation(summary = "根据id查询")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
-        SysRole sysRole = sysRoleService.getById(id);
-        return Result.ok(sysRole);
+        SysRoleDetailVo detail = sysRoleService.findDetail(id);
+        return Result.ok(detail);
+    }
+
+    /** 数据范围「自定部门」的只读选项；部门 CRUD 不在本票内，不提供写端点。 */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
+    @Operation(summary = "查询部门选项")
+    @GetMapping("depts")
+    public Result depts() {
+        List<SysDeptOptionVo> options = sysRoleService.findDeptOptions();
+        return Result.ok(options);
     }
 
     //修改角色-最终修改
@@ -125,13 +131,8 @@ public class SysRoleController {
     @Operation(summary = "修改角色")
     @PutMapping ("update")
     public Result update(@Valid @RequestBody SysRoleUpdateRequest request) {
-        //调用service的方法
-        boolean is_success = sysRoleService.updateById(request.toEntity());
-        if(is_success) {
-            return Result.ok();
-        } else {
-            return Result.fail();
-        }
+        sysRoleService.updateRole(request.toEntity(), request.getDeptIds());
+        return Result.ok();
     }
 
     //根据id删除

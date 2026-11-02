@@ -53,6 +53,33 @@
         <el-form-item label="角色编码" prop="roleCode">
           <el-input v-model="form.roleCode" />
         </el-form-item>
+        <el-form-item label="数据范围" prop="dataScope">
+          <el-select v-model="form.dataScope" style="width: 100%">
+            <el-option
+              v-for="option in dataScopeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="form.dataScope === 2" label="自定部门" prop="deptIds">
+          <el-select
+            v-model="form.deptIds"
+            multiple
+            filterable
+            :loading="deptLoading"
+            placeholder="选择部门"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="dept in deptOptions"
+              :key="dept.id"
+              :label="dept.name"
+              :value="dept.id"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <div>
@@ -67,10 +94,11 @@
 <script lang="ts">
 import { defineComponent, onBeforeUnmount } from 'vue'
 
-import { getById, removeById, saveOrUpdate } from '@/api/sysRole'
+import { findDeptOptions, getById, removeById, saveOrUpdate } from '@/api/sysRole'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import {
+  DATA_SCOPE_OPTIONS,
   emptyForm,
   formRules,
   listRequest,
@@ -82,7 +110,7 @@ import { listPageEffects } from '@/list/list-page-browser'
 import { assignAuthPath } from '@/router/paths'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
-import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'
+import type { DeptOption, EntityId, RoleListItem, RoleRecord } from '@/types/domain'
 import type { FormInstance } from 'element-plus'
 
 export default defineComponent({
@@ -111,13 +139,18 @@ export default defineComponent({
       roleName: '',
       dialogVisible: false,
       saving: false,
+      deptLoading: false,
+      deptOptions: [] as DeptOption[],
+      dataScopeOptions: DATA_SCOPE_OPTIONS,
       form: emptyForm(),
-      formRules: formRules(),
     }
   },
   computed: {
     dialogTitle() {
       return this.form.id ? '编辑角色' : '新建角色'
+    },
+    formRules() {
+      return formRules(this.form.dataScope)
     },
   },
   methods: {
@@ -131,15 +164,28 @@ export default defineComponent({
       this.roleName = ''
       this.search()
     },
+    async loadDeptOptions() {
+      this.deptLoading = true
+      try {
+        const response = await findDeptOptions()
+        this.deptOptions = response.data || []
+      } catch {
+        /* 请求层已提示；部门选项加载失败不阻塞角色表单。 */
+      } finally {
+        this.deptLoading = false
+      }
+    },
     openCreate() {
       this.form = emptyForm()
       this.dialogVisible = true
+      void this.loadDeptOptions()
     },
     async openEdit(id: EntityId) {
       const response = await this.list.settle(getById(id))
       if (!response) return
       this.form = presentForm(response.data || {})
       this.dialogVisible = true
+      void this.loadDeptOptions()
     },
     openAssign(id: EntityId, roleName?: string) {
       this.$router.push(assignAuthPath(id, roleName))

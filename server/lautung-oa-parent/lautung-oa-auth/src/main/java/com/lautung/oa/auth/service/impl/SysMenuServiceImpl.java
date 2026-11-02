@@ -134,24 +134,27 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .collect(Collectors.toSet());
 
         List<Long> requestedMenuIds = assginMenuVo.getMenuIdList();
-        List<Long> assignableMenuIds = new ArrayList<>();
+        Set<Long> requested = new LinkedHashSet<>();
         if (requestedMenuIds != null) {
-            for (Long menuId : requestedMenuIds) {
-                if (menuId == null) {
+            requestedMenuIds.stream().filter(Objects::nonNull).forEach(requested::add);
+        }
+        List<Long> assignableMenuIds = new ArrayList<>();
+        for (Long menuId : requested) {
+            SysMenu menu = baseMapper.selectById(menuId);
+            if (!backofficeGrant.isGrantableBackofficeMenu(menu)) {
+                // Drop legacy non-config-menu grants when the role is resubmitted.
+                // A newly requested invalid ID still rejects the whole assignment.
+                if (existingMenuIds.contains(menuId)) {
                     continue;
                 }
-
-                SysMenu menu = baseMapper.selectById(menuId);
-                if (!backofficeGrant.isGrantableBackofficeMenu(menu)) {
-                    // Drop legacy non-config-menu grants when the role is resubmitted.
-                    // A newly requested invalid ID still rejects the whole assignment.
-                    if (existingMenuIds.contains(menuId)) {
-                        continue;
-                    }
-                    throw new BusinessException(201, "只能授予配置菜单");
-                }
-                assignableMenuIds.add(menuId);
+                throw new BusinessException(201, "只能授予配置菜单");
             }
+            // 隐藏页不单独构成权限（ADR 0056）：可见父页面未同时提交时不落库。
+            Long visibleParentId = backofficeGrant.visiblePageParentId(menu);
+            if (visibleParentId != null && !requested.contains(visibleParentId)) {
+                continue;
+            }
+            assignableMenuIds.add(menuId);
         }
 
         //1 根据角色id 删除菜单角色表 分配数据
@@ -249,6 +252,14 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         }
         if (StringUtils.hasText(component)) {
             throw new BusinessException(201, "按钮的组件路径必须为空");
+        }
+        LambdaQueryWrapper<SysMenu> duplicatePerms = new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPerms, perms);
+        if (existing != null && existing.getId() != null) {
+            duplicatePerms.ne(SysMenu::getId, existing.getId());
+        }
+        if (baseMapper.selectCount(duplicatePerms) > 0) {
+            throw new BusinessException(201, "权限标识已存在");
         }
     }
 

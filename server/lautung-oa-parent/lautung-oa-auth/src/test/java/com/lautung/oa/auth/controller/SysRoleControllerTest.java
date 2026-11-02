@@ -4,6 +4,8 @@ import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
+import com.lautung.oa.vo.system.SysDeptOptionVo;
+import com.lautung.oa.vo.system.SysRoleDetailVo;
 import com.lautung.oa.vo.system.SysRoleQueryVo;
 import com.lautung.oa.vo.system.SysRoleSaveRequest;
 import com.lautung.oa.vo.system.SysRoleUpdateRequest;
@@ -20,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,40 +88,56 @@ class SysRoleControllerTest {
 
     @Test
     void reportsWriteOutcomes() {
-        when(service.save(any())).thenReturn(true);
-        when(service.updateById(any())).thenReturn(false);
         when(service.removeById(3L)).thenReturn(true);
         when(service.removeByIds(List.of(3L, 4L))).thenReturn(false);
 
         SysRoleSaveRequest save = new SysRoleSaveRequest();
         save.setRoleName("审批员");
         save.setRoleCode("approver");
+        save.setDataScope(2);
+        save.setDeptIds(List.of(7L, 8L));
         SysRoleUpdateRequest update = new SysRoleUpdateRequest();
         update.setId(3L);
         update.setRoleName("审批员");
 
         assertEquals(200, controller.save(save).getCode());
-        assertEquals(201, controller.update(update).getCode());
+        assertEquals(200, controller.update(update).getCode());
         assertEquals(200, controller.remove(3L).getCode());
         assertEquals(201, controller.batchRemove(List.of(3L, 4L)).getCode());
 
         ArgumentCaptor<SysRole> created = ArgumentCaptor.forClass(SysRole.class);
         ArgumentCaptor<SysRole> changed = ArgumentCaptor.forClass(SysRole.class);
-        verify(service).save(created.capture());
-        verify(service).updateById(changed.capture());
+        verify(service).saveRole(created.capture(), eq(List.of(7L, 8L)));
+        verify(service).updateRole(changed.capture(), isNull());
         assertEquals("审批员", created.getValue().getRoleName());
+        assertEquals(2, created.getValue().getDataScope());
         assertNull(created.getValue().getId());
         assertEquals(3L, changed.getValue().getId());
     }
 
     @Test
-    void readsASingleRole() {
-        SysRole role = new SysRole();
-        role.setId(3L);
-        when(service.getById(3L)).thenReturn(role);
+    void readsASingleRoleAsAnEditableDetail() {
+        SysRoleDetailVo detail = new SysRoleDetailVo();
+        detail.setId(3L);
+        detail.setDataScope(2);
+        detail.setDeptIds(List.of(7L));
+        when(service.findDetail(3L)).thenReturn(detail);
 
         Result result = controller.get(3L);
 
-        assertEquals(role, result.getData());
+        assertEquals(detail, result.getData());
+    }
+
+    @Test
+    void listsActiveDeptOptions() {
+        SysDeptOptionVo option = new SysDeptOptionVo();
+        option.setId(7L);
+        option.setName("研发部");
+        when(service.findDeptOptions()).thenReturn(List.of(option));
+
+        Result result = controller.depts();
+
+        assertEquals(200, result.getCode());
+        assertEquals(List.of(option), result.getData());
     }
 }

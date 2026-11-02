@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assignMenuLabel,
   collectCheckedIds,
   doAssignRequest,
   emptyForm,
@@ -66,6 +67,40 @@ describe('config/sys-menu', () => {
 
     it('collects selected page ids', () => {
       expect(collectCheckedIds(presentAssignableConfigMenus(CONFIG_TREE))).toEqual([11])
+    })
+
+    it('keeps button nodes in the assignable tree and labels them with their perms', () => {
+      const tree = presentAssignableConfigMenus([
+        {
+          id: 11,
+          name: '用户管理',
+          type: 1,
+          select: true,
+          children: [
+            {
+              id: 12,
+              name: '新增用户',
+              type: 2,
+              perms: 'system:user:add',
+              select: true,
+              children: [],
+            },
+          ],
+        },
+      ])
+
+      expect(tree[0].children[0]).toMatchObject({ type: 2, perms: 'system:user:add' })
+      expect(assignMenuLabel(tree[0])).toBe('用户管理')
+      expect(assignMenuLabel(tree[0].children[0])).toBe('新增用户（system:user:add）')
+      expect(collectCheckedIds(tree)).toEqual([11, 12])
+    })
+
+    it('does not restore a selected directory as a standalone check', () => {
+      const tree = presentAssignableConfigMenus([
+        { id: 1, name: '系统管理', type: 0, select: true, children: [] },
+      ])
+
+      expect(collectCheckedIds(tree)).toEqual([])
     })
 
     it('dedupes checked ids', () => {

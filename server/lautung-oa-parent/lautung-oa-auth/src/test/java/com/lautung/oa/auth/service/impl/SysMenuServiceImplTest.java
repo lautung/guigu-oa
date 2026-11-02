@@ -34,6 +34,7 @@ class SysMenuServiceImplTest {
         ReflectionTestUtils.setField(service, "sysRoleMenuService", roleMenuService);
         ReflectionTestUtils.setField(service, "permissionCacheInvalidator", cacheInvalidator);
         ReflectionTestUtils.setField(service, "backofficeGrant", backofficeGrant);
+        when(menuMapper.selectCount(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
     }
 
     @Test
@@ -108,6 +109,38 @@ class SysMenuServiceImplTest {
 
         service.updateMenu(update);
 
+        verify(menuMapper).updateById(update);
+    }
+
+    @Test
+    void duplicateButtonPermsAreRejected() {
+        SysMenu button = button(4L);
+        when(backofficeGrant.isBackofficeMenu(button)).thenReturn(true);
+        when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
+        when(menuMapper.selectCount(org.mockito.ArgumentMatchers.any())).thenReturn(1L);
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenu(button));
+
+        assertEquals(201, error.getCode());
+        assertEquals("权限标识已存在", error.getMsg());
+        verify(menuMapper, org.mockito.Mockito.never()).insert(button);
+    }
+
+    @Test
+    void aButtonUpdateExcludesItsOwnPermsFromTheUniquenessCheck() {
+        SysMenu existing = button(4L);
+        existing.setId(8L);
+        SysMenu update = new SysMenu();
+        update.setId(8L);
+        update.setName("新增用户改名");
+        when(backofficeGrant.isBackofficeMenu(update)).thenReturn(true);
+        when(menuMapper.selectById(8L)).thenReturn(existing);
+        when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
+        when(menuMapper.updateById(update)).thenReturn(1);
+
+        service.updateMenu(update);
+
+        verify(menuMapper).selectCount(org.mockito.ArgumentMatchers.any());
         verify(menuMapper).updateById(update);
     }
 

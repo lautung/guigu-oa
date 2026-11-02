@@ -1,15 +1,21 @@
 package com.lautung.oa.auth.service.impl;
 
+import com.lautung.oa.auth.mapper.SysDeptMapper;
+import com.lautung.oa.auth.mapper.SysRoleDeptMapper;
 import com.lautung.oa.auth.mapper.SysRoleMapper;
 import com.lautung.oa.auth.service.SysRoleMenuService;
 import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserRoleService;
 import com.lautung.oa.auth.service.PermissionCacheInvalidator;
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysRole;
+import com.lautung.oa.model.system.SysRoleDept;
 import com.lautung.oa.model.system.SysRoleMenu;
 import com.lautung.oa.model.system.SysUserRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
+import com.lautung.oa.vo.system.SysDeptOptionVo;
+import com.lautung.oa.vo.system.SysRoleDetailVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +27,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,12 +36,20 @@ import java.util.stream.Collectors;
 
 @Service
 public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
-    
+
+    private static final int CUSTOM_DEPARTMENTS = 2;
+
     @Autowired
     private SysUserRoleService sysUserRoleService;
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
+
+    @Autowired
+    private SysRoleDeptMapper sysRoleDeptMapper;
+
+    @Autowired
+    private SysDeptMapper sysDeptMapper;
 
     @Autowired
     private PermissionCacheInvalidator permissionCacheInvalidator;
@@ -90,7 +105,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         return removed;
     }
 
-    /** 删角色时同步回收授予关系行：用户-角色与角色-菜单（#146，逻辑删除）。 */
+    /** 删角色时同步回收授予关系行：用户-角色、角色-菜单与自定部门（#146/#225，逻辑删除）。 */
     private void deleteRoleRelations(Long roleId) {
         LambdaQueryWrapper<SysUserRole> userRoleWrapper = new LambdaQueryWrapper<>();
         userRoleWrapper.eq(SysUserRole::getRoleId, roleId);
@@ -99,6 +114,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         LambdaQueryWrapper<SysRoleMenu> roleMenuWrapper = new LambdaQueryWrapper<>();
         roleMenuWrapper.eq(SysRoleMenu::getRoleId, roleId);
         sysRoleMenuService.remove(roleMenuWrapper);
+
+        clearDeptRows(roleId);
     }
     
     //1 查询所有角色 和 当前用户所属角色
@@ -198,6 +215,137 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                 .filter(StringUtils::hasText)
                 .distinct()
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void saveRole(SysRole role, List<Long> deptIds) {
+        int dataScope = scopeOf(role);
+        role.setDataScope(dataScope);
+        // 先校验部门再写角色：非法部门不留下半个角色（同一事务里的明确拒绝）。
+        List<Long> normalizedDeptIds = dataScope == CUSTOM_DEPARTMENTS
+                ? validateDeptIds(deptIds)
+                : List.of();
+        if (dataScope == CUSTOM_DEPARTMENTS && normalizedDeptIds.isEmpty()) {
+            throw new BusinessException(201, "自定部门不能为空");
+        }
+        if (!save(role)) {
+            throw new BusinessException(201, "角色保存失败");
+        }
+        if (dataScope == CUSTOM_DEPARTMENTS) {
+            replaceDeptRows(role.getId(), normalizedDeptIds);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateRole(SysRole role, List<Long> deptIds) {
+        SysRole existing = role.getId() == null ? null : getById(role.getId());
+        if (existing == null) {
+            throw new BusinessException(201, "角色不存在");
+        }
+        int dataScope = role.getDataScope() != null ? role.getDataScope() : scopeOf(existing);
+        // deptIds 为空表示不覆盖（ADR 0034）；非 2 档时即使提交部门也要按最终范围清空旧行。
+        List<Long> normalizedDeptIds = deptIds != null && dataScope == CUSTOM_DEPARTMENTS
+                ? validateDeptIds(deptIds)
+                : null;
+        if (!updateById(role)) {
+            throw new BusinessException(201, "角色更新失败");
+        }
+        if (dataScope != CUSTOM_DEPARTMENTS) {
+            clearDeptRows(role.getId());
+        } else if (normalizedDeptIds != null) {
+            replaceDeptRows(role.getId(), normalizedDeptIds);
+        }
+    }
+
+    @Override
+    public SysRoleDetailVo findDetail(Long id) {
+        SysRole role = id == null ? null : getById(id);
+        if (role == null) {
+            return null;
+        }
+        SysRoleDetailVo detail = new SysRoleDetailVo();
+        detail.setId(role.getId());
+        detail.setRoleName(role.getRoleName());
+        detail.setRoleCode(role.getRoleCode());
+        detail.setDescription(role.getDescription());
+        detail.setDataScope(role.getDataScope());
+        detail.setDeptIds(findingDeptIds(role.getId()));
+        detail.setCreateTime(role.getCreateTime());
+        detail.setUpdateTime(role.getUpdateTime());
+        return detail;
+    }
+
+    @Override
+    public List<SysDeptOptionVo> findDeptOptions() {
+        return sysDeptMapper.selectList(new LambdaQueryWrapper<SysDept>()
+                        .eq(SysDept::getStatus, 1)
+                        .orderByAsc(SysDept::getParentId)
+                        .orderByAsc(SysDept::getSortValue)
+                        .orderByAsc(SysDept::getId))
+                .stream()
+                .map(dept -> {
+                    SysDeptOptionVo option = new SysDeptOptionVo();
+                    option.setId(dept.getId());
+                    option.setName(dept.getName());
+                    option.setParentId(dept.getParentId());
+                    return option;
+                })
+                .toList();
+    }
+
+    /** 只接受存在且未删除的部门；去重后保持提交顺序。 */
+    private List<Long> validateDeptIds(List<Long> deptIds) {
+        if (deptIds == null) {
+            return List.of();
+        }
+        List<Long> distinct = deptIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                .stream()
+                .toList();
+        if (distinct.isEmpty()) {
+            return List.of();
+        }
+        List<Long> existing = sysDeptMapper.selectBatchIds(distinct).stream()
+                .map(SysDept::getId)
+                .toList();
+        if (existing.size() != distinct.size()) {
+            throw new BusinessException(201, "只能选择已存在的部门");
+        }
+        return distinct;
+    }
+
+    private List<Long> findingDeptIds(Long roleId) {
+        return sysRoleDeptMapper.selectList(new LambdaQueryWrapper<SysRoleDept>()
+                        .eq(SysRoleDept::getRoleId, roleId)
+                        .orderByAsc(SysRoleDept::getId))
+                .stream()
+                .map(SysRoleDept::getDeptId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private void replaceDeptRows(Long roleId, List<Long> deptIds) {
+        clearDeptRows(roleId);
+        for (Long deptId : deptIds) {
+            SysRoleDept relation = new SysRoleDept();
+            relation.setRoleId(roleId);
+            relation.setDeptId(deptId);
+            sysRoleDeptMapper.insert(relation);
+        }
+    }
+
+    private void clearDeptRows(Long roleId) {
+        sysRoleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
+                .eq(SysRoleDept::getRoleId, roleId));
+    }
+
+    /** 未设置 data_scope 的老角色按 5（仅本人）理解，与 DataScopeResolver 同一口径。 */
+    private int scopeOf(SysRole role) {
+        return role.getDataScope() == null ? 5 : role.getDataScope();
     }
 
 //    @Autowired

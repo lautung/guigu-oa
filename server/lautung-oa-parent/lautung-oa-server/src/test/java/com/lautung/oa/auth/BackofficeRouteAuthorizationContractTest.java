@@ -84,7 +84,7 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysRoleController.class, "/system/sysUser", null, "toAssign");
         expect(SysRoleController.class, "/system/sysUser", "system:user:assignRole", "doAssign");
         expect(SysRoleController.class, "/system/sysRole", null,
-                "findAll", "pageQueryRole", "get");
+                "findAll", "pageQueryRole", "get", "depts");
         expect(SysRoleController.class, "/system/sysRole", "system:role:add", "save");
         expect(SysRoleController.class, "/system/sysRole", "system:role:edit", "update");
         expect(SysRoleController.class, "/system/sysRole", "system:role:remove", "remove", "batchRemove");

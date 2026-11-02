@@ -97,6 +97,18 @@ public class BackofficeGrant {
         return isGrantable(menu, loadAll());
     }
 
+    /**
+     * 隐藏页的可见父页面 id（最近的 type=1 祖先）；非隐藏页或没有页面祖先时为 null。
+     * 授予保存据此判定：只提交隐藏页、可见父页面未同时提交时，隐藏页不落库（ADR 0056）。
+     */
+    public Long visiblePageParentId(SysMenu menu) {
+        if (menu == null || !Objects.equals(menu.getType(), 1)) {
+            return null;
+        }
+        SysMenu parent = visiblePageParent(menu, loadAll());
+        return parent == null ? null : parent.getId();
+    }
+
     private Set<String> collectPermissions(List<SysMenu> granted, Map<Long, SysMenu> all,
                                            Set<String> pages) {
         Set<String> permissions = new LinkedHashSet<>();

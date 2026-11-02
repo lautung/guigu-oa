@@ -140,6 +140,8 @@ export interface RoleRecord {
   id?: EntityId | ''
   roleName?: string
   roleCode?: string
+  dataScope?: number
+  deptIds?: EntityId[]
   createTime?: string
 }
 
@@ -151,6 +153,14 @@ export interface RoleForm {
   id: EntityId | ''
   roleName: string
   roleCode: string
+  dataScope: number
+  deptIds: EntityId[]
+}
+
+export interface DeptOption {
+  id: EntityId
+  name: string
+  parentId?: EntityId
 }
 
 export interface UserRecord {
