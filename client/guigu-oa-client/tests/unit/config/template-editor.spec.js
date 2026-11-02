@@ -743,7 +743,7 @@ it('明确认证拒绝后重发保存再断网，仍保留待确认快照且不�
   }
 })
 
-it.each([201, 205, 403])('保存明确拒绝 %s 可立即重试且无全局普通错误', async (code) => {
+it.each([201, 403])('保存明确拒绝 %s 可立即重试且无全局普通错误', async (code) => {
   const h = await transportHarness(async () => ({ code, message: '本次保存未获接受' }))
   try {
     const edit = h.module.open('A')
@@ -755,6 +755,23 @@ it.each([201, 205, 403])('保存明确拒绝 %s 可立即重试且无全局普�
     expect(edit.state.error).toBe('本次保存未获接受')
     expect(h.calls.filter((call) => call.url.endsWith('/update'))).toHaveLength(1)
     expect(h.globalNotices).toEqual([])
+  } finally {
+    h.restore()
+  }
+})
+
+it('保存被 205 明确拒绝时可立即重试，并把没有操作权限提示一次', async () => {
+  const h = await transportHarness(async () => ({ code: 205, message: '没有操作权限' }))
+  try {
+    const edit = h.module.open('A')
+    await edit.ready
+    await edit.save()
+    expect(edit.state.phase).toBe('ready')
+    expect(edit.state.canSave).toBe(true)
+    expect(edit.state.snapshot).toBeNull()
+    expect(edit.state.error).toBe('没有操作权限')
+    expect(h.calls.filter((call) => call.url.endsWith('/update'))).toHaveLength(1)
+    expect(h.globalNotices).toEqual(['没有操作权限'])
   } finally {
     h.restore()
   }

@@ -97,19 +97,19 @@ function flattenTitles(items = []) {
 }
 
 describe('配置权限', () => {
-  describe('hasConfigPermission 与 grantedConfigMenus', () => {
+  describe('hasConfigPermission 与 grantedMenus', () => {
     it('has no 配置权限 when the granted entries are empty', () => {
       const permission = configPermission([])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.grantedConfigMenus).toEqual([])
+      expect(permission.grantedMenus).toEqual([])
     })
 
     it('has no 配置权限 when only a directory is granted', () => {
       const permission = configPermission([{ path: '/system', title: '组织与权限', type: 0 }])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.grantedConfigMenus).toEqual([])
+      expect(permission.grantedMenus).toEqual([])
     })
 
     it('has 配置权限 when at least one page is granted', () => {
@@ -121,13 +121,13 @@ describe('配置权限', () => {
     it('returns the granted tree as 组织与权限 / 用户管理', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '用户管理'])
+      expect(flattenTitles(permission.grantedMenus)).toEqual(['组织与权限', '用户管理'])
     })
 
     it('does not list hidden pages in the sidebar', () => {
       const permission = configPermission(ROLE_PAGE)
 
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '角色管理'])
+      expect(flattenTitles(permission.grantedMenus)).toEqual(['组织与权限', '角色管理'])
     })
 
     it('needs the visible parent page for a hidden page to count', () => {

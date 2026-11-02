@@ -130,7 +130,13 @@ export function configPermission(menus: BackofficeMenuEntry[] = []) {
 
   return {
     hasConfigPermission: pages.length > 0,
-    grantedConfigMenus: buildSidebar(menus),
+    grantedMenus: buildSidebar(menus),
+    /** 页面授予：精确页面、目录下的已授页面，或已授页面下的详情子路径。 */
+    coversPage(path: string): boolean {
+      const normalized = normalizePath(path)
+      if (!normalized) return false
+      return pathCoveredByGrant(normalized, pages)
+    },
     entryOf(path: string): { path: string; group: MenuGroup } | null {
       const normalized = normalizePath(path)
       if (!normalized) return null

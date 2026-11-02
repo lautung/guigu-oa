@@ -9,11 +9,13 @@
 | `src/recognition/index.ts` | `createRecognition(adapter)`；`capture()` / `assertCurrent()` / `recognize()` / `reject()` | 进入身份（generation + entryId）、迟到结果归属与 `/info` 形状校验（`roles`/`permissions`/`menus`） |
 | `src/request/request.ts` | `configureRequest(recognition)` → 默认导出 `request`；`createRequestClient` | 纯传输（ADR 0048）:axios 实例、附头、拦截器骨架、200 直通与转发；续期与失败分类外置 |
 | `src/request/renewal.ts` | `createRenewal(recognition, resend)` → `onExpired(config, context)`；`setRequestToken` / `isAuthentication` | 续期状态机唯一 owner:单飞去重、换头重放、认证端点豁免；208 的决策与执行（ADR 0048） |
-| `src/request/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` / `refreshRefusal` / `TransportScopeFields` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；传输 scope 字段一处拥有，传输与续期共用的失败基座 |
+| `src/request/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `PermissionRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` / `refreshRefusal` / `TransportScopeFields` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；205 是命名失败且不受 `notifyNormalErrors` 抑制（#224）；传输 scope 字段一处拥有，传输与续期共用的失败基座 |
 | `src/request/request-scope.ts` | `openRequestScope(recognition, { notifyNormalErrors })` → `request(config, isRelevant?)`、`current()` | 打开时捕获一次身份、按次相关性、错误策略；`ScopedRequestConfig` 只在传输层 |
 | `src/list/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
 | `src/list/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `src/list/list-page-browser.ts` |
-| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `canOccupy` / `grantedConfigMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`，按钮点与守卫在 #224 |
+| `src/permission/index.ts` | `hasPermission(perm)`；`hasPermi` 指令 / `createHasPermi(read)`；`isPermitted` / `permissionSet` | 按钮点判定（ADR 0052/0058）：读 user store 的 `permissions`，无权限移除 DOM（`mounted`/`updated`）；服务端 gate 是唯一强制点 |
+| `src/navigation/index.ts` | `resolveAuthGuard({ path, fullPath, hasToken, menus })` / `buildSidebarTree` / `buildLoginRedirectPath` | 导航决策：认证 + 后台页面授予；办事内置始终放行，配置页只放行 `/info` `menus` 覆盖的页面、详情子路径与含已授子页的目录，否则回落到默认落点 |
+| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |
 | `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下 |
 | `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |

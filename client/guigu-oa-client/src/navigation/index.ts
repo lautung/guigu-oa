@@ -26,10 +26,7 @@ function buildWorkSidebarGroup(): SidebarGroup {
   }
 }
 
-function configSidebarGroup(
-  grantedConfigMenus: SidebarItem[],
-  viewportWidth: number,
-): SidebarGroup {
+function configSidebarGroup(grantedMenus: SidebarItem[], viewportWidth: number): SidebarGroup {
   const mobile = isMobileViewport(viewportWidth)
 
   return {
@@ -37,7 +34,7 @@ function configSidebarGroup(
     title: '配置',
     collapsed: mobile,
     hint: mobile ? DESKTOP_CONFIG_HINT : null,
-    items: grantedConfigMenus,
+    items: grantedMenus,
   }
 }
 
@@ -52,7 +49,7 @@ export function buildSidebarTree({
   const permission = configPermission(menus)
 
   if (permission.hasConfigPermission) {
-    tree.push(configSidebarGroup(permission.grantedConfigMenus, viewportWidth))
+    tree.push(configSidebarGroup(permission.grantedMenus, viewportWidth))
   }
 
   return tree
@@ -62,15 +59,22 @@ export function resolveAuthGuard({
   path,
   fullPath,
   hasToken,
+  menus = [],
 }: {
   path: string
   fullPath?: string
   hasToken: boolean
+  menus?: BackofficeMenuEntry[]
 }): GuardDecision {
   const targetPath = fullPath || path
 
   if (hasToken) {
     if (path === ROUTES.LOGIN) {
+      return { action: 'redirect', to: getDefaultPostLoginRoute() }
+    }
+    const permission = configPermission(menus)
+    const entry = permission.entryOf(path)
+    if (entry?.group === 'config' && !permission.coversPage(path)) {
       return { action: 'redirect', to: getDefaultPostLoginRoute() }
     }
     return { action: 'allow' }

@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { useUserStore } from '@/store/modules/user'
 import { configureRequest } from '@/request/request'
+import { hasPermi } from '@/permission'
 
 /** 审批表单值的存储型 XSS 载荷（#142）：页面必须把它显示成字符，不能生成元素。 */
 export const XSS_PAYLOAD = '<img src=x onerror="window.__secXss=1">'
@@ -51,6 +52,7 @@ export function setupSession(options = {}) {
   const user = useUserStore(pinia)
   user.token = options.token === undefined ? 'token' : options.token
   user.menus = options.menus || []
+  user.permissions = options.permissions || []
   user.name = options.name || ''
   user.avatar = options.avatar || ''
   user.recognition = recognition
@@ -106,7 +108,7 @@ export function mountOptions(pinia, router) {
     global: {
       plugins: router ? [pinia, router] : [pinia],
       stubs: elementStubs,
-      directives: { loading: {} },
+      directives: { loading: {}, hasPermi },
     },
   }
 }
