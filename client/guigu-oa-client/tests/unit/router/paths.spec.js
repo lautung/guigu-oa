@@ -5,6 +5,7 @@ import {
   PATHS,
   WORK_LIST_KINDS,
   assignAuthPath,
+  noticeDetailPath,
   processInstanceDetailPath,
   processTemplateListPath,
   returnPathOfRoute,
@@ -44,6 +45,21 @@ describe('路径 module', () => {
     expect(auth.query).toEqual({ id: '3', roleName: '审批人' })
     expect(resolve(processInstanceDetailPath(12)).name).toBe('ProcessMgrDetail')
     expect(resolve(sysRolePath()).name).toBe('SysRole')
+    expect(resolve(PATHS.NOTICE).name).toBe('NoticeList')
+    expect(resolve(noticeDetailPath(19)).name).toBe('NoticeDetail')
+    expect(resolve(noticeDetailPath(19)).params.id).toBe('19')
+  })
+
+  it('公告是内置读面：不进配置组、不套页面授予', () => {
+    expect(resolve(PATHS.NOTICE).meta.menuGroup).toBeUndefined()
+    expect(resolve(PATHS.NOTICE).meta.title).toBe('全部公告')
+    expect(resolve(noticeDetailPath(1)).meta.menuGroup).toBeUndefined()
+    expect(resolve(noticeDetailPath(1)).meta.title).toBe('公告详情')
+  })
+
+  it('公告详情返回全部公告', () => {
+    expect(returnPathOfRoute(PATHS.NOTICE)).toBe(PATHS.NOTICE)
+    expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
   })
 
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {

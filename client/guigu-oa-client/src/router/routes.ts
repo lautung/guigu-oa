@@ -168,6 +168,21 @@ const processSetChildren: AppRoute[] = [
   },
 ]
 
+const noticeChildren: AppRoute[] = [
+  {
+    path: '',
+    name: 'NoticeList',
+    component: () => import('@/views/notice/index.vue'),
+    meta: { title: '全部公告' },
+  },
+  {
+    path: ':id',
+    name: 'NoticeDetail',
+    component: () => import('@/views/notice/detail.vue'),
+    meta: { title: '公告详情' },
+  },
+]
+
 export const constantRoutes: AppRoute[] = [
   {
     path: PATHS.LOGIN,
@@ -184,6 +199,13 @@ export const constantRoutes: AppRoute[] = [
     redirect: getDefaultPostLoginRoute(),
     meta: { menuGroup: 'work' },
     children: workChildren,
+  },
+  {
+    // 公告读面是内置路由（ADR 0055）：登录即有，不设 menuGroup，因此配置页授予
+    // 不把它当后台页面（#224 的守卫只过滤 config 组）。
+    path: PATHS.NOTICE,
+    component: ClientSurfaceHost,
+    children: noticeChildren,
   },
   {
     path: PATHS.SYSTEM,

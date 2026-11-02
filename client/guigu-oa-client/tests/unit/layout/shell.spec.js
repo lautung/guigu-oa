@@ -1,17 +1,45 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import AppSidebar from '@/layout/components/AppSidebar.vue'
 import SidebarNode from '@/layout/components/SidebarNode.vue'
 import TopBar from '@/layout/components/TopBar.vue'
-import { fakeRecognition, mountOptions, setupSession } from '../support/harness'
+import { fakeRecognition, installHttp, mountOptions, ok, setupSession } from '../support/harness'
 
 function router() {
   return createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/', component: { template: '<div />' } }],
   })
+}
+
+function noticeRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', component: { template: '<div />' } },
+      { path: '/notice', name: 'NoticeList', component: { template: '<div />' } },
+      { path: '/notice/:id', name: 'NoticeDetail', component: { template: '<div />' } },
+    ],
+  })
+}
+
+const unreadRow = (id) => ({
+  id,
+  title: `公告 ${id}`,
+  type: 1,
+  publisherName: '管理员',
+  publishTime: '2026-11-03 10:00:00',
+  read: false,
+})
+
+function noticeResponder(state) {
+  return (config) => {
+    if (config.url.endsWith('/admin/notices/unread-count')) return ok(state.count)
+    if (config.url.endsWith('/admin/notices/unread')) return ok(state.rows)
+    return ok(null)
+  }
 }
 
 function setViewport(width) {
@@ -89,8 +117,16 @@ describe('SidebarNode', () => {
 })
 
 describe('TopBar', () => {
+  let http
+
+  afterEach(() => {
+    http?.restore()
+    http = undefined
+  })
+
   it('shows the default avatar and logs out through the recognition module', async () => {
     const recognition = fakeRecognition({ exit: vi.fn() })
+    http = installHttp(noticeResponder({ count: 0, rows: [] }))
     const { pinia } = setupSession({ name: 'Alice', recognition })
     const wrapper = mount(TopBar, mountOptions(pinia, router()))
 
@@ -102,8 +138,81 @@ describe('TopBar', () => {
   })
 
   it('prefers the stored avatar when present', () => {
+    http = installHttp(noticeResponder({ count: 0, rows: [] }))
     const { pinia } = setupSession({ name: 'Bob', avatar: 'https://example.test/bob.png' })
     const wrapper = mount(TopBar, mountOptions(pinia, router()))
     expect(wrapper.find('.avatar').attributes('src')).toBe('https://example.test/bob.png')
+  })
+
+  it('shows the unread badge and the latest five unread notices', async () => {
+    const state = {
+      count: 3,
+      rows: [1, 2, 3, 4, 5, 6].map(unreadRow),
+    }
+    http = installHttp(noticeResponder(state))
+    const { pinia } = setupSession({ name: 'Alice' })
+    const routerInstance = noticeRouter()
+    const wrapper = mount(TopBar, mountOptions(pinia, routerInstance))
+    await flushPromises()
+
+    const badge = wrapper.find('.el-badge-stub')
+    expect(badge.attributes('data-value')).toBe('3')
+    expect(badge.attributes('data-hidden')).toBe('false')
+    expect(wrapper.findAll('.notice-item')).toHaveLength(5)
+    expect(wrapper.find('.notice-item-title').text()).toBe('公告 1')
+
+    await wrapper.findAll('.notice-item')[1].trigger('click')
+    await flushPromises()
+    expect(routerInstance.currentRoute.value.path).toBe('/notice/2')
+
+    await wrapper.find('.notice-all').trigger('click')
+    await flushPromises()
+    expect(routerInstance.currentRoute.value.path).toBe('/notice')
+  })
+
+  it('caps the badge at 99+', async () => {
+    http = installHttp(noticeResponder({ count: 120, rows: [] }))
+    const { pinia } = setupSession({ name: 'Alice' })
+    const wrapper = mount(TopBar, mountOptions(pinia, router()))
+    await flushPromises()
+
+    expect(wrapper.find('.el-badge-stub').attributes('data-value')).toBe('99+')
+  })
+
+  it('hides the badge when there is nothing unread', async () => {
+    http = installHttp(noticeResponder({ count: 0, rows: [] }))
+    const { pinia } = setupSession({ name: 'Alice' })
+    const wrapper = mount(TopBar, mountOptions(pinia, router()))
+    await flushPromises()
+
+    expect(wrapper.find('.el-badge-stub').attributes('data-hidden')).toBe('true')
+    expect(wrapper.find('.notice-empty').text()).toBe('暂无未读公告')
+  })
+
+  it('stops polling after logout and clears the badge', async () => {
+    let countCalls = 0
+    http = installHttp((config) => {
+      if (config.url.endsWith('/admin/notices/unread-count')) {
+        countCalls += 1
+        return ok(2)
+      }
+      if (config.url.endsWith('/admin/notices/unread')) return ok([unreadRow(1)])
+      return ok(null)
+    })
+    const session = setupSession({ name: 'Alice' })
+    session.recognition.exit = vi.fn(() => {
+      session.user.token = ''
+    })
+    const wrapper = mount(TopBar, mountOptions(session.pinia, router()))
+    await flushPromises()
+    expect(countCalls).toBe(1)
+
+    await wrapper.vm.handleLogout()
+    await flushPromises()
+    expect(wrapper.find('.el-badge-stub').attributes('data-hidden')).toBe('true')
+
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    expect(countCalls).toBe(1)
   })
 })

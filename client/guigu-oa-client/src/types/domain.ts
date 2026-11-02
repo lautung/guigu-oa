@@ -17,6 +17,8 @@ export interface ApiRequestConfig {
   url: string
   data?: unknown
   params?: Record<string, string | number | boolean | null | undefined>
+  /** 二进制读（公告图片）：响应体不是业务信封，由 request 模块直通 Blob。 */
+  responseType?: 'blob'
 }
 
 export interface ApiClient {
@@ -404,4 +406,78 @@ export interface FormDesignerState {
 export interface Profile {
   name: string
   phone: string
+}
+
+/** 公告（ADR 0055）：type 1 通知 / 2 公告；status 0 草稿 / 1 已发布 / 2 已撤回。 */
+export interface NoticeFeedRecord {
+  id?: EntityId | ''
+  title?: string
+  type?: number
+  publisherName?: string
+  publishTime?: string
+  read?: boolean
+}
+
+export interface NoticeFeedItem extends NoticeFeedRecord {
+  id: EntityId
+  title: string
+  typeLabel: string
+  typeTagType: AuditTagType
+  publisherName: string
+  publishTime: string
+  read: boolean
+  readLabel: string
+  readTagType: AuditTagType
+}
+
+export interface NoticeDetailRecord extends NoticeFeedRecord {
+  publisherId?: EntityId
+  content?: string
+}
+
+/** 详情页的展示投影：缺省值统一成空串，正文原样交给唯一渲染面。 */
+export interface NoticeDetailView {
+  id: EntityId
+  title: string
+  type?: number
+  typeLabel: string
+  typeTagType: AuditTagType
+  publisherId: EntityId | ''
+  publisherName: string
+  publishTime: string
+  content: string
+  read: boolean
+}
+
+/** 管理侧（#220）：列表行不含正文，详情含草稿正文。 */
+export interface NoticeAdminRecord {
+  id?: EntityId | ''
+  title?: string
+  type?: number
+  status?: number
+  publisherId?: EntityId
+  publisherName?: string
+  publishTime?: string
+  createTime?: string
+  updateTime?: string
+  content?: string
+}
+
+export interface NoticeAdminListItem extends NoticeAdminRecord {
+  id: EntityId
+  title: string
+  typeLabel: string
+  statusLabel: string
+  statusTagType: AuditTagType
+}
+
+export interface NoticeWritePayload {
+  title: string
+  type: number
+  content: string
+}
+
+export interface NoticeImageResult {
+  id: EntityId
+  url: string
 }

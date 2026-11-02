@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 function deferred() {
   let resolve!: () => void
@@ -104,6 +105,7 @@ async function setup(
       return json(route, { records: [original], total: 1, pages: 1 })
     if (path.startsWith('/admin/process/findPending/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
   return { errors, saved, uploads }

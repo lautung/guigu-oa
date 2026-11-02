@@ -20,8 +20,16 @@
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
 | `src/config/login-log.ts` | `LOGIN_STATUS_OPTIONS` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` | 登录日志四值（成功/失败/锁定/解锁）标签与查询投影；列表请求、批量删除、清空与按 username 编码的解锁请求 |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog` |
-| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
+| `src/notice/config.ts` | `NOTICE_TYPES` / `NOTICE_STATUSES` / `NOTICE_PERMISSIONS` / `presentFeedItem` / `presentDetail` / `presentAdminListRecord` / `feedQueryForTab` / `feedRequest` / `unreadRequest` / `unreadCountRequest` / `detailRequest` / `markReadRequest` / `imageRequest` / `admin*` 与写侧请求构造 | 公告（ADR 0055）的读侧/管理侧请求形状、类型与状态标签、列表与详情投影；管理侧写请求（create/update/remove/publish/withdraw/upload）留给 #220 复用 |
+| `src/notice/api.ts` | `fetchFeed` / `fetchUnread` / `fetchUnreadCount` / `fetchNoticeDetail` / `markNoticeRead` / `fetchNoticeImage` / `findNoticePage` 等 | 薄包装：读侧走 JSON 客户端，`fetchNoticeImage` 走二进制客户端（同源图片带认证头的唯一路径）；管理函数供 #220 |
+| `src/notice/unread.ts` | `createNoticeUnreadSource(send)` / `createUnreadPolling({ source, clock, intervalMs })` → `state` / `start` / `stop` / `refresh` | 铃铛数据源与轮询时机（立即、60 秒、focus 补拉）：latest-wins、失败静默、识别终态停表；时机用注入时钟单测 |
+| `src/notice/unread-browser.ts` | `useNoticeUnread()` / `refreshNoticeUnread()` | 浏览器接线：每次刷新重开请求作用域（关普通错误提示），外壳卸载即停；详情写回执后让角标立即归零 |
+| `src/notice/notice-images.ts` | `noticeImageId(src)` / `createNoticeImageHydrator({ loadImage, createObjectUrl, revokeObjectUrl })` → `hydrate` / `revokeAll` / `dispose` | 正文同源图片的认证取回：`/admin/notices/images/{id}` 换成 `blob:`，内容变化撤销、卸载作废，非公告图片不碰；#220 的预览可复用 |
+| `src/notice/NoticeContent.vue` | props `html` / `loadImage?` / `createObjectUrl?` / `revokeObjectUrl?` | 全仓唯一 `v-html` 渲染面：服务端写入时已消毒，客户端不再二次消毒；ESLint 只对本文件关 `vue/no-v-html`，`npm run check:v-html` 守卫第二处 |
+| `src/views/notice/index.vue` | 页面 | 全部公告：全部/未读两个 tab、`publish_time DESC, id DESC` 分页、类型/标题/发布人/发布时间/读态；读状态与分页复用 `createListPage` |
+| `src/views/notice/detail.vue` | 页面 | 公告详情：类型/标题/发布人/发布时间/正文；加载成功后每次访问只写一次已读回执；撤回/删除/不存在按不存在视图处理 |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告是内置 `/notice` 与 `/notice/:id` |
+| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属；公告路由没有 `menuGroup`，不进入配置页授予 |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
@@ -35,6 +43,8 @@
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
 
 日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
+
+公告展示面（#219）：`TopBar.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`；发布管理页 `/system/notice` 属于 #220，复用 `src/notice/api.ts` 的写侧函数。
 
 ## 服务端鉴权
 
@@ -60,7 +70,7 @@
 
 ## 服务端公告（#218 的稳定合同，供 #219/#220）
 
-公告只做了服务端；客户端 notice 模块与 `NoticeContent.vue` 的唯一 `v-html` 渲染面由 #219/#220 落地（ADR 0055/0028）。客户端按下面形状接线，不要在页面里重新猜字段：
+服务端合同由 #218 落地；客户端展示面（铃铛、`/notice`、`/notice/:id`、唯一 `v-html` 渲染面与图片认证取回）由 #219 落地，发布管理页 `/system/notice` 由 #220 落地（ADR 0055/0028）。客户端按下面形状接线，不要在页面里重新猜字段：
 
 - 读侧（登录即有，不设页面授予、不套数据范围）：
   - `GET /admin/notices/feed?page=1&limit=20&unreadOnly=false` → `{code,message,data:{current,size,total,records:[{id,title,type,publisherName,publishTime,read}]}}`；排序 `publishTime DESC, id DESC`；`limit` 上限 500；列表没有 `content`。

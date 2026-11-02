@@ -66,6 +66,16 @@ export function createTestRouter(routes = []) {
 
 export const elementStubs = {
   'el-alert': true,
+  // 顶栏铃铛：stub 暴露 value/hidden，并渲染 reference 与内容两个插槽。
+  'el-badge': {
+    props: ['value', 'hidden'],
+    template:
+      '<span class="el-badge-stub" :data-value="value" :data-hidden="String(hidden)"><slot /></span>',
+  },
+  'el-popover': {
+    template:
+      '<span class="el-popover-stub"><slot name="reference" /><span class="el-popover-body"><slot /></span></span>',
+  },
   'el-button': true,
   'el-card': true,
   'el-checkbox': true,
@@ -93,6 +103,8 @@ export const elementStubs = {
   'el-switch': true,
   'el-table': true,
   'el-table-column': true,
+  'el-tab-pane': true,
+  'el-tabs': true,
   'el-tag': true,
   'el-timeline': true,
   'el-timeline-item': true,

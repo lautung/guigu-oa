@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 const json = (route: Route, data: unknown, code = 200) =>
   route.fulfill({ contentType: 'application/json', body: JSON.stringify({ code, data }) })
@@ -128,6 +129,7 @@ async function setup(page: Page): Promise<State> {
       state.loginRows = []
       return json(route, null)
     }
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${request.method()} ${path}`)
   })
   await page.goto('/work/pending')

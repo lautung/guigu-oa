@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 function deferred() {
   let resolve!: () => void
   const promise = new Promise<void>((yes) => {
@@ -104,6 +105,7 @@ async function setup(page: Page): Promise<State> {
       state.pending = false
       return json(route, null)
     }
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
   // 生产构建的 CSP 只放行 connect-src 里的对象存储源（#139），mock 必须使用同一来源。

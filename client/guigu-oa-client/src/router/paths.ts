@@ -31,6 +31,8 @@ export const PATHS = {
   PROCESS_MGR: '/system/processMgr',
   PROCESS_MGR_PROCESS: '/system/processMgr/process',
   PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
+  NOTICE: '/notice',
+  NOTICE_DETAIL: '/notice/:id',
 } as const
 
 /** 办事列表的静态路径，保留既有 ROUTES 形状供导航与 surface 使用。 */
@@ -106,6 +108,11 @@ export function sysRolePath(): string {
   return PATHS.SYSTEM_SYS_ROLE
 }
 
+/** 公告详情是内置读面（ADR 0055），路径只在这里拼一次。 */
+export function noticeDetailPath(id: EntityId): string {
+  return `${PATHS.NOTICE}/${id}`
+}
+
 const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.LOGIN]: PATHS.LOGIN,
   [PATHS.WORK_START]: PATHS.WORK_START,
@@ -124,6 +131,7 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.PROCESS_SET_PROCESS_TEMPLATE]: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
   [PATHS.PROCESS_SET_TEMPLATE_SET]: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
   [PATHS.PROCESS_MGR_PROCESS]: PATHS.PROCESS_MGR_PROCESS,
+  [PATHS.NOTICE]: PATHS.NOTICE,
 }
 
 const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = [
@@ -133,6 +141,7 @@ const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = 
   { prefix: `${PATHS.WORK_STARTED}/`, returnPath: PATHS.WORK_STARTED },
   { prefix: `${PATHS.WORK_COPIED}/`, returnPath: PATHS.WORK_COPIED },
   { prefix: `${PATHS.PROCESS_MGR_PROCESS}/`, returnPath: PATHS.PROCESS_MGR_PROCESS },
+  { prefix: `${PATHS.NOTICE}/`, returnPath: PATHS.NOTICE },
 ]
 
 function normalize(path: string | undefined): string {

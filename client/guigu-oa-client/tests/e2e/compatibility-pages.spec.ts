@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 /**
  * 兼容性关键页扫描（#114 §2/§3）：Chromium + WebKit、1280×900 + 390×844，
@@ -188,6 +189,7 @@ async function mockApi(page: Page) {
         ],
         assginRoleList: [{ id: 1, roleName: '管理员' }],
       })
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
 }
