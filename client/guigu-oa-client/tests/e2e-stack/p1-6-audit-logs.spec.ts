@@ -24,7 +24,8 @@ test('后台写动作在操作日志页留下可查的行与参数', async ({ pa
 
   await page.goto('/system/log/operLog')
   await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
-  await page.getByPlaceholder('操作人').fill('admin')
+  // oper_name 是写入时的姓名快照（sys_user.name），不是登录名；admin 的姓名是「管理员」。
+  await page.getByPlaceholder('操作人', { exact: true }).fill('管理员')
   await page.getByPlaceholder('操作模块').fill('角色管理·新增角色')
   await page.getByRole('button', { name: '搜索', exact: true }).click()
 
@@ -74,7 +75,8 @@ test('登录失败写入失败行，解锁后出现解锁行并在操作日志�
 
   const unlockRow = page.locator('.el-table__row', { hasText: '手动解锁' }).first()
   await expect(unlockRow).toBeVisible()
-  await expect(unlockRow.getByText('解锁', { exact: true })).toBeVisible()
+  // 行内同时有状态标签「解锁」与操作按钮「解锁」：只断言状态标签，避免 strict 冲突。
+  await expect(unlockRow.locator('.el-tag', { hasText: '解锁' })).toBeVisible()
   await expect(unlockRow.getByText(failedUser, { exact: true })).toBeVisible()
 
   // 解锁是双写：操作日志另记一行「谁点的」（ADR 0054）。
