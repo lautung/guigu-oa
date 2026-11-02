@@ -29,4 +29,6 @@ ADR 0053 拒绝了若依的 `${params.dataScope}` 片段拼接，定了「解析
 - ADR 0053 的「三态」按本条细化，原则（参数进查询、禁止片段拼接、四个接入点、无缓存）不变。
 - `sys_dept.ancestors` 必须含自身且带包裹逗号，见 ADR 0056；部门 CRUD 迁移与解析器共用同一路径格式。
 
+补充（2026-11-03，审计接入）：`DataScope` 值对象下沉到 `lautung-oa-model`；`lautung-oa-security` 增加只读端口 `DataScopeProvider.resolve(userId)`，auth 的 `DataScopeResolver` 实现它。理由是审计模块按 ADR 0054 只能依赖 common/framework/security/model，不能反向依赖 auth；操作日志/登录日志的查询按端口取范围，部门列/本人列仍由各查询回答。实现位置变了，本条的五档语义、并集、空集与「不缓存」不变。
+
 Related: ADR 0011/0045（成员资格与审批读）；ADR 0009/0018（列表读收口）；ADR 0050（手写 SQL 存活过滤）；ADR 0053/0056（原则与组织表）；issue #208/#210/#211。
