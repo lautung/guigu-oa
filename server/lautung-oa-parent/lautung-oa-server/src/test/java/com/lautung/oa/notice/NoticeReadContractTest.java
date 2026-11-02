@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -110,7 +111,10 @@ class NoticeReadContractTest {
                 .andExpect(jsonPath("$.data.records[0].title").value("已发布三"))
                 .andExpect(jsonPath("$.data.records[0].type").value(1))
                 .andExpect(jsonPath("$.data.records[0].publisherName").value("管理员"))
-                .andExpect(jsonPath("$.data.records[0].publishTime").value("2026-01-02 09:00:00"))
+                // 只钉格式：publishTime 的序列化带应用时区（ADR 0031 钉 +08），
+                // CI runner 是 UTC，硬编码本地时刻会让同一份合同在本地/CI 两套结果。
+                .andExpect(jsonPath("$.data.records[0].publishTime")
+                        .value(matchesPattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")))
                 // 列表永不返回正文。
                 .andExpect(jsonPath("$.data.records[0].content").doesNotExist())
                 .andExpect(jsonPath("$.data.records[0].status").doesNotExist());
@@ -181,7 +185,8 @@ class NoticeReadContractTest {
                 .andExpect(jsonPath("$.data.content").value("<p>一</p>"))
                 .andExpect(jsonPath("$.data.publisherId").value(1))
                 .andExpect(jsonPath("$.data.publisherName").value("管理员"))
-                .andExpect(jsonPath("$.data.publishTime").value("2026-01-01 09:00:00"))
+                .andExpect(jsonPath("$.data.publishTime")
+                        .value(matchesPattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")))
                 .andExpect(jsonPath("$.data.read").value(false));
 
         // 重复打开不产生第二行，第二次详情看到 read=true。
