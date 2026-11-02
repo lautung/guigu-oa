@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -174,6 +175,29 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             sysUserRoleService.save(sysUserRole);
         }
         permissionCacheInvalidator.invalidateUserAfterCommit(assginRoleVo.getUserId());
+    }
+
+    @Override
+    public List<String> findRoleCodesByUserId(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        List<Long> roleIds = sysUserRoleService.list(
+                        new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId))
+                .stream()
+                .map(SysUserRole::getRoleId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        return baseMapper.selectList(new LambdaQueryWrapper<SysRole>().in(SysRole::getId, roleIds))
+                .stream()
+                .map(SysRole::getRoleCode)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
     }
 
 //    @Autowired

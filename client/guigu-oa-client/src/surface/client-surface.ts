@@ -2,7 +2,7 @@ import { configPermission } from '@/config/permission'
 import type { MenuGroup } from '@/config/permission'
 import { getDefaultPostLoginRoute, ROUTES } from '@/navigation/constants'
 import { returnPathOfRoute } from '@/router/paths'
-import type { ConfigMenuEntry } from '@/types/domain'
+import type { BackofficeMenuEntry } from '@/types/domain'
 
 export const MENU_GROUPS = {
   WORK: 'work',
@@ -21,7 +21,7 @@ export interface ClientSurfaceInput {
   path?: string
   viewportWidth?: number
   hasToken?: boolean
-  menus?: ConfigMenuEntry[]
+  menus?: BackofficeMenuEntry[]
 }
 
 interface ClientSurfaceResolution {

@@ -4,6 +4,7 @@ import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.baomidou.mybatisplus.spring.service.IService;
 
+import java.util.List;
 import java.util.Map;
 
 public interface SysRoleService extends IService<SysRole> {
@@ -13,4 +14,7 @@ public interface SysRoleService extends IService<SysRole> {
 
     //2 为用户分配角色
     void doAssign(AssginRoleVo assginRoleVo);
+
+    //3 用户被授予的角色 key（/info 展示用，不参与判定）
+    List<String> findRoleCodesByUserId(Long userId);
 }

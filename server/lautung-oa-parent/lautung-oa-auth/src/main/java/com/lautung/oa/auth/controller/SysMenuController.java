@@ -33,7 +33,7 @@ public class SysMenuController {
     private SysMenuService sysMenuService;
 
     //查询所有菜单和角色分配的菜单
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "查询所有菜单和角色分配的菜单")
     @GetMapping("toAssign/{roleId}")
     public Result toAssign(@PathVariable Long roleId) {
@@ -41,7 +41,7 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:assignAuth')")
     @Operation(summary = "角色分配菜单")
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginMenuVo assginMenuVo) {
@@ -50,7 +50,7 @@ public class SysMenuController {
     }
 
     //菜单列表接口
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu')")
     @Operation(summary = "菜单列表")
     @GetMapping("findNodes")
     public Result findNodes() {
@@ -59,7 +59,7 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:add')")
     @Operation(summary = "新增菜单")
     @PostMapping("save")
     public Result save(@Valid @RequestBody SysMenuSaveRequest request) {
@@ -67,7 +67,7 @@ public class SysMenuController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:edit')")
     @Operation(summary = "修改菜单")
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody SysMenuUpdateRequest request) {
@@ -75,7 +75,7 @@ public class SysMenuController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:remove')")
     @Operation(summary = "删除菜单")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {

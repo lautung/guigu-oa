@@ -31,7 +31,4 @@ public interface SysMenuService extends IService<SysMenu> {
     void saveMenu(SysMenu sysMenu);
 
     void updateMenu(SysMenu sysMenu);
-
-    //4 根据用户id获取用户可以操作按钮列表
-    List<String> findUserPermsByUserId(Long userId);
 }

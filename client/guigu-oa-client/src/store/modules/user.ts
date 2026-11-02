@@ -2,14 +2,16 @@ import { defineStore } from 'pinia'
 import { getToken, getRefreshToken } from '@/utils/auth'
 import { login, logout as logoutRequest } from '@/api/user'
 import type { Recognition, RecoveryState } from '@/recognition'
-import type { ConfigMenuEntry, LoginCredentials, UserInfo } from '@/types/domain'
+import type { BackofficeMenuEntry, LoginCredentials, UserInfo } from '@/types/domain'
 
 interface UserState {
   token: string
   refreshToken: string
   name: string
   avatar: string
-  menus: ConfigMenuEntry[]
+  roles: string[]
+  permissions: string[]
+  menus: BackofficeMenuEntry[]
   recognized: boolean
   recovery: RecoveryState
   recognition: Recognition | null
@@ -21,6 +23,8 @@ export const useUserStore = defineStore('user', {
     refreshToken: getRefreshToken() || '',
     name: '',
     avatar: '',
+    roles: [],
+    permissions: [],
     menus: [],
     recognized: false,
     recovery: { status: 'idle', target: '' },

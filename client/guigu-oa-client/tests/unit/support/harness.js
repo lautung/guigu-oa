@@ -29,7 +29,13 @@ export function fakeRecognition(overrides = {}) {
     reject: (_context, error) => {
       throw error
     },
-    recognize: async () => ({ name: 'Alice', avatar: '', configMenus: [] }),
+    recognize: async () => ({
+      name: 'Alice',
+      avatar: '',
+      roles: [],
+      permissions: [],
+      menus: [],
+    }),
     establish: () => {},
     resume: async () => {},
     exit: () => {},

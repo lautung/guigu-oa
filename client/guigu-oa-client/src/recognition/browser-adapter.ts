@@ -45,6 +45,8 @@ export function setupRecognition(pinia: Pinia, router: Router) {
         refreshToken: '',
         name: '',
         avatar: '',
+        roles: [],
+        permissions: [],
         menus: [],
         recognized: false,
       })
@@ -54,7 +56,9 @@ export function setupRecognition(pinia: Pinia, router: Router) {
       store.$patch({
         name: user.name,
         avatar: user.avatar || '',
-        menus: user.configMenus || [],
+        roles: user.roles || [],
+        permissions: user.permissions || [],
+        menus: user.menus || [],
         recognized: true,
       })
     },

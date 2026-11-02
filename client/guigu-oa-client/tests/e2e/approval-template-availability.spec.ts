@@ -39,7 +39,7 @@ async function mockUnavailableTemplate(page: Page) {
       return json(route, {
         name: 'Alice',
         avatar: '',
-        configMenus: [
+        menus: [
           { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
           {
             path: '/system/processSet/processTemplate',

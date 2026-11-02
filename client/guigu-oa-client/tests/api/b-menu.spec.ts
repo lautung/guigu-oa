@@ -18,7 +18,7 @@ import {
  * B 系统配置 / 菜单（#120 §6 B16–B21，#152 B22，#154 B25）。
  *
  * `sysMenu` 页授予才能调用；`sysMenu/toAssign` 与 `sysMenu/doAssign` 归 `sysRole` 页。
- * 配置菜单入口（sysUser/sysRole/sysMenu 与三个根）不可重定义、不可禁用、不可删除。
+ * 配置菜单入口（/system/sysUser、/system/sysRole、/system/sysMenu 与 /system 根）不可重定义、不可禁用、不可删除。
  */
 
 async function menuTree(api: Api): Promise<MenuRecord[]> {
@@ -48,7 +48,7 @@ test.describe('B 菜单管理', () => {
       )
       const menus = flattenMenus(tree)
       expect(menus.length).toBeGreaterThan(0)
-      expect(menus.some((menu) => menu.path === 'sysUser')).toBe(true)
+      expect(menus.some((menu) => menu.path === '/system/sysUser')).toBe(true)
       expect(menus.every((menu) => menu.select === false)).toBe(true)
 
       expect(await api.code(PLAIN_USER, 'get', `/admin/system/sysMenu/toAssign/${role.id}`)).toBe(
@@ -68,7 +68,7 @@ test.describe('B 菜单管理', () => {
         'get',
         `/admin/system/sysMenu/toAssign/${role.id}`,
       )
-      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === 'sysUser')
+      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === '/system/sysUser')
       expect(sysUserMenu, 'B17 菜单树里应有 sysUser 页').toBeTruthy()
 
       await assignMenus(api, role.id, [(sysUserMenu as MenuRecord).id])
@@ -78,7 +78,7 @@ test.describe('B 菜单管理', () => {
         `/admin/system/sysMenu/toAssign/${role.id}`,
       )
       const selected = flattenMenus(after).filter((menu) => menu.select === true)
-      expect(selected.map((menu) => menu.path)).toEqual(['sysUser'])
+      expect(selected.map((menu) => menu.path)).toEqual(['/system/sysUser'])
 
       const invalid = await api.envelope(ADMIN, 'post', '/admin/system/sysMenu/doAssign', {
         roleId: role.id,
@@ -120,7 +120,7 @@ test.describe('B 菜单管理', () => {
         parentId: (system as MenuRecord).id,
         name: '重定义入口',
         type: 1,
-        path: 'sysUser',
+        path: '/system/sysUser',
         component: 'system/sysUser/list',
         status: 1,
       })
@@ -161,7 +161,7 @@ test.describe('B 菜单管理', () => {
       await api.call(ADMIN, 'put', '/admin/system/sysMenu/update', { ...page, name: renamed })
       expect((await findMenu(api, path))?.name).toBe(renamed)
 
-      const protectedMenu = await findMenu(api, 'sysUser')
+      const protectedMenu = await findMenu(api, '/system/sysUser')
       expect(protectedMenu, 'B20 应有 sysUser 入口').toBeTruthy()
 
       const typeChange = await api.envelope(ADMIN, 'put', '/admin/system/sysMenu/update', {
@@ -219,7 +219,7 @@ test.describe('B 菜单管理', () => {
       await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${dir.id}`)
       expect(await findMenu(api, dirPath)).toBeUndefined()
 
-      const protectedMenu = await findMenu(api, 'sysUser')
+      const protectedMenu = await findMenu(api, '/system/sysUser')
       const protectedRemove = await api.envelope(
         ADMIN,
         'delete',

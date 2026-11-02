@@ -75,20 +75,22 @@ export interface MenuRecord {
   children?: MenuRecord[]
 }
 
-export interface ConfigMenu {
+export interface BackofficeMenu {
   path: string
   parentPath?: string | null
   title: string
   type: number
-  hidden: boolean
+  hidden?: boolean
+  sort?: number | null
+  icon?: string | null
 }
 
 export interface InfoPayload {
   name?: string
-  roles?: string
+  roles?: string[]
   avatar?: string
-  configMenus: ConfigMenu[]
-  buttons: string[]
+  permissions: string[]
+  menus: BackofficeMenu[]
 }
 
 export interface TemplateRecord {

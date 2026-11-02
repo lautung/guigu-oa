@@ -91,7 +91,7 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
       state.infoCalls += 1
       return json(route, {
         name: 'Alice',
-        configMenus: [
+        menus: [
           { path: '/system', title: '系统管理', type: 0, sort: 1 },
           {
             path: '/system/sysUser',

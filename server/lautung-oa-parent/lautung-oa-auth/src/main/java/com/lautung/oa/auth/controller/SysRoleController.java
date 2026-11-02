@@ -35,7 +35,7 @@ public class SysRoleController {
     private SysRoleService sysRoleService;
 
     //1 查询所有角色 和 当前用户所属角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "获取角色")
     @GetMapping("/toAssign/{userId}")
     public Result toAssign(@PathVariable Long userId) {
@@ -44,7 +44,7 @@ public class SysRoleController {
     }
 
     //2 为用户分配角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:assignRole')")
     @Operation(summary = "为用户分配角色")
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginRoleVo assginRoleVo) {
@@ -61,7 +61,7 @@ public class SysRoleController {
 //    }
 
     //统一返回数据结果
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "查询所有角色")
     @GetMapping("/findAll")
     public Result findAll() {
@@ -73,7 +73,7 @@ public class SysRoleController {
     //条件分页查询
     //page 当前页  limit 每页显示记录数
     //SysRoleQueryVo 条件对象
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "条件分页查询")
     @GetMapping("{page}/{limit}")
     public Result pageQueryRole(@PathVariable Long page,
@@ -98,7 +98,7 @@ public class SysRoleController {
     }
 
     //添加角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:add')")
     @Operation(summary = "添加角色")
     @PostMapping ("save")
     public Result save(@Valid @RequestBody SysRoleSaveRequest request) {
@@ -112,7 +112,7 @@ public class SysRoleController {
     }
 
     //修改角色-根据id查询
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "根据id查询")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -121,7 +121,7 @@ public class SysRoleController {
     }
 
     //修改角色-最终修改
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:edit')")
     @Operation(summary = "修改角色")
     @PutMapping ("update")
     public Result update(@Valid @RequestBody SysRoleUpdateRequest request) {
@@ -135,7 +135,7 @@ public class SysRoleController {
     }
 
     //根据id删除
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "根据id删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
@@ -149,7 +149,7 @@ public class SysRoleController {
 
     //批量删除
     // 前端数组 [1,2,3]
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "批量删除")
     @DeleteMapping("batchRemove")
     public Result batchRemove(@RequestBody List<Long> idList) {

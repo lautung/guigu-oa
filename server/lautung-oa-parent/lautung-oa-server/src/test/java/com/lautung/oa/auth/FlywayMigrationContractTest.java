@@ -84,10 +84,10 @@ class FlywayMigrationContractTest {
     private JwtHelper jwtHelper;
 
     @AfterEach
-    void clearConfigurationGrantFixtures() {
+    void clearBackofficeGrantFixtures() {
         jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id IN (101, 102, 103)");
         jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id IN (101, 102, 103)");
-        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (900, 901, 1000, 1001)");
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (900, 901, 902, 1000, 1001)");
         jdbcTemplate.update("DELETE FROM sys_role WHERE id IN (101, 102, 103)");
         jdbcTemplate.update("DELETE FROM sys_user WHERE username IN ('user-manager', 'ordinary', 'no-config', 'menu-manager')");
     }
@@ -105,6 +105,10 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '105' AND success = TRUE"));
         // 权限底座（#221）：组织表、data_scope、菜单 0/1/2 与 super_admin 种子。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '110' AND success = TRUE"));
+        // 后台页面路径绝对化（#222）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '111' AND success = TRUE"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 1 AND path IN "
+                + "('sysUser', 'sysRole', 'sysMenu', 'assignAuth') AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
                 + "WHERE LOWER(TABLE_NAME) = 'oa_process' AND LOWER(COLUMN_NAME) = 'idempotency_key'"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user WHERE token_version <> 0"));
@@ -162,21 +166,27 @@ class FlywayMigrationContractTest {
     }
 
     @Test
-    void adminInfoCarriesSeededButtonPointsAndAbsoluteProcessMenus() throws Exception {
+    void adminInfoCarriesSeededPermissionsAndAbsoluteMenusOnTheNewContract() throws Exception {
         mockMvc.perform(get("/admin/system/index/info")
                         .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.buttons", hasItems(BUTTON_PERMS.toArray(new String[0]))))
-                .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
+                .andExpect(jsonPath("$.data.roles", hasItem("super_admin")))
+                .andExpect(jsonPath("$.data.permissions", hasItems(BUTTON_PERMS.toArray(new String[0]))))
+                .andExpect(jsonPath("$.data.menus[*].path", hasItems(
                         "/system",
+                        "/system/sysUser",
+                        "/system/sysRole",
+                        "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
                         "/system/processSet/processTemplate",
                         "/system/processSet/templateSet",
                         "/system/processMgr",
                         "/system/processMgr/process")))
-                .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/processSet"))))
-                .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/processMgr"))));
+                .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
+                .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
+                .andExpect(jsonPath("$.data.configMenus").doesNotExist())
+                .andExpect(jsonPath("$.data.buttons").doesNotExist());
     }
 
     @Test
@@ -204,7 +214,7 @@ class FlywayMigrationContractTest {
     @Test
     void menuMaintenanceAcceptsButtonsOnlyUnderAPageWithPerms() throws Exception {
         int userPageId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'sysUser' AND type = 1", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/sysUser' AND type = 1", Integer.class);
         int systemRootId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system' AND parent_id = 0", Integer.class);
 
@@ -241,15 +251,20 @@ class FlywayMigrationContractTest {
     @Test
     void configurationMenuGrantsAuthorizeTheMatchingRoleAndUserOperations() throws Exception {
         int roleMenuId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'sysRole'", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/sysRole'", Integer.class);
         int userMenuId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'sysUser'", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/sysUser'", Integer.class);
         int menuAdminMenuId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'sysMenu'", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/sysMenu'", Integer.class);
         int processTypeMenuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system/processSet/processType'", Integer.class);
         int systemRootId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system' AND parent_id = 0", Integer.class);
+        int roleAssignAuthId = buttonId("system:role:assignAuth");
+        int userAssignRoleId = buttonId("system:user:assignRole");
+        int menuAddId = buttonId("system:menu:add");
+        int menuEditId = buttonId("system:menu:edit");
+        int menuRemoveId = buttonId("system:menu:remove");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (102, '用户页权限', 0)");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (103, '菜单页权限', 0)");
@@ -266,6 +281,8 @@ class FlywayMigrationContractTest {
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (900, 0, '办事', 0, '/work', 'Layout', 1, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (901, 900, '办事设置', 1, 'settings', 'system/settings/list', 1, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (id, parent_id, name, type, path, status, is_deleted) VALUES (902, 0, '坏类型', 3, 'badType', 1, 0)");
         jdbcTemplate.execute("ALTER TABLE sys_role_menu ALTER COLUMN id RESTART WITH 1000");
         jdbcTemplate.update(
                 "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (101, 101, 2, 0)");
@@ -284,6 +301,16 @@ class FlywayMigrationContractTest {
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (6, 'menu-manager', '', '菜单管理员', 1, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (104, 101, 1000, 0)");
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (105, 101, ?, 0)", roleAssignAuthId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (106, 102, ?, 0)", userAssignRoleId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (107, 103, ?, 0)", menuAddId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (108, 103, ?, 0)", menuEditId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (109, 103, ?, 0)", menuRemoveId);
 
         mockMvc.perform(get("/admin/system/sysRole/1/10")
                         .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token()))
@@ -298,18 +325,19 @@ class FlywayMigrationContractTest {
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
+                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId
+                                + ",1000," + roleAssignAuthId + "]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
-        // 按钮点是可授予的配置菜单；不在提交里的旧授予（/work 页面）随重提交被丢弃。
+        // 按钮点可授予；不在提交里的旧授予随重提交被丢弃。
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 1000 AND is_deleted = 0"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 901 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000,901]}"))
+                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000,902]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("只能授予配置菜单"));
@@ -319,7 +347,7 @@ class FlywayMigrationContractTest {
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",901]}"))
+                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",902]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("只能授予配置菜单"));
@@ -358,18 +386,18 @@ class FlywayMigrationContractTest {
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + menuAdminMenuId + ",\"name\":\"角色管理\",\"parentId\":" + systemRootId
-                                + ",\"type\":1,\"path\":\"sysRole\"}"))
+                                + ",\"type\":1,\"path\":\"/system/sysRole\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
-        // 配置入口不能改成办事路径：配置 gate 先于保护路径判定拒绝，所以文案是「只能维护配置菜单」。
+        // 配置入口不能改成办事路径：保护路由的身份变更先于任何目录规则拒绝。
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + systemRootId + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/work\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("只能维护配置菜单"));
+                .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
         // 保护路由本身不能改名：换到另一个配置根也仍是「不可重定义」。
         mockMvc.perform(put("/admin/system/sysMenu/update")
@@ -393,7 +421,7 @@ class FlywayMigrationContractTest {
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + menuAdminMenuId + ",\"name\":\"菜单管理\",\"parentId\":" + systemRootId
-                                + ",\"type\":1,\"path\":\"sysMenu\",\"status\":0}"))
+                                + ",\"type\":1,\"path\":\"/system/sysMenu\",\"status\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
@@ -402,7 +430,7 @@ class FlywayMigrationContractTest {
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"角色管理\",\"parentId\":" + systemRootId
-                                + ",\"type\":1,\"path\":\"sysRole\",\"component\":\"system/sysRole/list\"}"))
+                                + ",\"type\":1,\"path\":\"/system/sysRole\",\"component\":\"system/sysRole/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
@@ -420,11 +448,11 @@ class FlywayMigrationContractTest {
                                 + ",\"type\":1,\"path\":\"audit\",\"component\":\"system/audit/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
-        // 挂在非配置根（/work）下：type 合法且体良构，save 由授予闭包以「只能维护配置菜单」拒绝（ADR 0036 后仍走这条分支）。
+        // 祖先不存在的目录不是后台菜单：type 合法且体良构，save 以「只能维护配置菜单」拒绝。
         mockMvc.perform(post("/admin/system/sysMenu/save")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"办事子页\",\"parentId\":900,\"type\":1,\"path\":\"workChild\","
+                        .content("{\"name\":\"孤儿页\",\"parentId\":999999,\"type\":1,\"path\":\"orphanChild\","
                                 + "\"component\":\"system/audit/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
@@ -509,16 +537,19 @@ class FlywayMigrationContractTest {
                         .header("token", jwtHelper.createTokenPair(4L, "ordinary", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
-        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901, 1001)");
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (1000, 900, 901, 902, 1001)");
     }
 
     @Test
     void sysRoleBatchRemoveRejectsAnEmptyIdListAfterTheGate() throws Exception {
         int roleMenuId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'sysRole'", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/sysRole'", Integer.class);
+        int roleRemoveId = buttonId("system:role:remove");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (101, 101, ?, 0)", roleMenuId);
+        jdbcTemplate.update(
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (102, 101, ?, 0)", roleRemoveId);
         jdbcTemplate.update(
                 "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (101, 101, 2, 0)");
 
@@ -544,6 +575,13 @@ class FlywayMigrationContractTest {
 
     private int count(String sql) {
         return jdbcTemplate.queryForObject(sql, Integer.class);
+    }
+
+    private int buttonId(String permission) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE perms = ? AND type = 2 AND is_deleted = 0",
+                Integer.class,
+                permission);
     }
 
     private List<String> tableNames() throws SQLException {

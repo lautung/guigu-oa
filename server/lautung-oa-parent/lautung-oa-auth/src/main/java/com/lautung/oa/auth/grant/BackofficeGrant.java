@@ -11,50 +11,47 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 配置授予：某用户被授予了哪些配置菜单、某页是否被覆盖、菜单树应该发什么。
- * 菜单树是授予权威；gate、/info 与菜单维护都从这里取同一份闭包。
+ * 后台授予闭包（ADR 0052/0056）：{@code sys_menu} 全表即后台，只认 type 0/1/2。
+ *
+ * <p>输出三层里的前两层：被授予页面的<b>绝对路径</b>集合与随页面生效的按钮点标识集合。
+ * 只授目录或只授按钮都不构成后台权限；隐藏页跟可见父级同一条授予，
+ * 单独授予隐藏页而父级未授予时无效。gate、{@code /info} 与菜单维护共用这份闭包。
  */
 @Component
-public class ConfigurationGrant {
-
-    private static final Set<String> CONFIGURATION_ROOT_PATHS =
-            Set.of("/system", "/processSet", "/processMgr");
-    private static final Set<String> EXCLUDED_MENU_COMPONENTS = Set.of(
-            "system/sysdept/list", "system/syspost/list", "system/sysoperlog/list", "system/sysloginlog/list");
+public class BackofficeGrant {
 
     private final SysMenuMapper menuMapper;
 
-    public ConfigurationGrant(SysMenuMapper menuMapper) {
+    public BackofficeGrant(SysMenuMapper menuMapper) {
         this.menuMapper = menuMapper;
     }
 
     /**
-     * 读取时补祖先：sys_role_menu 只存实际授予，展示闭包在这里算。
-     * 只授目录不算配置权限；隐藏页跟可见父级同一条授予，单独授予隐藏页而父级未授予时无效。
+     * 读取时补祖先：{@code sys_role_menu} 只存实际授予，展示闭包在这里算。
+     * 页面路径一律解析成绝对路径；按钮点只在父页面也被授予时进入 permissions。
      */
-    public GrantedConfiguration snapshot(Long userId) {
+    public Snapshot snapshot(Long userId) {
         if (userId == null) {
-            return GrantedConfiguration.empty();
+            return Snapshot.empty();
         }
 
         Map<Long, SysMenu> all = loadAll();
         List<SysMenu> granted = menuMapper.findMenuListByUserId(userId);
         Map<Long, GrantedMenu> entries = new LinkedHashMap<>();
-        Set<String> pagePaths = new LinkedHashSet<>();
+        Set<String> pages = new LinkedHashSet<>();
 
         for (SysMenu menu : granted) {
             if (!isVisiblePage(menu, all)) {
                 continue;
             }
             addPageAndDirectories(menu, all, entries);
-            addPath(pagePaths, menu.getPath());
+            addPath(pages, routePath(menu, all));
 
             String visibleParentPath = routePath(menu, all);
             for (SysMenu child : all.values()) {
@@ -65,66 +62,85 @@ public class ConfigurationGrant {
                             child.getName(),
                             child.getType(),
                             true,
-                            child.getSortValue()));
-                    addPath(pagePaths, child.getPath());
+                            child.getSortValue(),
+                            child.getIcon()));
+                    addPath(pages, routePath(child, all));
                 }
             }
         }
 
+        Set<String> permissions = collectPermissions(granted, all, pages);
         List<GrantedMenu> ordered = entries.values().stream()
                 .sorted(Comparator.comparing(GrantedMenu::sort, Comparator.nullsLast(Integer::compareTo))
                         .thenComparing(GrantedMenu::path))
                 .toList();
-        return new GrantedConfiguration(ordered, pagePaths);
+        return new Snapshot(ordered, pages, permissions);
     }
 
-    /** 菜单管理可维护的配置类菜单：目录、页面与按钮，不看启用状态。 */
-    public List<SysMenu> configurationMenus() {
+    /** 菜单管理可维护的后台菜单：目录、页面与按钮，不看启用状态。 */
+    public List<SysMenu> backofficeMenus() {
         Map<Long, SysMenu> all = loadAll();
         return all.values().stream()
-                .filter(menu -> isConfigurationMenu(menu, all))
+                .filter(menu -> isBackofficeMenu(menu, all))
                 .sorted(Comparator.comparing(SysMenu::getSortValue, Comparator.nullsLast(Integer::compareTo))
                         .thenComparing(SysMenu::getId))
                 .collect(Collectors.toList());
     }
 
-    /** 配置类菜单（type 0/1/2，不含办事与排除项），不看启用状态。 */
-    public boolean isConfigurationMenu(SysMenu menu) {
-        return isConfigurationMenu(menu, loadAll());
+    /** 后台菜单（type 0/1/2 且祖先链完整），不看启用状态。 */
+    public boolean isBackofficeMenu(SysMenu menu) {
+        return isBackofficeMenu(menu, loadAll());
     }
 
-    /** 可授予的配置菜单：配置类 + 自身与祖先都启用。 */
-    public boolean isGrantableConfigurationMenu(SysMenu menu) {
+    /** 可授予的后台菜单：后台菜单 + 自身与祖先都启用。 */
+    public boolean isGrantableBackofficeMenu(SysMenu menu) {
         return isGrantable(menu, loadAll());
+    }
+
+    private Set<String> collectPermissions(List<SysMenu> granted, Map<Long, SysMenu> all,
+                                           Set<String> pages) {
+        Set<String> permissions = new LinkedHashSet<>();
+        for (SysMenu menu : granted) {
+            if (!Objects.equals(menu.getType(), 2)
+                    || !StringUtils.hasText(menu.getPerms())
+                    || !isGrantable(menu, all)) {
+                continue;
+            }
+            SysMenu page = menu.getParentId() == null ? null : all.get(menu.getParentId());
+            if (page != null && isPage(page) && pages.contains(routePath(page, all))) {
+                permissions.add(menu.getPerms());
+            }
+        }
+        return permissions;
     }
 
     private void addPageAndDirectories(SysMenu page, Map<Long, SysMenu> all,
                                        Map<Long, GrantedMenu> entries) {
-        addEntry(page, all, entries, false);
+        addEntry(page, all, entries);
         SysMenu current = page;
         while (current.getParentId() != null && current.getParentId() != 0L) {
             SysMenu parent = all.get(current.getParentId());
             if (parent == null || !isDirectory(parent)) {
                 break;
             }
-            addEntry(parent, all, entries, false);
+            addEntry(parent, all, entries);
             current = parent;
         }
     }
 
-    private void addEntry(SysMenu menu, Map<Long, SysMenu> all,
-                          Map<Long, GrantedMenu> entries, boolean hidden) {
+    private void addEntry(SysMenu menu, Map<Long, SysMenu> all, Map<Long, GrantedMenu> entries) {
         String path = routePath(menu, all);
         if (!StringUtils.hasText(path)) {
             return;
         }
         entries.putIfAbsent(menu.getId(), new GrantedMenu(
                 path,
-                hidden ? null : routeParentPath(menu, all),
+                routeParentPath(menu, all),
                 menu.getName(),
                 menu.getType(),
-                hidden,
-                menu.getSortValue()));
+                false,
+                menu.getSortValue(),
+                menu.getIcon()));
     }
 
     private void addPath(Set<String> paths, String path) {
@@ -220,21 +236,21 @@ public class ConfigurationGrant {
         return normalizePath("/" + String.join("/", segments));
     }
 
-    private boolean isConfigurationMenu(SysMenu menu, Map<Long, SysMenu> all) {
+    private boolean isBackofficeMenu(SysMenu menu, Map<Long, SysMenu> all) {
         if (menu == null) {
             return false;
         }
         Set<Long> visited = new HashSet<>();
         SysMenu current = menu;
         while (current != null) {
-            if (!isConfigurationNode(current)) {
+            if (!isBackofficeNode(current)) {
                 return false;
             }
             if (current.getParentId() == null) {
                 return false;
             }
             if (current.getParentId() == 0L) {
-                return isConfigurationRoot(current);
+                return isDirectory(current);
             }
             if (current.getId() != null && !visited.add(current.getId())) {
                 return false;
@@ -251,14 +267,14 @@ public class ConfigurationGrant {
         Set<Long> visited = new HashSet<>();
         SysMenu current = menu;
         while (current != null) {
-            if (!isConfigurationNode(current) || !Objects.equals(current.getStatus(), 1)) {
+            if (!isBackofficeNode(current) || !Objects.equals(current.getStatus(), 1)) {
                 return false;
             }
             if (current.getParentId() == null) {
                 return false;
             }
             if (current.getParentId() == 0L) {
-                return isConfigurationRoot(current);
+                return isDirectory(current);
             }
             if (current.getId() != null && !visited.add(current.getId())) {
                 return false;
@@ -268,30 +284,10 @@ public class ConfigurationGrant {
         return false;
     }
 
-    private boolean isConfigurationNode(SysMenu menu) {
-        if (!Objects.equals(menu.getType(), 0)
-                && !Objects.equals(menu.getType(), 1)
-                && !Objects.equals(menu.getType(), 2)) {
-            return false;
-        }
-
-        String path = Objects.toString(menu.getPath(), "").toLowerCase(Locale.ROOT);
-        String component = Objects.toString(menu.getComponent(), "").toLowerCase(Locale.ROOT);
-        return !isWorkMenuPath(path)
-                && !path.contains("wechat") && !component.contains("wechat")
-                && !path.contains("dashboard") && !component.contains("dashboard")
-                && !path.contains("onlineprocessset") && !component.contains("onlineprocessset")
-                && !EXCLUDED_MENU_COMPONENTS.contains(component);
-    }
-
-    private boolean isConfigurationRoot(SysMenu menu) {
+    private boolean isBackofficeNode(SysMenu menu) {
         return Objects.equals(menu.getType(), 0)
-                && menu.getPath() != null
-                && CONFIGURATION_ROOT_PATHS.contains(menu.getPath());
-    }
-
-    private boolean isWorkMenuPath(String path) {
-        return path.equals("work") || path.startsWith("/work") || path.startsWith("work/");
+                || Objects.equals(menu.getType(), 1)
+                || Objects.equals(menu.getType(), 2);
     }
 
     private boolean isDirectory(SysMenu menu) {
@@ -327,23 +323,28 @@ public class ConfigurationGrant {
         return normalizePath(path).replaceAll("^/+", "").replaceAll("/+$", "");
     }
 
-    public record GrantedConfiguration(List<GrantedMenu> entries, Set<String> pagePaths) {
+    public record Snapshot(List<GrantedMenu> menus, Set<String> pages, Set<String> permissions) {
 
-        public GrantedConfiguration {
-            entries = List.copyOf(entries);
-            pagePaths = Set.copyOf(pagePaths);
+        public Snapshot {
+            menus = List.copyOf(menus);
+            pages = Set.copyOf(pages);
+            permissions = Set.copyOf(permissions);
         }
 
-        public static GrantedConfiguration empty() {
-            return new GrantedConfiguration(List.of(), Set.of());
+        public static Snapshot empty() {
+            return new Snapshot(List.of(), Set.of(), Set.of());
         }
 
         public boolean hasAnyPage() {
-            return !pagePaths.isEmpty();
+            return !pages.isEmpty();
         }
 
-        public boolean covers(String menuPath) {
-            return menuPath != null && pagePaths.contains(menuPath);
+        public boolean covers(String pagePath) {
+            return pagePath != null && pages.contains(pagePath);
+        }
+
+        public boolean allows(String pagePath, String permission) {
+            return covers(pagePath) && (permission == null || permissions.contains(permission));
         }
     }
 
@@ -353,6 +354,7 @@ public class ConfigurationGrant {
             String title,
             Integer type,
             boolean hidden,
-            Integer sort) {
+            Integer sort,
+            String icon) {
     }
 }

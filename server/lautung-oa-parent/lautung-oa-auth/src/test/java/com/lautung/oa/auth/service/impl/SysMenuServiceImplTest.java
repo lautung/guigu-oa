@@ -1,6 +1,6 @@
 package com.lautung.oa.auth.service.impl;
 
-import com.lautung.oa.auth.grant.ConfigurationGrant;
+import com.lautung.oa.auth.grant.BackofficeGrant;
 import com.lautung.oa.auth.mapper.SysMenuMapper;
 import com.lautung.oa.auth.service.PermissionCacheInvalidator;
 import com.lautung.oa.auth.service.SysRoleMenuService;
@@ -25,7 +25,7 @@ class SysMenuServiceImplTest {
     private final SysMenuMapper menuMapper = mock(SysMenuMapper.class);
     private final SysRoleMenuService roleMenuService = mock(SysRoleMenuService.class);
     private final PermissionCacheInvalidator cacheInvalidator = mock(PermissionCacheInvalidator.class);
-    private final ConfigurationGrant configurationGrant = mock(ConfigurationGrant.class);
+    private final BackofficeGrant backofficeGrant = mock(BackofficeGrant.class);
     private final SysMenuServiceImpl service = new SysMenuServiceImpl();
 
     @BeforeEach
@@ -33,7 +33,7 @@ class SysMenuServiceImplTest {
         ReflectionTestUtils.setField(service, "baseMapper", menuMapper);
         ReflectionTestUtils.setField(service, "sysRoleMenuService", roleMenuService);
         ReflectionTestUtils.setField(service, "permissionCacheInvalidator", cacheInvalidator);
-        ReflectionTestUtils.setField(service, "configurationGrant", configurationGrant);
+        ReflectionTestUtils.setField(service, "backofficeGrant", backofficeGrant);
     }
 
     @Test
@@ -43,7 +43,7 @@ class SysMenuServiceImplTest {
         update.setId(9L);
         update.setType(1);
         update.setName("审批查询页");
-        when(configurationGrant.isConfigurationMenu(update)).thenReturn(true);
+        when(backofficeGrant.isBackofficeMenu(update)).thenReturn(true);
         when(menuMapper.selectById(9L)).thenReturn(existing);
 
         BusinessException error = assertThrows(BusinessException.class, () -> service.updateMenu(update));
@@ -60,7 +60,7 @@ class SysMenuServiceImplTest {
         update.setId(4L);
         update.setType(1);
         update.setName("部门管理改名");
-        when(configurationGrant.isConfigurationMenu(update)).thenReturn(true);
+        when(backofficeGrant.isBackofficeMenu(update)).thenReturn(true);
         when(menuMapper.selectById(4L)).thenReturn(existing);
         when(menuMapper.updateById(update)).thenReturn(1);
 
@@ -72,7 +72,7 @@ class SysMenuServiceImplTest {
     @Test
     void buttonMustHangUnderAPage() {
         SysMenu button = button(0L);
-        when(configurationGrant.isConfigurationMenu(button)).thenReturn(true);
+        when(backofficeGrant.isBackofficeMenu(button)).thenReturn(true);
         when(menuMapper.selectById(0L)).thenReturn(null);
 
         BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenu(button));
@@ -84,7 +84,7 @@ class SysMenuServiceImplTest {
     @Test
     void buttonWithPageParentIsSaved() {
         SysMenu button = button(4L);
-        when(configurationGrant.isConfigurationMenu(button)).thenReturn(true);
+        when(backofficeGrant.isBackofficeMenu(button)).thenReturn(true);
         when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
         when(menuMapper.insert(button)).thenReturn(1);
 
@@ -101,7 +101,7 @@ class SysMenuServiceImplTest {
         update.setId(8L);
         update.setType(2);
         update.setName("新增用户改名");
-        when(configurationGrant.isConfigurationMenu(update)).thenReturn(true);
+        when(backofficeGrant.isBackofficeMenu(update)).thenReturn(true);
         when(menuMapper.selectById(8L)).thenReturn(existing);
         when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
         when(menuMapper.updateById(update)).thenReturn(1);

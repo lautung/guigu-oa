@@ -40,7 +40,7 @@ public class SysUserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新状态")
     @PutMapping("updateStatus/{id}/{status}")
     public Result updateStatus(@PathVariable Long id, @PathVariable Integer status) {
@@ -49,7 +49,7 @@ public class SysUserController {
     }
 
     //用户条件分页查询
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "用户条件分页查询")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -83,7 +83,7 @@ public class SysUserController {
         return Result.ok(pageModel);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "获取用户")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -91,7 +91,7 @@ public class SysUserController {
         return Result.ok(user);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:add')")
     @Operation(summary = "保存用户")
     @PostMapping("save")
     public Result save(@Valid @RequestBody SysUserSaveRequest request) {
@@ -103,7 +103,7 @@ public class SysUserController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新用户")
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody SysUserUpdateRequest request) {
@@ -128,7 +128,7 @@ public class SysUserController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:remove')")
     @Operation(summary = "删除用户")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {

@@ -650,7 +650,9 @@ public class LoginAuthContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.name").value("管理员"))
-                .andExpect(jsonPath("$.data.configMenus").exists());
+                .andExpect(jsonPath("$.data.roles").isArray())
+                .andExpect(jsonPath("$.data.permissions").isArray())
+                .andExpect(jsonPath("$.data.menus").exists());
     }
 
     private String loginToken(String username, String password) throws Exception {

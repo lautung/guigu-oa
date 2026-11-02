@@ -8,7 +8,7 @@ import {
   getDefaultPostLoginRoute,
   isMobileViewport,
 } from './constants'
-import type { ConfigMenuEntry, SidebarGroup, SidebarItem } from '@/types/domain'
+import type { BackofficeMenuEntry, SidebarGroup, SidebarItem } from '@/types/domain'
 
 type GuardDecision = { action: 'allow' } | { action: 'redirect'; to: string }
 
@@ -45,7 +45,7 @@ export function buildSidebarTree({
   menus = [],
   viewportWidth = MOBILE_BREAKPOINT + 1,
 }: {
-  menus?: ConfigMenuEntry[]
+  menus?: BackofficeMenuEntry[]
   viewportWidth?: number
 } = {}): SidebarGroup[] {
   const tree = [buildWorkSidebarGroup()]

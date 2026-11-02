@@ -58,7 +58,7 @@ async function setup(
     if (path === '/admin/system/index/info')
       return json(route, {
         name: 'Alice',
-        configMenus:
+        menus:
           options.menus === false
             ? []
             : [

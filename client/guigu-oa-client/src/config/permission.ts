@@ -1,9 +1,9 @@
 import { isMobileViewport } from '@/navigation/constants'
 import { ROUTE_GROUP_ENTRIES, type RouteGroupEntry } from '@/router/routes'
-import type { ConfigMenuEntry, SidebarItem } from '@/types/domain'
+import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
 /**
- * 配置授予的客户端投影：组归属来自路由表，授予内容来自 /info 的 configMenus。
+ * 配置授予的客户端投影：组归属来自路由表，授予内容来自 /info 的 menus。
  * 不认按钮，不认用户 id，不再维护产品目录。
  */
 
@@ -35,21 +35,24 @@ function routeEntryOf(path: string): RouteGroupEntry | null {
   return descendant ? { path, group: descendant.group } : null
 }
 
-function grantedEntryOf(path: string, entries: readonly ConfigMenuEntry[]): ConfigMenuEntry | null {
+function grantedEntryOf(
+  path: string,
+  entries: readonly BackofficeMenuEntry[],
+): BackofficeMenuEntry | null {
   const match = bestMatch(path, entries)
   if (match) return match
   return entries.find((entry) => normalizePath(entry.path).startsWith(`${path}/`)) || null
 }
 
 function publicGrantedEntry(
-  entry: ConfigMenuEntry | null,
+  entry: BackofficeMenuEntry | null,
 ): { path: string; group: MenuGroup } | null {
   if (!entry) return null
   const path = entry.hidden && entry.parentPath ? entry.parentPath : entry.path
   return { path: normalizePath(path), group: 'config' }
 }
 
-function grantedPages(entries: readonly ConfigMenuEntry[]): string[] {
+function grantedPages(entries: readonly BackofficeMenuEntry[]): string[] {
   const visiblePages = entries
     .filter((entry) => entry.type === 1 && !entry.hidden)
     .map((entry) => normalizePath(entry.path))
@@ -74,14 +77,14 @@ function pathCoveredByGrant(path: string, pages: readonly string[]): boolean {
   )
 }
 
-function sidebarEntries(entries: readonly ConfigMenuEntry[]): ConfigMenuEntry[] {
+function sidebarEntries(entries: readonly BackofficeMenuEntry[]): BackofficeMenuEntry[] {
   const byPath = new Map(entries.map((entry) => [normalizePath(entry.path), entry]))
   const keep = new Set<string>()
 
   entries
     .filter((entry) => entry.type === 1 && !entry.hidden)
     .forEach((page) => {
-      let current: ConfigMenuEntry | undefined = page
+      let current: BackofficeMenuEntry | undefined = page
       while (current) {
         const path = normalizePath(current.path)
         if (keep.has(path)) break
@@ -93,8 +96,8 @@ function sidebarEntries(entries: readonly ConfigMenuEntry[]): ConfigMenuEntry[] 
   return entries.filter((entry) => !entry.hidden && keep.has(normalizePath(entry.path)))
 }
 
-function buildSidebar(entries: readonly ConfigMenuEntry[]): SidebarItem[] {
-  const byParent = new Map<string, ConfigMenuEntry[]>()
+function buildSidebar(entries: readonly BackofficeMenuEntry[]): SidebarItem[] {
+  const byParent = new Map<string, BackofficeMenuEntry[]>()
   sidebarEntries(entries).forEach((entry) => {
     const parentPath = entry.parentPath ? normalizePath(entry.parentPath) : ''
     const siblings = byParent.get(parentPath) || []
@@ -122,7 +125,7 @@ function buildSidebar(entries: readonly ConfigMenuEntry[]): SidebarItem[] {
   return build('')
 }
 
-export function configPermission(menus: ConfigMenuEntry[] = []) {
+export function configPermission(menus: BackofficeMenuEntry[] = []) {
   const pages = grantedPages(menus)
 
   return {

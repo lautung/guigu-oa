@@ -1,7 +1,7 @@
 package com.lautung.oa.auth.controller;
 
-import com.lautung.oa.auth.grant.ConfigurationGrant;
-import com.lautung.oa.auth.service.SysMenuService;
+import com.lautung.oa.auth.grant.BackofficeGrant;
+import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.common.result.Result;
@@ -10,7 +10,7 @@ import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.security.response.AuthenticationRejections;
 import com.lautung.oa.security.revocation.TokenRevocation;
 import com.lautung.oa.security.session.SessionVerifier;
-import com.lautung.oa.vo.system.ConfigMenuVo;
+import com.lautung.oa.vo.system.BackofficeMenuVo;
 import com.lautung.oa.vo.system.RefreshTokenVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,10 +35,10 @@ public class IndexController {
     private SysUserService sysUserService;
 
     @Autowired
-    private SysMenuService sysMenuService;
+    private SysRoleService sysRoleService;
 
     @Autowired
-    private ConfigurationGrant configurationGrant;
+    private BackofficeGrant backofficeGrant;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -59,29 +59,27 @@ public class IndexController {
         // /info 不是匿名路径：过滤器已完成会话核验并设置了当前用户（#173），这里不再重解析令牌。
         Long userId = LoginUserInfoHelper.getUserId();
         SysUser sysUser = sysUserService.getById(userId);
-        ConfigurationGrant.GrantedConfiguration grant = configurationGrant.snapshot(userId);
-        List<ConfigMenuVo> configMenus = grant.entries().stream()
-                .map(entry -> new ConfigMenuVo(
+        BackofficeGrant.Snapshot grant = backofficeGrant.snapshot(userId);
+        List<BackofficeMenuVo> menus = grant.menus().stream()
+                .map(entry -> new BackofficeMenuVo(
                         entry.path(),
                         entry.parentPath(),
                         entry.title(),
                         entry.type(),
                         entry.hidden(),
-                        entry.sort()))
+                        entry.sort(),
+                        entry.icon()))
                 .collect(Collectors.toList());
-        List<String> permsList = sysMenuService.findUserPermsByUserId(userId);
-        if (permsList == null) {
-            permsList = List.of();
-        }
-        refreshCachedAuthorities(sysUser.getUsername(), permsList);
+        List<String> permissions = List.copyOf(grant.permissions());
+        refreshCachedAuthorities(sysUser.getUsername(), permissions);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("roles", "[admin]");
+        map.put("roles", sysRoleService.findRoleCodesByUserId(userId));
         map.put("name", sysUser.getName());
         // 字段保留，空串由客户端同源默认图兜底：不再下发第三方占位图（#139 CSP）。
         map.put("avatar", "");
-        map.put("configMenus", configMenus);
-        map.put("buttons", permsList);
+        map.put("permissions", permissions);
+        map.put("menus", menus);
         return Result.ok(map);
     }
 

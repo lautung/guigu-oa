@@ -45,7 +45,7 @@ const template = {
   formOptions: JSON.stringify({ submitBtn: false }),
 }
 
-const configMenus = [
+const menus = [
   { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
     path: '/system/processSet/processTemplate',
@@ -137,7 +137,7 @@ async function seedSession(page: Page) {
 async function mockApi(page: Page) {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
-    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', configMenus })
+    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus })
     if (path === '/admin/process/findStartable')
       return json(route, [
         {

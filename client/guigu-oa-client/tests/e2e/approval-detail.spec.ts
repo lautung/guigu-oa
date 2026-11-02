@@ -42,7 +42,7 @@ async function setup(
     completions = 0
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
-    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', configMenus: [] })
+    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus: [] })
     if (path.startsWith('/admin/process/show/')) {
       const id = path.split('/').pop()
       if (id === 'A' && readGate) await readGate
