@@ -11,7 +11,7 @@ import { confirmMessageBox, rowAcrossPages, uiLoginExpectWork } from './helpers/
 test('审批类型：建、改、删', async ({ page }) => {
   const name = marker('类型')
   await uiLoginExpectWork(page, 'admin')
-  await page.goto('/processSet/processType')
+  await page.goto('/system/processSet/processType')
   await page.getByRole('button', { name: '新建' }).click()
   const dialog = page.locator('.el-dialog', { hasText: '新建' })
   await dialog.locator('.el-form-item', { hasText: '类型名称' }).locator('input').fill(name)
@@ -82,9 +82,9 @@ test('菜单：建（停用）、删', async ({ page }) => {
   await page.goto('/system/sysMenu')
 
   // 服务端只允许维护配置菜单（子节点须挂在配置根下，ADR 0011 的授予闭包），
-  // 顶层任意路径菜单会被 201「只能维护配置菜单」拒绝，所以这里在「审批查询」下加停用子节点。
+  // 顶层任意路径菜单会被 201「只能维护配置菜单」拒绝，所以这里在「审批管理」下加停用子节点。
   // 菜单页必须自带组件路径（ADR 0036），默认类型是「菜单」，组件路径也要填。
-  const parentRow = page.locator('.el-table__row', { hasText: '审批查询' }).first()
+  const parentRow = page.locator('.el-table__row', { hasText: '审批管理' }).first()
   await expect(parentRow).toBeVisible()
   await parentRow.getByRole('button', { name: '添加下级' }).click()
   const dialog = page.locator('.el-dialog', { hasText: '添加下级节点' })

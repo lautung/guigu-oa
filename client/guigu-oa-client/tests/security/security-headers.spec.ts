@@ -57,7 +57,7 @@ test('CSP 生效时主要页面无安全策略违规', async ({ page, request },
   // 配置侧：模板列表图标、查看弹窗（form-create）与编辑向导的表单设计器。
   await clearSession(page)
   await uiLogin(page, 'admin')
-  await page.goto('/processSet/processTemplate')
+  await page.goto('/system/processSet/processTemplate')
   await expect(page.getByRole('heading', { name: '审批模板', level: 2 })).toBeVisible()
   await page.locator('.el-table__row').first().getByRole('button', { name: '查看' }).click()
   await expect(page.getByRole('dialog', { name: '查看审批模板' })).toBeVisible()

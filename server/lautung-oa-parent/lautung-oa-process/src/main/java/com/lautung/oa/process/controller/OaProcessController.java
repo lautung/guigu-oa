@@ -33,7 +33,7 @@ public class OaProcessController {
     private ApprovalListReader approvalListReader;
 
     //审批管理列表（配置实例查询：与办事列表同一读 module，#181）
-    @PreAuthorize("@configurationMenuGate.isGranted('process')")
+    @PreAuthorize("@configurationMenuGate.isGranted('/system/processMgr/process')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,

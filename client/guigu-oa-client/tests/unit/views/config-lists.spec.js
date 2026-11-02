@@ -291,9 +291,9 @@ describe('ProcessInstance list page', () => {
     const wrapper = mount(ProcessInstance, observeMount(pinia, router))
     await flushPromises()
 
-    wrapper.vm.openDetail('/processMgr/process/p-1')
+    wrapper.vm.openDetail('/system/processMgr/process/p-1')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/processMgr/process/p-1')
+    expect(router.currentRoute.value.path).toBe('/system/processMgr/process/p-1')
   })
 })
 

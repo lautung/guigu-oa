@@ -104,17 +104,18 @@ class ConfigurationGrantTest {
     }
 
     @Test
-    void buttonsStayOutsideConfigurationMenus() {
+    void buttonsAreConfigurationMenusUnderTheirPage() {
         SysMenu button = new SysMenu();
         button.setParentId(menuId("sysUser"));
         button.setName("按钮");
         button.setType(2);
-        button.setPath("grantTestButton");
+        button.setPath("");
         button.setComponent("");
+        button.setPerms("system:user:grantTest");
         button.setStatus(1);
 
-        assertFalse(configurationGrant.isConfigurationMenu(button));
-        assertFalse(configurationGrant.isGrantableConfigurationMenu(button));
+        assertTrue(configurationGrant.isConfigurationMenu(button));
+        assertTrue(configurationGrant.isGrantableConfigurationMenu(button));
     }
 
     @Test
@@ -132,8 +133,8 @@ class ConfigurationGrantTest {
     }
 
     @Test
-    void configurationMenusExcludeButtonsAndNonConfigurationRoots() {
-        insertMenu(9001, menuId("sysUser"), "grantTestButton", "", 2, 1);
+    void configurationMenusIncludeButtonsAndExcludeNonConfigurationRoots() {
+        insertMenu(9001, menuId("sysUser"), "", "", 2, 1);
         insertMenu(9010, 0, "/grantTestWork", "Layout", 0, 1);
         insertMenu(9011, 9010, "pending", "work/pending/index", 1, 1);
 
@@ -142,7 +143,7 @@ class ConfigurationGrantTest {
                 .toList();
 
         assertTrue(paths.contains("sysUser"));
-        assertFalse(paths.contains("grantTestButton"));
+        assertTrue(paths.stream().anyMatch(path -> path.isEmpty()));
         assertFalse(paths.contains("/grantTestWork"));
         assertFalse(paths.contains("pending"));
     }
@@ -165,15 +166,15 @@ class ConfigurationGrantTest {
 
     @Test
     void menuMaintenanceRejectsNonConfigurationMenus() {
-        SysMenu button = new SysMenu();
-        button.setParentId(menuId("sysUser"));
-        button.setName("按钮");
-        button.setType(2);
-        button.setPath("grantTestButton");
-        button.setComponent("");
-        button.setStatus(1);
+        SysMenu workPage = new SysMenu();
+        workPage.setParentId(0L);
+        workPage.setName("办事");
+        workPage.setType(1);
+        workPage.setPath("grantTestWork");
+        workPage.setComponent("work/pending/index");
+        workPage.setStatus(1);
 
-        BusinessException error = assertThrows(BusinessException.class, () -> sysMenuService.saveMenu(button));
+        BusinessException error = assertThrows(BusinessException.class, () -> sysMenuService.saveMenu(workPage));
 
         assertTrue(error.getMessage().contains("只能维护配置菜单"));
     }
@@ -181,12 +182,13 @@ class ConfigurationGrantTest {
     @Test
     void doAssignSkipsAnExistingLegacyGrantAndRewritesWithConfigurationMenus() {
         createUserAndRole();
-        long buttonId = insertMenu(9001, menuId("sysUser"), "grantTestButton", "", 2, 1);
-        grantMenuIds(buttonId);
+        long workRootId = insertMenu(9010, 0, "/grantTestWork", "Layout", 0, 1);
+        long workPageId = insertMenu(9011, workRootId, "pending", "work/pending/index", 1, 1);
+        grantMenuIds(workPageId);
 
         AssginMenuVo request = new AssginMenuVo();
         request.setRoleId(ROLE_ID);
-        request.setMenuIdList(List.of(buttonId, menuId("sysUser")));
+        request.setMenuIdList(List.of(workPageId, menuId("sysUser")));
 
         sysMenuService.doAssign(request);
 

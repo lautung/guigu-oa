@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS sys_user (
   phone VARCHAR(20),
   head_url VARCHAR(200),
   dept_id BIGINT,
-  post_id BIGINT,
   description VARCHAR(255),
   open_id VARCHAR(100),
   status TINYINT DEFAULT 1,

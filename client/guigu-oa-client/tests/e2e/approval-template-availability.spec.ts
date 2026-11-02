@@ -40,17 +40,17 @@ async function mockUnavailableTemplate(page: Page) {
         name: 'Alice',
         avatar: '',
         configMenus: [
-          { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+          { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
           {
-            path: '/processSet/processTemplate',
-            parentPath: '/processSet',
+            path: '/system/processSet/processTemplate',
+            parentPath: '/system/processSet',
             title: '审批模板',
             type: 1,
             sort: 2,
           },
           {
-            path: '/processSet/templateSet',
-            parentPath: '/processSet/processTemplate',
+            path: '/system/processSet/templateSet',
+            parentPath: '/system/processSet/processTemplate',
             title: '审批模板设置',
             type: 1,
             hidden: true,
@@ -110,7 +110,7 @@ test('keeps unverified published templates frozen and blocks direct start URLs',
   await page.getByRole('button', { name: '登录' }).click()
   await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
 
-  await page.goto('/processSet/processTemplate')
+  await page.goto('/system/processSet/processTemplate')
   const templateRow = page.locator('.el-table__row').filter({ hasText: '历史请假模板' })
   await expect(templateRow.getByText('已发布')).toBeVisible()
   await expect(templateRow.getByText(unavailableMessage)).toBeVisible()
@@ -128,8 +128,8 @@ test('keeps unverified published templates frozen and blocks direct start URLs',
   await expect(page.getByLabel('抄送给')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: '附件' })).toHaveCount(0)
 
-  await page.goto(`/processSet/templateSet?id=${templateId}`)
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await page.goto(`/system/processSet/templateSet?id=${templateId}`)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   await expect(page.getByRole('alert')).toContainText('已发布的审批模板只读')
   await expect(page.getByRole('button', { name: '编辑' })).toHaveCount(0)
   expect(sideEffectRequests).toEqual([])

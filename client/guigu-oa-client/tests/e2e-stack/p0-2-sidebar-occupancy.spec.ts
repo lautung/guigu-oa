@@ -14,7 +14,7 @@ test('admin 侧栏有办事与配置两组', async ({ page }) => {
   await expect(groups.filter({ hasText: '配置' })).toBeVisible()
   await expect(page.locator('.app-sidebar').getByText('组织与权限')).toBeVisible()
   await expect(page.locator('.app-sidebar').getByText('审批设置')).toBeVisible()
-  await expect(page.locator('.app-sidebar').getByText('审批查询')).toBeVisible()
+  await expect(page.locator('.app-sidebar').getByText('审批管理')).toBeVisible()
 })
 
 test('user 侧栏只有办事组', async ({ page }) => {

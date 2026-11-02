@@ -70,6 +70,17 @@ describe('路径 module', () => {
     )
   })
 
+  it('审批页面挂在系统管理下，旧根路径不再注册', () => {
+    expect(PATHS.PROCESS_SET).toBe('/system/processSet')
+    expect(PATHS.PROCESS_MGR).toBe('/system/processMgr')
+    expect(resolve('/system/processSet/processType').name).toBe('ProcessType')
+    expect(resolve('/system/processSet/processTemplate').name).toBe('ProcessTemplate')
+    expect(resolve('/system/processMgr/process').name).toBe('ProcessMgr')
+    expect(resolve('/processSet/processType').matched).toEqual([])
+    expect(resolve('/processSet/processTemplate').matched).toEqual([])
+    expect(resolve('/processMgr/process').matched).toEqual([])
+  })
+
   it('返回路径覆盖列表、详情、隐藏页与未知路径', () => {
     expect(returnPathOfRoute(PATHS.WORK_PENDING)).toBe(PATHS.WORK_PENDING)
     expect(returnPathOfRoute('/work/pending/12/task-9')).toBe(PATHS.WORK_PENDING)
@@ -78,7 +89,7 @@ describe('路径 module', () => {
     expect(returnPathOfRoute('/work/copied/23')).toBe(PATHS.WORK_COPIED)
     expect(returnPathOfRoute('/work/start/11')).toBe(PATHS.WORK_START)
     expect(returnPathOfRoute(PATHS.SYSTEM_SYS_USER)).toBe(PATHS.SYSTEM_SYS_USER)
-    expect(returnPathOfRoute('/processMgr/process/9')).toBe(PATHS.PROCESS_MGR_PROCESS)
+    expect(returnPathOfRoute('/system/processMgr/process/9')).toBe(PATHS.PROCESS_MGR_PROCESS)
     expect(returnPathOfRoute(PATHS.SYSTEM_ASSIGN_AUTH)).toBe(PATHS.SYSTEM_SYS_ROLE)
     expect(returnPathOfRoute(PATHS.PROCESS_SET_TEMPLATE_SET)).toBe(
       PATHS.PROCESS_SET_PROCESS_TEMPLATE,
@@ -92,7 +103,9 @@ describe('路径 module', () => {
         workListPerspectiveFromRoute({ path: workListPath(kind), meta: { workListKind: kind } }),
       ).toMatchObject({ kind, returnPath: workListPath(kind) })
     }
-    expect(workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })).toEqual({
+    expect(
+      workListPerspectiveFromRoute({ path: '/system/processMgr/process/5', meta: {} }),
+    ).toEqual({
       kind: null,
       title: '',
       returnPath: PATHS.PROCESS_MGR_PROCESS,

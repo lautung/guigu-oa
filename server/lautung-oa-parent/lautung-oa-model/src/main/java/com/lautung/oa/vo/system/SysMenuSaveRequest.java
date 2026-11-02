@@ -14,10 +14,10 @@ import lombok.EqualsAndHashCode;
 import java.util.Objects;
 
 /**
- * 新增菜单的请求体。上级、名称、类型、路由地址由 HTTP 边界拦空；其余沿用配置 gate 的判定（ADR 0034）。
- * 类型只收 0/1（不再借道「只能维护配置菜单」），菜单页必须自带组件路径——保存时无从回读旧行，
- * 这条在请求体上判死；目录转菜单的旧行判定在 updateMenu 的 service 里（ADR 0036）。
- * 公共字段与 fill 在 {@link SysMenuRequest}。
+ * 新增菜单的请求体。上级、名称、类型由 HTTP 边界拦空；其余沿用配置 gate 的判定（ADR 0034）。
+ * 类型收 0/1/2：目录与页面必须有路由地址，菜单页必须自带组件路径（保存时无从回读旧行）；
+ * 按钮点必须带权限标识，path/component 为空。按钮的父级是否为页面在 saveMenu 的 service 里判
+ * （请求体看不到父行）。公共字段与 fill 在 {@link SysMenuRequest}。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -34,20 +34,47 @@ public class SysMenuSaveRequest extends SysMenuRequest {
     private String name;
 
     @NotNull(message = "菜单类型不能为空")
-    @Min(value = 0, message = "菜单类型只能为 0 或 1")
-    @Max(value = 1, message = "菜单类型只能为 0 或 1")
-    @Schema(description = "类型(0:目录,1:菜单)")
+    @Min(value = 0, message = "菜单类型只能为 0、1 或 2")
+    @Max(value = 2, message = "菜单类型只能为 0、1 或 2")
+    @Schema(description = "类型(0:目录,1:菜单,2:按钮)")
     private Integer type;
 
-    @NotBlank(message = "路由地址不能为空")
     @Size(max = 200, message = "路由地址过长")
     @Schema(description = "路由地址")
     private String path;
 
+    @AssertTrue(message = "路由地址不能为空")
+    @Schema(hidden = true)
+    public boolean isPagePathFilled() {
+        return Objects.equals(type, 2) || hasText(path);
+    }
+
+    @AssertTrue(message = "按钮的路由地址必须为空")
+    @Schema(hidden = true)
+    public boolean isButtonPathEmpty() {
+        return !Objects.equals(type, 2) || !hasText(path);
+    }
+
+    @AssertTrue(message = "按钮的组件路径必须为空")
+    @Schema(hidden = true)
+    public boolean isButtonComponentEmpty() {
+        return !Objects.equals(type, 2) || !hasText(getComponent());
+    }
+
+    @AssertTrue(message = "按钮权限标识不能为空")
+    @Schema(hidden = true)
+    public boolean isButtonPermsFilled() {
+        return !Objects.equals(type, 2) || hasText(getPerms());
+    }
+
     @AssertTrue(message = "类型为菜单时组件路径不能为空")
     @Schema(hidden = true)
     public boolean isPageComponentFilled() {
-        return !Objects.equals(type, 1) || (getComponent() != null && !getComponent().isBlank());
+        return !Objects.equals(type, 1) || hasText(getComponent());
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     public SysMenu toEntity() {

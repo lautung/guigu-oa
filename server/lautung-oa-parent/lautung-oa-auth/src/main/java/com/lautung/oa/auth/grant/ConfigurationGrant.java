@@ -78,7 +78,7 @@ public class ConfigurationGrant {
         return new GrantedConfiguration(ordered, pagePaths);
     }
 
-    /** 菜单管理可维护的配置类菜单：目录与页面，不看启用状态，不含按钮。 */
+    /** 菜单管理可维护的配置类菜单：目录、页面与按钮，不看启用状态。 */
     public List<SysMenu> configurationMenus() {
         Map<Long, SysMenu> all = loadAll();
         return all.values().stream()
@@ -88,7 +88,7 @@ public class ConfigurationGrant {
                 .collect(Collectors.toList());
     }
 
-    /** 配置类菜单（type 0/1，不含按钮、办事与排除项），不看启用状态。 */
+    /** 配置类菜单（type 0/1/2，不含办事与排除项），不看启用状态。 */
     public boolean isConfigurationMenu(SysMenu menu) {
         return isConfigurationMenu(menu, loadAll());
     }
@@ -269,7 +269,9 @@ public class ConfigurationGrant {
     }
 
     private boolean isConfigurationNode(SysMenu menu) {
-        if ((!Objects.equals(menu.getType(), 0) && !Objects.equals(menu.getType(), 1))) {
+        if (!Objects.equals(menu.getType(), 0)
+                && !Objects.equals(menu.getType(), 1)
+                && !Objects.equals(menu.getType(), 2)) {
             return false;
         }
 

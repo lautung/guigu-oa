@@ -157,7 +157,7 @@ it('通过完整编辑 interface 完成三步新建，保留扩展设计并以�
   })
   h.saves[0].resolve({ code: 200, message: '保存成功', data: null })
   await saving
-  expect(h.navigation).toEqual(['/processSet/processTemplate'])
+  expect(h.navigation).toEqual(['/system/processSet/processTemplate'])
   expect(h.notices).toEqual(['保存成功，审批模板仍为未发布'])
 })
 
@@ -346,7 +346,7 @@ it('保存超时保留固定快照且不能再保存，另开列表保留当前�
   expect(h.saves).toHaveLength(1)
   expect(h.uploads).toHaveLength(0)
   edit.openList()
-  expect(h.lists).toEqual(['/processSet/processTemplate'])
+  expect(h.lists).toEqual(['/system/processSet/processTemplate'])
   expect(edit.state.phase).toBe('uncertain')
   h.confirm(false)
   await edit.endEditing()
@@ -357,7 +357,7 @@ it('保存超时保留固定快照且不能再保存，另开列表保留当前�
   await edit.endEditing()
   expect(edit.state.snapshot).toBeNull()
   expect(edit.state.phase).toBe('closed')
-  expect(h.navigation).toEqual(['/processSet/processTemplate'])
+  expect(h.navigation).toEqual(['/system/processSet/processTemplate'])
   expect(h.notices).toEqual([])
 })
 
@@ -646,7 +646,7 @@ async function transportHarness(respond) {
     recovery: () => ({ status: 'idle', target: '' }),
     showRecovery: () => {},
     loadUser: async () => ({ name: 'Alice' }),
-    currentPath: () => '/processSet/templateSet?id=A',
+    currentPath: () => '/system/processSet/templateSet?id=A',
     goTo: (path) => authNavigation.push(path),
     goToLogin: (path) => authNavigation.push(path),
     notify: (message) => globalNotices.push(message),

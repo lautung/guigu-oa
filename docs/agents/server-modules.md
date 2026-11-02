@@ -12,10 +12,10 @@
 | `lautung-oa-common` | `lautung-oa-common/src/main/java/com/lautung/oa/common/` | `result/Result`（统一信封：`code`/`message`/`data`）、`result/ResultCodeEnum`（200/201/208/209/403）、`result/ResponseUtil`（过滤器写响应体，带 HTTP 状态重载）、`jwt/JwtHelper` |
 | `lautung-oa-framework` | `lautung-oa-framework/src/main/java/com/lautung/oa/framework/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405；参数校验 200+201，ADR 0033）、`config/mp/CommonFieldsMetaObjectHandler`（公共字段唯一写入者，ADR 0031）、`config/mp/MybatisPlusConfig`（分页拦截器，不再扫描域包）、`config/mp/SlowSqlLoggingConfiguration` + `observability/SlowSqlLoggingInterceptor`（慢 SQL WARN，默认关 dev 开，ADR 0041）、`observability/TraceIdFilter`、`observability/PhoneNumberMasker` + `PhoneNumberMaskingCustomizer`（结构化日志手机号打码，ADR 0039） |
 | `lautung-oa-security` | `lautung-oa-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`session/SessionVerifier`（会话核验 module：过滤器与续期共用的唯一凭证判定，ADR 0044）、`response/AuthenticationRejections`（401 认证家族写出的唯一出口）、`filter/TokenAuthenticationFilter`（接入核验结果并组装权限，失败 401+208）、`filter/TokenLoginFilter`（POST /login，先校验入参再签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
-| `lautung-oa-model` | `lautung-oa-model/src/main/java/com/lautung/oa/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`、`process/OaProcess|OaProcessRecord…`；请求 DTO 的 jsr303 约束（`com.lautung.oa.vo.*`，ADR 0033） |
+| `lautung-oa-model` | `lautung-oa-model/src/main/java/com/lautung/oa/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`（`SysRole.dataScope` 五档；`SysUser` 只有 `deptId`，岗位走 `sys_user_post`）、`process/OaProcess|OaProcessRecord…`；请求 DTO 的 jsr303 约束（`com.lautung.oa.vo.*`，ADR 0033） |
 | `lautung-oa-auth` | `lautung-oa-auth/src/main/java/com/lautung/oa/auth/` | auth 域垂直切片：`controller/`（index/login、sysUser/Role/Menu）、`service/`（`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`mapper/` 与 `mapper/xml/`；`config/AuthMapperConfiguration` 只扫描本域 Mapper |
 | `lautung-oa-process` | `lautung-oa-process/src/main/java/com/lautung/oa/process/` | process 域垂直切片：`controller/`、`service/`、`mapper/` + `mapper/xml/`、`approval/ApprovalWriter`、`attachment/`、`cc/`、`deployment/`、`membership/`、`publication/`、`read/`（五种审批列表读唯一入口 `ApprovalListReader`/`LedgerApprovalListReader`：行形状/窗口/回查/排序一处拥有，ADR 0045）、`mapper/xml/OaProcessMapper.xml` 的 `approvalRowLiveness`（手写 XML 不吃 `@TableLogic`，存活过滤每条读显式 include，`OaProcessMapperXmlLivenessTest` 兜住，ADR 0050）；`config/ProcessMapperConfiguration` 扫描 `process.mapper` + `process.attachment`；`process → auth` 直接边保留（3 个 `SysUserService` 调用点） |
-| `lautung-oa-server` | `lautung-oa-server/src/main/java/com/lautung/oa/` | 装配模块：启动类 `LautungOaApplication`、`demo/` seeder、`src/main/resources/`（`application*.yml`、Flyway SQL、BPMN）、`db/migration/`（Java 迁移，如 V104）、全部 `@SpringBootTest` 合同测试与测试资源 |
+| `lautung-oa-server` | `lautung-oa-server/src/main/java/com/lautung/oa/` | 装配模块：启动类 `LautungOaApplication`、`demo/` seeder、`src/main/resources/`（`application*.yml`、Flyway SQL、`db/seed/` 幂等种子、BPMN）、`db/migration/`（Java 迁移，如 V104/V110）、全部 `@SpringBootTest` 合同测试与测试资源 |
 | `lautung-oa-coverage-report` | `lautung-oa-coverage-report/` | JaCoCo `report-aggregate`；排除项 `com/lautung/oa/demo/**`、`com/lautung/oa/model/**` |
 
 ## 认证与错误语义（改安全相关代码前必读）
@@ -35,7 +35,8 @@
 
 - 业务 `@RequestMapping` 前缀：`/admin/system/*`（认证与配置）、`/admin/process/*`（流程）、`/admin/attachments/*`。
 - 静态形状约束写请求 DTO 的 jsr303 注解 + `@Valid`；领域/状态判断留 service；登录在 `TokenLoginFilter` 里手工校验（ADR 0033）；refresh 的失败按认证家族由控制器写 401（ADR 0037），不走 201 校验路线。
-- 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。长度上限对齐列宽、`sys_menu.type` 只收 0/1、菜单页必须自带组件路径（save 在 DTO、update 在 service 按落库形状判），见 ADR 0036。
-- 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门。
+- 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。长度上限对齐列宽、`sys_menu.type` 收 0/1/2（按钮点 perms 必填、path/component 为空、父级必须是页面；save 在 DTO，父级与落库形状在 service 判），见 ADR 0036/0056。
+- 审批页面挂在 `/system` 下：目录 `processSet`/`processMgr`，页面绝对路径 `/system/processSet/...`、`/system/processMgr/...`；14 个 process gate 字面量已随之改为绝对路径。
+- 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门；bean 改名与按钮点判定在 #222。
 - 表结构迁移只加不改：`lautung-oa-server/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。
 - `POST /admin/process/startUp` 的 `idempotencyKey` 可空，唯一索引 `uk_oa_process_idempotency_key` 按用户唯一（ADR 0032）：重复送达返回同一条审批；冲突后的重读必须在 `ApprovalWriter.startUp` 的事务之外（可重复读下事务内看不到对手已提交的行）。

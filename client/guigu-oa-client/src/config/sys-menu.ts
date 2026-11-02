@@ -168,7 +168,8 @@ export function formForCreate(parent?: MenuNode): MenuForm {
   form.parentId = parent.id ?? 0
   form.parentName = parent.name || ''
   form.component = ''
-  form.type = 1
+  // 页面下挂按钮点（ADR 0056）；目录下仍是页面。
+  form.type = parent.type === 1 ? 2 : 1
 
   return form
 }

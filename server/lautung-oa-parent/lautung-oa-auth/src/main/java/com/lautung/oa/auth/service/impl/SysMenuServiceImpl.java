@@ -141,7 +141,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
                 SysMenu menu = baseMapper.selectById(menuId);
                 if (!configurationGrant.isGrantableConfigurationMenu(menu)) {
-                    // Drop legacy button/work-menu grants when the role is resubmitted.
+                    // Drop legacy non-config-menu grants when the role is resubmitted.
                     // A newly requested invalid ID still rejects the whole assignment.
                     if (existingMenuIds.contains(menuId)) {
                         continue;
@@ -180,6 +180,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (sysMenu == null || !configurationGrant.isConfigurationMenu(sysMenu)) {
             throw new BusinessException(201, "只能维护配置菜单");
         }
+        validateButtonShape(sysMenu, null);
         save(sysMenu);
     }
 
@@ -207,7 +208,46 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (landsAsPageWithoutComponent(sysMenu, existingMenu)) {
             throw new BusinessException(201, "类型为菜单时组件路径不能为空");
         }
+        validateButtonShape(sysMenu, existingMenu);
         updateById(sysMenu);
+    }
+
+    /**
+     * 按钮点的落库形状（ADR 0056）：必须挂在页面上，perms 必填，path/component 为空。
+     * 更新请求省略的字段沿用旧行，因此按最终形状判，而不是只看请求体。
+     */
+    private void validateButtonShape(SysMenu update, SysMenu existing) {
+        Integer type = update.getType() != null
+                ? update.getType()
+                : (existing == null ? null : existing.getType());
+        if (!Objects.equals(type, 2)) {
+            return;
+        }
+        Long parentId = update.getParentId() != null
+                ? update.getParentId()
+                : (existing == null ? null : existing.getParentId());
+        SysMenu parent = parentId == null ? null : baseMapper.selectById(parentId);
+        if (parent == null || !Objects.equals(parent.getType(), 1)) {
+            throw new BusinessException(201, "按钮必须挂在页面下");
+        }
+        String perms = update.getPerms() != null
+                ? update.getPerms()
+                : (existing == null ? null : existing.getPerms());
+        String path = update.getPath() != null
+                ? update.getPath()
+                : (existing == null ? null : existing.getPath());
+        String component = update.getComponent() != null
+                ? update.getComponent()
+                : (existing == null ? null : existing.getComponent());
+        if (!StringUtils.hasText(perms)) {
+            throw new BusinessException(201, "按钮权限标识不能为空");
+        }
+        if (StringUtils.hasText(path)) {
+            throw new BusinessException(201, "按钮的路由地址必须为空");
+        }
+        if (StringUtils.hasText(component)) {
+            throw new BusinessException(201, "按钮的组件路径必须为空");
+        }
     }
 
     /** 更新落库后的最终形状：请求字段为空沿用旧行。目录转成菜单页而组件仍为空时拒绝。 */

@@ -30,8 +30,8 @@ describe('路由组归属与配置页', () => {
     const hidden = ROUTE_GROUP_ENTRIES.filter((entry) => entry.hiddenParentPath)
 
     expect(hidden.map((entry) => entry.path).sort()).toEqual([
-      '/processSet/templateSet',
       '/system/assignAuth',
+      '/system/processSet/templateSet',
     ])
     hidden.forEach((entry) => {
       const parent = router.resolve(entry.hiddenParentPath)
@@ -46,6 +46,6 @@ describe('路由组归属与配置页', () => {
     expect(byPath['/work/pending']).toBe('work')
     expect(byPath['/work/profile']).toBe('work')
     expect(byPath['/system/sysUser']).toBe('config')
-    expect(byPath['/processMgr/process']).toBe('config')
+    expect(byPath['/system/processMgr/process']).toBe('config')
   })
 })

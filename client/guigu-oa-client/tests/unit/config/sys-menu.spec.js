@@ -143,7 +143,7 @@ describe('config/sys-menu', () => {
           parentId: 1,
           name: '审批设置',
           type: 0,
-          path: '/processSet',
+          path: '/system/processSet',
           component: '',
           sortValue: 1,
           status: 1,
@@ -188,6 +188,39 @@ describe('config/sys-menu', () => {
         type: 1,
         component: '',
       })
+    })
+
+    it('creates a button under a page', () => {
+      expect(formForCreate(CONFIG_TREE[0].children[0])).toMatchObject({
+        parentId: 11,
+        parentName: '用户管理',
+        type: 2,
+        path: '',
+        component: '',
+        perms: '',
+      })
+    })
+  })
+
+  it('sends a button with blank path/component and its permission identifier', () => {
+    const request = writeRequest({
+      parentId: 11,
+      name: '新增用户',
+      type: 2,
+      path: '',
+      component: '',
+      perms: 'system:user:add',
+      icon: '',
+      sortValue: 1,
+      status: 1,
+    })
+
+    expect(request.data).toMatchObject({
+      parentId: 11,
+      type: 2,
+      path: '',
+      component: '',
+      perms: 'system:user:add',
     })
   })
 })

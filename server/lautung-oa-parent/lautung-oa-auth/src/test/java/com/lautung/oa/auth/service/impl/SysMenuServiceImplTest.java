@@ -69,6 +69,60 @@ class SysMenuServiceImplTest {
         verify(menuMapper).updateById(update);
     }
 
+    @Test
+    void buttonMustHangUnderAPage() {
+        SysMenu button = button(0L);
+        when(configurationGrant.isConfigurationMenu(button)).thenReturn(true);
+        when(menuMapper.selectById(0L)).thenReturn(null);
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.saveMenu(button));
+
+        assertEquals(201, error.getCode());
+        assertEquals("按钮必须挂在页面下", error.getMsg());
+    }
+
+    @Test
+    void buttonWithPageParentIsSaved() {
+        SysMenu button = button(4L);
+        when(configurationGrant.isConfigurationMenu(button)).thenReturn(true);
+        when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
+        when(menuMapper.insert(button)).thenReturn(1);
+
+        service.saveMenu(button);
+
+        verify(menuMapper).insert(button);
+    }
+
+    @Test
+    void buttonUpdateCanKeepTheExistingPermsAndParent() {
+        SysMenu existing = button(4L);
+        existing.setId(8L);
+        SysMenu update = new SysMenu();
+        update.setId(8L);
+        update.setType(2);
+        update.setName("新增用户改名");
+        when(configurationGrant.isConfigurationMenu(update)).thenReturn(true);
+        when(menuMapper.selectById(8L)).thenReturn(existing);
+        when(menuMapper.selectById(4L)).thenReturn(page(4L, "用户管理", "system/sysUser/list"));
+        when(menuMapper.updateById(update)).thenReturn(1);
+
+        service.updateMenu(update);
+
+        verify(menuMapper).updateById(update);
+    }
+
+    private SysMenu button(Long parentId) {
+        SysMenu menu = new SysMenu();
+        menu.setParentId(parentId);
+        menu.setName("新增用户");
+        menu.setType(2);
+        menu.setPath("");
+        menu.setComponent("");
+        menu.setPerms("system:user:add");
+        menu.setStatus(1);
+        return menu;
+    }
+
     private SysMenu directory(Long id, String name) {
         SysMenu menu = new SysMenu();
         menu.setId(id);

@@ -68,11 +68,11 @@ class ConfigurationRouteAuthorizationContractTest {
         expect(SysRoleController.class, "sysUser", "toAssign", "doAssign");
         expect(SysRoleController.class, "sysRole",
                 "findAll", "pageQueryRole", "save", "get", "update", "remove", "batchRemove");
-        expect(OaProcessTypeController.class, "processType",
+        expect(OaProcessTypeController.class, "/system/processSet/processType",
                 "findAll", "index", "get", "save", "updateById", "remove");
-        expect(OaProcessTemplateController.class, "processTemplate",
+        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate",
                 "index", "get", "save", "updateById", "remove", "uploadProcessDefinition", "publish");
-        expect(OaProcessController.class, "process", "index");
+        expect(OaProcessController.class, "/system/processMgr/process", "index");
     }
 
     @Autowired
@@ -189,7 +189,7 @@ class ConfigurationRouteAuthorizationContractTest {
 
     @Test
     void hiddenTemplatePageUsesItsVisibleParentMenu() throws Exception {
-        grant(102L, 102L, "route-template", "processTemplate");
+        grant(102L, 102L, "route-template", "/system/processSet/processTemplate");
 
         assertCode("/admin/process/processTemplate/get/" + templateId(), 102L, "route-template", 200);
         assertCode("/admin/process/processTemplate/1/10", 102L, "route-template", 200);
@@ -199,10 +199,11 @@ class ConfigurationRouteAuthorizationContractTest {
                         .header("token", jwtHelper.createTokenPair(102L, "route-template", 0L).token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
-                        "/processSet", "/processSet/processTemplate", "/processSet/templateSet")))
-                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/processSet/templateSet')].parentPath",
-                        hasItem("/processSet/processTemplate")))
-                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/processSet/templateSet')].hidden",
+                        "/system", "/system/processSet",
+                        "/system/processSet/processTemplate", "/system/processSet/templateSet")))
+                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/system/processSet/templateSet')].parentPath",
+                        hasItem("/system/processSet/processTemplate")))
+                .andExpect(jsonPath("$.data.configMenus[?(@.path == '/system/processSet/templateSet')].hidden",
                         hasItem(true)));
     }
 

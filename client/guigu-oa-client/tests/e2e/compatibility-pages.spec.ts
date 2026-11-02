@@ -46,17 +46,17 @@ const template = {
 }
 
 const configMenus = [
-  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet/processTemplate',
-    parentPath: '/processSet',
+    path: '/system/processSet/processTemplate',
+    parentPath: '/system/processSet',
     title: '审批模板',
     type: 1,
     sort: 2,
   },
   {
-    path: '/processSet/templateSet',
-    parentPath: '/processSet/processTemplate',
+    path: '/system/processSet/templateSet',
+    parentPath: '/system/processSet/processTemplate',
     title: '审批模板设置',
     type: 1,
     hidden: true,
@@ -269,7 +269,7 @@ test('待处理列表与审批详情在矩阵内可渲染', async ({ page }, tes
 test('配置-模板编辑：桌面可占用，手机落回待处理', async ({ page }, testInfo) => {
   await seedSession(page)
   await mockApi(page)
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
 
   if (isMobileViewport(page)) {
     await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()

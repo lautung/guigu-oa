@@ -43,7 +43,7 @@ describe('config/process-instance', () => {
             status: 1,
             statusLabel: '审批中',
             createTime: '2026-08-01 10:00:00',
-            detailPath: '/processMgr/process/12',
+            detailPath: '/system/processMgr/process/12',
           },
         ],
         total: 1,

@@ -22,13 +22,13 @@ export const PATHS = {
   SYSTEM_SYS_ROLE: '/system/sysRole',
   SYSTEM_SYS_MENU: '/system/sysMenu',
   SYSTEM_ASSIGN_AUTH: '/system/assignAuth',
-  PROCESS_SET: '/processSet',
-  PROCESS_SET_PROCESS_TYPE: '/processSet/processType',
-  PROCESS_SET_PROCESS_TEMPLATE: '/processSet/processTemplate',
-  PROCESS_SET_TEMPLATE_SET: '/processSet/templateSet',
-  PROCESS_MGR: '/processMgr',
-  PROCESS_MGR_PROCESS: '/processMgr/process',
-  PROCESS_MGR_PROCESS_DETAIL: '/processMgr/process/:id',
+  PROCESS_SET: '/system/processSet',
+  PROCESS_SET_PROCESS_TYPE: '/system/processSet/processType',
+  PROCESS_SET_PROCESS_TEMPLATE: '/system/processSet/processTemplate',
+  PROCESS_SET_TEMPLATE_SET: '/system/processSet/templateSet',
+  PROCESS_MGR: '/system/processMgr',
+  PROCESS_MGR_PROCESS: '/system/processMgr/process',
+  PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
 } as const
 
 /** 办事列表的静态路径，保留既有 ROUTES 形状供导航与 surface 使用。 */

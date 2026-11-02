@@ -1,5 +1,7 @@
 package com.lautung.oa.auth;
 
+import db.migration.V110__BackofficePermissionBase;
+import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -20,8 +23,13 @@ import java.util.Locale;
 
 import com.lautung.oa.common.jwt.JwtHelper;
 
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,11 +49,22 @@ class FlywayMigrationContractTest {
             "sys_menu",
             "sys_role_menu",
             "sys_user_role",
+            "sys_dept",
+            "sys_post",
+            "sys_user_post",
+            "sys_role_dept",
             "oa_process_type",
             "oa_process_template",
             "oa_process",
             "oa_process_record",
             "oa_attachment");
+    private static final List<String> BUTTON_PERMS = List.of(
+            "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
+            "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
+            "system:menu:add", "system:menu:edit", "system:menu:remove",
+            "process:type:add", "process:type:edit", "process:type:remove",
+            "process:template:add", "process:template:edit", "process:template:remove",
+            "process:template:upload", "process:template:publish");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -84,21 +103,49 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '104' AND success = TRUE"));
         // ADR 0032：发起提交标识的列与按用户唯一索引。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '105' AND success = TRUE"));
+        // 权限底座（#221）：组织表、data_scope、菜单 0/1/2 与 super_admin 种子。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '110' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
                 + "WHERE LOWER(TABLE_NAME) = 'oa_process' AND LOWER(COLUMN_NAME) = 'idempotency_key'"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user WHERE token_version <> 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE LOWER(TABLE_NAME) = 'sys_role' AND LOWER(COLUMN_NAME) = 'data_scope'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE LOWER(TABLE_NAME) = 'sys_user' AND LOWER(COLUMN_NAME) = 'dept_id'"));
+        assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE LOWER(TABLE_NAME) = 'sys_user' AND LOWER(COLUMN_NAME) = 'post_id'"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role WHERE role_code = 'config_admin' AND is_deleted = 0"));
-        assertEquals(1, count("SELECT COUNT(*) FROM sys_user_role ur JOIN sys_role r ON r.id = ur.role_id "
-                + "WHERE ur.user_id = 1 AND r.role_code = 'config_admin' AND ur.is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role WHERE role_code = 'super_admin' AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role WHERE role_code = 'config_admin' AND data_scope = 4"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role WHERE role_code = 'super_admin' AND data_scope = 1"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user_role ur JOIN sys_role r ON r.id = ur.role_id "
-                + "WHERE ur.user_id = 2 AND r.role_code = 'config_admin' AND ur.is_deleted = 0"));
+                + "WHERE r.role_code = 'config_admin' AND ur.is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_user_role ur JOIN sys_role r ON r.id = ur.role_id "
+                + "WHERE ur.user_id = 1 AND r.role_code = 'super_admin' AND ur.is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
                 + "JOIN sys_menu m ON m.id = rm.menu_id "
-                + "WHERE r.role_code = 'config_admin' AND m.path = 'templateSet' AND rm.is_deleted = 0"));
+                + "WHERE r.role_code = 'config_admin' AND m.path = '/system/processSet/templateSet' AND rm.is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user WHERE username = 'admin' AND id = 1"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_user WHERE username = 'user'"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE path = '/system' AND parent_id = 0"));
-        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 2"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE path IN ('/processSet', '/processMgr') AND is_deleted = 0"));
+        assertEquals(BUTTON_PERMS.size(), count("SELECT COUNT(*) FROM sys_menu WHERE type = 2 AND is_deleted = 0"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu c LEFT JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.type = 2 AND c.is_deleted = 0 AND (p.id IS NULL OR p.type <> 1 "
+                + "OR COALESCE(c.path, '') <> '' OR COALESCE(c.component, '') <> '' "
+                + "OR COALESCE(c.perms, '') = '')"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = 'processSet' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = 'processMgr' AND c.type = 0 AND p.path = '/system' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/processSet/processType' AND c.type = 1 AND p.path = 'processSet'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/processSet/processTemplate' AND c.type = 1 AND p.path = 'processSet'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/processSet/templateSet' AND c.type = 1 AND p.path = '/system/processSet/processTemplate'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/processMgr/process' AND c.type = 1 AND p.path = 'processMgr'"));
         assertEquals(1, count("SELECT COUNT(*) FROM oa_process_template WHERE name = '请假申请' AND status = 1"));
         assertEquals(UNPUBLISHED_LEAVE_FORM_PROPS, jdbcTemplate.queryForObject(
                 "SELECT form_props FROM oa_process_template WHERE name = '未发布病假'", String.class));
@@ -115,6 +162,83 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void adminInfoCarriesSeededButtonPointsAndAbsoluteProcessMenus() throws Exception {
+        mockMvc.perform(get("/admin/system/index/info")
+                        .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.buttons", hasItems(BUTTON_PERMS.toArray(new String[0]))))
+                .andExpect(jsonPath("$.data.configMenus[*].path", hasItems(
+                        "/system",
+                        "/system/processSet",
+                        "/system/processSet/processType",
+                        "/system/processSet/processTemplate",
+                        "/system/processSet/templateSet",
+                        "/system/processMgr",
+                        "/system/processMgr/process")))
+                .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/processSet"))))
+                .andExpect(jsonPath("$.data.configMenus[*].path", not(hasItem("/processMgr"))));
+    }
+
+    @Test
+    void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
+        int menus = count("SELECT COUNT(*) FROM sys_menu");
+        int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
+        int grants = count("SELECT COUNT(*) FROM sys_role_menu");
+        int userRoles = count("SELECT COUNT(*) FROM sys_user_role");
+        int roles = count("SELECT COUNT(*) FROM sys_role");
+
+        try (Connection connection = dataSource.getConnection()) {
+            Context context = mock(Context.class);
+            when(context.getConnection()).thenReturn(connection);
+            new V110__BackofficePermissionBase().migrate(context);
+        }
+
+        assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));
+        assertEquals(buttons, count("SELECT COUNT(*) FROM sys_menu WHERE type = 2"));
+        assertEquals(grants, count("SELECT COUNT(*) FROM sys_role_menu"));
+        assertEquals(userRoles, count("SELECT COUNT(*) FROM sys_user_role"));
+        assertEquals(roles, count("SELECT COUNT(*) FROM sys_role"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE path IN ('/processSet', '/processMgr') AND is_deleted = 0"));
+    }
+
+    @Test
+    void menuMaintenanceAcceptsButtonsOnlyUnderAPageWithPerms() throws Exception {
+        int userPageId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = 'sysUser' AND type = 1", Integer.class);
+        int systemRootId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = '/system' AND parent_id = 0", Integer.class);
+
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"测试按钮\",\"parentId\":" + userPageId
+                                + ",\"type\":2,\"path\":\"\",\"component\":\"\",\"perms\":\"system:user:test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE perms = 'system:user:test' AND type = 2"));
+        jdbcTemplate.update("DELETE FROM sys_menu WHERE perms = 'system:user:test'");
+
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"按钮挂目录\",\"parentId\":" + systemRootId
+                                + ",\"type\":2,\"path\":\"\",\"component\":\"\",\"perms\":\"system:user:test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("按钮必须挂在页面下"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE perms = 'system:user:test'"));
+
+        mockMvc.perform(post("/admin/system/sysMenu/save")
+                        .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"按钮缺标识\",\"parentId\":" + userPageId
+                                + ",\"type\":2,\"path\":\"\",\"component\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("按钮权限标识不能为空"));
+    }
+
+    @Test
     void configurationMenuGrantsAuthorizeTheMatchingRoleAndUserOperations() throws Exception {
         int roleMenuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = 'sysRole'", Integer.class);
@@ -123,7 +247,7 @@ class FlywayMigrationContractTest {
         int menuAdminMenuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = 'sysMenu'", Integer.class);
         int processTypeMenuId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sys_menu WHERE path = 'processType'", Integer.class);
+                "SELECT id FROM sys_menu WHERE path = '/system/processSet/processType'", Integer.class);
         int systemRootId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system' AND parent_id = 0", Integer.class);
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
@@ -179,16 +303,19 @@ class FlywayMigrationContractTest {
                 .andExpect(jsonPath("$.code").value(200));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
-        assertEquals(0, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 1000 AND is_deleted = 0"));
+        // 按钮点是可授予的配置菜单；不在提交里的旧授予（/work 页面）随重提交被丢弃。
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 1000 AND is_deleted = 0"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 901 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000]}"))
+                        .content("{\"roleId\":101,\"menuIdList\":[" + roleMenuId + "," + processTypeMenuId + ",1000,901]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("只能授予配置菜单"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + roleMenuId + " AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = " + processTypeMenuId + " AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu WHERE role_id = 101 AND menu_id = 1000 AND is_deleted = 0"));
         mockMvc.perform(post("/admin/system/sysMenu/doAssign")
                         .header("token", jwtHelper.createTokenPair(2L, "user", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -315,7 +442,7 @@ class FlywayMigrationContractTest {
                         .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空"));
+                .andExpect(jsonPath("$.message").value("菜单名称不能为空；路由地址不能为空；上级菜单不能为空；菜单类型不能为空"));
         // 目录转菜单页而不发 component：请求为空即沿用旧行，service 按落库形状判（ADR 0036）。
         jdbcTemplate.update(
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (1001, ?, '报表目录', 0, 'reports', '', 1, 0)",
