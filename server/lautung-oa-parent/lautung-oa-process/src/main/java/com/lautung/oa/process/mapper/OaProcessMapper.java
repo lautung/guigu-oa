@@ -1,5 +1,6 @@
 package com.lautung.oa.process.mapper;
 
+import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.model.process.Process;
 import com.lautung.oa.vo.process.ProcessQueryVo;
 import com.lautung.oa.vo.process.ProcessVo;
@@ -18,7 +19,11 @@ import java.util.List;
 public interface OaProcessMapper extends BaseMapper<Process> {
 
     //审批管理列表与已发起列表共用（勿命名为 selectPage，会与 BaseMapper 分页方法冲突导致 Parameter 'ew' not found）
-    IPage<ProcessVo> selectProcessPage(Page<ProcessVo> pageParam, @Param("vo") ProcessQueryVo processQueryVo);
+    //scope 只由配置实例查询传入（ADR 0057）：部门列 = 发起人部门 d.dept_id，本人列 = 发起人 a.user_id；
+    //已发起传 null，保持办事列表不带数据范围。
+    IPage<ProcessVo> selectProcessPage(Page<ProcessVo> pageParam,
+                                       @Param("vo") ProcessQueryVo processQueryVo,
+                                       @Param("scope") DataScope scope);
 
     //待处理回查：按 businessKey 集合批量取行，服务层按引擎顺序重排
     List<ProcessVo> selectRowsByIds(@Param("ids") List<Long> ids);

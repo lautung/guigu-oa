@@ -1,5 +1,6 @@
 package com.lautung.oa.process;
 
+import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.vo.process.ProcessQueryVo;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,13 +19,19 @@ public class OaProcessMapperMethodTest {
         Method method = OaProcessMapper.class.getMethod(
                 "selectProcessPage",
                 Page.class,
-                ProcessQueryVo.class
+                ProcessQueryVo.class,
+                DataScope.class
         );
 
         assertEquals("selectProcessPage", method.getName());
 
-        Param param = method.getParameters()[1].getAnnotation(Param.class);
-        assertNotNull(param);
-        assertEquals("vo", param.value());
+        Param voParam = method.getParameters()[1].getAnnotation(Param.class);
+        assertNotNull(voParam);
+        assertEquals("vo", voParam.value());
+
+        // 数据范围是参数不是 SQL 片段（ADR 0053/0057）：第三个入参绑定给 XML 的 scope。
+        Param scopeParam = method.getParameters()[2].getAnnotation(Param.class);
+        assertNotNull(scopeParam);
+        assertEquals("scope", scopeParam.value());
     }
 }

@@ -1,12 +1,22 @@
 package com.lautung.oa.auth.controller;
 
+import com.lautung.oa.auth.datascope.DataScope;
+import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.SysUserQueryVo;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
 import com.lautung.oa.vo.system.SysUserUpdateRequest;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -14,7 +24,10 @@ import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,12 +41,26 @@ class SysUserControllerTest {
 
     private final SysUserService service = mock(SysUserService.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+    private final DataScopeResolver dataScopeResolver = mock(DataScopeResolver.class);
     private final SysUserController controller = new SysUserController();
+
+    @BeforeAll
+    static void initTableMetadata() {
+        // Lambda wrapper 需要 SysUser 的列元数据，纯单元测试里手工初始化（testing.md）。
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SysUser.class);
+    }
 
     @BeforeEach
     void injectDependencies() {
         ReflectionTestUtils.setField(controller, "service", service);
         ReflectionTestUtils.setField(controller, "passwordEncoder", passwordEncoder);
+        ReflectionTestUtils.setField(controller, "dataScopeResolver", dataScopeResolver);
+        when(dataScopeResolver.resolve(any())).thenReturn(DataScope.unrestricted());
+    }
+
+    @AfterEach
+    void clearLoginUser() {
+        LoginUserInfoHelper.removeUserId();
     }
 
     @Test
@@ -60,6 +87,62 @@ class SysUserControllerTest {
 
         assertEquals(200, result.getCode());
         assertTrue(result.getData() instanceof Page);
+    }
+
+    @Test
+    void scopesTheUserPageByDepartmentAndOwnRow() {
+        LoginUserInfoHelper.setUserId(7L);
+        when(dataScopeResolver.resolve(7L)).thenReturn(DataScope.of(Set.of(10L, 11L), 7L));
+
+        controller.index(1L, 10L, new SysUserQueryVo());
+
+        String sql = capturedWrapper().getSqlSegment();
+        assertTrue(sql.contains("dept_id IN"), sql);
+        assertTrue(sql.contains("OR"), sql);
+        assertTrue(sql.contains("id ="), sql);
+    }
+
+    @Test
+    void emptyDataScopeReturnsZeroRowsInsteadOfEverything() {
+        LoginUserInfoHelper.setUserId(7L);
+        when(dataScopeResolver.resolve(7L)).thenReturn(DataScope.of(Set.of(), null));
+
+        controller.index(1L, 10L, new SysUserQueryVo());
+
+        String sql = capturedWrapper().getSqlSegment();
+        assertTrue(sql.contains("1 = 0"), sql);
+        assertFalse(sql.contains("dept_id"), sql);
+    }
+
+    @Test
+    void selfOnlyScopeUsesTheUserRowWithoutADepartmentPredicate() {
+        LoginUserInfoHelper.setUserId(7L);
+        when(dataScopeResolver.resolve(7L)).thenReturn(DataScope.of(Set.of(), 7L));
+
+        controller.index(1L, 10L, new SysUserQueryVo());
+
+        String sql = capturedWrapper().getSqlSegment();
+        assertTrue(sql.contains("id ="), sql);
+        assertFalse(sql.contains("dept_id"), sql);
+        assertFalse(sql.contains("1 = 0"), sql);
+    }
+
+    @Test
+    void unrestrictedScopeAddsNoPredicate() {
+        LoginUserInfoHelper.setUserId(7L);
+        when(dataScopeResolver.resolve(7L)).thenReturn(DataScope.unrestricted());
+
+        controller.index(1L, 10L, new SysUserQueryVo());
+
+        String sql = capturedWrapper().getSqlSegment();
+        assertEquals("", sql);
+    }
+
+    @SuppressWarnings("unchecked")
+    private LambdaQueryWrapper<SysUser> capturedWrapper() {
+        ArgumentCaptor<Wrapper<SysUser>> wrapper = ArgumentCaptor.forClass(Wrapper.class);
+        verify(service).page(any(), wrapper.capture());
+        return (LambdaQueryWrapper<SysUser>) wrapper.getValue();
     }
 
     @Test
