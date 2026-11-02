@@ -129,13 +129,13 @@ test.describe('B 菜单管理', () => {
       const nonConfig = await api.envelope(ADMIN, 'post', '/admin/system/sysMenu/save', {
         parentId: page.id,
         name: '按钮',
-        type: 2,
+        type: 3,
         path: unique('apiBtn'),
         perms: 'api:test',
         status: 1,
       })
-      // type 只收 0/1（ADR 0036）：坏类型在校验边界就被拦下，不再借道「只能维护配置菜单」。
-      expectCodeAndMessage(nonConfig.body, 201, '菜单类型只能为 0 或 1', 'B19 type 非法（边界）')
+      // type 只收 0/1/2（ADR 0056）：坏类型在校验边界就被拦下，不再借道「只能维护配置菜单」。
+      expectCodeAndMessage(nonConfig.body, 201, '菜单类型只能为 0、1 或 2', 'B19 type 非法（边界）')
     } finally {
       await api.call(ADMIN, 'delete', `/admin/system/sysMenu/remove/${page.id}`)
     }
@@ -238,7 +238,7 @@ test.describe('B 菜单管理', () => {
     const empty = await api.envelope(PLAIN_USER, 'post', '/admin/system/sysMenu/save', {})
     expectCode(empty.body, 201, 'B22 未授予 + 空体')
     expect(empty.body.message).toBe(
-      '菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空',
+      '菜单名称不能为空；路由地址不能为空；上级菜单不能为空；菜单类型不能为空',
     )
 
     // 良构体才轮到配置 gate：205 仍是「没有配置权限」的唯一答案。
