@@ -1,5 +1,5 @@
-import { classifySubmissionFailure } from '@/submission-outcome'
-import type { RequestScope } from '@/request-scope'
+import { classifySubmissionFailure } from '@/request/submission-outcome'
+import type { RequestScope } from '@/request/request-scope'
 import type {
   ApiRequestConfig,
   AttachmentRecord,

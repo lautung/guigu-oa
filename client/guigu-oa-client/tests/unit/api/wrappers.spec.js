@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { requestMock } = vi.hoisted(() => ({ requestMock: vi.fn() }))
 
-vi.mock('@/utils/request', () => ({ default: requestMock }))
+vi.mock('@/request/request', () => ({ default: requestMock }))
 
 import { findCarbonCopyRecipients } from '@/api/carbon-copy'
 import {

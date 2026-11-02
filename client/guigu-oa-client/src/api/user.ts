@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/request/request'
 import type { ApiResponse, LoginCredentials, LoginTokens, UserInfo } from '@/types/domain'
 
 export function login(data: LoginCredentials): Promise<ApiResponse<LoginTokens>> {

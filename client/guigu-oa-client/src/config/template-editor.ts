@@ -1,8 +1,8 @@
 import { markRaw, reactive, readonly } from 'vue'
-import { classifySubmissionFailure } from '@/submission-outcome'
+import { classifySubmissionFailure } from '@/request/submission-outcome'
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { processTemplateListPath } from '@/router/paths'
-import type { RequestScope } from '@/request-scope'
+import type { RequestScope } from '@/request/request-scope'
 import type {
   ApiRequestConfig,
   EntityId,

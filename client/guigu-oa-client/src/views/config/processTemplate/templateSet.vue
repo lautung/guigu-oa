@@ -150,7 +150,7 @@ import {
 } from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
 import { templateSetPath } from '@/router/paths'
-import { openRequestScope } from '@/request-scope'
+import { openRequestScope } from '@/request/request-scope'
 import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
 

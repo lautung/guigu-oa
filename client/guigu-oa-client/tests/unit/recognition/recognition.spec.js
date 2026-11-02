@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRecognition } from '@/recognition'
-import { createRequestClient } from '@/utils/request'
+import { createRequestClient } from '@/request/request'
 
 const originalAdapter = axios.defaults.adapter
 const infoUrl = '/admin/system/index/info'

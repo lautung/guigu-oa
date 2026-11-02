@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/request/request'
 import type { ApiResponse, EntityId } from '@/types/domain'
 
 export interface CarbonCopyRecipient {

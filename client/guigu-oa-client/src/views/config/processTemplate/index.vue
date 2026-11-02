@@ -74,7 +74,7 @@
 <script lang="ts">
 import { defineComponent, onBeforeUnmount } from 'vue'
 
-import request from '@/utils/request'
+import request from '@/request/request'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import {
@@ -88,7 +88,7 @@ import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
 import type { NoListQuery } from '@/list-read'
 import { templateSetPath } from '@/router/paths'
-import { openRequestScope } from '@/request-scope'
+import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type {
   FormDesignerOption,

@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { useUserStore } from '@/store/modules/user'
-import { configureRequest } from '@/utils/request'
+import { configureRequest } from '@/request/request'
 
 /** 审批表单值的存储型 XSS 载荷（#142）：页面必须把它显示成字符，不能生成元素。 */
 export const XSS_PAYLOAD = '<img src=x onerror="window.__secXss=1">'

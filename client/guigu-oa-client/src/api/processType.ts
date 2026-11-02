@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/request/request'
 import { findAllRequest, getRequest, removeRequest, writeRequest } from '@/config/process-type'
 import type { ApiResponse, ProcessTypeRecord } from '@/types/domain'
 

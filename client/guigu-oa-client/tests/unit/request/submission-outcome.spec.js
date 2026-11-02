@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { classifySubmissionFailure } from '@/submission-outcome'
-import { BusinessRequestFailure, RequestFailure } from '@/request-failure'
+import { classifySubmissionFailure } from '@/request/submission-outcome'
+import { BusinessRequestFailure, RequestFailure } from '@/request/request-failure'
 
 const actions = [
   ['start-approval', [201, 205, 208, 209, 403]],

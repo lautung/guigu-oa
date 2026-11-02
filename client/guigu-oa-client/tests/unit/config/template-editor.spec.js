@@ -510,7 +510,7 @@ it('保存中强制离开不确认，迟到成功不提示也不抢导航', asyn
 })
 
 it.each([208, 209])('明确拒绝 %s 恢复正常重试；重发后断网仍待确认', async (code) => {
-  const { BusinessRequestFailure } = await import('@/request-failure')
+  const { BusinessRequestFailure } = await import('@/request/request-failure')
   const h = harness()
   const edit = h.module.open('A')
   await flushPromises()
@@ -623,8 +623,8 @@ it('保存与待确认不能被重读或设计重试解锁；提交只包含现�
 async function transportHarness(respond) {
   const { default: axios } = await import('axios')
   const { createRecognition } = await import('@/recognition')
-  const { createRequestScope } = await import('@/request-scope')
-  const { createRequestClient } = await import('@/utils/request')
+  const { createRequestScope } = await import('@/request/request-scope')
+  const { createRequestClient } = await import('@/request/request')
   const fixture = harness()
   const calls = [],
     globalNotices = [],

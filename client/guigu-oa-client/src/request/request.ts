@@ -6,13 +6,13 @@ import {
   rejectRequest,
   transportFailure,
   type TransportScopeFields,
-} from '@/request-failure'
+} from '@/request/request-failure'
 import {
   createRenewal,
   isAuthentication,
   setRequestToken,
   type RenewableRequestConfig,
-} from '@/renewal'
+} from '@/request/renewal'
 import type { ApiClient, ApiRequestConfig, ApiResponse } from '@/types/domain'
 
 const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'

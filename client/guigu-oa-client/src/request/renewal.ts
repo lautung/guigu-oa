@@ -9,7 +9,7 @@ import {
   rejectRequest,
   transportFailure,
   type TransportScopeFields,
-} from '@/request-failure'
+} from '@/request/request-failure'
 import type { ApiResponse, LoginTokens } from '@/types/domain'
 
 const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'

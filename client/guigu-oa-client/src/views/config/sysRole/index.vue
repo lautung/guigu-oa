@@ -80,7 +80,7 @@ import {
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
 import { assignAuthPath } from '@/router/paths'
-import { openRequestScope } from '@/request-scope'
+import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, RoleListItem, RoleRecord } from '@/types/domain'
 import type { FormInstance } from 'element-plus'

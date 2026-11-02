@@ -4,7 +4,7 @@ import type { Router } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getInfo } from '@/api/user'
-import { configureRequest } from '@/utils/request'
+import { configureRequest } from '@/request/request'
 import {
   getToken,
   getRefreshToken,

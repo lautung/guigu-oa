@@ -1,5 +1,5 @@
 import { reactive, readonly } from 'vue'
-import type { RequestScope } from '@/request-scope'
+import type { RequestScope } from '@/request/request-scope'
 import type { ApiRequestConfig, PageResult } from '@/types/domain'
 
 export type ListReadStatus = 'loading' | 'ready' | 'failed'

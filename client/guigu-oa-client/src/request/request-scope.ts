@@ -1,6 +1,6 @@
 import type { Recognition } from '@/recognition'
 import type { ApiRequestConfig, ApiResponse } from '@/types/domain'
-import request, { type ScopedRequestConfig } from '@/utils/request'
+import request, { type ScopedRequestConfig } from '@/request/request'
 
 export interface RequestScopeOptions {
   notifyNormalErrors?: boolean

@@ -1,9 +1,9 @@
 import axios, { AxiosError } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRecognition } from '@/recognition'
-import { createRenewal } from '@/renewal'
-import { BusinessRequestFailure } from '@/request-failure'
-import { installHttp } from './support/harness'
+import { createRenewal } from '@/request/renewal'
+import { BusinessRequestFailure } from '@/request/request-failure'
+import { installHttp } from '../support/harness'
 
 const originalAdapter = axios.defaults.adapter
 const refreshUrl = '/dev-api/admin/system/index/refresh'

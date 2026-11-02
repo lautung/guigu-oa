@@ -145,7 +145,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { openRequestScope } from '@/request-scope'
+import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import { createApprovalDetail, type ApprovalDetailOpening } from '@/work/approval-detail'
 import { createHttpDetailAdapter } from '@/work/approval-detail-http'

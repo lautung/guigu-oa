@@ -28,7 +28,7 @@
 import { defineComponent } from 'vue'
 
 import { findStartable } from '@/config/process-template'
-import request from '@/utils/request'
+import request from '@/request/request'
 import { startApplyPath } from '@/router/paths'
 import type { EntityId, ProcessTemplateStartGroup } from '@/types/domain'
 

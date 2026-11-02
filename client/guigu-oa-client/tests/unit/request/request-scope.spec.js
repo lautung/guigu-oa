@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createRequestScope } from '@/request-scope'
+import { createRequestScope } from '@/request/request-scope'
 
 function fakeRecognition() {
   let generation = 1

@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/request/request'
 import { getRequest, removeRequest, writeRequest } from '@/config/sys-role'
 import type { ApiResponse, EntityId, RoleRecord } from '@/types/domain'
 

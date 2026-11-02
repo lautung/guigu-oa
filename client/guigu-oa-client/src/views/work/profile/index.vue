@@ -11,7 +11,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 
-import request from '@/utils/request'
+import request from '@/request/request'
 import { presentProfile, readProfile } from '@/work/profile'
 
 export default defineComponent({

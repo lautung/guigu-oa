@@ -5,7 +5,7 @@ import {
   type ListReadQuery,
   type ListReadView,
 } from '@/list-read'
-import type { RequestScope } from '@/request-scope'
+import type { RequestScope } from '@/request/request-scope'
 import type { ApiRequestConfig } from '@/types/domain'
 
 export interface ListPageEffects {

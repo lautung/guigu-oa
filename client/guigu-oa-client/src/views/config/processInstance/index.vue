@@ -81,7 +81,7 @@ import {
 } from '@/config/process-instance'
 import { createListPage } from '@/list-page'
 import { listPageEffects } from '@/list-page-browser'
-import { openRequestScope } from '@/request-scope'
+import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { ProcessInstanceListItem, ProcessInstanceRecord } from '@/types/domain'
 
