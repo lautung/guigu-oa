@@ -1,0 +1,212 @@
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  background: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+/* 原型切换条：故意不像产品 UI */
+.proto-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #111827;
+  color: #f9fafb;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  font-size: 13px;
+  user-select: none;
+}
+
+.proto-arrow {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f9fafb;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.proto-arrow:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.proto-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  min-width: 190px;
+  justify-content: center;
+}
+
+.proto-key {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.proto-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.proto-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.proto-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 4px;
+}
+
+.proto-settings {
+  border: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f9fafb;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.proto-settings:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.proto-panel {
+  padding: 12px 4px;
+}
+
+.proto-group + .proto-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.proto-group-label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+
+.proto-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.proto-row > span {
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+}
+
+.proto-swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.proto-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.proto-swatch.active {
+  border-color: var(--el-text-color-primary);
+  box-shadow: 0 0 0 2px var(--el-bg-color);
+}
+
+.proto-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+@media (max-width: 560px) {
+  .proto-bar {
+    bottom: 10px;
+    height: 42px;
+    gap: 4px;
+  }
+
+  .proto-title {
+    min-width: 0;
+    padding: 0 2px;
+    gap: 6px;
+  }
+
+  .proto-name {
+    font-size: 12px;
+  }
+
+  .proto-tag {
+    display: none;
+  }
+
+  .proto-arrow {
+    width: 28px;
+    height: 28px;
+  }
+}
