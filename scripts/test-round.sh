@@ -19,7 +19,7 @@
 #                                             （api/functional/compat/security 会先重建镜像）
 #   BASE_SNAPSHOT    (/tmp/guigu-oa-base-snapshot)  clean 产出的干净基线快照
 #   OUT              (docs/test/evidence/<日期>-clean-rerun) 证据目录
-#   ZAP_HOME         (/tmp/zap/ZAP_2.17.0)    ZAP Core 解压目录
+#   ZAP_HOME         (/tmp/zap/ZAP_2.17.0)    ZAP Core 解压目录（下载配方见 docs/agents/testing.md「安全套件」）
 #   PERF_TARGET / PERF_FINISHED (10000 / 4000)
 #   FORCE=1          允许覆盖已存在的证据文件（ZAP/security-scan 的重跑保护）
 #
@@ -62,7 +62,7 @@ usage() {
   MAVEN_MIRROR_URL / NPM_REGISTRY (空)      受限网络构建镜像源，透传 compose build
   BASE_SNAPSHOT    (/tmp/guigu-oa-base-snapshot)  clean 产出的干净基线快照
   OUT              (docs/test/evidence/<日期>-clean-rerun) 证据目录
-  ZAP_HOME         (/tmp/zap/ZAP_2.17.0)    ZAP Core 解压目录
+  ZAP_HOME         (/tmp/zap/ZAP_2.17.0)    ZAP Core 解压目录（下载配方见 docs/agents/testing.md「安全套件」）
   PERF_TARGET / PERF_FINISHED (10000 / 4000)
   FORCE=1          允许覆盖已存在的证据文件（ZAP/security-scan 的重跑保护）
 
@@ -316,5 +316,10 @@ case "${1:-}" in
   -h | --help | help) usage; exit 0 ;;
   *) usage; exit 2 ;;
 esac
+
+# verify 常在生成证据之前跑过；这里在每轮收尾立刻查体积/链接，避免超大证据到下一轮才红。
+if [ -d "$OUT" ]; then
+  step "evidence: check-docs" node "$client/scripts/check-docs.mjs"
+fi
 
 say "耗时汇总：$timings"

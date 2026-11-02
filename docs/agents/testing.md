@@ -54,6 +54,24 @@
 - 收紧入参规则（新增 `@Valid`/约束）时，grep `tests/api` 与 `tests/e2e-stack` 的负例载荷：仍返回 201 不代表走到了命名分支，必要时用 `expectCodeAndMessage` 钉住稳定消息片段。
 - 服务端合同测试同样受这条约束，且由 `npm run check:contracts`（`scripts/check-contract-assertions.mjs`）强制：断言 201 的用例必须同链钉 `$.message`；同一检查还禁止控制器把 MyBatis 实体当 `@RequestBody`、禁止 `*SaveRequest` 声明 `id`。205 不要求钉消息——它的文案由两个 producer 统一为「没有操作权限」，码加上 `status().isOk()` 已能指认分支。
 
+## 安全套件
+
+- ZAP Core 2.17.0 默认放 `/tmp/zap/ZAP_2.17.0`，`test-round.sh ci-security` 可用 `ZAP_HOME` 覆盖。首次准备（GitHub 资产名是 `ZAP_2.17.0_Core.zip`，不是 Linux `tar.gz`）：
+
+  ```sh
+  mkdir -p /tmp/zap
+  curl -L -o /tmp/zap/ZAP_2.17.0_Core.zip \
+    https://github.com/zaproxy/zaproxy/releases/download/v2.17.0/ZAP_2.17.0_Core.zip
+  unzip -q /tmp/zap/ZAP_2.17.0_Core.zip -d /tmp/zap
+  ```
+
+- 完整 ZAP HTML/JSON 留在 `/tmp/security-evidence-full/<轮次>/`，入仓只留摘要；`check-docs` 拦单文件 >100KB、单轮 >5MB，`test-round.sh` 每轮收尾会自动跑它。
+
+## 主栈回归
+
+- `.github/workflows/regression.yml` 用 `concurrency: regression-${{ github.ref }}` + `cancel-in-progress: true`：后续 main push 会取消正在跑的前一个 Regression，状态是 `cancelled`，不是失败。
+- 合并 PR 后若还要继续直推 main：先等 merge commit 的 CI + Regression 绿，或事后对 merge SHA `gh run rerun <run-id>`；若接受后续 run 覆盖，在票/PR 里写清被取消的 run 与覆盖它的 run。
+
 ## 覆盖率
 
 - `./scripts/coverage.sh`：两端一起跑并打印汇总；CI 用它同一份 `scripts/coverage-summary.mjs` 输出 summary。
