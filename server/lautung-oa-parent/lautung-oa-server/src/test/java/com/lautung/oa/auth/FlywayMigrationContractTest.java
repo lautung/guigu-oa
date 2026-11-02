@@ -399,11 +399,11 @@ class FlywayMigrationContractTest {
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu WHERE id = " + systemRootId + " AND path = '/system' AND is_deleted = 0"));
-        // 保护路由本身不能改名：换到另一个配置根也仍是「不可重定义」。
+        // 保护路由本身不能改名：换到受保护页面路径也仍是「不可重定义」。
         mockMvc.perform(put("/admin/system/sysMenu/update")
                         .header("token", jwtHelper.createTokenPair(6L, "menu-manager", 0L).token())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"id\":" + systemRootId + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/processSet\"}"))
+                        .content("{\"id\":" + systemRootId + ",\"name\":\"系统管理\",\"parentId\":0,\"type\":0,\"path\":\"/system/sysUser\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("菜单路由不可重定义"));

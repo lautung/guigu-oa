@@ -31,8 +31,10 @@ import java.util.stream.Collectors;
 @Service
 public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
 
+    // 落库形状：#221 把审批两棵树迁入 /system，根行的 path 是相对段 processSet/processMgr，
+    // 不是旧的顶层绝对路径；保护集必须跟着库里的 raw path 走，否则根目录可以被删掉或改名。
     private static final Set<String> PROTECTED_MENU_PATHS = Set.of(
-            "/system/sysUser", "/system/sysRole", "/system/sysMenu", "/system", "/processSet", "/processMgr");
+            "/system/sysUser", "/system/sysRole", "/system/sysMenu", "/system", "processSet", "processMgr");
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
