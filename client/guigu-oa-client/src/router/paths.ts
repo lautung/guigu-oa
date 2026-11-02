@@ -33,6 +33,8 @@ export const PATHS = {
   PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
   NOTICE: '/notice',
   NOTICE_DETAIL: '/notice/:id',
+  SYSTEM_NOTICE: '/system/notice',
+  SYSTEM_NOTICE_EDIT: '/system/notice/edit/:id?',
 } as const
 
 /** 办事列表的静态路径，保留既有 ROUTES 形状供导航与 surface 使用。 */
@@ -113,6 +115,12 @@ export function noticeDetailPath(id: EntityId): string {
   return `${PATHS.NOTICE}/${id}`
 }
 
+/** 发布管理页的编辑子路由（#220）：新建不带 id，编辑带 id。 */
+export function noticeEditPath(id?: EntityId): string {
+  const base = PATHS.SYSTEM_NOTICE_EDIT.replace('/:id?', '')
+  return id == null || id === '' ? base : `${base}/${id}`
+}
+
 const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.LOGIN]: PATHS.LOGIN,
   [PATHS.WORK_START]: PATHS.WORK_START,
@@ -132,6 +140,7 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.PROCESS_SET_TEMPLATE_SET]: PATHS.PROCESS_SET_PROCESS_TEMPLATE,
   [PATHS.PROCESS_MGR_PROCESS]: PATHS.PROCESS_MGR_PROCESS,
   [PATHS.NOTICE]: PATHS.NOTICE,
+  [PATHS.SYSTEM_NOTICE]: PATHS.SYSTEM_NOTICE,
 }
 
 const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = [
@@ -142,6 +151,7 @@ const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = 
   { prefix: `${PATHS.WORK_COPIED}/`, returnPath: PATHS.WORK_COPIED },
   { prefix: `${PATHS.PROCESS_MGR_PROCESS}/`, returnPath: PATHS.PROCESS_MGR_PROCESS },
   { prefix: `${PATHS.NOTICE}/`, returnPath: PATHS.NOTICE },
+  { prefix: `${PATHS.SYSTEM_NOTICE}/`, returnPath: PATHS.SYSTEM_NOTICE },
 ]
 
 function normalize(path: string | undefined): string {

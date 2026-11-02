@@ -134,6 +134,21 @@ const configChildren: AppRoute[] = [
     meta: { title: '登录日志', menuGroup: 'config' },
   },
   {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_NOTICE),
+    name: 'SysNotice',
+    component: () => import('@/views/config/notice/index.vue'),
+    meta: { title: '通知公告', menuGroup: 'config' },
+  },
+  {
+    // 隐藏子路由（#220）：作为已授予 `/system/notice` 的前缀被 #224 守卫覆盖，
+    // 不单独出现在菜单或页面授予里。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_NOTICE_EDIT),
+    name: 'SysNoticeEdit',
+    component: () => import('@/views/config/notice/edit.vue'),
+    meta: { title: '编辑公告', menuGroup: 'config' },
+    hidden: true,
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_ASSIGN_AUTH),
     name: 'AssignAuth',
     component: () => import('@/views/config/sysRole/assignAuth.vue'),

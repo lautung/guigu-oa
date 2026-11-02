@@ -97,6 +97,23 @@ describe('后台页面授予守卫', () => {
     ).toEqual({ action: 'allow' })
   })
 
+  it('covers the hidden notice editor as a prefix of the granted notice page', () => {
+    const noticePage = [
+      { path: '/system', title: '组织与权限', type: 0, sort: 1 },
+      { path: '/system/notice', parentPath: '/system', title: '通知公告', type: 1, sort: 1 },
+    ]
+
+    expect(
+      resolveAuthGuard({ path: '/system/notice/edit/7', hasToken: true, menus: noticePage }),
+    ).toEqual({ action: 'allow' })
+    expect(
+      resolveAuthGuard({ path: '/system/notice/edit', hasToken: true, menus: noticePage }),
+    ).toEqual({ action: 'allow' })
+    expect(
+      resolveAuthGuard({ path: '/system/notice/edit/7', hasToken: true, menus: USER_PAGE }),
+    ).toEqual({ action: 'redirect', to: ROUTES.PENDING })
+  })
+
   it('allows a hidden page only through its own menus entry', () => {
     const roleWithoutHidden = [
       { path: '/system', title: '组织与权限', type: 0, sort: 1 },

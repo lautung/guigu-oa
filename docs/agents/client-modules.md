@@ -21,15 +21,21 @@
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
 | `src/config/login-log.ts` | `LOGIN_STATUS_OPTIONS` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` | 登录日志四值（成功/失败/锁定/解锁）标签与查询投影；列表请求、批量删除、清空与按 username 编码的解锁请求 |
 | `src/notice/config.ts` | `NOTICE_TYPES` / `NOTICE_STATUSES` / `NOTICE_PERMISSIONS` / `presentFeedItem` / `presentDetail` / `presentAdminListRecord` / `feedQueryForTab` / `feedRequest` / `unreadRequest` / `unreadCountRequest` / `detailRequest` / `markReadRequest` / `imageRequest` / `admin*` 与写侧请求构造 | 公告（ADR 0055）的读侧/管理侧请求形状、类型与状态标签、列表与详情投影；管理侧写请求（create/update/remove/publish/withdraw/upload）留给 #220 复用 |
-| `src/notice/api.ts` | `fetchFeed` / `fetchUnread` / `fetchUnreadCount` / `fetchNoticeDetail` / `markNoticeRead` / `fetchNoticeImage` / `findNoticePage` 等 | 薄包装：读侧走 JSON 客户端，`fetchNoticeImage` 走二进制客户端（同源图片带认证头的唯一路径）；管理函数供 #220 |
+| `src/notice/api.ts` | `fetchFeed` / `fetchUnread` / `fetchUnreadCount` / `fetchNoticeDetail` / `markNoticeRead` / `fetchNoticeImage` / `findNoticePage` 等 | 薄包装：读侧走 JSON 客户端，`fetchNoticeImage` 走二进制客户端（同源图片带认证头的唯一路径）；管理侧函数由 #220 发布页使用 |
 | `src/notice/unread.ts` | `createNoticeUnreadSource(send)` / `createUnreadPolling({ source, clock, intervalMs })` → `state` / `start` / `stop` / `refresh` | 铃铛数据源与轮询时机（立即、60 秒、focus 补拉）：latest-wins、失败静默、识别终态停表；时机用注入时钟单测 |
 | `src/notice/unread-browser.ts` | `useNoticeUnread()` / `refreshNoticeUnread()` | 浏览器接线：每次刷新重开请求作用域（关普通错误提示），外壳卸载即停；详情写回执后让角标立即归零 |
 | `src/notice/notice-images.ts` | `noticeImageId(src)` / `createNoticeImageHydrator({ loadImage, createObjectUrl, revokeObjectUrl })` → `hydrate` / `revokeAll` / `dispose` | 正文同源图片的认证取回：`/admin/notices/images/{id}` 换成 `blob:`，内容变化撤销、卸载作废，非公告图片不碰；#220 的预览可复用 |
 | `src/notice/NoticeContent.vue` | props `html` / `loadImage?` / `createObjectUrl?` / `revokeObjectUrl?` | 全仓唯一 `v-html` 渲染面：服务端写入时已消毒，客户端不再二次消毒；ESLint 只对本文件关 `vue/no-v-html`，`npm run check:v-html` 守卫第二处 |
+| `src/notice/quill.ts` | `noticeQuillToolbar({ image? })` / `noticeQuillFormats({ image? })` / `NOTICE_QUILL_TOOLBAR` | Quill 2 工具栏能力的唯一 owner（ADR 0055）：只开 h1–h4、粗斜下划线删除线、有序/无序、引用、代码块、链接、图片、清除格式；`image:false` 供只有 edit 权限的用户隐藏图片按钮 |
+| `src/notice/QuillEditor.vue` | props `modelValue` / `readonly` / `showImage` / `placeholder`；`insertImage(url)` | Quill 2 本地包装：Quill 拥有 DOM，不使用 `v-html`；图片按钮只发 `image` 事件，由页面走服务端上传后在光标处插入同源 URL |
+| `src/notice/admin.ts` | `createNoticeEditor(adapter)` → `state` / `open` / `updateForm` / `saveDraft` / `publish` / `withdraw` / `remove` / `requestLeave` / `dispose`；`noticeWritePayload` / `emptyNoticeForm` | 发布管理状态机（ADR 0055）：新建/草稿/已发布/已撤回的动作矩阵、创建后 replace 到编辑路径、dirty 快照与离开确认、写载荷只含 title/type/content |
+| `src/notice/admin-browser.ts` | `createNoticeEditorPage(router)` | 公告编辑页的浏览器接线：HTTP、确认框、提示、路由跳转/替换与编辑路径 |
+| `src/views/config/notice/index.vue` | 页面 | 系统管理 > 通知公告：标题/类型/状态筛选与分页；编辑/发布(再次发布)/撤回/删除动作按状态与 `v-hasPermi` 收口；删除与发布/撤回二次确认 |
+| `src/views/config/notice/edit.vue` | 页面 | 公告编辑：标题/类型/Quill 2 正文、编辑/预览两个 tab（预览经 `NoticeContent` 水合图片）、按状态显示保存草稿/发布/撤回/删除；路由离开与返回走 dirty 确认 |
 | `src/views/notice/index.vue` | 页面 | 全部公告：全部/未读两个 tab、`publish_time DESC, id DESC` 分页、类型/标题/发布人/发布时间/读态；读状态与分页复用 `createListPage` |
 | `src/views/notice/detail.vue` | 页面 | 公告详情：类型/标题/发布人/发布时间/正文；加载成功后每次访问只写一次已读回执；撤回/删除/不存在按不存在视图处理 |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告是内置 `/notice` 与 `/notice/:id` |
-| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属；公告路由没有 `menuGroup`，不进入配置页授予 |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
+| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
@@ -44,7 +50,7 @@
 
 日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
 
-公告展示面（#219）：`TopBar.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`；发布管理页 `/system/notice` 属于 #220，复用 `src/notice/api.ts` 的写侧函数。
+公告展示面（#219）：`TopBar.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`。发布管理面（#220）：`/system/notice` 列表与隐藏子路由 `/system/notice/edit/:id?` 属于配置组，页面状态机在 `src/notice/admin.ts`，Quill 工具栏能力在 `src/notice/quill.ts`；图片上传端点由服务端 `system:notice:add` 把关，只有 edit 权限时编辑页隐藏图片按钮。
 
 ## 服务端鉴权
 

@@ -6,6 +6,7 @@ import {
   WORK_LIST_KINDS,
   assignAuthPath,
   noticeDetailPath,
+  noticeEditPath,
   processInstanceDetailPath,
   processTemplateListPath,
   returnPathOfRoute,
@@ -60,6 +61,24 @@ describe('路径 module', () => {
   it('公告详情返回全部公告', () => {
     expect(returnPathOfRoute(PATHS.NOTICE)).toBe(PATHS.NOTICE)
     expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
+  })
+
+  it('公告发布管理页的列表与编辑路径落在配置组', () => {
+    expect(resolve(PATHS.SYSTEM_NOTICE).name).toBe('SysNotice')
+    expect(resolve(PATHS.SYSTEM_NOTICE).meta).toMatchObject({
+      title: '通知公告',
+      menuGroup: 'config',
+    })
+    expect(resolve(noticeEditPath()).name).toBe('SysNoticeEdit')
+    expect(resolve(noticeEditPath()).params.id).toBeUndefined()
+    expect(resolve(noticeEditPath(7)).name).toBe('SysNoticeEdit')
+    expect(resolve(noticeEditPath(7)).params.id).toBe('7')
+    expect(resolve(noticeEditPath(7)).meta).toMatchObject({
+      title: '编辑公告',
+      menuGroup: 'config',
+    })
+    expect(returnPathOfRoute(PATHS.SYSTEM_NOTICE)).toBe(PATHS.SYSTEM_NOTICE)
+    expect(returnPathOfRoute(noticeEditPath(7))).toBe(PATHS.SYSTEM_NOTICE)
   })
 
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {
