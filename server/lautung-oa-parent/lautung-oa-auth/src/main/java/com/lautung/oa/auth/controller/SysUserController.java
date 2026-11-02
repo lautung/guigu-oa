@@ -4,6 +4,8 @@ package com.lautung.oa.auth.controller;
 import com.lautung.oa.auth.datascope.DataScope;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysUserService;
+import com.lautung.oa.framework.operlog.BusinessType;
+import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
@@ -50,6 +52,7 @@ public class SysUserController {
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新状态")
+    @OperLog(title = "用户管理·更新用户状态", businessType = BusinessType.UPDATE)
     @PutMapping("updateStatus/{id}/{status}")
     public Result updateStatus(@PathVariable Long id, @PathVariable Integer status) {
         service.updateStatus(id,status);
@@ -130,6 +133,7 @@ public class SysUserController {
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:add')")
     @Operation(summary = "保存用户")
+    @OperLog(title = "用户管理·新增用户", businessType = BusinessType.CREATE)
     @PostMapping("save")
     public Result save(@Valid @RequestBody SysUserSaveRequest request) {
         SysUser user = request.toEntity();
@@ -142,6 +146,7 @@ public class SysUserController {
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新用户")
+    @OperLog(title = "用户管理·修改用户", businessType = BusinessType.UPDATE)
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody SysUserUpdateRequest request) {
         SysUser user = request.toEntity();
@@ -167,6 +172,7 @@ public class SysUserController {
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:remove')")
     @Operation(summary = "删除用户")
+    @OperLog(title = "用户管理·删除用户", businessType = BusinessType.DELETE)
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         service.removeById(id);

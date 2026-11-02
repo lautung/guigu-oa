@@ -1,6 +1,8 @@
 package com.lautung.oa.auth.controller;
 
 import com.lautung.oa.auth.service.SysRoleService;
+import com.lautung.oa.framework.operlog.BusinessType;
+import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysRole;
@@ -48,6 +50,7 @@ public class SysRoleController {
     //2 为用户分配角色
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:assignRole')")
     @Operation(summary = "为用户分配角色")
+    @OperLog(title = "用户管理·分配角色", businessType = BusinessType.ASSIGN)
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginRoleVo assginRoleVo) {
         sysRoleService.doAssign(assginRoleVo);
@@ -102,6 +105,7 @@ public class SysRoleController {
     //添加角色
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:add')")
     @Operation(summary = "添加角色")
+    @OperLog(title = "角色管理·新增角色", businessType = BusinessType.CREATE)
     @PostMapping ("save")
     public Result save(@Valid @RequestBody SysRoleSaveRequest request) {
         sysRoleService.saveRole(request.toEntity(), request.getDeptIds());
@@ -129,6 +133,7 @@ public class SysRoleController {
     //修改角色-最终修改
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:edit')")
     @Operation(summary = "修改角色")
+    @OperLog(title = "角色管理·修改角色", businessType = BusinessType.UPDATE)
     @PutMapping ("update")
     public Result update(@Valid @RequestBody SysRoleUpdateRequest request) {
         sysRoleService.updateRole(request.toEntity(), request.getDeptIds());
@@ -138,6 +143,7 @@ public class SysRoleController {
     //根据id删除
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "根据id删除")
+    @OperLog(title = "角色管理·删除角色", businessType = BusinessType.DELETE)
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         boolean is_success = sysRoleService.removeById(id);
@@ -152,6 +158,7 @@ public class SysRoleController {
     // 前端数组 [1,2,3]
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "批量删除")
+    @OperLog(title = "角色管理·批量删除角色", businessType = BusinessType.DELETE)
     @DeleteMapping("batchRemove")
     public Result batchRemove(@RequestBody List<Long> idList) {
         boolean is_success = sysRoleService.removeByIds(idList);

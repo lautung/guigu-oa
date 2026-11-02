@@ -736,7 +736,7 @@ public class LoginAuthContractTest {
     }
 
     @TestConfiguration
-    static class InMemoryRedisConfig {
+    public static class InMemoryRedisConfig {
         @Bean
         @Primary
         public RedisTemplate<String, String> redisTemplate() {

@@ -57,7 +57,8 @@ class FlywayMigrationContractTest {
             "oa_process_template",
             "oa_process",
             "oa_process_record",
-            "oa_attachment");
+            "oa_attachment",
+            "sys_oper_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
@@ -107,6 +108,8 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '110' AND success = TRUE"));
         // 后台页面路径绝对化（#222）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '111' AND success = TRUE"));
+        // 操作日志表（#213，ADR 0054）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '112' AND success = TRUE"));
         assertEquals(0, count("SELECT COUNT(*) FROM sys_menu WHERE type = 1 AND path IN "
                 + "('sysUser', 'sysRole', 'sysMenu', 'assignAuth') AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "

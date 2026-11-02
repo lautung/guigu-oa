@@ -16,6 +16,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  * <pre>
  * common ← framework
  * common, model ← security
+ * common, framework, security, model ← audit
  * common, framework, security, model ← auth
  * common, framework, security, model, auth ← process
  * 全模块 ← server
@@ -32,6 +33,7 @@ class ArchitectureTest {
             .layer("Security").definedBy("com.lautung.oa.security..")
             // vo 是 model 模块里的请求 DTO 包，与 model 同属数据层
             .layer("Model").definedBy("com.lautung.oa.model..", "com.lautung.oa.vo..")
+            .layer("Audit").definedBy("com.lautung.oa.audit..")
             .layer("Auth").definedBy("com.lautung.oa.auth..")
             .layer("Process").definedBy("com.lautung.oa.process..")
             // 启动类在 com.lautung.oa 包根，demo seeder 在 com.lautung.oa.demo
@@ -40,13 +42,16 @@ class ArchitectureTest {
             .whereLayer("Framework").mayOnlyAccessLayers("Common")
             .whereLayer("Security").mayOnlyAccessLayers("Common", "Model")
             .whereLayer("Model").mayNotAccessAnyLayer()
+            // 审计只接 framework/model/security 的端口，不依赖任何域模块，所以登录/业务路径不动（ADR 0054）
+            .whereLayer("Audit").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Auth").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Process").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Auth")
-            .whereLayer("Server").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Auth", "Process")
-            .whereLayer("Common").mayOnlyBeAccessedByLayers("Framework", "Security", "Auth", "Process", "Server")
-            .whereLayer("Framework").mayOnlyBeAccessedByLayers("Auth", "Process", "Server")
-            .whereLayer("Security").mayOnlyBeAccessedByLayers("Auth", "Process", "Server")
-            .whereLayer("Model").mayOnlyBeAccessedByLayers("Security", "Auth", "Process", "Server")
+            .whereLayer("Server").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Audit", "Auth", "Process")
+            .whereLayer("Common").mayOnlyBeAccessedByLayers("Framework", "Security", "Audit", "Auth", "Process", "Server")
+            .whereLayer("Framework").mayOnlyBeAccessedByLayers("Audit", "Auth", "Process", "Server")
+            .whereLayer("Security").mayOnlyBeAccessedByLayers("Audit", "Auth", "Process", "Server")
+            .whereLayer("Model").mayOnlyBeAccessedByLayers("Security", "Audit", "Auth", "Process", "Server")
+            .whereLayer("Audit").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Auth").mayOnlyBeAccessedByLayers("Process", "Server")
             .whereLayer("Process").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Server").mayNotBeAccessedByAnyLayer()

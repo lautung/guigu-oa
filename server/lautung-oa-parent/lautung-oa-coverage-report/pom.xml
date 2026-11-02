@@ -40,6 +40,11 @@
         </dependency>
         <dependency>
             <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-audit</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.lautung</groupId>
             <artifactId>lautung-oa-auth</artifactId>
             <version>${project.version}</version>
         </dependency>
