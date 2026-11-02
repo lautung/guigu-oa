@@ -152,6 +152,30 @@ function checkEvidencePaths(markdownPath) {
   return checked
 }
 
+// ADR 编号是跨文件的引用键（代码注释、记忆、别的 ADR 都写 `ADR 0050`），撞号会静默变歧义。
+// 只查命名形状与编号唯一性：空洞可能是有意退役，不查连续性。
+function checkAdrNames() {
+  const adrRoot = join(root, 'docs/adr')
+  if (!existsSync(adrRoot)) return 0
+  const seen = new Map()
+  let count = 0
+
+  for (const name of readdirSync(adrRoot).filter((entry) => entry.endsWith('.md'))) {
+    const match = /^(\d{4})-\S.*\.md$/.exec(name)
+    if (!match) {
+      errors.push(`docs/adr/${name} 不符合 0001-slug.md 命名`)
+      continue
+    }
+    count += 1
+    if (seen.has(match[1])) {
+      errors.push(`docs/adr/${name} 与 ${seen.get(match[1])} 编号重复（${match[1]}）`)
+      continue
+    }
+    seen.set(match[1], name)
+  }
+  return count
+}
+
 let markdownFiles = 0
 let linkCount = 0
 let evidencePathCount = 0
@@ -165,6 +189,7 @@ walk(root, (path) => {
 })
 
 const evidenceSize = checkEvidenceSize()
+const adrCount = checkAdrNames()
 
 if (errors.length) {
   console.error('文档检查失败：')
@@ -173,7 +198,7 @@ if (errors.length) {
 }
 
 console.log(
-  `docs ok (${markdownFiles} markdown files, ${linkCount} relative links, ${evidencePathCount} evidence paths, evidence ${formatSize(
+  `docs ok (${markdownFiles} markdown files, ${linkCount} relative links, ${evidencePathCount} evidence paths, ${adrCount} ADRs, evidence ${formatSize(
     evidenceSize,
   )})`,
 )

@@ -38,4 +38,34 @@ if (missingFromMap.length) {
   process.exit(1)
 }
 
-console.log(`module map ok (${paths.length} client paths, ${requiredPaths.size} required)`)
+// 服务端地图同一个约定：模块即目录，地图里写成路径的反引号内容必须存在。
+// 反引号里还有包名、SQL、类名，所以只认 `lautung-oa-<模块>/…` 与 `server/…` 两种形状；
+// 带省略号或通配的示意路径跳过（`lautung-oa-security/.../security/`、`…/V*.sql`）。
+const serverRoot = join(root, 'server/lautung-oa-parent')
+const serverText = readFileSync(join(root, 'docs/agents/server-modules.md'), 'utf8')
+const serverPaths = [
+  ...new Set(
+    [...serverText.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)].map((match) => match[1]),
+  ),
+].filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
+
+const missingServerPaths = serverPaths.filter(
+  (path) => !existsSync(path.startsWith('server/') ? join(root, path) : join(serverRoot, path)),
+)
+
+const serverModules = readdirSync(serverRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && entry.name.startsWith('lautung-oa-'))
+  .map((entry) => entry.name)
+const missingModules = serverModules.filter((name) => !serverText.includes(`\`${name}\``))
+
+if (missingServerPaths.length || missingModules.length) {
+  console.error('服务端模块地图与服务端目录不一致：')
+  for (const path of missingServerPaths) console.error(`  - 路径不存在：${path}`)
+  for (const name of missingModules) console.error(`  - 模块缺少地图行：${name}`)
+  process.exit(1)
+}
+
+console.log(
+  `module map ok (${paths.length} client paths, ${requiredPaths.size} required, ` +
+    `${serverPaths.length} server paths, ${serverModules.length} server modules)`,
+)

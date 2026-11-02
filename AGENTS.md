@@ -37,4 +37,4 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 - 本地启动（服务与端口、后端 jar、MySQL/Redis、DB 初始化、种子账号、Compose 卷名坑）：`docs/development/local-dev.md`
 - 命令与测试（前端 verify/e2e/api/build、仓库 verify、服务端测试、五类测试轮、覆盖率、安全套件、主栈回归）：`docs/agents/testing.md`
 - Compose 演示栈：`docs/development/compose-demo.md`
-- 提交前门禁：`./scripts/verify.sh`（客户端 `npm run verify` + 服务端 `mvn -pl lautung-oa-server -am test`）。
+- 提交前门禁：`./scripts/verify.sh`。

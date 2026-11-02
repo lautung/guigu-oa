@@ -65,10 +65,11 @@
   `TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), Entity.class)`。
 - `BaseMapper` 有重载，mock 时要类型化 matcher：`selectList(isNull())`、`insert(any(Entity.class))`、`update(isNull(), any())`；裸 `any()` 会编译歧义或匹配不到。
 - MyBatis `Interceptor` 的签名覆盖以走真实 `Plugin` 装配的合同测试为准：单测直调 `intercept()` 绕过 `@Signature` 匹配，签名漏注册时照样全绿（#151 曾因此漏掉 `update` 签名，靠评审才抓住）。
+- 新增或改断言先证明它会红：临时去掉被保护的行为（删掉 SQL 的 `<include>`、把文案改回旧值、拆掉签名注册），确认新断言变红并指名到语句/路径，再恢复。仍绿说明断言没落在被保护的那条路径上——绿的摆设比没有更贵（#198 的护栏与契约测试都是这么验的，护栏另加了「解析到 0 条语句即红」的防呆）。
 - 文件上传用 `@TempDir` + `MockMultipartFile`；S3 相关 mock `S3Client` / `S3Presigner` 返回 `Presigned*Request` 的 mock，`url()` 直接 stub。
 - 真实 Spring 合同测试沿用现有 `@SpringBootTest` + H2 + 内存 Redis，不需要本地 MySQL/Redis；它们全在装配模块 `lautung-oa-server`。单测随域模块走：多数是纯 Mockito；少数需要装配资源的两例（`OpenApiExposureConfigTest` 读 profile YAML、`ProcessEngineCutoverTest` 起真 Flowable + BPMN 夹具）仍留在域模块，资源由 pom 的 `testResources` 从 `lautung-oa-server` 复制。
 - 要起真实服务做验证（非合同测试）时：连 Compose 栈已发布的 MySQL/Redis（3306/6379），`java -jar target/lautung-oa-server.jar --server.port=8801 --spring.flyway.validate-on-migrate=false`——Compose 镜像带 V100/101 而本地 main 已无，关校验后两边迁移互补、零写入。不动 8800 的栈，测完 DROP 自己建的临时库。
-- 每份 H2 schema 只裁到该组用例需要的表，**不是全库**：`auth-contract-schema.sql` 只有 `sys_user` / `sys_menu`（没有角色与授予行，配置 gate 恒拒绝），所以逐字段校验用例放那里成立（校验先于 gate），正向路径要用 `FlywayMigrationContractTest`（真迁移 + 种子授予）。新增合同测试前先看它挂的 schema 有没有你要的表。
+- 每份 H2 schema 只裁到该组用例需要的表，**不是全库**：`auth-contract-schema.sql` 只有 `sys_user` / `sys_menu`（没有角色与授予行，配置 gate 恒拒绝），所以逐字段校验用例放那里成立（校验先于 gate），正向路径要用 `FlywayMigrationContractTest`（真迁移 + 种子授予）。新增合同测试前先看它挂的 schema 有没有你要的表。脚本由 `@Sql` 在每个测试方法前重放，状态靠末尾的 `DELETE FROM` 重置，负例（插一条软删行之类）可以直接写。
 - 加索引后必须用实发 SQL 验证执行计划：「索引建了 ≠ 优化器会用」——MySQL 8.4 在 join 上下文按 ref 成本取舍（差 0.45 即反转，`ANALYZE TABLE` 与显式 DESC 索引都救不回），优化器不认排序收益时 mapper 条件 hint 是合法兜底（#185）。实发 SQL 抓取与 EXPLAIN 配方见 `perf/README.md`「SQL 取证纪律」。
 - 单类/多类：`mvn -pl lautung-oa-server -am test -Dtest=A,B -Dsurefire.failIfNoSpecifiedTests=false`；漏掉最后一个参数会因上游模块没有匹配用例而整轮失败。
 - 收紧入参规则（新增 `@Valid`/约束）时，grep `tests/api` 与 `tests/e2e-stack` 的负例载荷：仍返回 201 不代表走到了命名分支，必要时用 `expectCodeAndMessage` 钉住稳定消息片段。
