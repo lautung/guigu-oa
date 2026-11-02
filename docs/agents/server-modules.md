@@ -1,17 +1,22 @@
 # 服务端模块地图（导航）
 
-`server/guigu-oa-parent/` 是多模块 Maven 工程。找服务端的东西先看这张表，再决定要不要 grep。
+`server/lautung-oa-parent/` 是多模块 Maven 工程（扁平 `lautung-oa-*` 模块，groupId `com.lautung`）。找服务端的东西先看这张表，再决定要不要 grep。
 客户端模块与审批端口见 `client-modules.md`；领域术语见根目录 `GLOSSARY.md`。
+
+模块依赖边（无环）：`common ← framework`；`common, model ← security`；`common, framework, security, model ← auth`；`common, framework, security, model, auth ← process`；全部 ← `server`。E2 包名替换前，Java 包声明仍是 `com.atguigu.*`。
 
 ## 模块与关键类
 
 | 模块 | 路径 | 关键类 / 内容 |
 |---|---|---|
-| `common/common-util` | `common/common-util/src/main/java/com/atguigu/common/` | `result/Result`（统一信封：`code`/`message`/`data`）、`result/ResultCodeEnum`（200/201/208/209/403）、`result/ResponseUtil`（过滤器写响应体，带 HTTP 状态重载）、`jwt/JwtHelper` |
-| `common/service-util` | `common/service-util/.../common/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405；参数校验 200+201，ADR 0033）、`config/mp/CommonFieldsMetaObjectHandler`（公共字段唯一写入者，ADR 0031）、`config/mp/SlowSqlLoggingConfiguration` + `observability/SlowSqlLoggingInterceptor`（慢 SQL WARN，默认关 dev 开，ADR 0041）、`observability/TraceIdFilter`、`observability/PhoneNumberMasker` + `PhoneNumberMaskingCustomizer`（结构化日志手机号打码，ADR 0039） |
-| `common/spring-security` | `common/spring-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`session/SessionVerifier`（会话核验 module：过滤器与续期共用的唯一凭证判定，ADR 0044）、`response/AuthenticationRejections`（401 认证家族写出的唯一出口）、`filter/TokenAuthenticationFilter`（接入核验结果并组装权限，失败 401+208）、`filter/TokenLoginFilter`（POST /login，先校验入参再签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
-| `model` | `model/src/main/java/com/atguigu/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`、`process/OaProcess|OaProcessRecord…`；请求 DTO 的 jsr303 约束（`com.atguigu.vo.*`，ADR 0033） |
-| `service-oa` | `service-oa/src/main/java/com/atguigu/` | 业务实现与 HTTP 入口：`auth/`（index/login、sysUser/Role/Menu、`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`process/`（模板/审批/附件/`approval/ApprovalWriter`、`read/` 五种审批列表读唯一入口 `ApprovalListReader`/`LedgerApprovalListReader`：行形状/窗口/回查/排序一处拥有，ADR 0045）、`db/migration/`（Flyway V1xx）。迁移以 SQL 为主；需要"先查元数据再决定动不动手"的（如 `V104` 依赖引擎历史回填）写成 `src/main/java/db/migration/` 下的 Java 迁移 |
+| `lautung-oa-common` | `lautung-oa-common/src/main/java/com/atguigu/common/` | `result/Result`（统一信封：`code`/`message`/`data`）、`result/ResultCodeEnum`（200/201/208/209/403）、`result/ResponseUtil`（过滤器写响应体，带 HTTP 状态重载）、`jwt/JwtHelper` |
+| `lautung-oa-framework` | `lautung-oa-framework/.../common/` | `config/exception/GlobalExceptionHandler`（业务异常 200+code；容器级 404/405；参数校验 200+201，ADR 0033）、`config/mp/CommonFieldsMetaObjectHandler`（公共字段唯一写入者，ADR 0031）、`config/mp/MybatisPlusConfig`（分页拦截器，不再扫描域包）、`config/mp/SlowSqlLoggingConfiguration` + `observability/SlowSqlLoggingInterceptor`（慢 SQL WARN，默认关 dev 开，ADR 0041）、`observability/TraceIdFilter`、`observability/PhoneNumberMasker` + `PhoneNumberMaskingCustomizer`（结构化日志手机号打码，ADR 0039） |
+| `lautung-oa-security` | `lautung-oa-security/.../security/` | `config/WebSecurityConfig`（过滤器链与入口点）、`config/PublicApiPaths`（匿名放行清单）、`session/SessionVerifier`（会话核验 module：过滤器与续期共用的唯一凭证判定，ADR 0044）、`response/AuthenticationRejections`（401 认证家族写出的唯一出口）、`filter/TokenAuthenticationFilter`（接入核验结果并组装权限，失败 401+208）、`filter/TokenLoginFilter`（POST /login，先校验入参再签发双 token）、`custom/RestAuthenticationEntryPoint`（未认证 401+208）、`custom/RestAccessDeniedHandler`（403+205）、`login/`（限流）、`revocation/`（会话吊销） |
+| `lautung-oa-model` | `lautung-oa-model/src/main/java/com/atguigu/model/` | 实体：`system/SysUser|SysRole|SysMenu|SysUserRole|SysRoleMenu`、`process/OaProcess|OaProcessRecord…`；请求 DTO 的 jsr303 约束（`com.atguigu.vo.*`，ADR 0033） |
+| `lautung-oa-auth` | `lautung-oa-auth/src/main/java/com/atguigu/auth/` | auth 域垂直切片：`controller/`（index/login、sysUser/Role/Menu）、`service/`（`grant/ConfigurationGrant` 配置授予、`service/PermissionCacheInvalidator` 权限缓存失效）、`mapper/` 与 `mapper/xml/`；`config/AuthMapperConfiguration` 只扫描本域 Mapper |
+| `lautung-oa-process` | `lautung-oa-process/src/main/java/com/atguigu/process/` | process 域垂直切片：`controller/`、`service/`、`mapper/` + `mapper/xml/`、`approval/ApprovalWriter`、`attachment/`、`cc/`、`deployment/`、`membership/`、`publication/`、`read/`（五种审批列表读唯一入口 `ApprovalListReader`/`LedgerApprovalListReader`：行形状/窗口/回查/排序一处拥有，ADR 0045）；`config/ProcessMapperConfiguration` 扫描 `process.mapper` + `process.attachment`；`process → auth` 直接边保留（3 个 `SysUserService` 调用点） |
+| `lautung-oa-server` | `lautung-oa-server/src/main/java/com/atguigu/` | 装配模块：启动类 `ServiceAuthApplication`（E2 改名 `LautungOaApplication`）、`demo/` seeder、`src/main/resources/`（`application*.yml`、Flyway SQL、BPMN）、`db/migration/`（Java 迁移，如 V104）、全部 `@SpringBootTest` 合同测试与测试资源 |
+| `lautung-oa-coverage-report` | `lautung-oa-coverage-report/` | JaCoCo `report-aggregate`；排除项 `com/atguigu/demo/**`、`com/atguigu/model/**` |
 
 ## 认证与错误语义（改安全相关代码前必读）
 
@@ -32,5 +37,5 @@
 - 静态形状约束写请求 DTO 的 jsr303 注解 + `@Valid`；领域/状态判断留 service；登录在 `TokenLoginFilter` 里手工校验（ADR 0033）；refresh 的失败按认证家族由控制器写 401（ADR 0037），不走 201 校验路线。
 - 配置类写请求体是 `model` 的 `vo/{system,process}/XxxRequest`：save 只创建（不含 `id`）、update 只要求 `id`、其余为空即不覆盖；改这两条规则先看 ADR 0034。长度上限对齐列宽、`sys_menu.type` 只收 0/1、菜单页必须自带组件路径（save 在 DTO、update 在 service 按落库形状判），见 ADR 0036。
 - 配置类接口由 `configurationMenuGate`（见 `ConfigurationGrant`）按菜单授予统一判定，`@PreAuthorize` 只是粗门。
-- 表结构迁移只加不改：`service-oa/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。
+- 表结构迁移只加不改：`lautung-oa-server/src/main/resources/db/migration/V*.sql`，Flyway 按版本执行。
 - `POST /admin/process/startUp` 的 `idempotencyKey` 可空，唯一索引 `uk_oa_process_idempotency_key` 按用户唯一（ADR 0032）：重复送达返回同一条审批；冲突后的重读必须在 `ApprovalWriter.startUp` 的事务之外（可重复读下事务内看不到对手已提交的行）。

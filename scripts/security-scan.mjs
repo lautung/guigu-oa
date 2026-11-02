@@ -218,7 +218,7 @@ async function startApproval(token, template, marker, options = {}) {
 function readDevJwtSecret() {
   const file = path.join(
     REPO_ROOT,
-    'server/guigu-oa-parent/service-oa/src/main/resources/application-dev.yml',
+    'server/lautung-oa-parent/lautung-oa-server/src/main/resources/application-dev.yml',
   )
   if (!fs.existsSync(file)) return null
   const text = fs.readFileSync(file, 'utf8')
@@ -1422,14 +1422,14 @@ defineCase({
     const controller = fs.readFileSync(
       path.join(
         REPO_ROOT,
-        'server/guigu-oa-parent/service-oa/src/main/java/com/atguigu/process/controller/OaProcessTemplateController.java',
+        'server/lautung-oa-parent/lautung-oa-process/src/main/java/com/atguigu/process/controller/OaProcessTemplateController.java',
       ),
       'utf8',
     )
     const sysUserController = fs.readFileSync(
       path.join(
         REPO_ROOT,
-        'server/guigu-oa-parent/service-oa/src/main/java/com/atguigu/auth/controller/SysUserController.java',
+        'server/lautung-oa-parent/lautung-oa-auth/src/main/java/com/atguigu/auth/controller/SysUserController.java',
       ),
       'utf8',
     )

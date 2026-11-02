@@ -119,9 +119,9 @@ docker compose up --build
 后端需要 JDK 21。启动方式、数据库配置和 API 地址见仓库 [AGENTS.md](AGENTS.md)：
 
 ```bash
-cd server/guigu-oa-parent/service-oa
+cd server/lautung-oa-parent/lautung-oa-server
 mvn -DskipTests install
-java -jar target/service-oa.jar
+java -jar target/lautung-oa-server.jar
 ```
 
 启动统一客户端：
@@ -150,8 +150,8 @@ npm run build:prod
 # 客户端：Vitest 覆盖率，报告在 coverage/
 npm run coverage
 
-# 服务端：JaCoCo 聚合报告，报告在 coverage-report/target/site/jacoco-aggregate/
-mvn -f server/guigu-oa-parent/pom.xml test
+# 服务端：JaCoCo 聚合报告，报告在 lautung-oa-coverage-report/target/site/jacoco-aggregate/
+mvn -f server/lautung-oa-parent/pom.xml test
 
 # 两端一起跑并打印汇总
 ./scripts/coverage.sh
@@ -160,7 +160,7 @@ mvn -f server/guigu-oa-parent/pom.xml test
 口径与排除项：
 
 - 客户端统计全量 `src/**/*.{ts,vue}`，只排除没有运行时语义的 `src/main.ts`、`src/env.d.ts` 和 `src/types/**`；`src/api/**` 留在分母内。
-- 服务端聚合 `service-oa`、`common-util`、`service-util` 和 `spring-security`，排除 Lombok 数据类 `com.atguigu.model.*` 与演示数据播种 `com.atguigu.demo.*`。
+- 服务端聚合 `lautung-oa-*` 全部模块，排除 Lombok 数据类 `com.atguigu.model.*` 与演示数据播种 `com.atguigu.demo.*`。
 - 指标以行和分支为准；方法/类覆盖只在 HTML 明细里参考。
 - `src/views/**` 用挂载测试覆盖主要交互；`npm run test:e2e` 的 Playwright 用例仍负责整链路行为，两者的覆盖不合并统计。
 

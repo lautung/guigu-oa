@@ -127,7 +127,7 @@
 | 性能 | 冒烟 100%；基线×3 中位数达标（读 p95 ≤500ms、写/登录 p95 ≤1s、错误率 <1%、吞吐 ≥ 回归下限）；压力档错误率 <5%、读 p95 ≤2s、写 p95 ≤3s、无 OOM/重启；附件档签名 p95 ≤500ms、上传链 ≤2s、下载链 ≤1s；调优改善 ≥20% 且他场景回退 ≤10% |
 | 安全 | 基线轮：定向用例全部执行、ZAP 报告归档、失败项全部入账；after-fix 轮：S1/S2 清零、定向用例全绿、ZAP 的 Medium/Low 安全头告警消失；accepted risk 有书面理由 |
 | 兼容性 | 三类硬失败为零（横向溢出、pageerror/console.error、办事主链路不可完成）；产品规则必过项通过；跳过只能是既定视口设计 |
-| 底座 | `npm run verify` 与 `mvn -pl service-oa -am test` 全绿；覆盖率只报告、不卡红 |
+| 底座 | `npm run verify` 与 `mvn -pl lautung-oa-server -am test` 全绿；覆盖率只报告、不卡红 |
 
 ### 5.3 发布门槛
 
@@ -185,7 +185,7 @@
 |---|---|---|---|
 | 五类一键 | `./scripts/test-round.sh all` | 见脚本头部前置 | 见 `execution/2026-10-30-clean-rerun.md` |
 | 客户端静态检查 + 单测 | `cd client/guigu-oa-client && npm run verify` | `npm ci` | — |
-| 服务端测试 | `cd server/guigu-oa-parent && mvn -pl service-oa -am test` | — | — |
+| 服务端测试 | `cd server/lautung-oa-parent && mvn -pl lautung-oa-server -am test` | — | — |
 | 全仓检查 | `./scripts/verify.sh` | — | — |
 | 功能（真实栈） | `cd client/guigu-oa-client && npm run test:e2e:stack` | 干净栈 | 57s（27 次运行） |
 | 接口（黑盒） | `DEMO_ORIGIN=http://localhost:9530 npm run test:api` | 干净栈 | 14–16s/轮 |

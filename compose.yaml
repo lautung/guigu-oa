@@ -66,8 +66,8 @@ services:
 
   service-oa:
     build:
-      context: ./server/guigu-oa-parent
-      dockerfile: service-oa/Dockerfile
+      context: ./server/lautung-oa-parent
+      dockerfile: lautung-oa-server/Dockerfile
       args:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-}
     environment:

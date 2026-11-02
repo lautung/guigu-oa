@@ -40,7 +40,7 @@ Flowable 首次启动时创建 `ACT_*` / `FLW_*` 引擎表。浏览器打开 `ht
 | redis | `redis:7.4-alpine` | Redis 7.4.12 |
 | minio | `bitnamilegacy/minio:2025.7.23-debian-12-r5` | MinIO DEVELOPMENT.2025-07-23T15-54-02Z |
 | minio-init | `bitnamilegacy/minio-client:2025.7.21-debian-12-r3` | mc 2025-07-21 |
-| service-oa | 本地构建（`server/guigu-oa-parent/service-oa/Dockerfile`） | JDK 21.0.12 / Spring Boot 4.1.0 / Flowable 8.0.0 |
+| service-oa | 本地构建（`server/lautung-oa-parent/lautung-oa-server/Dockerfile`） | JDK 21.0.12 / Spring Boot 4.1.0 / Flowable 8.0.0 |
 | client | 本地构建（`client/guigu-oa-client/Dockerfile`） | 构建镜像 node 22.18，运行镜像 nginx 1.31.8 |
 
 MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io 撤下（Docker Hub 返回
@@ -78,7 +78,7 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 匿名面**不提供** `/v3/api-docs` 与 `/swagger-ui/index.html`（#140）。这是有意的——演示栈的
 8800 端口直接对外开放，保留文档等于把全部端点、参数与数据模型交给未登录访问者。
 
-本地需要看接口文档时只跑 `dev`：用 `java -jar target/service-oa.jar` 起后端（`application.yml`
+本地需要看接口文档时只跑 `dev`：用 `java -jar target/lautung-oa-server.jar` 起后端（`application.yml`
 的默认 profile 就是 `dev`）。前端 `npm run dev` 只是 9530 的 Vite 开发服务器，接口文档由 8800
 后端提供，和前端是否运行无关。前端 nginx 同时设置了 `server_tokens off`，`Server` 头只回
 `nginx`，不带版本号。
