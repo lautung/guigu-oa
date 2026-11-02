@@ -12,6 +12,7 @@ import com.lautung.oa.process.attachment.AttachmentMapper;
 import com.lautung.oa.process.attachment.TestAttachmentObjectStore;
 import com.lautung.oa.process.cc.CarbonCopyTrigger;
 import com.lautung.oa.process.cc.CarbonCopyWriter;
+import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.read.ApprovalListReader;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.process.service.ApprovalTemplate;
@@ -132,6 +133,9 @@ public class ApprovalContractTest {
 
     @Autowired
     private AttachmentMapper attachmentMapper;
+
+    @Autowired
+    private OaProcessMapper processMapper;
 
     @Autowired
     private TestAttachmentObjectStore objectStore;
@@ -609,6 +613,44 @@ public class ApprovalContractTest {
                         .param("status", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    public void 已删审批行不在已发起与配置实例查询里且total同口径() throws Exception {
+        SysUser alice = user(2L, "alice", "小艾");
+        String aliceToken = loginToken("alice");
+        String adminToken = loginToken("admin");
+
+        Approval.StartOutcome kept = approval.startUp(alice, publishedLeaveForm());
+        Approval.StartOutcome deleted = approval.startUp(alice, publishedLeaveForm());
+        jdbcTemplate.update("UPDATE oa_process SET title = '已作废的机房抢修' WHERE id = ?", deleted.processId());
+        jdbcTemplate.update("UPDATE oa_process SET is_deleted = 1 WHERE id = ?", deleted.processId());
+
+        // 已发起：records 与 total 同口径。total 由分页插件从同一条 SQL 派生 count（#198），
+        // 只断 records 会漏掉「列表干净但页码还在」这半边。
+        mockMvc.perform(get("/admin/process/findStarted/1/10").header("token", aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records.length()").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(kept.processId().intValue()));
+
+        // 配置实例查询：同一个 SQL 的另一个入口。
+        mockMvc.perform(get("/admin/process/1/10").header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records.length()").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(kept.processId().intValue()));
+
+        // 存活过滤与既有条件叠加、不是把 where 短路：keyword 单独命中已删行时结果仍是空。
+        mockMvc.perform(get("/admin/process/1/10")
+                        .header("token", adminToken)
+                        .param("keyword", "已作废的机房抢修"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.records.length()").value(0));
+
+        // 列表与详情口径一致：已删行按 id 也读不到（MyBatis-Plus 生成的 SQL 自动带 @TableLogic）。
+        assertNull(processMapper.selectById(deleted.processId()));
     }
 
     @Test

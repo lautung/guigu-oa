@@ -7,6 +7,7 @@
       四条行取数（待处理回查、已发起、抄送我的行、已处理行）全部 include；
       两个计数（抄送我的、已处理）是 count 聚合，不引用本清单。
       ProcessVo 是唯一行类型；给行补一个字段只改这里。
+      行本体存活过滤另有一份 owner：approvalRowLiveness（#198）。
     -->
     <sql id="approvalRowColumns">
         a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.current_auditor,a.status,a.create_time,a.update_time,
@@ -21,6 +22,11 @@
         left join oa_process_type c on a.process_type_id = c.id
     </sql>
 
+    <!-- 行本体存活（#198）：手写 XML 不吃实体的 @TableLogic——它只进 MyBatis-Plus 生成的 SQL
+         （ADR 0050），所以每条读都要自己 include 一次。只过滤审批行本体 a：join 侧的
+         sys_user/模板/类型不禁删，删掉模板或用户后历史审批仍要显示当时的名字。 -->
+    <sql id="approvalRowLiveness">a.is_deleted = 0</sql>
+
     <select id="selectProcessPage" resultType="com.lautung.oa.vo.process.ProcessVo">
         select
         <if test="vo.userId != null">
@@ -30,6 +36,7 @@
         from oa_process a
             <include refid="approvalRowJoins"/>
         <where>
+            and <include refid="approvalRowLiveness"/>
             <if test="vo.keyword != null and vo.keyword != ''">
                 and (a.process_code like CONCAT('%',#{vo.keyword},'%') or
                     a.title like CONCAT('%',#{vo.keyword},'%'))
@@ -52,7 +59,9 @@
              hint 只在 user_id 等值时注入：MySQL 8.4 优化器在 join 上下文里按 ref 成本选中
              幂等键索引（两者仅差 0.45），不认反向扫描的排序收益，单表形状则无此问题
              （EXPLAIN ANALYZE 实测 0.08ms vs 全量排序 19ms）；无 user_id 的配置实例查询
-             用不上该索引，hint 自然被忽略，计划不变。 -->
+             用不上该索引，hint 自然被忽略，计划不变。
+             存活过滤是残余谓词（#198）：索引刻意不含 is_deleted——把等值列插进去会破坏排序匹配；
+             已删行数为 0 时反向扫描 + 残余过滤 + LIMIT 提前终止与加过滤前同形，故不另做 EXPLAIN 取证。 -->
         order by a.create_time desc, a.id desc
     </select>
 
@@ -62,7 +71,7 @@
             <include refid="approvalRowColumns"/>
         from oa_process a
             <include refid="approvalRowJoins"/>
-        where a.is_deleted = 0
+        where <include refid="approvalRowLiveness"/>
         and a.id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
@@ -76,7 +85,7 @@
         select count(distinct r.process_id)
         from oa_process_record r
                  join oa_process a on a.id = r.process_id
-        where r.operate_user_id = #{userId} and r.is_deleted = 0 and a.is_deleted = 0
+        where r.operate_user_id = #{userId} and r.is_deleted = 0 and <include refid="approvalRowLiveness"/>
           and r.description != #{excludeDescription}
     </select>
 
@@ -100,7 +109,7 @@
               limit #{limit} offset #{offset}) p
                  join oa_process a on a.id = p.process_id
             <include refid="approvalRowJoins"/>
-        where a.is_deleted = 0
+        where <include refid="approvalRowLiveness"/>
         order by p.last_time desc, a.id desc
     </select>
 
@@ -110,7 +119,7 @@
         select count(distinct g.process_id)
         from oa_process_cc g
                  join oa_process a on a.id = g.process_id
-        where g.user_id = #{userId} and g.is_deleted = 0 and a.is_deleted = 0
+        where g.user_id = #{userId} and g.is_deleted = 0 and <include refid="approvalRowLiveness"/>
     </select>
 
     <!-- 抄送我的行：与全局行形状同源，原生 LIMIT/OFFSET 分页，最新在前。 -->
@@ -120,7 +129,7 @@
         from oa_process_cc g
                  join oa_process a on a.id = g.process_id
             <include refid="approvalRowJoins"/>
-        where g.user_id = #{userId} and g.is_deleted = 0 and a.is_deleted = 0
+        where g.user_id = #{userId} and g.is_deleted = 0 and <include refid="approvalRowLiveness"/>
         order by a.create_time desc, a.id desc
         limit #{limit} offset #{offset}
     </select>
