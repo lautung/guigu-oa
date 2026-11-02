@@ -1,0 +1,123 @@
+import type {
+  ApiRequestConfig,
+  AuditTagType,
+  EntityId,
+  LoginLogListItem,
+  LoginLogRecord,
+  PageResult,
+} from '@/types/domain'
+
+/** 登录状态标签镜像服务端 LoginEventType 的四值（0 成功 / 1 失败 / 2 锁定 / 3 解锁）。 */
+export const LOGIN_STATUS_OPTIONS = [
+  { value: 0, label: '成功' },
+  { value: 1, label: '失败' },
+  { value: 2, label: '锁定' },
+  { value: 3, label: '解锁' },
+] as const
+
+export const LOGIN_LOG_PERMISSIONS = {
+  remove: 'system:loginLog:remove',
+  clean: 'system:loginLog:clean',
+  unlock: 'system:loginLog:unlock',
+} as const
+
+export interface LoginLogQuery {
+  username?: string
+  ip?: string
+  status?: number | ''
+  createTimes?: string[]
+}
+
+export function loginStatusLabel(value: number | null | undefined): string {
+  return LOGIN_STATUS_OPTIONS.find((option) => option.value === value)?.label || ''
+}
+
+export function loginStatusTagType(value: number | null | undefined): AuditTagType {
+  if (value === 0) return 'success'
+  if (value === 1) return 'danger'
+  if (value === 2) return 'warning'
+  if (value === 3) return 'info'
+  return 'info'
+}
+
+/** 空字段不进查询串；状态 0（成功）是合法值，不能被当成空值丢掉。 */
+export function presentQuery(query: LoginLogQuery = {}): Record<string, string | number> {
+  const params: Record<string, string | number> = {}
+  if (query.username) params.username = query.username
+  if (query.ip) params.ip = query.ip
+  if (query.status !== '' && query.status != null) params.status = query.status
+  const createTimes = query.createTimes || []
+  if (createTimes.length === 2 && createTimes[0] && createTimes[1]) {
+    params.createTimeBegin = createTimes[0]
+    params.createTimeEnd = createTimes[1]
+  }
+  return params
+}
+
+export function emptyQuery(): LoginLogQuery {
+  return {
+    username: '',
+    ip: '',
+    status: '',
+    createTimes: [],
+  }
+}
+
+export function presentListRecord(record: LoginLogRecord = {}): LoginLogListItem {
+  return {
+    id: record.id || '',
+    username: record.username,
+    ip: record.ip,
+    browser: record.browser,
+    os: record.os,
+    status: record.status,
+    statusLabel: loginStatusLabel(record.status),
+    statusTagType: loginStatusTagType(record.status),
+    msg: record.msg,
+    createTime: record.createTime,
+  }
+}
+
+export function presentListPage(page: PageResult<LoginLogRecord> = {}) {
+  return {
+    records: (page.records || []).map(presentListRecord),
+    total: page.total || 0,
+    pages: page.pages || 0,
+  }
+}
+
+const LOGIN_LOG_API = '/admin/system/sysLoginLog'
+
+export function listRequest(
+  page: number,
+  limit: number,
+  params: Record<string, string | number> = {},
+): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${LOGIN_LOG_API}/${page}/${limit}`,
+    params,
+  }
+}
+
+export function removeRequest(idList: readonly EntityId[]): ApiRequestConfig {
+  return {
+    method: 'delete',
+    url: `${LOGIN_LOG_API}/remove`,
+    data: [...idList],
+  }
+}
+
+export function cleanRequest(): ApiRequestConfig {
+  return {
+    method: 'delete',
+    url: `${LOGIN_LOG_API}/clean`,
+  }
+}
+
+export function unlockRequest(username: string): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${LOGIN_LOG_API}/unlock/${encodeURIComponent(username)}`,
+  }
+}

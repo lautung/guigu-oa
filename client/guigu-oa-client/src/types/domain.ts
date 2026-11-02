@@ -187,6 +187,79 @@ export interface UserForm {
   status: number
 }
 
+/** 操作日志（ADR 0054）：审计行是历史事实，读侧只映射，不 join。 */
+export interface OperLogRecord {
+  id?: EntityId | ''
+  title?: string
+  businessType?: number
+  method?: string
+  requestMethod?: string
+  operId?: EntityId
+  operName?: string
+  deptId?: EntityId
+  deptName?: string
+  operUrl?: string
+  operIp?: string
+  operParam?: string
+  resultCode?: number
+  resultMessage?: string
+  status?: number
+  errorMsg?: string
+  costTime?: number
+  createTime?: string
+}
+
+export type AuditTagType = 'success' | 'danger' | 'warning' | 'info'
+
+export interface OperLogListItem extends OperLogRecord {
+  id: EntityId
+  businessTypeLabel: string
+  statusLabel: string
+  statusTagType: AuditTagType
+  costTimeText: string
+}
+
+/** 详情弹窗的展示投影：JSON 已经格式化，缺省值统一成空串。 */
+export interface OperLogDetail {
+  id: EntityId | ''
+  title: string
+  businessTypeLabel: string
+  operName: string
+  deptName: string
+  operIp: string
+  requestMethod: string
+  operUrl: string
+  method: string
+  statusLabel: string
+  statusTagType: AuditTagType
+  resultCodeText: string
+  resultMessage: string
+  errorMsg: string
+  costTimeText: string
+  operParamText: string
+  createTime: string
+}
+
+/** 登录日志（ADR 0054）：一行即全貌，没有详情端点。 */
+export interface LoginLogRecord {
+  id?: EntityId | ''
+  username?: string
+  userId?: EntityId
+  deptId?: EntityId
+  ip?: string
+  browser?: string
+  os?: string
+  status?: number
+  msg?: string
+  createTime?: string
+}
+
+export interface LoginLogListItem extends LoginLogRecord {
+  id: EntityId
+  statusLabel: string
+  statusTagType: AuditTagType
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string

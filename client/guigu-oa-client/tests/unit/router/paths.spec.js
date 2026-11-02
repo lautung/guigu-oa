@@ -57,6 +57,8 @@ describe('路径 module', () => {
       PATHS.SYSTEM_SYS_USER,
       PATHS.SYSTEM_SYS_ROLE,
       PATHS.SYSTEM_SYS_MENU,
+      PATHS.SYSTEM_LOG_OPER,
+      PATHS.SYSTEM_LOG_LOGIN,
       PATHS.SYSTEM_ASSIGN_AUTH,
       PATHS.PROCESS_SET_PROCESS_TYPE,
       PATHS.PROCESS_SET_PROCESS_TEMPLATE,
@@ -89,6 +91,8 @@ describe('路径 module', () => {
     expect(returnPathOfRoute('/work/copied/23')).toBe(PATHS.WORK_COPIED)
     expect(returnPathOfRoute('/work/start/11')).toBe(PATHS.WORK_START)
     expect(returnPathOfRoute(PATHS.SYSTEM_SYS_USER)).toBe(PATHS.SYSTEM_SYS_USER)
+    expect(returnPathOfRoute(PATHS.SYSTEM_LOG_OPER)).toBe(PATHS.SYSTEM_LOG_OPER)
+    expect(returnPathOfRoute(PATHS.SYSTEM_LOG_LOGIN)).toBe(PATHS.SYSTEM_LOG_LOGIN)
     expect(returnPathOfRoute('/system/processMgr/process/9')).toBe(PATHS.PROCESS_MGR_PROCESS)
     expect(returnPathOfRoute(PATHS.SYSTEM_ASSIGN_AUTH)).toBe(PATHS.SYSTEM_SYS_ROLE)
     expect(returnPathOfRoute(PATHS.PROCESS_SET_TEMPLATE_SET)).toBe(

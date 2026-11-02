@@ -18,7 +18,9 @@
 | `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |
 | `src/config/sys-role.ts` | `DATA_SCOPE_OPTIONS` / `dataScopeLabel` / `deptOptionsRequest` / `formRules(dataScope)` / `writeRequest` | 角色表单与数据范围：五档标签、`dataScope=2` 时自定部门必填（镜像服务端）、写载荷固定带 `dataScope`/`deptIds`、详情回读映射 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下 |
+| `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
+| `src/config/login-log.ts` | `LOGIN_STATUS_OPTIONS` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` | 登录日志四值（成功/失败/锁定/解锁）标签与查询投影；列表请求、批量删除、清空与按 username 编码的解锁请求 |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog` |
 | `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
@@ -31,6 +33,8 @@
 | `src/work/approval-detail.ts` | `createApprovalDetail(adapter)` → `open(target)`（`decide` / `endRecovery` / `reloadAttachments`） | 审批详情与处理结果待确认；HTTP 接线在 `approval-detail-http.ts` |
 | `src/request/submission-outcome.ts` | `classifySubmissionFailure(error, action)` | 明确拒绝 vs 待确认的分类 |
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
+
+日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
 
 ## 服务端鉴权
 

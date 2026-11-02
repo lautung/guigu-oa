@@ -122,6 +122,18 @@ const configChildren: AppRoute[] = [
     meta: { title: '菜单管理', menuGroup: 'config' },
   },
   {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
+    name: 'SysOperLog',
+    component: () => import('@/views/config/operLog/index.vue'),
+    meta: { title: '操作日志', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_LOGIN),
+    name: 'SysLoginLog',
+    component: () => import('@/views/config/loginLog/index.vue'),
+    meta: { title: '登录日志', menuGroup: 'config' },
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_ASSIGN_AUTH),
     name: 'AssignAuth',
     component: () => import('@/views/config/sysRole/assignAuth.vue'),
