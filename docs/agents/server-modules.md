@@ -3,7 +3,7 @@
 `server/lautung-oa-parent/` 是多模块 Maven 工程（扁平 `lautung-oa-*` 模块，groupId `com.lautung`）。找服务端的东西先看这张表，再决定要不要 grep。
 客户端模块与审批端口见 `client-modules.md`；领域术语见根目录 `GLOSSARY.md`。
 
-模块依赖边（无环）：`common ← framework`；`common, model ← security`；`common, framework, security, model ← auth`；`common, framework, security, model, auth ← process`；全部 ← `server`。Java 包声明为 `com.lautung.oa.*`。
+模块依赖边（无环）：`common ← framework`；`common, model ← security`；`common, framework, security, model ← auth`；`common, framework, security, model, auth ← process`；全部 ← `server`。业务代码包声明为 `com.lautung.oa.*`；Flyway Java 迁移固定在 `db.migration`（不在 `com.lautung.oa` 树下，也不在 ArchUnit 分析集内）。
 
 ## 模块与关键类
 

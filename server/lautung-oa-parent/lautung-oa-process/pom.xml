@@ -68,7 +68,7 @@
     </dependencies>
 
     <build>
-        <!-- 8 个 mapper XML 物理在 src/main/java 的包目录内，随包一起打进 jar -->
+        <!-- 本模块 4 个 mapper XML 物理在 src/main/java 的包目录内，随包一起打进 jar（全仓 8 个分属 auth/process） -->
         <resources>
             <resource>
                 <directory>src/main/java</directory>
@@ -79,6 +79,10 @@
             </resource>
         </resources>
         <testResources>
+            <!-- 显式声明会覆盖 Maven 默认目录，先把默认 src/test/resources 保住 -->
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
             <!-- ProcessEngineCutoverTest 用装配模块的 BPMN 夹具起真实 Flowable 引擎；
                  夹具实体留在 lautung-oa-server，这里只复制到测试 classpath。 -->
             <testResource>

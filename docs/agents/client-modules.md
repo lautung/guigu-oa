@@ -16,6 +16,7 @@
 | `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `canOccupy` / `grantedConfigMenus` | 配置授予的客户端投影；组归属来自 `router/routes.ts` |
 | `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径 |
 | `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
+| `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
 | `src/config/form-rules.ts` | `requiredRule(message)` → `{ required, validator }` | 配置表单必填语义的唯一 owner：字符串 trim 判空（镜像 `@NotBlank`）、数值缺省判空（镜像 `@NotNull`）；文案由各 config module 的 `formRules()` 提供并镜像服务端 DTO（ADR 0038） |

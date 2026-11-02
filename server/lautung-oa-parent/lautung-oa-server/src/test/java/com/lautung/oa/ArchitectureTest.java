@@ -11,6 +11,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 /**
  * 冻结 #195 的模块依赖边。包根即模块边界，只约束生产类：测试类跨模块引用是装配模块
  * （{@code lautung-oa-server}）的合法用法，因此用 {@link ImportOption.DoNotIncludeTests} 排除。
+ * 新增模块必须同时声明为 {@code lautung-oa-server} 的依赖，否则不在本测试的分析集内。
  *
  * <pre>
  * common ← framework
@@ -51,13 +52,11 @@ class ArchitectureTest {
             .whereLayer("Server").mayNotBeAccessedByAnyLayer()
             // 新顶层包必须先归入某个层，否则会静默绕过上面的全部边
             .ensureAllClassesAreContainedInArchitecture()
-            .allowEmptyShould(true)
             .as("模块依赖边与 #195 冻结的 DAG 一致");
 
     @ArchTest
     static final ArchRule MODULE_CYCLES = SlicesRuleDefinition.slices()
             .matching("com.lautung.oa.(*)..")
             .should().beFreeOfCycles()
-            .allowEmptyShould(true)
             .as("模块包之间无环");
 }
