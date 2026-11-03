@@ -35,6 +35,11 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(DemoScenarioSeeder.class);
     private static final String ATTACHMENT_CONTENT = "Compose 演示附件：请假申请说明。\n";
 
+    /** 演示定时任务（#238）：行由启动登记产生（disabled），这里只做改名与备注的化妆。 */
+    public static final String DEMO_JOB_BEAN = "demoLogMonitorJob";
+    public static final String DEMO_JOB_NAME = "演示：示例日志任务";
+    public static final String DEMO_JOB_REMARK = "演示用，默认停用；在页面上手动执行一次即可看到执行记录。";
+
     private final Approval approval;
     private final ApprovalListReader approvalListReader;
     private final DemoApprovalPublisher demoApprovalPublisher;
@@ -65,6 +70,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        ensureDemoJobRow();
         ProcessTemplate template = demoApprovalPublisher.ensurePublished();
         if (template == null) {
             return;
@@ -94,6 +100,17 @@ public class DemoScenarioSeeder implements ApplicationRunner {
                 Long.class);
         log.info("Compose 演示数据就绪 pending={} processed={} carolCopied={}",
                 pendingCount, processedCount, copiedCount);
+    }
+
+    /**
+     * 演示定时任务的行化妆：登记（{@code @Order(0)} 的调度器，先于本 seeder）已把
+     * {@code demoLogMonitorJob} 种成 disabled 行，这里补上可读的名字与备注。
+     * 只 UPDATE，不碰 enabled / cron / 并发。
+     */
+    public void ensureDemoJobRow() {
+        jdbcTemplate.update(
+                "UPDATE sys_job SET name = ?, remark = ? WHERE bean_name = ? AND is_deleted = 0",
+                DEMO_JOB_NAME, DEMO_JOB_REMARK, DEMO_JOB_BEAN);
     }
 
     private SysUser requireUser(String username) {
