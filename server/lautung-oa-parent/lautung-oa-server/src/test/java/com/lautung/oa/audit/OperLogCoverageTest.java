@@ -20,8 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 采集守卫（ADR 0054）：{@code /admin/system/*} 下的后台 controller 写方法必须挂
- * {@link OperLog}，漏挂即红。{@code IndexController} 是登录/续期/退出的传输端点，
+ * 采集守卫（ADR 0054）：{@code /admin/system/*} 与 {@code /admin/monitor/*} 下的后台 controller
+ * 写方法必须挂 {@link OperLog}，漏挂即红。{@code IndexController} 是登录/续期/退出的传输端点，
  * 不是操作日志材料，显式排除。
  *
  * <p>扫描整个 {@code com.lautung.oa} 的 {@code @RestController}（含依赖 jar），不是维护一份
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class OperLogCoverageTest {
 
-    private static final String BACKOFFICE_PREFIX = "/admin/system";
+    private static final List<String> BACKOFFICE_PREFIXES = List.of("/admin/system", "/admin/monitor");
 
     private static final String EXCLUDED_CONTROLLER = "IndexController";
 
@@ -53,7 +53,7 @@ class OperLogCoverageTest {
             }
         }
 
-        assertTrue(scannedWriteMethods >= 13,
+        assertTrue(scannedWriteMethods >= 14,
                 "后台写方法扫描结果异常，只看到 " + scannedWriteMethods + " 个——守卫没有落在路径上");
         assertTrue(missing.isEmpty(), "后台写方法缺少 @OperLog: " + missing);
     }
@@ -67,20 +67,21 @@ class OperLogCoverageTest {
         List<Class<?>> controllers = new ArrayList<>();
         for (BeanDefinition candidate : candidates) {
             Class<?> type = Class.forName(candidate.getBeanClassName());
-            if (isBackofficeSystemController(type)) {
+            if (isBackofficeController(type)) {
                 controllers.add(type);
             }
         }
         return controllers;
     }
 
-    private static boolean isBackofficeSystemController(Class<?> controller) {
+    private static boolean isBackofficeController(Class<?> controller) {
         RequestMapping mapping = AnnotatedElementUtils.findMergedAnnotation(controller, RequestMapping.class);
         if (mapping == null) {
             return false;
         }
         return Arrays.stream(mapping.path())
-                .anyMatch(path -> path.equals(BACKOFFICE_PREFIX) || path.startsWith(BACKOFFICE_PREFIX + "/"));
+                .anyMatch(path -> BACKOFFICE_PREFIXES.stream()
+                        .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/")));
     }
 
     private static boolean isWriteMapping(Method method) {

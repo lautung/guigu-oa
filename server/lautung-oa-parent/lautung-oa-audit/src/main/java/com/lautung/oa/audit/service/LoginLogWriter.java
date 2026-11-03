@@ -4,7 +4,7 @@ import com.lautung.oa.audit.entity.SysLoginLog;
 import com.lautung.oa.audit.mapper.LoginUserSnapshot;
 import com.lautung.oa.audit.mapper.LoginUserSnapshotMapper;
 import com.lautung.oa.audit.mapper.SysLoginLogMapper;
-import com.lautung.oa.audit.support.UserAgentParser;
+import com.lautung.oa.security.login.UserAgentParser;
 import com.lautung.oa.security.login.LoginEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

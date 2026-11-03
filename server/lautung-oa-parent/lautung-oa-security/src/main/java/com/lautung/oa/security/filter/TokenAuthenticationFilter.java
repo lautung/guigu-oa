@@ -4,6 +4,7 @@ import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.security.config.PublicApiPaths;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.security.response.AuthenticationRejections;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.security.session.SessionVerifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,14 +32,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private final SessionVerifier sessionVerifier;
     private final RedisTemplate<String, String> redisTemplate;
+    private final OnlineSessionRegistry onlineSessionRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TokenAuthenticationFilter(
             SessionVerifier sessionVerifier,
-            RedisTemplate<String, String> redisTemplate
+            RedisTemplate<String, String> redisTemplate,
+            OnlineSessionRegistry onlineSessionRegistry
     ) {
         this.sessionVerifier = sessionVerifier;
         this.redisTemplate = redisTemplate;
+        this.onlineSessionRegistry = onlineSessionRegistry;
     }
 
     @Override
@@ -47,6 +51,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         LoginUserInfoHelper.removeUserId();
         LoginUserInfoHelper.removeUsername();
+        LoginUserInfoHelper.removeSessionId();
         if (PublicApiPaths.permitsAnonymous(request.getRequestURI())) {
             chain.doFilter(request, response);
             return;
@@ -60,12 +65,16 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 AuthenticationRejections.write(response, rejected.failure());
                 return;
             }
-            SecurityContextHolder.getContext().setAuthentication(
-                    buildAuthentication((SessionVerifier.Outcome.Recognized) outcome));
+            SessionVerifier.Outcome.Recognized recognized = (SessionVerifier.Outcome.Recognized) outcome;
+            LoginUserInfoHelper.setSessionId(recognized.claims().sessionId());
+            // 按会话节流刷新最后活跃（ADR 0060）；登记已过期时实现不会补写无 TTL 的孤儿 hash。
+            onlineSessionRegistry.touch(recognized.claims().sessionId());
+            SecurityContextHolder.getContext().setAuthentication(buildAuthentication(recognized));
             chain.doFilter(request, response);
         } finally {
             LoginUserInfoHelper.removeUserId();
             LoginUserInfoHelper.removeUsername();
+            LoginUserInfoHelper.removeSessionId();
         }
     }
 

@@ -46,7 +46,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -57,7 +56,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.jayway.jsonpath.JsonPath;
 
-import java.lang.reflect.Proxy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1611,39 +1608,7 @@ public class ApprovalContractTest {
         @Bean
         @Primary
         public RedisTemplate<String, String> redisTemplate() {
-            ConcurrentHashMap<String, String> store = new ConcurrentHashMap<>();
-            RedisTemplate<String, String> template = new RedisTemplate<String, String>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public ValueOperations<String, String> opsForValue() {
-                    return (ValueOperations<String, String>) Proxy.newProxyInstance(
-                            ValueOperations.class.getClassLoader(),
-                            new Class<?>[]{ValueOperations.class},
-                            (proxy, method, args) -> {
-                                if ("set".equals(method.getName()) && args != null && args.length >= 2) {
-                                    store.put(String.valueOf(args[0]), String.valueOf(args[1]));
-                                    return null;
-                                }
-                                if ("get".equals(method.getName()) && args != null && args.length >= 1) {
-                                    return store.get(args[0]);
-                                }
-                                if ("toString".equals(method.getName())) {
-                                    return "InMemoryValueOperations";
-                                }
-                                throw new UnsupportedOperationException(method.getName());
-                            });
-                }
-
-                @Override
-                public Boolean delete(String key) {
-                    return store.remove(key) != null;
-                }
-
-                @Override
-                public void afterPropertiesSet() {
-                }
-            };
-            return template;
+            return new com.lautung.oa.support.InMemoryRedisTemplate();
         }
     }
 

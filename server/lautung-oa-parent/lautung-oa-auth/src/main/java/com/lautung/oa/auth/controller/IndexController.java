@@ -9,6 +9,7 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.security.response.AuthenticationRejections;
 import com.lautung.oa.security.revocation.TokenRevocation;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.security.session.SessionVerifier;
 import com.lautung.oa.vo.system.BackofficeMenuVo;
 import com.lautung.oa.vo.system.RefreshTokenVo;
@@ -22,8 +23,10 @@ import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Tag(name = "后台登录管理")
@@ -51,6 +54,9 @@ public class IndexController {
 
     @Autowired
     private SessionVerifier sessionVerifier;
+
+    @Autowired
+    private OnlineSessionRegistry onlineSessionRegistry;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -80,6 +86,8 @@ public class IndexController {
         map.put("avatar", "");
         map.put("permissions", permissions);
         map.put("menus", menus);
+        // ADR 0058 的小扩展（ADR 0060）：客户端据此标出本机会话；不改既有三段。
+        map.put("sessionId", LoginUserInfoHelper.getSessionId());
         return Result.ok(map);
     }
 
@@ -92,15 +100,21 @@ public class IndexController {
     public Result logout(
             HttpServletRequest request,
             @RequestBody(required = false) RefreshTokenVo refreshTokenVo) {
-        revoke(jwtHelper.readAccessToken(request.getHeader("token")));
-        revoke(jwtHelper.readRefreshToken(
+        Set<String> sessionIds = new LinkedHashSet<>();
+        collectSessionId(sessionIds, jwtHelper.readAccessToken(request.getHeader("token")));
+        collectSessionId(sessionIds, jwtHelper.readRefreshToken(
                 refreshTokenVo == null ? null : refreshTokenVo.getRefreshToken()));
+        // 退出与强退都走「吊销 + 注销」（ADR 0060）；同一 sessionId 的两张令牌只处理一次。
+        sessionIds.forEach(sessionId -> {
+            tokenRevocation.revoke(sessionId);
+            onlineSessionRegistry.remove(sessionId);
+        });
         return Result.ok();
     }
 
-    private void revoke(JwtHelper.TokenClaims claims) {
-        if (claims != null) {
-            tokenRevocation.revoke(claims.sessionId());
+    private static void collectSessionId(Set<String> sessionIds, JwtHelper.TokenClaims claims) {
+        if (claims != null && StringUtils.hasText(claims.sessionId())) {
+            sessionIds.add(claims.sessionId());
         }
     }
 
