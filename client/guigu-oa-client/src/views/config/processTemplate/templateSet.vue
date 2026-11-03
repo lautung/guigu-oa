@@ -149,9 +149,9 @@ import {
   type TemplateEditorOpening,
 } from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
+import { configPermission } from '@/config/permission'
 import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request/request-scope'
-import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
 
 const route = useRoute()
@@ -170,11 +170,10 @@ const editor = createTemplateEditor({
   openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
   entryId: () => recognition.capture().entryId,
   occupancy: () =>
-    resolveClientSurface({
+    configPermission(userStore.menus).occupancyOf({
       path: route.path,
       hasToken: !!userStore.token,
-      menus: userStore.menus,
-    }).occupancy,
+    }),
   designer: async () => {
     await nextTick()
     if (!designer.value) throw new Error('表单设计器暂不可用，请重试或返回')

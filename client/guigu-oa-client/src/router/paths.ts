@@ -1,7 +1,7 @@
 import type { EntityId, ProcessInstanceRecord } from '@/types/domain'
 
 /**
- * 统一客户端的路径原子。路由表、列表、详情、surface 都从这里取；字符串只在这里出现一次。
+ * 路径原子。路由表、列表、详情、面包屑都从这里取；字符串只在这里出现一次。
  */
 export const PATHS = {
   LOGIN: '/login',
@@ -40,7 +40,7 @@ export const PATHS = {
   SYSTEM_NOTICE_EDIT: '/system/notice/edit/:id?',
 } as const
 
-/** 办事列表的静态路径，保留既有 ROUTES 形状供导航与 surface 使用。 */
+/** 办事列表的静态路径，保留既有 ROUTES 形状供导航使用。 */
 export const ROUTES = {
   LOGIN: PATHS.LOGIN,
   START: PATHS.WORK_START,

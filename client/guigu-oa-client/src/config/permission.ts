@@ -1,3 +1,4 @@
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { ROUTE_GROUP_ENTRIES, type RouteGroupEntry } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
@@ -7,6 +8,14 @@ import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
  */
 
 export type MenuGroup = 'work' | 'config'
+
+/** 编辑/分配 module 在离开判定时消费的占用结论，不读 viewport。 */
+export type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
+
+export interface OccupancyInput {
+  path?: string
+  hasToken?: boolean
+}
 
 function normalizePath(path: string | undefined): string {
   if (!path) return ''
@@ -128,33 +137,50 @@ function buildSidebar(entries: readonly BackofficeMenuEntry[]): SidebarItem[] {
 export function configPermission(menus: BackofficeMenuEntry[] = []) {
   const pages = grantedPages(menus)
 
+  /** 页面授予：精确页面、目录下的已授页面，或已授页面下的详情子路径。 */
+  function coversPage(path: string): boolean {
+    const normalized = normalizePath(path)
+    if (!normalized) return false
+    return pathCoveredByGrant(normalized, pages)
+  }
+
+  function entryOf(path: string): { path: string; group: MenuGroup } | null {
+    const normalized = normalizePath(path)
+    if (!normalized) return null
+
+    const route = routeEntryOf(normalized)
+    if (route) {
+      return {
+        path: route.hiddenParentPath || route.path,
+        group: route.group,
+      }
+    }
+
+    return publicGrantedEntry(grantedEntryOf(normalized, menus))
+  }
+
+  function canOccupy({ path }: { path: string }): boolean {
+    const normalized = normalizePath(path)
+    if (!normalized) return false
+    return pathCoveredByGrant(normalized, pages)
+  }
+
   return {
     hasConfigPermission: pages.length > 0,
     grantedMenus: buildSidebar(menus),
-    /** 页面授予：精确页面、目录下的已授页面，或已授页面下的详情子路径。 */
-    coversPage(path: string): boolean {
-      const normalized = normalizePath(path)
-      if (!normalized) return false
-      return pathCoveredByGrant(normalized, pages)
-    },
-    entryOf(path: string): { path: string; group: MenuGroup } | null {
-      const normalized = normalizePath(path)
-      if (!normalized) return null
-
-      const route = routeEntryOf(normalized)
-      if (route) {
-        return {
-          path: route.hiddenParentPath || route.path,
-          group: route.group,
-        }
-      }
-
-      return publicGrantedEntry(grantedEntryOf(normalized, menus))
-    },
-    canOccupy({ path }: { path: string }): boolean {
-      const normalized = normalizePath(path)
-      if (!normalized) return false
-      return pathCoveredByGrant(normalized, pages)
+    coversPage,
+    entryOf,
+    canOccupy,
+    /**
+     * 后台页占用：无 token 或非 config 组一律放行（匿名由导航守卫负责）；
+     * config 组且未授予时回落到默认登录落点。
+     */
+    occupancyOf({ path, hasToken = false }: OccupancyInput = {}): Occupancy {
+      const entry = path ? entryOf(path) : null
+      if (!hasToken || !entry || entry.group !== 'config') return { action: 'allow' }
+      return canOccupy({ path: path || '' })
+        ? { action: 'allow' }
+        : { action: 'redirect', to: getDefaultPostLoginRoute() }
     },
   }
 }

@@ -29,7 +29,7 @@
 | `src/shell/FullscreenButton.vue` | 全屏按钮（顶栏） | 浏览器支持标准 Fullscreen API 时显示；按 `fullscreenchange` 同步「全屏/退出全屏」，不支持时整颗按钮隐藏 |
 | `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
 | `src/shell/shell-icons.ts` | `shellIcon(name)` | 菜单 icon 字符串 → 内联 SVG 的白名单（不引图标包），未知回退 Document |
-| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |
+| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` / `occupancyOf({ path, hasToken })` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影与授予唯一权威；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里；`occupancyOf` 回答编辑/分配 module 的 `allow \| redirect`（非 config 组或无 token 放行，未授予回落工作台），不读 viewport |
 | `src/config/sys-role.ts` | `DATA_SCOPE_OPTIONS` / `dataScopeLabel` / `deptOptionsRequest` / `formRules(dataScope)` / `writeRequest` | 角色表单与数据范围：五档标签、`dataScope=2` 时自定部门必填（镜像服务端）、写载荷固定带 `dataScope`/`deptIds`、详情回读映射 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
@@ -51,7 +51,6 @@
 | `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；工作台是 `/workbench`（登录落点），监控/工具空态是 `/monitor`、`/tool`，审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
 | `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属：`/login` 在外，所有认证路由挂在唯一的 `/` AppShell 下（子路由保留绝对路径语义与既有 name/meta），`/monitor`、`/tool` 是无授予的模块空态占位；`/` 重定向与守卫回落都是工作台，`/work` 自身仍回待处理；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
-| `src/surface/client-surface.ts` | `resolveClientSurface({ path, hasToken, menus })` | 只剩后台页授予判定与返回路径；不再按视口占用/回落（ADR 0051），外壳不路由经过它，#231 删除 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
 | `src/config/form-rules.ts` | `requiredRule(message)` → `{ required, validator }` | 配置表单必填语义的唯一 owner：字符串 trim 判空（镜像 `@NotBlank`）、数值缺省判空（镜像 `@NotNull`）；文案由各 config module 的 `formRules()` 提供并镜像服务端 DTO（ADR 0038） |
 | `src/config/template-editor.ts` | `createTemplateEditor(options)` → `open(id)`（`requestLeave` / `environmentChanged` / `dispose`）+ `formRules()` | 审批模板编辑的保存/待确认/占用；`occupancy()` 是端口；必填文案在 `formRules()` |
