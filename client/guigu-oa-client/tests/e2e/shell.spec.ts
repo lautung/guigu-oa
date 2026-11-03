@@ -204,3 +204,57 @@ test('没有配置授予时系统管理置灰，仍是五项之一', async ({ pa
   await expect(system).toBeDisabled()
   await expect(page.locator('.top-nav-item', { hasText: '系统监控' })).toBeEnabled()
 })
+
+test('菜单搜索按标题打开页面，无结果给空态', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) < 900, '窄屏不展开搜索弹层')
+  await openShell(page)
+
+  await page.locator('.menu-search-trigger').click()
+  const input = page.locator('.menu-search-input')
+  await expect(input).toBeVisible()
+
+  await input.fill('操作')
+  const results = page.locator('.menu-search-item')
+  await expect(results).toHaveCount(1)
+  await expect(results.first()).toContainText('操作日志')
+  await expect(results.first()).toContainText('系统管理 / 日志管理')
+
+  await results.first().click()
+  await expect(page).toHaveURL(/\/system\/log\/operLog$/)
+  await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
+  await expect(page.locator('.shell-breadcrumb')).toContainText('日志管理')
+
+  await page.locator('.menu-search-trigger').click()
+  await page.locator('.menu-search-input').fill('不存在的页面')
+  await expect(page.locator('.menu-search-empty')).toHaveText('没有匹配的页面')
+})
+
+test('侧栏折叠为 62px 图标栏并可再展开', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) < 900, '窄屏用抽屉而不是折叠栏')
+  await openShell(page)
+
+  const sidebar = page.locator('.app-sidebar')
+  await expect(sidebar).not.toHaveClass(/collapsed/)
+  await page.locator('.collapse-btn').click()
+  await expect(sidebar).toHaveClass(/collapsed/)
+  await expect(sidebar).toHaveCSS('width', '62px')
+  await expect(sidebar.locator('.side-item').first()).toHaveAttribute('title', '发起审批')
+
+  await page.locator('.collapse-btn').click()
+  await expect(sidebar).not.toHaveClass(/collapsed/)
+})
+
+test('用户菜单切换亮暗与密度并写入 localStorage', async ({ page }) => {
+  await openShell(page)
+
+  await page.locator('.user-trigger').click()
+  await page.locator('[data-theme="dark"]').click()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  expect(await page.evaluate(() => localStorage.getItem('guigu_oa_shell_theme'))).toBe('dark')
+
+  await page.locator('[data-density="large"]').click()
+  expect(await page.evaluate(() => localStorage.getItem('guigu_oa_shell_density'))).toBe('large')
+
+  await page.locator('[data-theme="light"]').click()
+  await expect(page.locator('html')).not.toHaveClass(/dark/)
+})

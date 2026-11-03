@@ -31,7 +31,7 @@
             @close="closeTab"
             @command="handleTabCommand"
           />
-          <shell-breadcrumb :crumbs="breadcrumb" />
+          <shell-breadcrumb :items="breadcrumb" />
           <main class="shell-content">
             <router-view />
           </main>

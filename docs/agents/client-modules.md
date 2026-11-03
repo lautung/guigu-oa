@@ -17,11 +17,16 @@
 | `src/navigation/index.ts` | `resolveAuthGuard({ path, fullPath, hasToken, menus })` / `buildLoginRedirectPath` | 导航决策：认证 + 后台页面授予；办事、工作台与公告读面内置始终放行，配置页只放行 `/info` `menus` 覆盖的页面、详情子路径与含已授子页的目录，否则回落到工作台（`getDefaultPostLoginRoute`，ADR 0051） |
 | `src/shell/shell-nav.ts` | `SHELL_MODULE_DEFINITIONS` / `buildShellNav(menus)` / `activeModuleKey(path)` / `isShellLeafActive` / `lastTabPathForModule` | 五个一级模块（工作台/办事/系统管理/系统监控/系统工具）的唯一 owner，五项固定不随权限增减：工作台与办事内置，系统管理由 `/info.menus` 派生（无授予时置灰），监控/工具落在 `/monitor`、`/tool` 空态占位；配置页按 `/system/log/`、`/system/processSet/`、`/system/processMgr/` 路径前缀分「日志管理/审批设置/审批管理」，其余平铺；侧栏激活项判定也在这一处 |
 | `src/shell/shell-tabs.ts` | `initialShellTabs` / `openShellTab` / `closeShellTab` / `closeCurrentTab` / `closeOtherTabs` / `closeAllTabs` / `isFixedTab` | 标签只存 path + title：工作台固定、同路径去重、关闭当前激活右邻再左邻、全部关闭回工作台；路径带 fullPath 以保留模板编辑的 id 查询 |
-| `src/shell/breadcrumb.ts` | `buildBreadcrumb({ path, title, menus })` | 「首页 / 一级 / 二级 / 页面」trail；一级用模块标题，配置页走菜单 parentPath 链，详情与隐藏页回退到列表/可见父级 |
+| `src/shell/breadcrumb.ts` | `buildBreadcrumb({ path, title, menus })` → `BreadcrumbNode[]`（`title` + 可选 `path`） | 「首页 / 一级 / 二级 / 页面」trail；一级用模块标题，配置页走菜单 parentPath 链，详情与隐藏页回退到列表/可见父级；`path` 只给真实页面（列表页/可见父级），目录与当前页不生成链接 |
+| `src/shell/menu-search.ts` | `buildMenuSearch(menus)` / `searchMenus(entries, query, limit)` | 菜单搜索索引与匹配（ADR 0059）：把 `buildShellNav` 的已授权页面与内置办事页拍平成「标题 + 面包屑」，按标题前缀/标题包含/仅面包屑命中排序，同级保持导航顺序；不引 fuse、不搜按钮点 |
+| `src/shell/fullscreen.ts` | `fullscreenSupported(doc)` / `toggleFullscreen(doc)` | 标准 Fullscreen API 的判定与切换；`requestFullscreen` 或 `exitFullscreen` 缺失即不支持，入口隐藏 |
 | `src/shell/shell-state.ts` | `useShellStore` → `syncRoute` / `closeTab` / `closeCurrentTab` / `closeOtherTabs` / `closeAllTabs` / `setTheme` / `setDensity` / `toggleCollapsed` / drawer actions | 外壳状态：tabs、activeModule、collapsed、drawer、theme、density；标签不持久化，主题与密度写 localStorage |
 | `src/shell/shell-preferences.ts` | `readShellPreferences` / `writeShellTheme` / `writeShellDensity` / `applyShellTheme` | 亮/暗与三档密度的取值校验与持久化；`html.dark` 只在这里切换 |
 | `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」 |
-| `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `ModulePlaceholder.vue` | 外壳 chrome 组件 | 一级药丸导航（无落点的模块置灰）、深色树、卡片标签与关闭下拉、面包屑行、监控/工具空态页；顶栏保留公告铃铛与退出登录，全屏/用户菜单/菜单搜索/主题密度控件留给 #230 |
+| `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `ModulePlaceholder.vue` | 外壳 chrome 组件 | 一级药丸导航（无落点的模块置灰）、深色树（底部折叠为 62px 图标栏、窄屏抽屉）、卡片标签与关闭下拉、可点面包屑行、监控/工具空态页；顶栏工具区依次为全屏、菜单搜索、公告铃铛、用户菜单 |
+| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/work/profile`、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`）；不做锁屏入口 |
+| `src/shell/MenuSearch.vue` | 菜单搜索弹层（顶栏） | 输入即过滤，↑/↓ 移动、回车打开当前项、点击打开结果；展示标题与面包屑，空查询给提示、无结果给空态；索引来自 `menu-search.ts`，只含已授权页面 |
+| `src/shell/FullscreenButton.vue` | 全屏按钮（顶栏） | 浏览器支持标准 Fullscreen API 时显示；按 `fullscreenchange` 同步「全屏/退出全屏」，不支持时整颗按钮隐藏 |
 | `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
 | `src/shell/shell-icons.ts` | `shellIcon(name)` | 菜单 icon 字符串 → 内联 SVG 的白名单（不引图标包），未知回退 Document |
 | `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |

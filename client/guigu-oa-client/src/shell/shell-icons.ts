@@ -80,6 +80,15 @@ const ICONS: Record<string, IconSpec> = {
   Fold: {
     paths: ['M15 6l-6 6 6 6'],
   },
+  Search: {
+    paths: ['M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-5.2-5.2'],
+  },
+  FullScreen: {
+    paths: ['M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'],
+  },
+  ExitFullScreen: {
+    paths: ['M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5'],
+  },
 }
 
 const cache = new Map<string, FunctionalComponent>()

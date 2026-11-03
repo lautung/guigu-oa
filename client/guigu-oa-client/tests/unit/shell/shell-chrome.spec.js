@@ -169,6 +169,25 @@ describe('AppShell', () => {
     ])
   })
 
+  it('links breadcrumb ancestors to their list pages and leaves directories unlinked', async () => {
+    const { pinia } = setupSession({ name: 'Alice', menus: SYSTEM_MENUS })
+    const router = shellRouter('/work/pending/9/task-1')
+    await router.isReady()
+    const wrapper = mount(AppShell, shellOptions(pinia, router))
+
+    const links = wrapper.findAll('.shell-breadcrumb-link')
+    expect(links.map((link) => link.text())).toEqual(['首页', '待处理'])
+
+    await links[1].trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/work/pending')
+
+    await router.push('/system/log/operLog')
+    await flushPromises()
+    expect(wrapper.findAll('.shell-breadcrumb-link').map((link) => link.text())).toEqual(['首页'])
+    expect(wrapper.find('.shell-breadcrumb').text()).toContain('日志管理')
+  })
+
   it('closes the active tab to its neighbour and closes all back to workbench', async () => {
     const { pinia } = setupSession({ name: 'Alice' })
     const router = shellRouter()
@@ -425,9 +444,12 @@ describe('AppTopBar', () => {
     expect(wrapper.find('.top-nav-item.active').text()).toBe('办事')
     expect(wrapper.find('.desktop-hint').text()).toBe('建议桌面')
     expect(wrapper.find('.username').text()).toBe('Alice')
-    expect(wrapper.find('.logout-btn').text()).toBe('退出')
+    expect(wrapper.find('.user-trigger').exists()).toBe(true)
+    expect(wrapper.find('.menu-search-trigger').exists()).toBe(true)
+    expect(wrapper.find('.fullscreen-btn').exists()).toBe(false)
+    expect(wrapper.find('.logout-btn').text()).toBe('退出登录')
 
-    await wrapper.vm.handleLogout()
+    await wrapper.find('.logout-btn').trigger('click')
     await flushPromises()
     expect(recognition.exit).toHaveBeenCalled()
   })

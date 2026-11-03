@@ -21,8 +21,9 @@ export async function openPendingFromWorkbench(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
 }
 
-/** 顶栏退出登录；窄屏与桌面走同一入口。 */
+/** 顶栏退出登录；窄屏与桌面走同一入口（#230 起收进用户菜单）。 */
 export async function logoutFromShell(page: Page): Promise<void> {
+  await page.locator('.user-trigger').click()
   await page.locator('.logout-btn').click()
   await expect(page.getByPlaceholder('用户名')).toBeVisible()
 }

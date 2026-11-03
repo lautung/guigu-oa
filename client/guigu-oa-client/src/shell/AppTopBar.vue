@@ -36,22 +36,21 @@
       <el-tag v-if="desktopHint" class="desktop-hint" size="small" type="warning">
         建议桌面
       </el-tag>
+      <fullscreen-button />
+      <menu-search />
       <notice-bell />
-      <img :src="avatarSrc" class="avatar" alt="" />
-      <span v-if="userStore.name" class="username">{{ userStore.name }}</span>
-      <button type="button" class="logout-btn" @click="handleLogout">退出</button>
+      <user-menu />
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useUserStore } from '@/store/modules/user'
 import NoticeBell from './NoticeBell.vue'
+import FullscreenButton from './FullscreenButton.vue'
+import MenuSearch from './MenuSearch.vue'
+import UserMenu from './UserMenu.vue'
 import { shellIcon } from './shell-icons'
 import type { ShellModule, ShellModuleKey } from './shell-nav'
-
-const DEFAULT_AVATAR = '/avatar.svg'
 
 defineProps<{
   modules: ShellModule[]
@@ -64,15 +63,6 @@ defineEmits<{
   (event: 'switch-module', key: ShellModuleKey): void
   (event: 'toggle-menu'): void
 }>()
-
-const userStore = useUserStore()
-const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
-
-async function handleLogout(): Promise<void> {
-  await userStore.logout()
-}
-
-defineExpose({ handleLogout })
 </script>
 
 <style lang="scss" scoped>
@@ -196,38 +186,6 @@ defineExpose({ handleLogout })
   outline: none;
 }
 
-.logout-btn {
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--el-text-color-regular);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.logout-btn:hover,
-.logout-btn:focus-visible {
-  background: var(--el-fill-color-light);
-  color: var(--el-color-primary);
-  outline: none;
-}
-
-.avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.username {
-  font-size: 13px;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 1180px) {
   .brand {
     width: auto;
@@ -241,10 +199,6 @@ defineExpose({ handleLogout })
 @media (max-width: 899px) {
   .top-bar {
     gap: 8px;
-  }
-
-  .username {
-    max-width: 72px;
   }
 }
 </style>
