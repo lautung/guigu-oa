@@ -1,58 +1,11 @@
 import { configPermission } from '@/config/permission'
-import {
-  AUTH_WHITELIST,
-  DESKTOP_CONFIG_HINT,
-  MOBILE_BREAKPOINT,
-  ROUTES,
-  WORK_BUILTIN_ITEMS,
-  getDefaultPostLoginRoute,
-  isMobileViewport,
-} from './constants'
-import type { BackofficeMenuEntry, SidebarGroup, SidebarItem } from '@/types/domain'
+import { AUTH_WHITELIST, ROUTES, getDefaultPostLoginRoute } from './constants'
+import type { BackofficeMenuEntry } from '@/types/domain'
 
 type GuardDecision = { action: 'allow' } | { action: 'redirect'; to: string }
 
 export function buildLoginRedirectPath(intendedPath?: string): string {
   return intendedPath || getDefaultPostLoginRoute()
-}
-
-function buildWorkSidebarGroup(): SidebarGroup {
-  return {
-    key: 'work',
-    title: '办事',
-    collapsed: false,
-    hint: null,
-    items: WORK_BUILTIN_ITEMS.map((item) => ({ ...item })),
-  }
-}
-
-function configSidebarGroup(grantedMenus: SidebarItem[], viewportWidth: number): SidebarGroup {
-  const mobile = isMobileViewport(viewportWidth)
-
-  return {
-    key: 'config',
-    title: '配置',
-    collapsed: mobile,
-    hint: mobile ? DESKTOP_CONFIG_HINT : null,
-    items: grantedMenus,
-  }
-}
-
-export function buildSidebarTree({
-  menus = [],
-  viewportWidth = MOBILE_BREAKPOINT + 1,
-}: {
-  menus?: BackofficeMenuEntry[]
-  viewportWidth?: number
-} = {}): SidebarGroup[] {
-  const tree = [buildWorkSidebarGroup()]
-  const permission = configPermission(menus)
-
-  if (permission.hasConfigPermission) {
-    tree.push(configSidebarGroup(permission.grantedMenus, viewportWidth))
-  }
-
-  return tree
 }
 
 export function resolveAuthGuard({

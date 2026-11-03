@@ -72,6 +72,26 @@ export const elementStubs = {
     template:
       '<span class="el-badge-stub" :data-value="value" :data-hidden="String(hidden)"><slot /></span>',
   },
+  'el-breadcrumb': {
+    template: '<nav class="el-breadcrumb-stub"><slot /></nav>',
+  },
+  'el-breadcrumb-item': {
+    template: '<span class="el-breadcrumb-item-stub"><slot /></span>',
+  },
+  'el-config-provider': {
+    props: ['size'],
+    template: '<div class="el-config-provider-stub" :data-size="size"><slot /></div>',
+  },
+  'el-dropdown': {
+    template:
+      '<span class="el-dropdown-stub"><slot /><span class="el-dropdown-menu-stub"><slot name="dropdown" /></span></span>',
+  },
+  'el-dropdown-menu': {
+    template: '<span class="el-dropdown-menu-list-stub"><slot /></span>',
+  },
+  'el-dropdown-item': {
+    template: '<span class="el-dropdown-item-stub"><slot /></span>',
+  },
   'el-popover': {
     template:
       '<span class="el-popover-stub"><slot name="reference" /><span class="el-popover-body"><slot /></span></span>',
@@ -105,7 +125,7 @@ export const elementStubs = {
   'el-table-column': true,
   'el-tab-pane': true,
   'el-tabs': true,
-  'el-tag': true,
+  'el-tag': { template: '<span class="el-tag-stub"><slot /></span>' },
   'el-timeline': true,
   'el-timeline-item': true,
   'el-tooltip': true,

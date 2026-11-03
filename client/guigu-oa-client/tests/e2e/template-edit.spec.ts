@@ -328,7 +328,7 @@ for (const [name, record] of [
   })
 }
 
-test('手机尺寸与缺少配置菜单时不能占用模板编辑页', async ({ page }) => {
+test('缺少配置菜单时不能占用模板编辑页', async ({ page }) => {
   const h = await setup(page, { menus: false })
   await page.goto('/system/processSet/templateSet?id=97')
   await expect(page).toHaveURL(/\/work\/pending$/)
@@ -337,12 +337,13 @@ test('手机尺寸与缺少配置菜单时不能占用模板编辑页', async ({
   expect(h.errors).toEqual([])
 })
 
-test('有配置菜单的手机也不能占用模板编辑页', async ({ page }) => {
+test('有配置菜单的手机也能打开模板编辑页', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) > 768, '验证手机配置进入规则')
   const h = await setup(page)
   await page.goto('/system/processSet/templateSet?id=97')
-  await expect(page).toHaveURL(/\/work\/pending$/)
-  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/system\/processSet\/templateSet\?id=97$/)
+  await expect(page.getByRole('button', { name: '下一步', exact: true })).toBeVisible()
+  await expect(page.locator('.desktop-hint')).toHaveText('建议桌面')
   expect(h.saved).toHaveLength(0)
 })
 
@@ -435,21 +436,26 @@ test('保存中冻结内容，确认离开后重新进入同地址不接受旧�
   expect(h.errors).toEqual([])
 })
 
-test('普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认', async ({ page }) => {
+test('普通离开可取消，缩到手机不强制离开', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '从桌面缩为手机')
   const h = await setup(page)
   await page.goto('/system/processSet/templateSet?id=97')
   await page.getByLabel('审批名称', { exact: true }).fill('尚未保存的编辑')
-  await page.getByRole('link', { name: '待处理', exact: true }).click()
+
+  const work = page.locator('.top-nav-item', { hasText: '办事' })
+  await work.click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: '继续编辑', exact: true }).click()
   await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('尚未保存的编辑')
-  await page.getByRole('link', { name: '待处理', exact: true }).click()
+
+  await work.click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/templateSet\?id=97$/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: '继续编辑', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
+  await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('尚未保存的编辑')
   expect(h.saved).toHaveLength(0)
   expect(h.errors).toEqual([])
 })
@@ -488,7 +494,7 @@ test('读取在途离开后重开同地址，旧读取不覆盖本次内容', as
   const reading = page.waitForRequest('**/processTemplate/get/97')
   await page.goto('/system/processSet/templateSet?id=97')
   await reading
-  await page.getByRole('link', { name: '审批模板', exact: true }).click()
+  await page.locator('.app-sidebar').getByRole('link', { name: '审批模板', exact: true }).click()
   await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   await page.locator('.el-table__row').getByRole('button', { name: '编辑', exact: true }).click()
   await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('本次重新读取')
@@ -529,7 +535,7 @@ test('进入结果被替换时清理编辑，旧上传结果不影响重新进�
   const oldResponse = page.waitForResponse('**/uploadProcessDefinition')
   gate.resolve()
   await oldResponse
-  await page.getByRole('link', { name: '审批模板', exact: true }).click()
+  await page.goto('/system/processSet/processTemplate')
   await page.locator('.el-table__row').getByRole('button', { name: '编辑', exact: true }).click()
   await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('模板时序测试')
   await flowStep(page)

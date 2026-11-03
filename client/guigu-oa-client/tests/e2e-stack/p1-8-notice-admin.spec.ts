@@ -1,6 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { marker } from './helpers/stack'
-import { confirmMessageBox, rowAcrossPages, uiLoginExpectWork } from './helpers/ui'
+import { confirmMessageBox, rowAcrossPages, uiLoginExpectWork, uiLogout } from './helpers/ui'
 import type { Oracle } from './helpers/oracle'
 import type { Page } from '@playwright/test'
 
@@ -40,8 +40,7 @@ const PNG_1X1 = Buffer.from(
 )
 
 async function logout(page: Page) {
-  await page.locator('.logout-btn').click()
-  await expect(page.getByPlaceholder('用户名')).toBeVisible()
+  await uiLogout(page)
 }
 
 test('管理页草稿→发布→铃铛→撤回→删除，含图片上传与渲染', async ({ page, oracle }) => {

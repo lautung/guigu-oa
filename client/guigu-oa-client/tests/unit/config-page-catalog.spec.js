@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ROUTE_GROUP_ENTRIES, constantRoutes } from '@/router/routes'
+import { PATHS } from '@/router/paths'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 describe('路由组归属与配置页', () => {
@@ -47,5 +48,16 @@ describe('路由组归属与配置页', () => {
     expect(byPath['/work/profile']).toBe('work')
     expect(byPath['/system/sysUser']).toBe('config')
     expect(byPath['/system/processMgr/process']).toBe('config')
+  })
+
+  it('routes every authenticated page through the one shell root', () => {
+    const shell = constantRoutes.find((route) => route.path === '/')
+    const hosted = constantRoutes.filter((route) => route.path !== PATHS.LOGIN && route.children)
+
+    expect(hosted).toHaveLength(1)
+    expect(hosted[0]).toBe(shell)
+    expect(shell.children.map((route) => route.path)).toContain(PATHS.WORKBENCH)
+    expect(shell.children.map((route) => route.path)).toContain(PATHS.SYSTEM)
+    expect(shell.children.map((route) => route.path)).toContain(PATHS.NOTICE)
   })
 })

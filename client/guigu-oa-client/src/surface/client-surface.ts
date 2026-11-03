@@ -19,7 +19,6 @@ type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
 
 export interface ClientSurfaceInput {
   path?: string
-  viewportWidth?: number
   hasToken?: boolean
   menus?: BackofficeMenuEntry[]
 }
@@ -56,7 +55,6 @@ function isLoginPath(path: string): boolean {
 
 export function resolveClientSurface({
   path = '',
-  viewportWidth = 1024,
   hasToken = false,
   menus = [],
 }: ClientSurfaceInput = {}): ClientSurfaceResolution {
@@ -71,7 +69,7 @@ export function resolveClientSurface({
   }
 
   const canOccupy =
-    !hasToken || entry.group !== MENU_GROUPS.CONFIG || permission.canOccupy({ path, viewportWidth })
+    !hasToken || entry.group !== MENU_GROUPS.CONFIG || permission.canOccupy({ path })
 
   return {
     showSurface: hasToken,
@@ -82,21 +80,5 @@ export function resolveClientSurface({
       : { action: 'redirect', to: getDefaultPostLoginRoute() },
     hasWorkListPerspective: WORK_LIST_ENTRY_PATHS.includes(entry.path),
     returnPath: returnPathOfRoute(path),
-  }
-}
-
-export function createViewportOccupancyHandler({
-  getSurfaceInput,
-  goTo,
-}: {
-  getSurfaceInput: () => ClientSurfaceInput
-  goTo: (path: string) => void
-}): (viewportWidth: number) => void {
-  return function handleViewportWidth(viewportWidth: number): void {
-    const input = getSurfaceInput()
-    const occupancy = resolveClientSurface({ ...input, viewportWidth }).occupancy
-    if (occupancy.action === 'redirect' && occupancy.to !== input.path) {
-      goTo(occupancy.to)
-    }
   }
 }

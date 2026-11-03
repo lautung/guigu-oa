@@ -14,7 +14,16 @@
 | `src/list/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
 | `src/list/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `src/list/list-page-browser.ts` |
 | `src/permission/index.ts` | `hasPermission(perm)`；`hasPermi` 指令 / `createHasPermi(read)`；`isPermitted` / `permissionSet` | 按钮点判定（ADR 0052/0058）：读 user store 的 `permissions`，无权限移除 DOM（`mounted`/`updated`）；服务端 gate 是唯一强制点 |
-| `src/navigation/index.ts` | `resolveAuthGuard({ path, fullPath, hasToken, menus })` / `buildSidebarTree` / `buildLoginRedirectPath` | 导航决策：认证 + 后台页面授予；办事内置始终放行，配置页只放行 `/info` `menus` 覆盖的页面、详情子路径与含已授子页的目录，否则回落到默认落点 |
+| `src/navigation/index.ts` | `resolveAuthGuard({ path, fullPath, hasToken, menus })` / `buildLoginRedirectPath` | 导航决策：认证 + 后台页面授予；办事、工作台与公告读面内置始终放行，配置页只放行 `/info` `menus` 覆盖的页面、详情子路径与含已授子页的目录，否则回落到默认落点 |
+| `src/shell/shell-nav.ts` | `SHELL_MODULE_DEFINITIONS` / `buildShellNav(menus)` / `activeModuleKey(path)` / `isShellLeafActive` / `lastTabPathForModule` | 五个一级模块（工作台/办事/系统管理/系统监控/系统工具）的唯一 owner：工作台与办事内置，系统管理由 `/info.menus` 派生，监控/工具无页面时整块隐藏；侧栏平铺项与嵌套分组标题、激活项判定也在这一处 |
+| `src/shell/shell-tabs.ts` | `initialShellTabs` / `openShellTab` / `closeShellTab` / `closeCurrentTab` / `closeOtherTabs` / `closeAllTabs` / `isFixedTab` | 标签只存 path + title：工作台固定、同路径去重、关闭当前激活右邻再左邻、全部关闭回工作台；路径带 fullPath 以保留模板编辑的 id 查询 |
+| `src/shell/breadcrumb.ts` | `buildBreadcrumb({ path, title, menus })` | 「首页 / 一级 / 二级 / 页面」trail；一级用模块标题，配置页走菜单 parentPath 链，详情与隐藏页回退到列表/可见父级 |
+| `src/shell/shell-state.ts` | `useShellStore` → `syncRoute` / `closeTab` / `closeCurrentTab` / `closeOtherTabs` / `closeAllTabs` / `setTheme` / `setDensity` / `toggleCollapsed` / drawer actions | 外壳状态：tabs、activeModule、collapsed、drawer、theme、density；标签不持久化，主题与密度写 localStorage |
+| `src/shell/shell-preferences.ts` | `readShellPreferences` / `writeShellTheme` / `writeShellDensity` / `applyShellTheme` | 亮/暗与三档密度的取值校验与持久化；`html.dark` 只在这里切换 |
+| `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」 |
+| `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `AppearanceMenu.vue` | 外壳 chrome 组件 | 一级药丸导航、深色树、卡片标签与关闭下拉、面包屑行、亮/暗与三档密度下拉；顶栏用户菜单含个人中心/退出登录 |
+| `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
+| `src/shell/shell-icons.ts` | `shellIcon(name)` | 菜单 icon 字符串 → Element Plus 图标组件的白名单，未知回退 Document |
 | `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |
 | `src/config/sys-role.ts` | `DATA_SCOPE_OPTIONS` / `dataScopeLabel` / `deptOptionsRequest` / `formRules(dataScope)` / `writeRequest` | 角色表单与数据范围：五档标签、`dataScope=2` 时自定部门必填（镜像服务端）、写载荷固定带 `dataScope`/`deptIds`、详情回读映射 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
@@ -34,10 +43,10 @@
 | `src/views/config/notice/edit.vue` | 页面 | 公告编辑：标题/类型/Quill 2 正文、编辑/预览两个 tab（预览经 `NoticeContent` 水合图片）、按状态显示保存草稿/发布/撤回/删除；路由离开与返回走 dirty 确认 |
 | `src/views/notice/index.vue` | 页面 | 全部公告：全部/未读两个 tab、`publish_time DESC, id DESC` 分页、类型/标题/发布人/发布时间/读态；读状态与分页复用 `createListPage` |
 | `src/views/notice/detail.vue` | 页面 | 公告详情：类型/标题/发布人/发布时间/正文；加载成功后每次访问只写一次已读回执；撤回/删除/不存在按不存在视图处理 |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
-| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；工作台占位是 `/workbench`，审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
+| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属：`/login` 在外，所有认证路由挂在唯一的 `/` AppShell 下（子路由保留绝对路径语义与既有 name/meta）；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
-| `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
+| `src/surface/client-surface.ts` | `resolveClientSurface({ path, hasToken, menus })` | 只剩后台页授予判定与返回路径；不再按视口占用/回落（ADR 0051），外壳不路由经过它，#231 删除 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
 | `src/config/form-rules.ts` | `requiredRule(message)` → `{ required, validator }` | 配置表单必填语义的唯一 owner：字符串 trim 判空（镜像 `@NotBlank`）、数值缺省判空（镜像 `@NotNull`）；文案由各 config module 的 `formRules()` 提供并镜像服务端 DTO（ADR 0038） |
 | `src/config/template-editor.ts` | `createTemplateEditor(options)` → `open(id)`（`requestLeave` / `environmentChanged` / `dispose`）+ `formRules()` | 审批模板编辑的保存/待确认/占用；`occupancy()` 是端口；必填文案在 `formRules()` |
@@ -50,7 +59,7 @@
 
 日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
 
-公告展示面（#219）：`TopBar.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`。发布管理面（#220）：`/system/notice` 列表与隐藏子路由 `/system/notice/edit/:id?` 属于配置组，页面状态机在 `src/notice/admin.ts`，Quill 工具栏能力在 `src/notice/quill.ts`；图片上传端点由服务端 `system:notice:add` 把关，只有 edit 权限时编辑页隐藏图片按钮。
+公告展示面（#219）：`src/shell/NoticeBell.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`。发布管理面（#220）：`/system/notice` 列表与隐藏子路由 `/system/notice/edit/:id?` 属于配置组，页面状态机在 `src/notice/admin.ts`，Quill 工具栏能力在 `src/notice/quill.ts`；图片上传端点由服务端 `system:notice:add` 把关，只有 edit 权限时编辑页隐藏图片按钮。
 
 ## 服务端鉴权
 

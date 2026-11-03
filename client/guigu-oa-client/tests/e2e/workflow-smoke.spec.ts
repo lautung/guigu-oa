@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
+import { openShellLink } from './helpers/shell'
 
 const templateId = 101
 const processId = 'smoke-process-1'
@@ -185,7 +186,7 @@ for (const approval of approvalCases) {
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
 
-    await page.getByRole('link', { name: '发起审批' }).click()
+    await openShellLink(page, '发起审批')
     await page.getByRole('button', { name: '请假申请' }).click()
     await expect(page.getByRole('heading', { name: '请假申请' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '附件' })).toBeVisible()
@@ -220,7 +221,7 @@ for (const approval of approvalCases) {
       formShowData: { 请假原因: '家中有事' },
     })
 
-    await page.getByRole('link', { name: '待处理' }).click()
+    await openShellLink(page, '待处理')
     await page.getByText('请假申请').first().click()
     await expect(page.getByRole('heading', { name: '审批流转记录' })).toBeVisible()
     await expect(page.getByText('approval-note.txt')).toBeVisible()

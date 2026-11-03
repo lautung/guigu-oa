@@ -5,6 +5,7 @@ import type { EntityId, ProcessInstanceRecord } from '@/types/domain'
  */
 export const PATHS = {
   LOGIN: '/login',
+  WORKBENCH: '/workbench',
   WORK: '/work',
   WORK_START: '/work/start',
   WORK_START_APPLY: '/work/start/:processTemplateId',
@@ -123,6 +124,7 @@ export function noticeEditPath(id?: EntityId): string {
 
 const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.LOGIN]: PATHS.LOGIN,
+  [PATHS.WORKBENCH]: PATHS.WORKBENCH,
   [PATHS.WORK_START]: PATHS.WORK_START,
   [PATHS.WORK_PENDING]: PATHS.WORK_PENDING,
   [PATHS.WORK_PROCESSED]: PATHS.WORK_PROCESSED,

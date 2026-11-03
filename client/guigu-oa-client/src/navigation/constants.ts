@@ -2,10 +2,6 @@ import { ROUTES } from '@/router/paths'
 
 export { ROUTES }
 
-export const MOBILE_BREAKPOINT = 768
-
-export const DESKTOP_CONFIG_HINT = '请在电脑浏览器使用'
-
 export const AUTH_WHITELIST = [ROUTES.LOGIN] as const
 
 export const WORK_BUILTIN_ITEMS = [
@@ -19,8 +15,4 @@ export const WORK_BUILTIN_ITEMS = [
 
 export function getDefaultPostLoginRoute(): string {
   return ROUTES.PENDING
-}
-
-export function isMobileViewport(viewportWidth: number): boolean {
-  return viewportWidth <= MOBILE_BREAKPOINT
 }

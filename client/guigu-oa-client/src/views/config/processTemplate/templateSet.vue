@@ -174,7 +174,6 @@ const editor = createTemplateEditor({
       path: route.path,
       hasToken: !!userStore.token,
       menus: userStore.menus,
-      viewportWidth: window.innerWidth,
     }).occupancy,
   designer: async () => {
     await nextTick()

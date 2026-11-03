@@ -26,7 +26,7 @@ interface AppRoute {
   children?: AppRoute[]
 }
 
-const ClientSurfaceHost = () => import('@/surface/ClientSurfaceHost.vue')
+const AppShell = () => import('@/shell/AppShell.vue')
 
 /** 子路由路径从 paths 的绝对路径派生，避免第二份路径字符串。 */
 function childPath(parent: string, absolute: string): string {
@@ -205,55 +205,60 @@ export const constantRoutes: AppRoute[] = [
     hidden: true,
   },
   {
+    // 一个外壳、一个 router-view（ADR 0059）：认证路由全部挂在这里，/login 在外。
     path: '/',
+    component: AppShell,
     redirect: getDefaultPostLoginRoute(),
-  },
-  {
-    path: PATHS.WORK,
-    component: ClientSurfaceHost,
-    redirect: getDefaultPostLoginRoute(),
-    meta: { menuGroup: 'work' },
-    children: workChildren,
-  },
-  {
-    // 公告读面是内置路由（ADR 0055）：登录即有，不设 menuGroup，因此配置页授予
-    // 不把它当后台页面（#224 的守卫只过滤 config 组）。
-    path: PATHS.NOTICE,
-    component: ClientSurfaceHost,
-    children: noticeChildren,
-  },
-  {
-    path: PATHS.SYSTEM,
-    component: ClientSurfaceHost,
-    redirect: PATHS.SYSTEM_SYS_USER,
-    meta: { menuGroup: 'config' },
-    children: configChildren,
-  },
-  {
-    path: PATHS.PROCESS_SET,
-    component: ClientSurfaceHost,
-    redirect: PATHS.PROCESS_SET_PROCESS_TYPE,
-    meta: { menuGroup: 'config' },
-    children: processSetChildren,
-  },
-  {
-    path: PATHS.PROCESS_MGR,
-    component: ClientSurfaceHost,
-    redirect: PATHS.PROCESS_MGR_PROCESS,
-    meta: { menuGroup: 'config' },
     children: [
       {
-        path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS),
-        name: 'ProcessMgr',
-        component: () => import('@/views/config/processInstance/index.vue'),
-        meta: { title: '审批实例查询', menuGroup: 'config' },
+        path: PATHS.WORKBENCH,
+        name: 'Workbench',
+        component: () => import('@/views/workbench/index.vue'),
+        meta: { title: '工作台' },
       },
       {
-        path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS_DETAIL),
-        name: 'ProcessMgrDetail',
-        component: () => import('@/views/work/pending/detail.vue'),
-        meta: { title: '审批详情', menuGroup: 'config' },
-        hidden: true,
+        path: PATHS.WORK,
+        redirect: getDefaultPostLoginRoute(),
+        meta: { menuGroup: 'work' },
+        children: workChildren,
+      },
+      {
+        // 公告读面是内置路由（ADR 0055）：登录即有，不设 menuGroup，因此配置页授予
+        // 不把它当后台页面（#224 的守卫只过滤 config 组）。
+        path: PATHS.NOTICE,
+        children: noticeChildren,
+      },
+      {
+        path: PATHS.SYSTEM,
+        redirect: PATHS.SYSTEM_SYS_USER,
+        meta: { menuGroup: 'config' },
+        children: configChildren,
+      },
+      {
+        path: PATHS.PROCESS_SET,
+        redirect: PATHS.PROCESS_SET_PROCESS_TYPE,
+        meta: { menuGroup: 'config' },
+        children: processSetChildren,
+      },
+      {
+        path: PATHS.PROCESS_MGR,
+        redirect: PATHS.PROCESS_MGR_PROCESS,
+        meta: { menuGroup: 'config' },
+        children: [
+          {
+            path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS),
+            name: 'ProcessMgr',
+            component: () => import('@/views/config/processInstance/index.vue'),
+            meta: { title: '审批实例查询', menuGroup: 'config' },
+          },
+          {
+            path: childPath(PATHS.PROCESS_MGR, PATHS.PROCESS_MGR_PROCESS_DETAIL),
+            name: 'ProcessMgrDetail',
+            component: () => import('@/views/work/pending/detail.vue'),
+            meta: { title: '审批详情', menuGroup: 'config' },
+            hidden: true,
+          },
+        ],
       },
     ],
   },

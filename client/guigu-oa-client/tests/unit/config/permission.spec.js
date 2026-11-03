@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { configPermission } from '@/config/permission'
-import { MOBILE_BREAKPOINT } from '@/navigation/constants'
-
-const DESKTOP_WIDTH = 1200
-const MOBILE_WIDTH = 375
 
 const USER_PAGE = [
   { path: '/system', title: '组织与权限', type: 0, sort: 1 },
@@ -82,8 +78,8 @@ const CUSTOM_HIDDEN_PAGE = [
   },
 ]
 
-function canOccupy(permission, path, viewportWidth = DESKTOP_WIDTH) {
-  return permission.canOccupy({ path, viewportWidth })
+function canOccupy(permission, path) {
+  return permission.canOccupy({ path })
 }
 
 function flattenTitles(items = []) {
@@ -210,12 +206,10 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/system/processMgr')).toBe(true)
     })
 
-    it('cannot occupy 配置 on mobile even when granted', () => {
+    it('keeps 配置 pages open on mobile when granted', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_WIDTH)).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT)).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT + 1)).toBe(true)
+      expect(canOccupy(permission, '/system/sysUser')).toBe(true)
     })
 
     it('does not treat 办事 paths as 配置 occupancy', () => {
@@ -238,7 +232,6 @@ describe('配置权限', () => {
 
       expect(canOccupy(permission, '/office/userDetail')).toBe(true)
       expect(canOccupy(permission, '/office/userDetail/9')).toBe(true)
-      expect(canOccupy(permission, '/office/userDetail', MOBILE_WIDTH)).toBe(false)
     })
 
     it('cannot occupy a custom hidden page whose visible parent has no grant', () => {

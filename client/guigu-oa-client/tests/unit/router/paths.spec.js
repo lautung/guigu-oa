@@ -83,6 +83,7 @@ describe('路径 module', () => {
 
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {
     const staticPaths = [
+      PATHS.WORKBENCH,
       PATHS.WORK_START,
       PATHS.WORK_PENDING,
       PATHS.WORK_PROCESSED,
@@ -116,6 +117,12 @@ describe('路径 module', () => {
     expect(resolve('/processSet/processType').matched).toEqual([])
     expect(resolve('/processSet/processTemplate').matched).toEqual([])
     expect(resolve('/processMgr/process').matched).toEqual([])
+  })
+
+  it('工作台占位路由在壳内，返回路径是自身', () => {
+    expect(resolve(PATHS.WORKBENCH).name).toBe('Workbench')
+    expect(resolve(PATHS.WORKBENCH).meta.title).toBe('工作台')
+    expect(returnPathOfRoute(PATHS.WORKBENCH)).toBe(PATHS.WORKBENCH)
   })
 
   it('返回路径覆盖列表、详情、隐藏页与未知路径', () => {

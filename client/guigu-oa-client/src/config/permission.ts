@@ -1,4 +1,3 @@
-import { isMobileViewport } from '@/navigation/constants'
 import { ROUTE_GROUP_ENTRIES, type RouteGroupEntry } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
@@ -118,6 +117,7 @@ function buildSidebar(entries: readonly BackofficeMenuEntry[]): SidebarItem[] {
         return {
           path,
           title: entry.title,
+          ...(entry.icon ? { icon: entry.icon } : {}),
           ...(children.length > 0 ? { children } : {}),
         }
       })
@@ -151,9 +151,9 @@ export function configPermission(menus: BackofficeMenuEntry[] = []) {
 
       return publicGrantedEntry(grantedEntryOf(normalized, menus))
     },
-    canOccupy({ path, viewportWidth }: { path: string; viewportWidth: number }): boolean {
+    canOccupy({ path }: { path: string }): boolean {
       const normalized = normalizePath(path)
-      if (!normalized || isMobileViewport(viewportWidth)) return false
+      if (!normalized) return false
       return pathCoveredByGrant(normalized, pages)
     },
   }

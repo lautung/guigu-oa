@@ -156,6 +156,18 @@ describe('后台页面授予守卫', () => {
       action: 'allow',
     })
   })
+
+  it('keeps the built-in workbench and notice pages allowed without menus', () => {
+    expect(resolveAuthGuard({ path: '/workbench', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+    expect(resolveAuthGuard({ path: '/notice', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+    expect(resolveAuthGuard({ path: '/notice/7', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+  })
 })
 
 function createTestRouter() {

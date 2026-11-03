@@ -74,7 +74,6 @@ export function useAssignRoles() {
           path: router.currentRoute.value.path,
           hasToken: !!userStore.token,
           menus: userStore.menus,
-          viewportWidth: window.innerWidth,
         }).occupancy,
       confirm: async (message, kind) => {
         const ending = kind === 'end-assignment'

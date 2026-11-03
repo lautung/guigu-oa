@@ -5,11 +5,36 @@ import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import { PATHS } from '@/router/paths'
 
 describe('route table', () => {
+  const shell = constantRoutes.find((route) => route.path === '/')
+
+  it('keeps /login outside the single authenticated shell', () => {
+    expect(constantRoutes.filter((route) => route.path === PATHS.LOGIN)).toHaveLength(1)
+    expect(shell.children.some((route) => route.path === PATHS.LOGIN)).toBe(false)
+    expect(shell.redirect).toBe(PATHS.WORK_PENDING)
+    expect(shell.children.map((route) => route.path)).toEqual([
+      PATHS.WORKBENCH,
+      PATHS.WORK,
+      PATHS.NOTICE,
+      PATHS.SYSTEM,
+      PATHS.PROCESS_SET,
+      PATHS.PROCESS_MGR,
+    ])
+  })
+
   it('keeps child paths relative to their parent', () => {
-    const work = constantRoutes.find((route) => route.path === PATHS.WORK)
+    const work = shell.children.find((route) => route.path === PATHS.WORK)
     expect(work.children[0].path).toBe('start')
     expect(work.children.map((child) => child.path)).toContain('pending/:id/:taskId')
     expect(work.redirect).toBe(PATHS.WORK_PENDING)
+  })
+
+  it('registers the workbench placeholder without changing the landing route', () => {
+    const workbench = shell.children.find((route) => route.path === PATHS.WORKBENCH)
+
+    expect(workbench.name).toBe('Workbench')
+    expect(workbench.meta.title).toBe('工作台')
+    expect(workbench.meta.menuGroup).toBeUndefined()
+    expect(shell.redirect).toBe(PATHS.WORK_PENDING)
   })
 
   it('declares group membership for every visible menu route', () => {

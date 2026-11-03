@@ -36,8 +36,18 @@ export async function openWorkList(page: Page, title: string): Promise<void> {
   await expect(page.getByRole('heading', { name: title, level: 2 })).toBeVisible()
 }
 
-export function sidebarGroups(page: Page): Locator {
-  return page.locator('.app-sidebar .sidebar-group')
+export function topModules(page: Page): Locator {
+  return page.locator('.top-nav-item')
+}
+
+export async function uiSwitchModule(page: Page, title: string): Promise<void> {
+  await page.locator('.top-nav-item', { hasText: title }).click()
+}
+
+export async function uiLogout(page: Page): Promise<void> {
+  await page.locator('.user-trigger').click()
+  await page.locator('.el-dropdown-menu__item', { hasText: '退出登录' }).click()
+  await expect(page.getByPlaceholder('用户名')).toBeVisible()
 }
 
 /** 统一客户端发起页的演示表单：请假原因 + 请假天数（演示模板 formProps）。 */

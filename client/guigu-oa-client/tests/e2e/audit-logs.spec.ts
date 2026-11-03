@@ -138,7 +138,11 @@ async function setup(page: Page): Promise<State> {
 }
 
 async function openFromSidebar(page: Page, title: string): Promise<void> {
-  await page.getByRole('link', { name: title, exact: true }).click()
+  const link = page.locator('.app-sidebar').getByRole('link', { name: title, exact: true })
+  if ((await link.count()) === 0) {
+    await page.locator('.top-nav-item', { hasText: '系统管理' }).click()
+  }
+  await link.click()
   await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
 }
 
