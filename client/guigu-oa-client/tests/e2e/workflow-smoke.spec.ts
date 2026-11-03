@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 const templateId = 101
 const processId = 'smoke-process-1'
@@ -50,7 +51,7 @@ async function mockApi(page: Page): Promise<SmokeState> {
       return json(route, { token: 'smoke-token', refreshToken: 'smoke-refresh-token' })
     }
     if (path === '/admin/system/index/info' && method === 'GET') {
-      return json(route, { name: 'Alice', avatar: '', configMenus: [] })
+      return json(route, { name: 'Alice', avatar: '', menus: [] })
     }
     if (path === '/admin/process/findStartable' && method === 'GET') {
       return json(route, [
@@ -145,6 +146,8 @@ async function mockApi(page: Page): Promise<SmokeState> {
       state.approvalStatus = body.status
       return json(route, null)
     }
+
+    if (await fulfillNoticeUnread(route, path)) return
 
     state.unexpectedRequests.push(`${method} ${path}`)
     return json(route, { message: `Unexpected API request: ${method} ${path}` }, 500)

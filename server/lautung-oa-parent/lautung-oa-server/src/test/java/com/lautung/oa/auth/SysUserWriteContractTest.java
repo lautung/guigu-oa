@@ -92,7 +92,7 @@ class SysUserWriteContractTest {
     }
 
     @Test
-    void refusesASaveFromAUserWithoutTheConfigurationGrantBeforeTheUniquenessCheck() throws Exception {
+    void refusesASaveFromAUserWithoutTheBackofficeGrantBeforeTheUniquenessCheck() throws Exception {
         // 顺序契约（ADR 0034 的延伸）：查重判定在配置 gate 之后——未授予 + 重名 = 205，不是 201。
         mockMvc.perform(post("/admin/system/sysUser/save").header("token", plainUserToken())
                         .contentType(MediaType.APPLICATION_JSON)

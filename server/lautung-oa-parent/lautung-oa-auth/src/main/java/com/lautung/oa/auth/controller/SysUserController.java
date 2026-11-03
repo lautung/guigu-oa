@@ -1,10 +1,15 @@
 package com.lautung.oa.auth.controller;
 
 
+import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysUserService;
+import com.lautung.oa.model.system.DataScope;
+import com.lautung.oa.framework.operlog.BusinessType;
+import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysUserQueryVo;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
@@ -20,6 +25,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 /**
  * <p>
@@ -40,8 +47,12 @@ public class SysUserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @Autowired
+    private DataScopeResolver dataScopeResolver;
+
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新状态")
+    @OperLog(title = "用户管理·更新用户状态", businessType = BusinessType.UPDATE)
     @PutMapping("updateStatus/{id}/{status}")
     public Result updateStatus(@PathVariable Long id, @PathVariable Integer status) {
         service.updateStatus(id,status);
@@ -49,7 +60,7 @@ public class SysUserController {
     }
 
     //用户条件分页查询
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "用户条件分页查询")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -77,13 +88,42 @@ public class SysUserController {
         if(!StringUtils.isEmpty(createTimeEnd)) {
             wrapper.le(SysUser::getCreateTime,createTimeEnd);
         }
+        //数据范围（ADR 0057）：部门列 sys_user.dept_id，本人列 sys_user.id；空集是零行，不是全部。
+        applyDataScope(wrapper, dataScopeResolver.resolve(LoginUserInfoHelper.getUserId()));
 
         //调用mp的方法实现条件分页查询
         IPage<SysUser> pageModel = service.page(pageParam, wrapper);
         return Result.ok(pageModel);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    /**
+     * 查询侧只接受参数（ADR 0053）：部门集用 wrapper 的 {@code in}，本人行用 {@code eq}，
+     * 两者并集用 {@code or}；解析不出任何可见行时用常量 {@code 1 = 0} 得到零行。
+     */
+    private void applyDataScope(LambdaQueryWrapper<SysUser> wrapper, DataScope scope) {
+        if (scope.isUnrestricted()) {
+            return;
+        }
+        Set<Long> deptIds = scope.getDeptIds();
+        Long selfUserId = scope.getSelfUserId();
+        if (deptIds.isEmpty() && selfUserId == null) {
+            wrapper.apply("1 = 0");
+            return;
+        }
+        wrapper.and(nested -> {
+            if (!deptIds.isEmpty()) {
+                nested.in(SysUser::getDeptId, deptIds);
+            }
+            if (selfUserId != null) {
+                if (!deptIds.isEmpty()) {
+                    nested.or();
+                }
+                nested.eq(SysUser::getId, selfUserId);
+            }
+        });
+    }
+
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "获取用户")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -91,8 +131,9 @@ public class SysUserController {
         return Result.ok(user);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:add')")
     @Operation(summary = "保存用户")
+    @OperLog(title = "用户管理·新增用户", businessType = BusinessType.CREATE)
     @PostMapping("save")
     public Result save(@Valid @RequestBody SysUserSaveRequest request) {
         SysUser user = request.toEntity();
@@ -103,8 +144,9 @@ public class SysUserController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新用户")
+    @OperLog(title = "用户管理·修改用户", businessType = BusinessType.UPDATE)
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody SysUserUpdateRequest request) {
         SysUser user = request.toEntity();
@@ -128,8 +170,9 @@ public class SysUserController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:remove')")
     @Operation(summary = "删除用户")
+    @OperLog(title = "用户管理·删除用户", businessType = BusinessType.DELETE)
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         service.removeById(id);

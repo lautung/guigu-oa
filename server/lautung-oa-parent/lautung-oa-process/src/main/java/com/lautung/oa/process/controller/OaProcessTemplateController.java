@@ -36,7 +36,7 @@ public class OaProcessTemplateController {
     private OaProcessTemplateService processTemplateService;
 
     //分页查询审批模板
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
     @Operation(summary = "获取分页审批模板数据")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -48,7 +48,7 @@ public class OaProcessTemplateController {
         return Result.ok(pageModel);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
     @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -56,7 +56,7 @@ public class OaProcessTemplateController {
         return Result.ok(processTemplate);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:add')")
     @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@Valid @RequestBody ProcessTemplateSaveRequest request) {
@@ -65,7 +65,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:edit')")
     @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody ProcessTemplateUpdateRequest request) {
@@ -73,7 +73,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:remove')")
     @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
@@ -81,7 +81,7 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:upload')")
     @Operation(summary = "上传流程定义")
     @PostMapping("/uploadProcessDefinition")
     public Result uploadProcessDefinition(@RequestParam("file") MultipartFile file) {
@@ -100,7 +100,7 @@ public class OaProcessTemplateController {
     }
 
     //部署流程定义（发布）
-    @PreAuthorize("@configurationMenuGate.isGranted('processTemplate')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:publish')")
     @Operation(summary = "发布")
     @PostMapping("/publish/{id}")
     public Result publish(@PathVariable Long id) {

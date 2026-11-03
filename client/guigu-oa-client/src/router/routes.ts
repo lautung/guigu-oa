@@ -122,6 +122,33 @@ const configChildren: AppRoute[] = [
     meta: { title: '菜单管理', menuGroup: 'config' },
   },
   {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
+    name: 'SysOperLog',
+    component: () => import('@/views/config/operLog/index.vue'),
+    meta: { title: '操作日志', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_LOGIN),
+    name: 'SysLoginLog',
+    component: () => import('@/views/config/loginLog/index.vue'),
+    meta: { title: '登录日志', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_NOTICE),
+    name: 'SysNotice',
+    component: () => import('@/views/config/notice/index.vue'),
+    meta: { title: '通知公告', menuGroup: 'config' },
+  },
+  {
+    // 隐藏子路由（#220）：作为已授予 `/system/notice` 的前缀被 #224 守卫覆盖，
+    // 不单独出现在菜单或页面授予里。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_NOTICE_EDIT),
+    name: 'SysNoticeEdit',
+    component: () => import('@/views/config/notice/edit.vue'),
+    meta: { title: '编辑公告', menuGroup: 'config' },
+    hidden: true,
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_ASSIGN_AUTH),
     name: 'AssignAuth',
     component: () => import('@/views/config/sysRole/assignAuth.vue'),
@@ -156,6 +183,21 @@ const processSetChildren: AppRoute[] = [
   },
 ]
 
+const noticeChildren: AppRoute[] = [
+  {
+    path: '',
+    name: 'NoticeList',
+    component: () => import('@/views/notice/index.vue'),
+    meta: { title: '全部公告' },
+  },
+  {
+    path: ':id',
+    name: 'NoticeDetail',
+    component: () => import('@/views/notice/detail.vue'),
+    meta: { title: '公告详情' },
+  },
+]
+
 export const constantRoutes: AppRoute[] = [
   {
     path: PATHS.LOGIN,
@@ -172,6 +214,13 @@ export const constantRoutes: AppRoute[] = [
     redirect: getDefaultPostLoginRoute(),
     meta: { menuGroup: 'work' },
     children: workChildren,
+  },
+  {
+    // 公告读面是内置路由（ADR 0055）：登录即有，不设 menuGroup，因此配置页授予
+    // 不把它当后台页面（#224 的守卫只过滤 config 组）。
+    path: PATHS.NOTICE,
+    component: ClientSurfaceHost,
+    children: noticeChildren,
   },
   {
     path: PATHS.SYSTEM,

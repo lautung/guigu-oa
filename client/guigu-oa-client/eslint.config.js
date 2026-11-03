@@ -26,6 +26,15 @@ export default typescriptEslint.config(
     },
   },
   {
+    // 公告正文是唯一允许 v-html 的渲染面（ADR 0028/0055）：服务端写入时按同源白名单
+    // 消毒，客户端只注入已消毒 HTML。例外只开这一个文件，`npm run check:v-html`
+    // 守卫没有第二处。
+    files: ['src/notice/NoticeContent.vue'],
+    rules: {
+      'vue/no-v-html': 'off',
+    },
+  },
+  {
     files: ['vite.config.js', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: globals.node,

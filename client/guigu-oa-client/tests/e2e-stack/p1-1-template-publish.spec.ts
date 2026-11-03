@@ -30,7 +30,7 @@ test('未发布模板可改可删，发布后冻结', async ({ page, oracle }) =
   })
 
   await uiLoginExpectWork(page, admin)
-  await page.goto('/processSet/processTemplate')
+  await page.goto('/system/processSet/processTemplate')
   await expect(page.getByRole('heading', { name: '审批模板', level: 2 })).toBeVisible()
 
   // 未发布：可改（打开向导改名称、经 UI 上传流程 zip 并提交保存）。
@@ -52,7 +52,7 @@ test('未发布模板可改可删，发布后冻结', async ({ page, oracle }) =
   })
   await expect(page.getByText('当前采用的流程 zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存' }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   const renamed = await rowMustExist(page, `${nameA}改`)
   await expect(renamed).toContainText('未发布')
 

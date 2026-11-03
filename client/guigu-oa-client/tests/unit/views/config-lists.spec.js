@@ -16,6 +16,7 @@ vi.mock('element-plus', async (importOriginal) => {
 })
 
 const sysRoleApi = vi.hoisted(() => ({
+  findDeptOptions: vi.fn(),
   getById: vi.fn(),
   removeById: vi.fn(),
   saveOrUpdate: vi.fn(),
@@ -112,6 +113,12 @@ beforeEach(() => {
   messageMock.mockReset()
   confirmMock.mockReset().mockResolvedValue('confirm')
   sysRoleApi.getById.mockResolvedValue(ok(roleRecord))
+  sysRoleApi.findDeptOptions.mockResolvedValue(
+    ok([
+      { id: 7, name: '研发部', parentId: 0 },
+      { id: 8, name: '测试部', parentId: 0 },
+    ]),
+  )
   sysRoleApi.removeById.mockResolvedValue(ok(null))
   sysRoleApi.saveOrUpdate.mockResolvedValue(ok(null))
   processTypeApi.getById.mockResolvedValue(ok(typeRecord))
@@ -209,6 +216,54 @@ describe('SysRole list page', () => {
       '角色编码不能为空',
     ])
   })
+
+  it('requires departments for the custom scope and writes them with the role', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysRole, observeMount(pinia, testRouter()))
+    await flushPromises()
+
+    sysRoleApi.getById.mockResolvedValueOnce(ok({ ...roleRecord, dataScope: 2, deptIds: [] }))
+    await wrapper.vm.openEdit(3)
+    await flushPromises()
+    expect(sysRoleApi.findDeptOptions).toHaveBeenCalledTimes(1)
+    expect(wrapper.vm.deptOptions).toEqual([
+      { id: 7, name: '研发部', parentId: 0 },
+      { id: 8, name: '测试部', parentId: 0 },
+    ])
+    expect(wrapper.vm.form.dataScope).toBe(2)
+
+    await wrapper.vm.save()
+    // Element Plus 用 100ms debounce 决定错误是否上屏，等过 debounce 再断言。
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysRoleApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toEqual([
+      '自定部门不能为空',
+    ])
+
+    wrapper.vm.form.deptIds.push(7, 8)
+    await flushPromises()
+    await wrapper.vm.save()
+    expect(sysRoleApi.saveOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ dataScope: 2, deptIds: [7, 8] }),
+    )
+    expect(wrapper.vm.dialogVisible).toBe(false)
+  })
+
+  it('loads the data scope and departments when editing a role', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysRole, observeMount(pinia, testRouter()))
+    await flushPromises()
+
+    sysRoleApi.getById.mockResolvedValueOnce(ok({ ...roleRecord, dataScope: 2, deptIds: [8] }))
+    await wrapper.vm.openEdit(3)
+    await flushPromises()
+
+    expect(wrapper.vm.form.dataScope).toBe(2)
+    expect(wrapper.vm.form.deptIds).toEqual([8])
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(sysRoleApi.findDeptOptions).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('ProcessType list page', () => {
@@ -291,9 +346,9 @@ describe('ProcessInstance list page', () => {
     const wrapper = mount(ProcessInstance, observeMount(pinia, router))
     await flushPromises()
 
-    wrapper.vm.openDetail('/processMgr/process/p-1')
+    wrapper.vm.openDetail('/system/processMgr/process/p-1')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/processMgr/process/p-1')
+    expect(router.currentRoute.value.path).toBe('/system/processMgr/process/p-1')
   })
 })
 
@@ -372,6 +427,35 @@ describe('SysMenu list page', () => {
     await wrapper.vm.remove(1)
     expect(sysMenuApi.removeById).toHaveBeenCalledWith(1)
     expect(sysMenuApi.findNodes).toHaveBeenCalledTimes(3)
+  })
+
+  it('requires a name and perms before saving a button row', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysMenu, observeMount(pinia, testRouter()))
+    await flushPromises()
+
+    wrapper.vm.openCreate({ id: 2, name: '用户管理', type: 1, path: '/system/sysUser' })
+    await flushPromises()
+    expect(wrapper.vm.form.type).toBe(2)
+    expect(wrapper.vm.typeLabel(2)).toBe('按钮')
+    await wrapper.vm.save()
+    // Element Plus 用 100ms debounce 决定错误是否上屏，等过 debounce 再断言。
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysMenuApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toEqual([
+      '菜单名称不能为空',
+      '按钮权限标识不能为空',
+    ])
+
+    wrapper.vm.form.name = '新增用户'
+    wrapper.vm.form.perms = 'system:user:add'
+    await wrapper.vm.save()
+    expect(sysMenuApi.saveOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 2, name: '新增用户', perms: 'system:user:add' }),
+    )
+    expect(wrapper.vm.dialogVisible).toBe(false)
   })
 
   it('reports a failed tree read and recovers on retry', async () => {

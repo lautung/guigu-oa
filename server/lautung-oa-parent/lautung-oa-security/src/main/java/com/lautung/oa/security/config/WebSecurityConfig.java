@@ -9,12 +9,14 @@ import com.lautung.oa.security.filter.TokenAuthenticationFilter;
 import com.lautung.oa.security.filter.TokenLoginFilter;
 import com.lautung.oa.security.login.LoginAttemptLimiter;
 import com.lautung.oa.security.login.LoginAttemptPolicy;
+import com.lautung.oa.security.login.LoginAudit;
 import com.lautung.oa.security.login.RedisLoginAttemptLimiter;
 import com.lautung.oa.security.login.Slf4jLoginAudit;
 import com.lautung.oa.security.revocation.RedisTokenRevocation;
 import com.lautung.oa.security.revocation.TokenRevocation;
 import com.lautung.oa.security.session.SessionVerifier;
 import jakarta.validation.Validator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -72,13 +74,14 @@ public class WebSecurityConfig {
     @Bean
     public LoginAttemptLimiter loginAttemptLimiter(
             RedisTemplate<String, String> redisTemplate,
-            Clock loginAttemptClock
+            Clock loginAttemptClock,
+            ObjectProvider<LoginAudit> loginAudit
     ) {
         return new RedisLoginAttemptLimiter(
                 redisTemplate,
                 LoginAttemptPolicy.account(),
                 LoginAttemptPolicy.source(),
-                new Slf4jLoginAudit(),
+                auditOrFallback(loginAudit),
                 loginAttemptClock);
     }
 
@@ -102,7 +105,8 @@ public class WebSecurityConfig {
             SessionVerifier sessionVerifier,
             AuthenticationManager authenticationManager,
             LoginAttemptLimiter loginAttemptLimiter,
-            Validator validator
+            Validator validator,
+            ObjectProvider<LoginAudit> loginAudit
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -120,10 +124,19 @@ public class WebSecurityConfig {
                 .addFilterBefore(
                         new TokenAuthenticationFilter(sessionVerifier, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilter(new TokenLoginFilter(authenticationManager, jwtHelper, loginAttemptLimiter, validator))
+                .addFilter(new TokenLoginFilter(
+                        authenticationManager, jwtHelper, loginAttemptLimiter, validator, auditOrFallback(loginAudit)))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
+    }
+
+    /**
+     * 审计落库实现由 audit 模块供给（ADR 0054）；安全模块单独使用时退回应用日志，
+     * 登录路径不因缺少 audit 模块而启动失败。
+     */
+    private static LoginAudit auditOrFallback(ObjectProvider<LoginAudit> loginAudit) {
+        return loginAudit.getIfAvailable(Slf4jLoginAudit::new);
     }
 }

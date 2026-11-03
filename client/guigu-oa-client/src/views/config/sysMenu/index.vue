@@ -17,12 +17,18 @@
       :tree-props="{ children: 'children' }"
     >
       <el-table-column prop="name" label="菜单名称" />
+      <el-table-column label="类型" width="80">
+        <template #default="scope">{{ typeLabel(scope.row.type) }}</template>
+      </el-table-column>
       <el-table-column prop="path" label="路由地址" />
       <el-table-column prop="component" label="组件路径" />
       <el-table-column prop="sortValue" label="排序" width="80" />
       <el-table-column label="操作" width="220" align="center">
         <template #default="scope">
-          <el-button v-if="scope.row.type === 0" link @click="openCreate(scope.row)"
+          <el-button
+            v-if="scope.row.type === 0 || scope.row.type === 1"
+            link
+            @click="openCreate(scope.row)"
             >添加下级</el-button
           >
           <el-button link @click="openEdit(scope.row)">编辑</el-button>
@@ -37,8 +43,8 @@
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px">
-      <el-form label-width="90px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="dialogRules" label-width="90px">
         <el-form-item v-if="form.parentName" label="上级菜单">
           <el-input :value="form.parentName" disabled />
         </el-form-item>
@@ -46,9 +52,10 @@
           <el-radio-group v-model="form.type" :disabled="typeLocked">
             <el-radio :value="0">目录</el-radio>
             <el-radio :value="1">菜单</el-radio>
+            <el-radio :value="2">按钮</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="菜单名称">
+        <el-form-item label="菜单名称" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="图标">
@@ -57,11 +64,14 @@
         <el-form-item label="排序">
           <el-input-number v-model="form.sortValue" :min="0" controls-position="right" />
         </el-form-item>
-        <el-form-item label="路由地址">
+        <el-form-item v-if="form.type !== 2" label="路由地址">
           <el-input v-model="form.path" />
         </el-form-item>
-        <el-form-item v-if="form.type !== 0" label="组件路径">
+        <el-form-item v-if="form.type !== 2" label="组件路径">
           <el-input v-model="form.component" />
+        </el-form-item>
+        <el-form-item v-if="form.type === 2" label="权限标识" prop="perms">
+          <el-input v-model="form.perms" placeholder="如 system:user:add" />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -85,9 +95,11 @@ import { defineComponent } from 'vue'
 
 import { findNodes, removeById, saveOrUpdate } from '@/api/sysMenu'
 import ListLoadError from '@/components/ListLoadError.vue'
+import { requiredRule, type RequiredRule } from '@/config/form-rules'
 import { emptyForm, formForCreate, presentConfigMenuTree, presentForm } from '@/config/sys-menu'
 import { listPageEffects } from '@/list/list-page-browser'
 import type { EntityId, MenuNode } from '@/types/domain'
+import type { FormInstance } from 'element-plus'
 
 const effects = listPageEffects()
 
@@ -108,13 +120,26 @@ export default defineComponent({
   computed: {
     dialogTitle() {
       if (this.form.id) return '编辑菜单'
+      if (this.form.type === 2) return '添加按钮'
       return this.form.parentId ? '添加下级节点' : '添加目录节点'
+    },
+    dialogRules(): Record<string, RequiredRule[]> {
+      const rules: Record<string, RequiredRule[]> = {
+        name: [requiredRule('菜单名称不能为空')],
+      }
+      if (this.form.type === 2) {
+        rules.perms = [requiredRule('按钮权限标识不能为空')]
+      }
+      return rules
     },
   },
   created() {
     this.fetchTree()
   },
   methods: {
+    typeLabel(type: number | undefined) {
+      return type === 0 ? '目录' : type === 1 ? '菜单' : type === 2 ? '按钮' : ''
+    },
     fetchTree() {
       this.treeStatus = 'loading'
       this.treeError = ''
@@ -139,6 +164,14 @@ export default defineComponent({
       this.dialogVisible = true
     },
     async save() {
+      const form = this.$refs.formRef as FormInstance | undefined
+      if (form) {
+        try {
+          await form.validate()
+        } catch {
+          return
+        }
+      }
       this.saving = true
       try {
         const response = await saveOrUpdate(this.form)

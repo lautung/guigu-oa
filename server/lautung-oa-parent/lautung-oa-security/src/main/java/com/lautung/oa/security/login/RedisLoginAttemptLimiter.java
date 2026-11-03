@@ -53,18 +53,20 @@ public class RedisLoginAttemptLimiter implements LoginAttemptLimiter {
     }
 
     @Override
-    public void recordFailure(String username, String sourceAddress) {
+    public void recordFailure(String username, String sourceAddress, String userAgent) {
         Instant now = clock.instant();
-        Count account = countFailure(
+        Instant accountLockedUntil = countFailure(
                 Dimension.account(normalize(username, BLANK_DIMENSION)), accountPolicy, now);
-        Count source = countFailure(
+        Instant sourceLockedUntil = countFailure(
                 Dimension.source(normalize(sourceAddress, UNKNOWN_SOURCE)), sourcePolicy, now);
-        audit.loginFailed(username, sourceAddress, account.failures());
-        if (account.lockedUntil() != null) {
-            audit.loginLocked(username, sourceAddress, LoginAttemptScope.ACCOUNT, account.lockedUntil());
+        audit.record(new LoginEvent(LoginEventType.FAILURE, username, sourceAddress, userAgent, "登录失败"));
+        if (accountLockedUntil != null) {
+            audit.record(new LoginEvent(
+                    LoginEventType.LOCKED, username, sourceAddress, userAgent, lockMessage(LoginAttemptScope.ACCOUNT)));
         }
-        if (source.lockedUntil() != null) {
-            audit.loginLocked(username, sourceAddress, LoginAttemptScope.SOURCE, source.lockedUntil());
+        if (sourceLockedUntil != null) {
+            audit.record(new LoginEvent(
+                    LoginEventType.LOCKED, username, sourceAddress, userAgent, lockMessage(LoginAttemptScope.SOURCE)));
         }
     }
 
@@ -73,6 +75,13 @@ public class RedisLoginAttemptLimiter implements LoginAttemptLimiter {
         Dimension account = Dimension.account(normalize(username, BLANK_DIMENSION));
         redisTemplate.delete(account.countKey());
         redisTemplate.delete(account.lastFailureKey());
+    }
+
+    @Override
+    public void unlockAccount(String username) {
+        Dimension account = Dimension.account(normalize(username, BLANK_DIMENSION));
+        clear(account);
+        audit.record(new LoginEvent(LoginEventType.UNLOCKED, username, null, null, "手动解锁"));
     }
 
     private boolean evaluate(
@@ -88,7 +97,9 @@ public class RedisLoginAttemptLimiter implements LoginAttemptLimiter {
                 return true;
             }
             clear(dimension);
-            audit.loginUnlocked(username, sourceAddress, dimension.scope());
+            // Lazy unlock: there is no request user-agent to attach here.
+            audit.record(new LoginEvent(
+                    LoginEventType.UNLOCKED, username, sourceAddress, null, unlockMessage(dimension.scope())));
             return false;
         }
         if (!policy.backoffEnabled()) {
@@ -102,7 +113,7 @@ public class RedisLoginAttemptLimiter implements LoginAttemptLimiter {
         return now.toEpochMilli() - lastFailureAt < policy.backoffFor(failures).toMillis();
     }
 
-    private Count countFailure(Dimension dimension, LoginAttemptPolicy policy, Instant now) {
+    private Instant countFailure(Dimension dimension, LoginAttemptPolicy policy, Instant now) {
         Long incremented = redisTemplate.opsForValue().increment(dimension.countKey());
         long failures = incremented == null ? 1 : incremented;
         // Only extend the window: overwriting the value here would let a slower thread undo an INCR.
@@ -110,18 +121,23 @@ public class RedisLoginAttemptLimiter implements LoginAttemptLimiter {
         redisTemplate.opsForValue().set(
                 dimension.lastFailureKey(), String.valueOf(now.toEpochMilli()), policy.window());
 
-        Instant lockedUntil = null;
         if (failures >= policy.lockAfter()) {
-            lockedUntil = now.plus(policy.lockDuration());
+            Instant lockedUntil = now.plus(policy.lockDuration());
             redisTemplate.opsForValue().set(
                     dimension.lockKey(),
                     String.valueOf(lockedUntil.toEpochMilli()),
                     policy.lockDuration().plus(LOCK_MARKER_RETENTION));
+            return lockedUntil;
         }
-        return new Count((int) Math.min(failures, Integer.MAX_VALUE), lockedUntil);
+        return null;
     }
 
-    private record Count(int failures, Instant lockedUntil) {
+    private static String lockMessage(LoginAttemptScope scope) {
+        return scope == LoginAttemptScope.ACCOUNT ? "账号锁定" : "来源锁定";
+    }
+
+    private static String unlockMessage(LoginAttemptScope scope) {
+        return scope == LoginAttemptScope.ACCOUNT ? "账号解锁" : "来源解锁";
     }
 
     private void clear(Dimension dimension) {

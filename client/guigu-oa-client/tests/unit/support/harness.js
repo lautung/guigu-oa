@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import { useUserStore } from '@/store/modules/user'
 import { configureRequest } from '@/request/request'
+import { hasPermi } from '@/permission'
 
 /** 审批表单值的存储型 XSS 载荷（#142）：页面必须把它显示成字符，不能生成元素。 */
 export const XSS_PAYLOAD = '<img src=x onerror="window.__secXss=1">'
@@ -29,7 +30,13 @@ export function fakeRecognition(overrides = {}) {
     reject: (_context, error) => {
       throw error
     },
-    recognize: async () => ({ name: 'Alice', avatar: '', configMenus: [] }),
+    recognize: async () => ({
+      name: 'Alice',
+      avatar: '',
+      roles: [],
+      permissions: [],
+      menus: [],
+    }),
     establish: () => {},
     resume: async () => {},
     exit: () => {},
@@ -45,6 +52,7 @@ export function setupSession(options = {}) {
   const user = useUserStore(pinia)
   user.token = options.token === undefined ? 'token' : options.token
   user.menus = options.menus || []
+  user.permissions = options.permissions || []
   user.name = options.name || ''
   user.avatar = options.avatar || ''
   user.recognition = recognition
@@ -58,6 +66,16 @@ export function createTestRouter(routes = []) {
 
 export const elementStubs = {
   'el-alert': true,
+  // 顶栏铃铛：stub 暴露 value/hidden，并渲染 reference 与内容两个插槽。
+  'el-badge': {
+    props: ['value', 'hidden'],
+    template:
+      '<span class="el-badge-stub" :data-value="value" :data-hidden="String(hidden)"><slot /></span>',
+  },
+  'el-popover': {
+    template:
+      '<span class="el-popover-stub"><slot name="reference" /><span class="el-popover-body"><slot /></span></span>',
+  },
   'el-button': true,
   'el-card': true,
   'el-checkbox': true,
@@ -85,6 +103,8 @@ export const elementStubs = {
   'el-switch': true,
   'el-table': true,
   'el-table-column': true,
+  'el-tab-pane': true,
+  'el-tabs': true,
   'el-tag': true,
   'el-timeline': true,
   'el-timeline-item': true,
@@ -100,7 +120,7 @@ export function mountOptions(pinia, router) {
     global: {
       plugins: router ? [pinia, router] : [pinia],
       stubs: elementStubs,
-      directives: { loading: {} },
+      directives: { loading: {}, hasPermi },
     },
   }
 }

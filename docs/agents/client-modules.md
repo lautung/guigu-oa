@@ -6,16 +6,36 @@
 
 | module | interface / seam | 职责 |
 |---|---|---|
-| `src/recognition/index.ts` | `createRecognition(adapter)`；`capture()` / `assertCurrent()` / `recognize()` / `reject()` | 进入身份（generation + entryId）与迟到结果归属 |
+| `src/recognition/index.ts` | `createRecognition(adapter)`；`capture()` / `assertCurrent()` / `recognize()` / `reject()` | 进入身份（generation + entryId）、迟到结果归属与 `/info` 形状校验（`roles`/`permissions`/`menus`） |
 | `src/request/request.ts` | `configureRequest(recognition)` → 默认导出 `request`；`createRequestClient` | 纯传输（ADR 0048）:axios 实例、附头、拦截器骨架、200 直通与转发；续期与失败分类外置 |
 | `src/request/renewal.ts` | `createRenewal(recognition, resend)` → `onExpired(config, context)`；`setRequestToken` / `isAuthentication` | 续期状态机唯一 owner:单飞去重、换头重放、认证端点豁免；208 的决策与执行（ADR 0048） |
-| `src/request/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` / `refreshRefusal` / `TransportScopeFields` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；传输 scope 字段一处拥有，传输与续期共用的失败基座 |
+| `src/request/request-failure.ts` | `RequestFailure` / `BusinessRequestFailure` / `PermissionRequestFailure` / `businessFailure` / `transportFailure` / `businessEnvelope` / `rejectRequest` / `refreshRefusal` / `TransportScopeFields` | 请求失败分类与业务信封识别的唯一 owner（#145/#155）；205 是命名失败且不受 `notifyNormalErrors` 抑制（#224）；传输 scope 字段一处拥有，传输与续期共用的失败基座 |
 | `src/request/request-scope.ts` | `openRequestScope(recognition, { notifyNormalErrors })` → `request(config, isRelevant?)`、`current()` | 打开时捕获一次身份、按次相关性、错误策略；`ScopedRequestConfig` 只在传输层 |
 | `src/list/list-read.ts` | `createListRead({ openScope, toRequest })` → `view` / `read()` / `release()` | 列表读的口令、sequence 与迟到丢弃 |
 | `src/list/list-page.ts` | `createListPage({ openScope, toRequest, present, notify, confirm })` → `view` / `rows` / `runWrite` / `confirmRemove` / `settle` | 列表页读后状态、分页、写后刷新与失败策略；浏览器接线在 `src/list/list-page-browser.ts` |
-| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `canOccupy` / `grantedConfigMenus` | 配置授予的客户端投影；组归属来自 `router/routes.ts` |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径 |
-| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属 |
+| `src/permission/index.ts` | `hasPermission(perm)`；`hasPermi` 指令 / `createHasPermi(read)`；`isPermitted` / `permissionSet` | 按钮点判定（ADR 0052/0058）：读 user store 的 `permissions`，无权限移除 DOM（`mounted`/`updated`）；服务端 gate 是唯一强制点 |
+| `src/navigation/index.ts` | `resolveAuthGuard({ path, fullPath, hasToken, menus })` / `buildSidebarTree` / `buildLoginRedirectPath` | 导航决策：认证 + 后台页面授予；办事内置始终放行，配置页只放行 `/info` `menus` 覆盖的页面、详情子路径与含已授子页的目录，否则回落到默认落点 |
+| `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `canOccupy` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里 |
+| `src/config/sys-role.ts` | `DATA_SCOPE_OPTIONS` / `dataScopeLabel` / `deptOptionsRequest` / `formRules(dataScope)` / `writeRequest` | 角色表单与数据范围：五档标签、`dataScope=2` 时自定部门必填（镜像服务端）、写载荷固定带 `dataScope`/`deptIds`、详情回读映射 |
+| `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
+| `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
+| `src/config/login-log.ts` | `LOGIN_STATUS_OPTIONS` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` | 登录日志四值（成功/失败/锁定/解锁）标签与查询投影；列表请求、批量删除、清空与按 username 编码的解锁请求 |
+| `src/notice/config.ts` | `NOTICE_TYPES` / `NOTICE_STATUSES` / `NOTICE_PERMISSIONS` / `presentFeedItem` / `presentDetail` / `presentAdminListRecord` / `feedQueryForTab` / `feedRequest` / `unreadRequest` / `unreadCountRequest` / `detailRequest` / `markReadRequest` / `imageRequest` / `admin*` 与写侧请求构造 | 公告（ADR 0055）的读侧/管理侧请求形状、类型与状态标签、列表与详情投影；管理侧写请求（create/update/remove/publish/withdraw/upload）留给 #220 复用 |
+| `src/notice/api.ts` | `fetchFeed` / `fetchUnread` / `fetchUnreadCount` / `fetchNoticeDetail` / `markNoticeRead` / `fetchNoticeImage` / `findNoticePage` 等 | 薄包装：读侧走 JSON 客户端，`fetchNoticeImage` 走二进制客户端（同源图片带认证头的唯一路径）；管理侧函数由 #220 发布页使用 |
+| `src/notice/unread.ts` | `createNoticeUnreadSource(send)` / `createUnreadPolling({ source, clock, intervalMs })` → `state` / `start` / `stop` / `refresh` | 铃铛数据源与轮询时机（立即、60 秒、focus 补拉）：latest-wins、失败静默、识别终态停表；时机用注入时钟单测 |
+| `src/notice/unread-browser.ts` | `useNoticeUnread()` / `refreshNoticeUnread()` | 浏览器接线：每次刷新重开请求作用域（关普通错误提示），外壳卸载即停；详情写回执后让角标立即归零 |
+| `src/notice/notice-images.ts` | `noticeImageId(src)` / `createNoticeImageHydrator({ loadImage, createObjectUrl, revokeObjectUrl })` → `hydrate` / `revokeAll` / `dispose` | 正文同源图片的认证取回：`/admin/notices/images/{id}` 换成 `blob:`，内容变化撤销、卸载作废，非公告图片不碰；#220 的预览可复用 |
+| `src/notice/NoticeContent.vue` | props `html` / `loadImage?` / `createObjectUrl?` / `revokeObjectUrl?` | 全仓唯一 `v-html` 渲染面：服务端写入时已消毒，客户端不再二次消毒；ESLint 只对本文件关 `vue/no-v-html`，`npm run check:v-html` 守卫第二处 |
+| `src/notice/quill.ts` | `noticeQuillToolbar({ image? })` / `noticeQuillFormats({ image? })` / `NOTICE_QUILL_TOOLBAR` | Quill 2 工具栏能力的唯一 owner（ADR 0055）：只开 h1–h4、粗斜下划线删除线、有序/无序、引用、代码块、链接、图片、清除格式；`image:false` 供只有 edit 权限的用户隐藏图片按钮 |
+| `src/notice/QuillEditor.vue` | props `modelValue` / `readonly` / `showImage` / `placeholder`；`insertImage(url)` | Quill 2 本地包装：Quill 拥有 DOM，不使用 `v-html`；图片按钮只发 `image` 事件，由页面走服务端上传后在光标处插入同源 URL |
+| `src/notice/admin.ts` | `createNoticeEditor(adapter)` → `state` / `open` / `updateForm` / `saveDraft` / `publish` / `withdraw` / `remove` / `requestLeave` / `dispose`；`noticeWritePayload` / `emptyNoticeForm` | 发布管理状态机（ADR 0055）：新建/草稿/已发布/已撤回的动作矩阵、创建后 replace 到编辑路径、dirty 快照与离开确认、写载荷只含 title/type/content |
+| `src/notice/admin-browser.ts` | `createNoticeEditorPage(router)` | 公告编辑页的浏览器接线：HTTP、确认框、提示、路由跳转/替换与编辑路径 |
+| `src/views/config/notice/index.vue` | 页面 | 系统管理 > 通知公告：标题/类型/状态筛选与分页；编辑/发布(再次发布)/撤回/删除动作按状态与 `v-hasPermi` 收口；删除与发布/撤回二次确认 |
+| `src/views/config/notice/edit.vue` | 页面 | 公告编辑：标题/类型/Quill 2 正文、编辑/预览两个 tab（预览经 `NoticeContent` 水合图片）、按状态显示保存草稿/发布/撤回/删除；路由离开与返回走 dirty 确认 |
+| `src/views/notice/index.vue` | 页面 | 全部公告：全部/未读两个 tab、`publish_time DESC, id DESC` 分页、类型/标题/发布人/发布时间/读态；读状态与分页复用 `createListPage` |
+| `src/views/notice/detail.vue` | 页面 | 公告详情：类型/标题/发布人/发布时间/正文；加载成功后每次访问只写一次已读回执；撤回/删除/不存在按不存在视图处理 |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；审批页面在 `/system/processSet`、`/system/processMgr` 下，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
+| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/surface/client-surface.ts` | `resolveClientSurface({ path, viewportWidth, hasToken, menus })` | 占用、密度与返回路径；不决定编辑生命周期 |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与强制离开；浏览器接线在 `assign-roles-browser.ts` |
@@ -28,14 +48,18 @@
 | `src/request/submission-outcome.ts` | `classifySubmissionFailure(error, action)` | 明确拒绝 vs 待确认的分类 |
 | `src/config/process-template.ts` | `publish` / `removeUnpublished` / `findStartable` / `presentDesignerState` | 模板列表动作与可发起清单 |
 
+日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
+
+公告展示面（#219）：`TopBar.vue` 的铃铛只消费 `src/notice/unread-browser.ts` 的未读计数与最近 5 条；`/notice` 列表与 `/notice/:id` 详情是内置读面（登录即有，不设菜单授予）。正文只经 `NoticeContent.vue` 渲染，图片经 `notice-images` 认证取回后显示为 `blob:`。发布管理面（#220）：`/system/notice` 列表与隐藏子路由 `/system/notice/edit/:id?` 属于配置组，页面状态机在 `src/notice/admin.ts`，Quill 工具栏能力在 `src/notice/quill.ts`；图片上传端点由服务端 `system:notice:add` 把关，只有 edit 权限时编辑页隐藏图片按钮。
+
 ## 服务端鉴权
 
 | module | interface | 职责 |
 |---|---|---|
 | `common.jwt.JwtHelper` | `createTokenPair` / `createAccessToken` / `readAccessToken` / `readRefreshToken` → `TokenClaims(userId, username, sessionId, tokenVersion, expiresAt)` | 一次登录的一对 access/refresh 共享 sessionId 与用户行的 token_version；无 sessionId 的令牌不可鉴权 |
 | `security.revocation.TokenRevocation` | `isRevoked(sessionId)` / `revoke(sessionId)` | 退出的按会话吊销表；`RedisTokenRevocation` 是唯一实现，标记 TTL 与 refresh 同寿，过滤器与 refresh 共用 |
-| `security.login.LoginAttemptLimiter` | `isBlocked(username, source)` / `recordFailure` / `recordSuccess` | 登录失败的两个计数维度（提交的账号、来源地址）；`RedisLoginAttemptLimiter` 是唯一实现，策略在 `LoginAttemptPolicy` |
-| `security.login.LoginAudit` | `loginFailed` / `loginLocked` / `loginUnlocked` | 失败、锁定、解锁的审计轨迹；`Slf4jLoginAudit` 写结构化应用日志，字段脱敏且不含密码或令牌 |
+| `security.login.LoginAttemptLimiter` | `isBlocked(username, source)` / `recordFailure(username, source, userAgent)` / `recordSuccess` / `unlockAccount(username)` | 登录失败的两个计数维度（提交的账号、来源地址）；`unlockAccount` 只清账号维度的三个键并审计，来源维度不提供人工解锁；`RedisLoginAttemptLimiter` 是唯一实现，策略在 `LoginAttemptPolicy` |
+| `security.login.LoginAudit` | `record(LoginEvent)` / `recordLogOnly(LoginEvent)`；`LoginEvent(type, username, sourceAddress, userAgent, msg)`，`LoginEventType` 四值 0 成功/1 失败/2 锁定/3 解锁 | 登录审计端口：`record` 持久化（库是查询真相），`recordLogOnly` 只写应用日志（被锁定挡下的尝试）；DB 实现在 audit（`CompositeLoginAudit` = `DatabaseLoginAudit` + `Slf4jLoginAudit` 兜底），security 单独使用时退回日志实现 |
 
 ## 服务端审批
 
@@ -47,8 +71,22 @@
 | `process.read.ApprovalListReader` | `pending` / `processed` / `started` / `carbonCopied` / `instanceQuery`（参数强类型） | 五种审批列表读的唯一入口：行形状（`OaProcessMapper.xml` 共享列清单，`ProcessVo` 唯一行类型）、窗口（`PageWindow`）、回查批量化、排序一处拥有；pending/processed 仍由引擎分页与计数，tiebreaker 与引擎 businessKey 批量收在 port 实现内（ADR 0045） |
 | `process.approval.ApprovalWriter` | `startUp` / `startedOutcome` / `approve` | 写入次序、事务边界、附件绑定与回滚补偿；同一提交标识重复送达返回同一条审批（ADR 0032），冲突重读只在事务外调用 `startedOutcome` |
 | `process.membership.ApprovalMembership` / `ApprovalMembershipResolver` | `resolve(user, process)` → `canRead` / `canUpload` / `canAct` | 审批成员资格；证据接口 `MembershipEvidence` 由 engine 继承，扩展来自 `ProcessMembershipExtension` |
-| `auth.grant.ConfigurationGrant` | `snapshot(userId)` → `hasAnyPage` / `covers` / `entries`；`isConfigurationMenu` | 配置授予的唯一闭包；gate、`/info` 与角色授权共用 |
-| `auth.service.ConfigurationMenuGate` | `isGranted(...)` | 六个配置 controller 的方法级 gate |
+| `auth.grant.BackofficeGrant` | `snapshot(userId)` → `hasAnyPage` / `covers` / `allows` / `menus` / `permissions`；`isBackofficeMenu` / `isGrantableBackofficeMenu` / `visiblePageParentId` | 后台授予的唯一闭包：页面绝对路径 + 仅随已授页面生效的按钮点；`visiblePageParentId` 供授予保存判定隐藏页能否落库；gate、`/info` 与角色授权共用 |
+| `auth.service.BackofficeGate` | `isAllowed(pagePath[, permission])` | 各后台 controller 的方法级 gate：读只判页面，写加判按钮点 |
+
+## 服务端公告（#218 的稳定合同，供 #219/#220）
+
+服务端合同由 #218 落地；客户端展示面（铃铛、`/notice`、`/notice/:id`、唯一 `v-html` 渲染面与图片认证取回）由 #219 落地，发布管理页 `/system/notice` 由 #220 落地（ADR 0055/0028）。客户端按下面形状接线，不要在页面里重新猜字段：
+
+- 读侧（登录即有，不设页面授予、不套数据范围）：
+  - `GET /admin/notices/feed?page=1&limit=20&unreadOnly=false` → `{code,message,data:{current,size,total,records:[{id,title,type,publisherName,publishTime,read}]}}`；排序 `publishTime DESC, id DESC`；`limit` 上限 500；列表没有 `content`。
+  - `GET /admin/notices/unread` → `data:[…同上行…]`，最多 5 条未读。
+  - `GET /admin/notices/unread-count` → `data:<number>`（撤回/删除立即排除）。
+  - `GET /admin/notices/{id}` → `data:{id,title,type,content,publisherId,publisherName,publishTime,read}`；撤回/删除/不存在时没有 `data`（信封仍是 200）。GET 不写回执。
+  - `POST /admin/notices/{id}/read` → 打开详情成功后显式调用；幂等；撤回/删除返回 201「公告不存在」。
+  - `GET /admin/notices/images/{id}` → 二进制，`Content-Type` 是存储类型且带 `X-Content-Type-Options: nosniff`；无权 205、不存在 201。正文里的图片地址只允许 `/admin/notices/images/{id}`。
+- 管理侧（页面 `/system/notice`；按钮 `system:notice:add|edit|remove|publish`，`publish` 同时管撤回，没有 `:query`）：`GET /admin/system/notices`（`page/limit/title/type/status`，行不含 `content`）、`GET /admin/system/notices/{id}`（含草稿正文，编辑页必需）、`POST /admin/system/notices`、`PUT /admin/system/notices/{id}`、`DELETE /admin/system/notices/{id}`、`POST .../{id}/publish`、`POST .../{id}/withdraw`、`POST /admin/system/notices/images`（multipart 字段 `file`，响应 `{id,url}`）。
+- 类型固定 `1 通知 / 2 公告`；状态 `0 草稿 / 1 已发布 / 2 已撤回`。已发布可编辑；已撤回不可编辑，只能再发布（刷新 `publishTime` 与发布人快照）；删除等价于隐式撤回。
 
 ## 约定
 

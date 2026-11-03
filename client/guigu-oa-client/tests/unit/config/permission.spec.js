@@ -24,10 +24,10 @@ const ROLE_PAGE = [
 ]
 
 const PROCESS_TYPE_PAGE = [
-  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet/processType',
-    parentPath: '/processSet',
+    path: '/system/processSet/processType',
+    parentPath: '/system/processSet',
     title: '审批类型',
     type: 1,
     sort: 1,
@@ -35,17 +35,17 @@ const PROCESS_TYPE_PAGE = [
 ]
 
 const TEMPLATE_PAGE = [
-  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet/processTemplate',
-    parentPath: '/processSet',
+    path: '/system/processSet/processTemplate',
+    parentPath: '/system/processSet',
     title: '审批模板',
     type: 1,
     sort: 2,
   },
   {
-    path: '/processSet/templateSet',
-    parentPath: '/processSet/processTemplate',
+    path: '/system/processSet/templateSet',
+    parentPath: '/system/processSet/processTemplate',
     title: '审批模板设置',
     type: 1,
     hidden: true,
@@ -54,10 +54,10 @@ const TEMPLATE_PAGE = [
 ]
 
 const PROCESS_INSTANCE_PAGE = [
-  { path: '/processMgr', title: '审批查询', type: 0, sort: 3 },
+  { path: '/system/processMgr', title: '审批管理', type: 0, sort: 3 },
   {
-    path: '/processMgr/process',
-    parentPath: '/processMgr',
+    path: '/system/processMgr/process',
+    parentPath: '/system/processMgr',
     title: '审批实例查询',
     type: 1,
     sort: 1,
@@ -97,19 +97,19 @@ function flattenTitles(items = []) {
 }
 
 describe('配置权限', () => {
-  describe('hasConfigPermission 与 grantedConfigMenus', () => {
+  describe('hasConfigPermission 与 grantedMenus', () => {
     it('has no 配置权限 when the granted entries are empty', () => {
       const permission = configPermission([])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.grantedConfigMenus).toEqual([])
+      expect(permission.grantedMenus).toEqual([])
     })
 
     it('has no 配置权限 when only a directory is granted', () => {
       const permission = configPermission([{ path: '/system', title: '组织与权限', type: 0 }])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(permission.grantedConfigMenus).toEqual([])
+      expect(permission.grantedMenus).toEqual([])
     })
 
     it('has 配置权限 when at least one page is granted', () => {
@@ -121,13 +121,13 @@ describe('配置权限', () => {
     it('returns the granted tree as 组织与权限 / 用户管理', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '用户管理'])
+      expect(flattenTitles(permission.grantedMenus)).toEqual(['组织与权限', '用户管理'])
     })
 
     it('does not list hidden pages in the sidebar', () => {
       const permission = configPermission(ROLE_PAGE)
 
-      expect(flattenTitles(permission.grantedConfigMenus)).toEqual(['组织与权限', '角色管理'])
+      expect(flattenTitles(permission.grantedMenus)).toEqual(['组织与权限', '角色管理'])
     })
 
     it('needs the visible parent page for a hidden page to count', () => {
@@ -171,7 +171,7 @@ describe('配置权限', () => {
       expect(canOccupy(permission, '/system/sysRole')).toBe(false)
       expect(canOccupy(permission, '/system/sysMenu')).toBe(false)
       expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
-      expect(canOccupy(permission, '/processSet/processType')).toBe(false)
+      expect(canOccupy(permission, '/system/processSet/processType')).toBe(false)
     })
 
     it('can occupy a hidden page when its visible parent is granted', () => {
@@ -193,21 +193,21 @@ describe('配置权限', () => {
     it('can occupy the 审批模板 wizard when 审批模板 is granted', () => {
       const permission = configPermission(TEMPLATE_PAGE)
 
-      expect(canOccupy(permission, '/processSet/templateSet')).toBe(true)
+      expect(canOccupy(permission, '/system/processSet/templateSet')).toBe(true)
     })
 
     it('cannot occupy the 审批模板 wizard when only 审批类型 is granted', () => {
       const permission = configPermission(PROCESS_TYPE_PAGE)
 
-      expect(canOccupy(permission, '/processSet/templateSet')).toBe(false)
+      expect(canOccupy(permission, '/system/processSet/templateSet')).toBe(false)
     })
 
     it('can occupy 审批实例详情 when 审批实例查询 is granted', () => {
       const permission = configPermission(PROCESS_INSTANCE_PAGE)
 
-      expect(canOccupy(permission, '/processMgr/process')).toBe(true)
-      expect(canOccupy(permission, '/processMgr/process/9')).toBe(true)
-      expect(canOccupy(permission, '/processMgr')).toBe(true)
+      expect(canOccupy(permission, '/system/processMgr/process')).toBe(true)
+      expect(canOccupy(permission, '/system/processMgr/process/9')).toBe(true)
+      expect(canOccupy(permission, '/system/processMgr')).toBe(true)
     })
 
     it('cannot occupy 配置 on mobile even when granted', () => {
@@ -305,8 +305,8 @@ describe('配置权限', () => {
         path: '/system/sysUser',
         group: 'config',
       })
-      expect(permission.entryOf('/processMgr/process/9')).toEqual({
-        path: '/processMgr/process',
+      expect(permission.entryOf('/system/processMgr/process/9')).toEqual({
+        path: '/system/processMgr/process',
         group: 'config',
       })
     })
@@ -322,8 +322,8 @@ describe('配置权限', () => {
         path: '/system/sysRole',
         group: 'config',
       })
-      expect(configPermission([]).entryOf('/processSet/templateSet')).toEqual({
-        path: '/processSet/processTemplate',
+      expect(configPermission([]).entryOf('/system/processSet/templateSet')).toEqual({
+        path: '/system/processSet/processTemplate',
         group: 'config',
       })
     })
@@ -333,8 +333,8 @@ describe('配置权限', () => {
         path: '/system',
         group: 'config',
       })
-      expect(configPermission([]).entryOf('/processMgr')).toEqual({
-        path: '/processMgr',
+      expect(configPermission([]).entryOf('/system/processMgr')).toEqual({
+        path: '/system/processMgr',
         group: 'config',
       })
     })

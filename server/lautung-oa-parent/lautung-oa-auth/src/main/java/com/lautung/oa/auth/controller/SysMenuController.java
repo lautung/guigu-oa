@@ -3,6 +3,8 @@ package com.lautung.oa.auth.controller;
 
 import com.lautung.oa.auth.service.SysMenuService;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.framework.operlog.BusinessType;
+import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.model.system.SysMenu;
 import com.lautung.oa.vo.system.AssginMenuVo;
 import com.lautung.oa.vo.system.SysMenuSaveRequest;
@@ -33,7 +35,7 @@ public class SysMenuController {
     private SysMenuService sysMenuService;
 
     //查询所有菜单和角色分配的菜单
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "查询所有菜单和角色分配的菜单")
     @GetMapping("toAssign/{roleId}")
     public Result toAssign(@PathVariable Long roleId) {
@@ -41,8 +43,9 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:assignAuth')")
     @Operation(summary = "角色分配菜单")
+    @OperLog(title = "角色管理·分配菜单", businessType = BusinessType.ASSIGN)
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginMenuVo assginMenuVo) {
         sysMenuService.doAssign(assginMenuVo);
@@ -50,7 +53,7 @@ public class SysMenuController {
     }
 
     //菜单列表接口
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu')")
     @Operation(summary = "菜单列表")
     @GetMapping("findNodes")
     public Result findNodes() {
@@ -59,24 +62,27 @@ public class SysMenuController {
         return Result.ok(list);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:add')")
     @Operation(summary = "新增菜单")
+    @OperLog(title = "菜单管理·新增菜单", businessType = BusinessType.CREATE)
     @PostMapping("save")
     public Result save(@Valid @RequestBody SysMenuSaveRequest request) {
         sysMenuService.saveMenu(request.toEntity());
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:edit')")
     @Operation(summary = "修改菜单")
+    @OperLog(title = "菜单管理·修改菜单", businessType = BusinessType.UPDATE)
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody SysMenuUpdateRequest request) {
         sysMenuService.updateMenu(request.toEntity());
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('sysMenu')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysMenu','system:menu:remove')")
     @Operation(summary = "删除菜单")
+    @OperLog(title = "菜单管理·删除菜单", businessType = BusinessType.DELETE)
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         sysMenuService.removeMenuById(id);

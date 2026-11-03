@@ -19,7 +19,10 @@
         <module>lautung-oa-framework</module>
         <module>lautung-oa-security</module>
         <module>lautung-oa-model</module>
+        <module>lautung-oa-storage</module>
+        <module>lautung-oa-audit</module>
         <module>lautung-oa-auth</module>
+        <module>lautung-oa-notice</module>
         <module>lautung-oa-process</module>
         <module>lautung-oa-server</module>
         <module>lautung-oa-coverage-report</module>

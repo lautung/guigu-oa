@@ -1,9 +1,12 @@
 package com.lautung.oa.process.controller;
 
 
+import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.process.read.ApprovalListReader;
+import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.process.ProcessQueryVo;
 import com.lautung.oa.vo.process.ProcessVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -32,16 +35,21 @@ public class OaProcessController {
     @Autowired
     private ApprovalListReader approvalListReader;
 
+    @Autowired
+    private DataScopeResolver dataScopeResolver;
+
     //审批管理列表（配置实例查询：与办事列表同一读 module，#181）
-    @PreAuthorize("@configurationMenuGate.isGranted('process')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processMgr/process')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
                         @PathVariable Long limit,
                         ProcessQueryVo processQueryVo) {
         Page<ProcessVo> pageParam = PageWindow.of(page, limit);
+        // 数据范围按发起人解析（ADR 0053/0057）；解析失败（无角色/无部门）是零行，不是全部。
+        DataScope scope = dataScopeResolver.resolve(LoginUserInfoHelper.getUserId());
         IPage<ProcessVo> pageModel =
-                approvalListReader.instanceQuery(pageParam, processQueryVo);
+                approvalListReader.instanceQuery(pageParam, processQueryVo, scope);
         return Result.ok(pageModel);
     }
 }

@@ -784,7 +784,7 @@ public class ApprovalContractTest {
         mockMvc.perform(get("/admin/system/index/info").header("token", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.configMenus.length()").value(greaterThan(0)));
+                .andExpect(jsonPath("$.data.menus.length()").value(greaterThan(0)));
 
         mockMvc.perform(get("/admin/process/show/" + processId)
                         .header("token", eveToken))

@@ -46,10 +46,6 @@ public class SysUser extends BaseEntity {
 	@TableField("dept_id")
 	private Long deptId;
 
-	@Schema(description = "岗位id")
-	@TableField("post_id")
-	private Long postId;
-
 	@Schema(description = "描述")
 	@TableField("description")
 	private String description;

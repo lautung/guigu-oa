@@ -32,18 +32,30 @@ export function presentConfigMenuTree(nodes: MenuNode[] = []): MenuNode[] {
   return presentMenuTree(nodes)
 }
 
-/** 服务端只发可授予的配置类菜单；客户端只做展示字段映射。 */
+/** 服务端只发可授予的配置类菜单（目录/页面/按钮）；客户端只做展示字段映射。 */
 export function presentAssignableConfigMenus(nodes: MenuNode[] = []): MenuNode[] {
   return presentMenuTree(nodes)
 }
 
+/** 授权树节点文案：按钮点带出权限标识，与页面同名时也能区分（#225）。 */
+export function assignMenuLabel(node: MenuNode = {}): string {
+  const name = node.name || ''
+  if (node.type === 2) {
+    return node.perms ? `${name}（${node.perms}）` : name
+  }
+  return name
+}
+
+/**
+ * 授权树初始勾选：授给这个角色的页面与按钮逐项还原（目录不单独构成权限，不还原）。
+ * 树用 check-strictly（父子不级联），所以页面与按钮各自独立勾选。
+ */
 export function collectCheckedIds(nodes: MenuNode[] = []): EntityId[] {
   return nodes.reduce<EntityId[]>((ids, node) => {
-    const children = node.children || []
-    if (node.select && children.length === 0 && node.id != null) {
+    if (node.select && node.id != null && node.type !== 0) {
       ids.push(node.id)
     }
-    return ids.concat(collectCheckedIds(children))
+    return ids.concat(collectCheckedIds(node.children || []))
   }, [])
 }
 
@@ -168,7 +180,8 @@ export function formForCreate(parent?: MenuNode): MenuForm {
   form.parentId = parent.id ?? 0
   form.parentName = parent.name || ''
   form.component = ''
-  form.type = 1
+  // 页面下挂按钮点（ADR 0056）；目录下仍是页面。
+  form.type = parent.type === 1 ? 2 : 1
 
   return form
 }

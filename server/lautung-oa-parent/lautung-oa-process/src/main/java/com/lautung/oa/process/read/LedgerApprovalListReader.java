@@ -1,5 +1,6 @@
 package com.lautung.oa.process.read;
 
+import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.ProcessApprovalSupport;
@@ -80,7 +81,8 @@ public class LedgerApprovalListReader implements ApprovalListReader {
     public IPage<ProcessVo> started(Page<ProcessVo> page, SysUser user) {
         ProcessQueryVo query = new ProcessQueryVo();
         query.setUserId(user.getId());
-        return processMapper.selectProcessPage(page, query);
+        // 办事列表不套数据范围：成员资格是更强的可见性真相（ADR 0053/0057）。
+        return processMapper.selectProcessPage(page, query, null);
     }
 
     @Override
@@ -93,8 +95,8 @@ public class LedgerApprovalListReader implements ApprovalListReader {
     }
 
     @Override
-    public IPage<ProcessVo> instanceQuery(Page<ProcessVo> page, ProcessQueryVo query) {
-        return processMapper.selectProcessPage(page, query);
+    public IPage<ProcessVo> instanceQuery(Page<ProcessVo> page, ProcessQueryVo query, DataScope scope) {
+        return processMapper.selectProcessPage(page, query, scope);
     }
 
     private Map<Long, ProcessVo> rowsById(List<Long> ids) {

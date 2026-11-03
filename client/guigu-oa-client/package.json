@@ -11,7 +11,7 @@
     "build:prod": "npm run typecheck && vite build",
     "lint": "eslint \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts,vue}\" \"scripts/**/*.mjs\" playwright.config.ts playwright.api.config.ts vite.config.js",
     "typecheck": "vue-tsc --noEmit",
-    "verify": "npm run lint && npm run typecheck && npm run format:check && npm run check:docs && npm run check:legacy && npm run check:shell && npm run check:contracts && npm run check:test-tooling && npm run test:unit",
+    "verify": "npm run lint && npm run typecheck && npm run format:check && npm run check:docs && npm run check:legacy && npm run check:shell && npm run check:v-html && npm run check:contracts && npm run check:test-tooling && npm run test:unit",
     "format:check": "prettier --check \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" \"scripts/**/*.mjs\" playwright.config.ts playwright.api.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml ../../.github/workflows/regression.yml ../../.github/workflows/security.yml",
     "format": "prettier --write \"src/**/*.{ts,vue}\" \"tests/**/*.{js,ts}\" \"scripts/**/*.mjs\" playwright.config.ts playwright.api.config.ts vite.config.js eslint.config.js tsconfig.json .prettierrc.json ../../.github/workflows/ci.yml ../../.github/workflows/regression.yml ../../.github/workflows/security.yml",
     "test:unit": "vitest run",
@@ -25,7 +25,8 @@
     "check:legacy": "node ../../scripts/check-legacy-terms.mjs",
     "check:shell": "node scripts/check-shell.mjs",
     "check:contracts": "node ../../scripts/check-contract-assertions.mjs",
-    "check:test-tooling": "node scripts/check-test-tooling.mjs"
+    "check:test-tooling": "node scripts/check-test-tooling.mjs",
+    "check:v-html": "node scripts/check-v-html.mjs"
   },
   "dependencies": {
     "@form-create/designer": "3.5.0",
@@ -37,6 +38,7 @@
     "normalize.css": "7.0.0",
     "nprogress": "0.2.0",
     "pinia": "4.0.3",
+    "quill": "2.0.3",
     "vue": "3.5.41",
     "vue-router": "5.2.0"
   },

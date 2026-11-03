@@ -157,7 +157,7 @@ it('通过完整编辑 interface 完成三步新建，保留扩展设计并以�
   })
   h.saves[0].resolve({ code: 200, message: '保存成功', data: null })
   await saving
-  expect(h.navigation).toEqual(['/processSet/processTemplate'])
+  expect(h.navigation).toEqual(['/system/processSet/processTemplate'])
   expect(h.notices).toEqual(['保存成功，审批模板仍为未发布'])
 })
 
@@ -346,7 +346,7 @@ it('保存超时保留固定快照且不能再保存，另开列表保留当前�
   expect(h.saves).toHaveLength(1)
   expect(h.uploads).toHaveLength(0)
   edit.openList()
-  expect(h.lists).toEqual(['/processSet/processTemplate'])
+  expect(h.lists).toEqual(['/system/processSet/processTemplate'])
   expect(edit.state.phase).toBe('uncertain')
   h.confirm(false)
   await edit.endEditing()
@@ -357,7 +357,7 @@ it('保存超时保留固定快照且不能再保存，另开列表保留当前�
   await edit.endEditing()
   expect(edit.state.snapshot).toBeNull()
   expect(edit.state.phase).toBe('closed')
-  expect(h.navigation).toEqual(['/processSet/processTemplate'])
+  expect(h.navigation).toEqual(['/system/processSet/processTemplate'])
   expect(h.notices).toEqual([])
 })
 
@@ -646,7 +646,7 @@ async function transportHarness(respond) {
     recovery: () => ({ status: 'idle', target: '' }),
     showRecovery: () => {},
     loadUser: async () => ({ name: 'Alice' }),
-    currentPath: () => '/processSet/templateSet?id=A',
+    currentPath: () => '/system/processSet/templateSet?id=A',
     goTo: (path) => authNavigation.push(path),
     goToLogin: (path) => authNavigation.push(path),
     notify: (message) => globalNotices.push(message),
@@ -743,7 +743,7 @@ it('明确认证拒绝后重发保存再断网，仍保留待确认快照且不�
   }
 })
 
-it.each([201, 205, 403])('保存明确拒绝 %s 可立即重试且无全局普通错误', async (code) => {
+it.each([201, 403])('保存明确拒绝 %s 可立即重试且无全局普通错误', async (code) => {
   const h = await transportHarness(async () => ({ code, message: '本次保存未获接受' }))
   try {
     const edit = h.module.open('A')
@@ -755,6 +755,23 @@ it.each([201, 205, 403])('保存明确拒绝 %s 可立即重试且无全局普�
     expect(edit.state.error).toBe('本次保存未获接受')
     expect(h.calls.filter((call) => call.url.endsWith('/update'))).toHaveLength(1)
     expect(h.globalNotices).toEqual([])
+  } finally {
+    h.restore()
+  }
+})
+
+it('保存被 205 明确拒绝时可立即重试，并把没有操作权限提示一次', async () => {
+  const h = await transportHarness(async () => ({ code: 205, message: '没有操作权限' }))
+  try {
+    const edit = h.module.open('A')
+    await edit.ready
+    await edit.save()
+    expect(edit.state.phase).toBe('ready')
+    expect(edit.state.canSave).toBe(true)
+    expect(edit.state.snapshot).toBeNull()
+    expect(edit.state.error).toBe('没有操作权限')
+    expect(h.calls.filter((call) => call.url.endsWith('/update'))).toHaveLength(1)
+    expect(h.globalNotices).toEqual(['没有操作权限'])
   } finally {
     h.restore()
   }

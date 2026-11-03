@@ -25,6 +25,7 @@ export function setupNavigation(router: Router, pinia: Pinia, recognition: Recog
       path: to.path,
       fullPath: to.fullPath,
       hasToken: !!recognition.credentials().token,
+      menus: store.menus,
     })
     if (decision.action === 'redirect') {
       NProgress.done()

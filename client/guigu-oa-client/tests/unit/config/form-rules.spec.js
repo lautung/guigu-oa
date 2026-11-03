@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { requiredRule } from '@/config/form-rules'
+import { requiredListRule, requiredRule } from '@/config/form-rules'
 
 function verdictOf(rule, value) {
   let error
@@ -35,5 +35,12 @@ describe('config/form-rules', () => {
     expect(verdictOf(rule, 2)).toBeUndefined()
     expect(verdictOf(rule, '')).toBeInstanceOf(Error)
     expect(verdictOf(rule, null)).toBeInstanceOf(Error)
+  })
+
+  it('requires a non-empty list for collection fields', () => {
+    const rule = requiredListRule('自定部门不能为空')
+    expect(verdictOf(rule, [])).toBeInstanceOf(Error)
+    expect(verdictOf(rule, null)).toBeInstanceOf(Error)
+    expect(verdictOf(rule, [7])).toBeUndefined()
   })
 })

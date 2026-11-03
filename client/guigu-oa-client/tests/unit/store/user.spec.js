@@ -64,8 +64,9 @@ describe('browser adapter with real Pinia and navigation', () => {
         ? ok({ token: 'jwt-alice', refreshToken: 'refresh-alice' })
         : ok({
             name: 'Alice',
-            configMenus: [{ path: '/system/sysUser', title: '用户管理', type: 1 }],
-            buttons: ['ignored'],
+            roles: ['super_admin'],
+            permissions: ['system:user:add'],
+            menus: [{ path: '/system/sysUser', title: '用户管理', type: 1, icon: null }],
           })
     })
     await h.router.push('/login')
@@ -74,11 +75,16 @@ describe('browser adapter with real Pinia and navigation', () => {
     expect(h.store.name).toBe('')
     await h.router.push('/work/pending')
     expect(h.store.name).toBe('Alice')
-    expect(h.store.menus).toEqual([{ path: '/system/sysUser', title: '用户管理', type: 1 }])
-    expect(h.store.buttons).toBeUndefined()
+    expect(h.store.roles).toEqual(['super_admin'])
+    expect(h.store.permissions).toEqual(['system:user:add'])
+    expect(h.store.menus).toEqual([
+      { path: '/system/sysUser', title: '用户管理', type: 1, icon: null },
+    ])
     await h.store.logout()
     await flushPromises()
     expect(h.store.name).toBe('')
+    expect(h.store.roles).toEqual([])
+    expect(h.store.permissions).toEqual([])
     expect(h.store.recognized).toBe(false)
     expect(getToken()).toBeUndefined()
     expect(getRefreshToken()).toBeUndefined()
@@ -177,8 +183,8 @@ describe('browser adapter with real Pinia and navigation', () => {
     setToken('only-token')
     const respond = vi
       .fn()
-      .mockResolvedValueOnce(ok({ name: 'Alice', configMenus: {} }))
-      .mockResolvedValue(ok({ name: 'Alice', configMenus: [] }))
+      .mockResolvedValueOnce(ok({ name: 'Alice', menus: {} }))
+      .mockResolvedValue(ok({ name: 'Alice', menus: [] }))
     const h = setup(respond, '/work/pending')
     wrapper = mount(App, { global: { plugins: [h.pinia, h.router, ElementPlus] } })
     await vi.waitFor(() => expect(wrapper.text()).toContain('暂时无法获取用户信息'))

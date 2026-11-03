@@ -19,62 +19,17 @@ export async function uiLoginExpectWork(page: Page, username: string): Promise<v
   await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
 }
 
-export function workItem(page: Page, text: string): Locator {
-  return page.locator('.work-list-item', { hasText: text })
-}
-
-/**
- * 等当前办事列表初始加载完成（#169）：page-title 先于数据渲染，loading 中无行、
- * 无分页器、无空态；首轮扫描前必须等正信号（行或空态出现）。
- * 不能等 loading-mask 消失——注册时 mask 尚未挂载的话「不存在」会被 hidden
- * 立即满足（TOCTOU）；visible 语义会持续等到元素将来出现，无此空窗。
- */
-export async function expectWorkListLoaded(page: Page): Promise<void> {
-  await page
-    .locator('.work-list-item, .el-empty')
-    .first()
-    .waitFor({ state: 'visible', timeout: 15_000 })
-}
-
-/** 点下一页并等列表返回；返回 false 表示没有下一页。翻页过早会跳过目标行（#169）。 */
-export async function nextWorkListPage(page: Page): Promise<boolean> {
-  const next = page.locator('.el-pagination .btn-next')
-  if ((await next.count()) === 0 || (await next.isDisabled())) return false
-  // 等列表请求真正返回再继续：固定 sleep 在慢 runner 上会提前翻下一页，跳过目标行。
-  const response = page.waitForResponse(
-    (res) => /\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(res.url()),
-    { timeout: 15_000 },
-  )
-  await next.click()
-  await response
-  await page
-    .locator('.list-container .el-loading-mask')
-    .waitFor({ state: 'hidden', timeout: 5_000 })
-    .catch(() => {})
-  return true
-}
-
-async function walkWorkList(page: Page, text: string, maxPages: number): Promise<Locator | null> {
-  await expectWorkListLoaded(page)
-  for (let visited = 1; ; visited++) {
-    const item = workItem(page, text)
-    if ((await item.count()) > 0) return item.first()
-    if (visited >= maxPages) return null
-    if (!(await nextWorkListPage(page))) return null
-  }
-}
-
-export async function expectWorkItemVisible(page: Page, text: string): Promise<Locator> {
-  const item = await walkWorkList(page, text, 40)
-  if (!item) throw new Error(`办事列表翻页后仍找不到：${text}`)
-  await expect(item).toBeVisible()
-  return item
-}
-
-export async function clickWorkItem(page: Page, text: string): Promise<void> {
-  const item = await expectWorkItemVisible(page, text)
-  await item.click()
-}
+// 办事列表的定位/等待/翻页收在共享 helper（#226）：这里只 re-export，
+// 避免 security 套件再出现一份没跟上 #169 的副本。
+export {
+  clickWorkItem,
+  expectWorkItemVisible,
+  expectWorkListLoaded,
+  nextWorkListPage,
+  walkWorkList,
+  workItem,
+  workListItems,
+} from '../../helpers/work-list'
 
 export async function openWorkList(page: Page, title: string): Promise<void> {
   await page.getByRole('link', { name: title }).click()

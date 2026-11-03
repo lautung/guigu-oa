@@ -1,10 +1,14 @@
 package com.lautung.oa.auth.controller;
 
 import com.lautung.oa.auth.service.SysRoleService;
+import com.lautung.oa.framework.operlog.BusinessType;
+import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
+import com.lautung.oa.vo.system.SysDeptOptionVo;
+import com.lautung.oa.vo.system.SysRoleDetailVo;
 import com.lautung.oa.vo.system.SysRoleQueryVo;
 import com.lautung.oa.vo.system.SysRoleSaveRequest;
 import com.lautung.oa.vo.system.SysRoleUpdateRequest;
@@ -35,7 +39,7 @@ public class SysRoleController {
     private SysRoleService sysRoleService;
 
     //1 查询所有角色 和 当前用户所属角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
     @Operation(summary = "获取角色")
     @GetMapping("/toAssign/{userId}")
     public Result toAssign(@PathVariable Long userId) {
@@ -44,8 +48,9 @@ public class SysRoleController {
     }
 
     //2 为用户分配角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysUser')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:assignRole')")
     @Operation(summary = "为用户分配角色")
+    @OperLog(title = "用户管理·分配角色", businessType = BusinessType.ASSIGN)
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginRoleVo assginRoleVo) {
         sysRoleService.doAssign(assginRoleVo);
@@ -61,7 +66,7 @@ public class SysRoleController {
 //    }
 
     //统一返回数据结果
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "查询所有角色")
     @GetMapping("/findAll")
     public Result findAll() {
@@ -73,7 +78,7 @@ public class SysRoleController {
     //条件分页查询
     //page 当前页  limit 每页显示记录数
     //SysRoleQueryVo 条件对象
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "条件分页查询")
     @GetMapping("{page}/{limit}")
     public Result pageQueryRole(@PathVariable Long page,
@@ -98,45 +103,47 @@ public class SysRoleController {
     }
 
     //添加角色
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:add')")
     @Operation(summary = "添加角色")
+    @OperLog(title = "角色管理·新增角色", businessType = BusinessType.CREATE)
     @PostMapping ("save")
     public Result save(@Valid @RequestBody SysRoleSaveRequest request) {
-        //调用service的方法
-        boolean is_success = sysRoleService.save(request.toEntity());
-        if(is_success) {
-            return Result.ok();
-        } else {
-            return Result.fail();
-        }
+        sysRoleService.saveRole(request.toEntity(), request.getDeptIds());
+        return Result.ok();
     }
 
     //修改角色-根据id查询
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
     @Operation(summary = "根据id查询")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
-        SysRole sysRole = sysRoleService.getById(id);
-        return Result.ok(sysRole);
+        SysRoleDetailVo detail = sysRoleService.findDetail(id);
+        return Result.ok(detail);
+    }
+
+    /** 数据范围「自定部门」的只读选项；部门 CRUD 不在本票内，不提供写端点。 */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
+    @Operation(summary = "查询部门选项")
+    @GetMapping("depts")
+    public Result depts() {
+        List<SysDeptOptionVo> options = sysRoleService.findDeptOptions();
+        return Result.ok(options);
     }
 
     //修改角色-最终修改
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:edit')")
     @Operation(summary = "修改角色")
+    @OperLog(title = "角色管理·修改角色", businessType = BusinessType.UPDATE)
     @PutMapping ("update")
     public Result update(@Valid @RequestBody SysRoleUpdateRequest request) {
-        //调用service的方法
-        boolean is_success = sysRoleService.updateById(request.toEntity());
-        if(is_success) {
-            return Result.ok();
-        } else {
-            return Result.fail();
-        }
+        sysRoleService.updateRole(request.toEntity(), request.getDeptIds());
+        return Result.ok();
     }
 
     //根据id删除
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "根据id删除")
+    @OperLog(title = "角色管理·删除角色", businessType = BusinessType.DELETE)
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {
         boolean is_success = sysRoleService.removeById(id);
@@ -149,8 +156,9 @@ public class SysRoleController {
 
     //批量删除
     // 前端数组 [1,2,3]
-    @PreAuthorize("@configurationMenuGate.isGranted('sysRole')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:remove')")
     @Operation(summary = "批量删除")
+    @OperLog(title = "角色管理·批量删除角色", businessType = BusinessType.DELETE)
     @DeleteMapping("batchRemove")
     public Result batchRemove(@RequestBody List<Long> idList) {
         boolean is_success = sysRoleService.removeByIds(idList);

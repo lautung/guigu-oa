@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 /**
  * 兼容性关键页扫描（#114 §2/§3）：Chromium + WebKit、1280×900 + 390×844，
@@ -45,18 +46,18 @@ const template = {
   formOptions: JSON.stringify({ submitBtn: false }),
 }
 
-const configMenus = [
-  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+const menus = [
+  { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet/processTemplate',
-    parentPath: '/processSet',
+    path: '/system/processSet/processTemplate',
+    parentPath: '/system/processSet',
     title: '审批模板',
     type: 1,
     sort: 2,
   },
   {
-    path: '/processSet/templateSet',
-    parentPath: '/processSet/processTemplate',
+    path: '/system/processSet/templateSet',
+    parentPath: '/system/processSet/processTemplate',
     title: '审批模板设置',
     type: 1,
     hidden: true,
@@ -137,7 +138,7 @@ async function seedSession(page: Page) {
 async function mockApi(page: Page) {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
-    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', configMenus })
+    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus })
     if (path === '/admin/process/findStartable')
       return json(route, [
         {
@@ -188,6 +189,7 @@ async function mockApi(page: Page) {
         ],
         assginRoleList: [{ id: 1, roleName: '管理员' }],
       })
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
 }
@@ -269,7 +271,7 @@ test('待处理列表与审批详情在矩阵内可渲染', async ({ page }, tes
 test('配置-模板编辑：桌面可占用，手机落回待处理', async ({ page }, testInfo) => {
   await seedSession(page)
   await mockApi(page)
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
 
   if (isMobileViewport(page)) {
     await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()

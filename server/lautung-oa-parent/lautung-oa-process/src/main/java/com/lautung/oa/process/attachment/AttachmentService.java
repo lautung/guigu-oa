@@ -7,6 +7,7 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.membership.ApprovalMembership;
 import com.lautung.oa.process.membership.ApprovalMembershipResolver;
+import com.lautung.oa.storage.StorageS3Properties;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.slf4j.Logger;
@@ -36,14 +37,14 @@ public class AttachmentService {
     private final AttachmentMapper attachmentMapper;
     private final OaProcessMapper processMapper;
     private final AttachmentObjectStore objectStore;
-    private final AttachmentS3Properties properties;
+    private final StorageS3Properties properties;
     private final ApprovalMembershipResolver membershipResolver;
 
     public AttachmentService(
             AttachmentMapper attachmentMapper,
             OaProcessMapper processMapper,
             AttachmentObjectStore objectStore,
-            AttachmentS3Properties properties,
+            StorageS3Properties properties,
             ApprovalMembershipResolver membershipResolver) {
         this.attachmentMapper = attachmentMapper;
         this.processMapper = processMapper;

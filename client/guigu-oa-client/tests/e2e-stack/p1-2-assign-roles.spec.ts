@@ -43,7 +43,7 @@ test('分配配置角色后 user 的配置菜单生效，撤销后消失', async
     // 重新进入：配置组出现，配置页可以占用。
     await page.locator('.logout-btn').click()
     await loginUntilSidebarGroups(page, 'user', 2)
-    await page.goto('/processSet/processType')
+    await page.goto('/system/processSet/processType')
     await expect(page.getByRole('heading', { name: '审批类型', level: 2 })).toBeVisible()
   } finally {
     await oracle.assignRoles('admin', userId, [])

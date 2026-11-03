@@ -19,33 +19,33 @@ const SAMPLE_CONFIG_MENUS = [
     hidden: true,
     sort: 3,
   },
-  { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+  { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
   {
-    path: '/processSet/processType',
-    parentPath: '/processSet',
+    path: '/system/processSet/processType',
+    parentPath: '/system/processSet',
     title: '审批类型',
     type: 1,
     sort: 1,
   },
   {
-    path: '/processSet/processTemplate',
-    parentPath: '/processSet',
+    path: '/system/processSet/processTemplate',
+    parentPath: '/system/processSet',
     title: '审批模板',
     type: 1,
     sort: 2,
   },
   {
-    path: '/processSet/templateSet',
-    parentPath: '/processSet/processTemplate',
+    path: '/system/processSet/templateSet',
+    parentPath: '/system/processSet/processTemplate',
     title: '审批模板设置',
     type: 1,
     hidden: true,
     sort: 3,
   },
-  { path: '/processMgr', title: '审批查询', type: 0, sort: 3 },
+  { path: '/system/processMgr', title: '审批管理', type: 0, sort: 3 },
   {
-    path: '/processMgr/process',
-    parentPath: '/processMgr',
+    path: '/system/processMgr/process',
+    parentPath: '/system/processMgr',
     title: '审批实例查询',
     type: 1,
     sort: 1,
@@ -157,7 +157,7 @@ describe('统一客户端表面', () => {
       menus: SAMPLE_CONFIG_MENUS,
     })
     const templateSet = resolveClientSurface({
-      path: '/processSet/templateSet',
+      path: '/system/processSet/templateSet',
       viewportWidth: 1200,
       hasToken: true,
       menus: SAMPLE_CONFIG_MENUS,
@@ -177,7 +177,7 @@ describe('统一客户端表面', () => {
       menus: SAMPLE_CONFIG_MENUS,
     })
     const fromConfig = resolveClientSurface({
-      path: '/processMgr/process/9',
+      path: '/system/processMgr/process/9',
       viewportWidth: 1200,
       hasToken: true,
       menus: SAMPLE_CONFIG_MENUS,
@@ -190,7 +190,7 @@ describe('统一客户端表面', () => {
 
     expect(fromConfig.menuGroup).toBe('config')
     expect(fromConfig.density).toBe('wide')
-    expect(fromConfig.returnPath).toBe('/processMgr/process')
+    expect(fromConfig.returnPath).toBe('/system/processMgr/process')
     expect(fromConfig.hasWorkListPerspective).toBe(false)
   })
 

@@ -33,7 +33,7 @@ test.describe('B 配置授予分支', () => {
         'get',
         `/admin/system/sysMenu/toAssign/${role.id}`,
       )
-      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === 'sysUser')
+      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === '/system/sysUser')
       expect(sysUserMenu, '菜单树里应有 sysUser 页').toBeTruthy()
 
       await assignMenus(api, role.id, [(sysUserMenu as MenuRecord).id])
@@ -41,9 +41,7 @@ test.describe('B 配置授予分支', () => {
 
       const info = await api.call<InfoPayload>(temp.username, 'get', '/admin/system/index/info')
       // 读取时补祖先：目录 /system 随页面出现，但其它配置页不出现。
-      const pagePaths = info.configMenus
-        .map((menu) => menu.path)
-        .filter((path) => path !== '/system')
+      const pagePaths = info.menus.map((menu) => menu.path).filter((path) => path !== '/system')
       expect(pagePaths).toEqual(['/system/sysUser'])
 
       expect(await api.code(temp.username, 'get', '/admin/system/sysUser/1/5')).toBe(200)
@@ -68,7 +66,7 @@ test.describe('B 配置授予分支', () => {
         'get',
         `/admin/system/sysMenu/toAssign/${role.id}`,
       )
-      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === 'sysUser')
+      const sysUserMenu = flattenMenus(tree).find((menu) => menu.path === '/system/sysUser')
       expect(sysUserMenu, '菜单树里应有 sysUser 页').toBeTruthy()
 
       await assignMenus(api, role.id, [(sysUserMenu as MenuRecord).id])
@@ -83,7 +81,8 @@ test.describe('B 配置授予分支', () => {
         '角色删除后原授予页应立即 205',
       ).toBe(205)
       const info = await api.call<InfoPayload>(temp.username, 'get', '/admin/system/index/info')
-      expect(info.configMenus).toEqual([])
+      expect(info.menus).toEqual([])
+      expect(info.permissions).toEqual([])
     } finally {
       await assignRoles(api, temp.id, []).catch(() => {})
       await deleteRole(api, role.id).catch(() => {})

@@ -7,6 +7,7 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.membership.ApprovalMembership;
 import com.lautung.oa.process.membership.ApprovalMembershipResolver;
+import com.lautung.oa.storage.StorageS3Properties;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -43,7 +44,7 @@ class AttachmentServiceTest {
     private final AttachmentMapper attachmentMapper = mock(AttachmentMapper.class);
     private final OaProcessMapper processMapper = mock(OaProcessMapper.class);
     private final AttachmentObjectStore objectStore = mock(AttachmentObjectStore.class);
-    private final AttachmentS3Properties properties = new AttachmentS3Properties();
+    private final StorageS3Properties properties = new StorageS3Properties();
     private final ApprovalMembershipResolver membershipResolver = mock(ApprovalMembershipResolver.class);
     private final AttachmentService service = new AttachmentService(
             attachmentMapper, processMapper, objectStore, properties, membershipResolver);

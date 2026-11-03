@@ -33,14 +33,14 @@ public class OaProcessTypeController {
     private OaProcessTypeService processTypeService;
 
     //查询所有审批分类
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType')")
     @GetMapping("findAll")
     public Result findAll() {
         List<ProcessType> list = processTypeService.list();
         return Result.ok(list);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType')")
     @Operation(summary = "获取分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(@PathVariable Long page,
@@ -50,7 +50,7 @@ public class OaProcessTypeController {
         return Result.ok(pageModel);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType')")
     @Operation(summary = "获取")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
@@ -58,7 +58,7 @@ public class OaProcessTypeController {
         return Result.ok(processType);
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType','process:type:add')")
     @Operation(summary = "新增")
     @PostMapping("save")
     public Result save(@Valid @RequestBody ProcessTypeSaveRequest request) {
@@ -66,7 +66,7 @@ public class OaProcessTypeController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType','process:type:edit')")
     @Operation(summary = "修改")
     @PutMapping("update")
     public Result updateById(@Valid @RequestBody ProcessTypeUpdateRequest request) {
@@ -74,7 +74,7 @@ public class OaProcessTypeController {
         return Result.ok();
     }
 
-    @PreAuthorize("@configurationMenuGate.isGranted('processType')")
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processType','process:type:remove')")
     @Operation(summary = "删除")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable Long id) {

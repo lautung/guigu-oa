@@ -49,7 +49,11 @@ function nullableString(value: unknown): boolean {
   return value == null || typeof value === 'string'
 }
 
-function validConfigMenus(value: unknown): boolean {
+function validStringArray(value: unknown): boolean {
+  return value == null || (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+}
+
+function validMenus(value: unknown): boolean {
   if (value == null) return true
   if (!Array.isArray(value)) return false
   return value.every((entry: unknown) => {
@@ -61,7 +65,8 @@ function validConfigMenus(value: unknown): boolean {
       typeof node.title === 'string' &&
       typeof node.type === 'number' &&
       (node.hidden == null || typeof node.hidden === 'boolean') &&
-      (node.sort == null || typeof node.sort === 'number')
+      (node.sort == null || typeof node.sort === 'number') &&
+      nullableString(node.icon)
     )
   })
 }
@@ -71,7 +76,9 @@ function validUser(user: UserInfo): boolean {
     !!user &&
     typeof user.name === 'string' &&
     nullableString(user.avatar) &&
-    validConfigMenus(user.configMenus)
+    validStringArray(user.roles) &&
+    validStringArray(user.permissions) &&
+    validMenus(user.menus)
   )
 }
 

@@ -10,6 +10,7 @@ import { setupStore } from './store'
 import router from './router'
 import { setupNavigation } from './router/guard'
 import { setupRecognition } from './recognition/browser-adapter'
+import { hasPermi } from './permission'
 
 formCreate.use(autoImport)
 
@@ -19,6 +20,7 @@ const pinia = setupStore(app)
 const recognition = setupRecognition(pinia, router)
 setupNavigation(router, pinia, recognition)
 app.use(router)
+app.directive('hasPermi', hasPermi)
 app.use(ElementPlus, { size: 'small' })
 app.use(formCreate)
 app.use(FcDesigner)

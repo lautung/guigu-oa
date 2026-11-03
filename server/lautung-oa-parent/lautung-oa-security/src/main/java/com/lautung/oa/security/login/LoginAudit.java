@@ -1,13 +1,16 @@
 package com.lautung.oa.security.login;
 
-import java.time.Instant;
-
-/** Audit trail of repeated login failures; no password or token may ever pass through here. */
+/**
+ * Audit trail of login attempts; no password or token may ever pass through here.
+ *
+ * <p>{@link #record(LoginEvent)} is the durable path: a blocked attempt must never take it (one
+ * attacker could otherwise turn the audit table into a write amplifier). {@link
+ * #recordLogOnly(LoginEvent)} writes the application log without a database row and is what a
+ * locked-out attempt uses.
+ */
 public interface LoginAudit {
 
-    void loginFailed(String username, String sourceAddress, int accountFailures);
+    void record(LoginEvent event);
 
-    void loginLocked(String username, String sourceAddress, LoginAttemptScope scope, Instant lockedUntil);
-
-    void loginUnlocked(String username, String sourceAddress, LoginAttemptScope scope);
+    void recordLogOnly(LoginEvent event);
 }

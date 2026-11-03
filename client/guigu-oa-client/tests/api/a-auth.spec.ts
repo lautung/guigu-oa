@@ -93,11 +93,14 @@ test.describe('A 认证与认出', () => {
     const api = new Api(request)
 
     const adminInfo = await api.call<InfoPayload>(ADMIN, 'get', '/admin/system/index/info')
-    expect(adminInfo.configMenus.length).toBeGreaterThan(0)
-    expect(adminInfo.configMenus.some((menu) => menu.path === '/system/sysUser')).toBe(true)
+    expect(adminInfo.roles).toContain('super_admin')
+    expect(adminInfo.permissions.length).toBeGreaterThan(0)
+    expect(adminInfo.menus.length).toBeGreaterThan(0)
+    expect(adminInfo.menus.some((menu) => menu.path === '/system/sysUser')).toBe(true)
 
     const plainInfo = await api.call<InfoPayload>(PLAIN_USER, 'get', '/admin/system/index/info')
-    expect(plainInfo.configMenus).toHaveLength(0)
+    expect(plainInfo.menus).toHaveLength(0)
+    expect(plainInfo.permissions).toHaveLength(0)
 
     const anonymous = await api.anonymous('get', '/admin/system/index/info')
     expectCode(anonymous.body, 208, 'A3 无 token')

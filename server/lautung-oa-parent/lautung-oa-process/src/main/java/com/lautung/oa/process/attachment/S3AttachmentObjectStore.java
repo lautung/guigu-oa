@@ -1,5 +1,6 @@
 package com.lautung.oa.process.attachment;
 
+import com.lautung.oa.storage.StorageS3Properties;
 import org.springframework.http.ContentDisposition;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -20,12 +21,12 @@ public class S3AttachmentObjectStore implements AttachmentObjectStore {
 
     private final S3Client client;
     private final S3Presigner presigner;
-    private final AttachmentS3Properties properties;
+    private final StorageS3Properties properties;
 
     public S3AttachmentObjectStore(
             S3Client attachmentS3Client,
             S3Presigner attachmentS3Presigner,
-            AttachmentS3Properties properties) {
+            StorageS3Properties properties) {
         this.client = attachmentS3Client;
         this.presigner = attachmentS3Presigner;
         this.properties = properties;

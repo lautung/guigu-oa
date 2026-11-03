@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { expectWorkListLoaded, workListItems } from '../helpers/work-list'
 import { CLIENT_PAGES, uiLogin } from './helpers'
 
 /**
@@ -50,14 +51,16 @@ test('CSP 生效时主要页面无安全策略违规', async ({ page, request },
   await uiLogin(page, 'bob')
   await page.getByRole('link', { name: '待处理' }).click()
   await expect(page.getByRole('heading', { name: '待处理', level: 2 })).toBeVisible()
-  await page.locator('.work-list-item').first().click()
+  // 首行点击前先等列表加载正信号（#226）：loading 中行未渲染，裸点会空转 15s。
+  await expectWorkListLoaded(page)
+  await workListItems(page).first().click()
   await expect(page.getByRole('heading', { name: '审批流转记录' })).toBeVisible()
   await page.waitForTimeout(1_000)
 
   // 配置侧：模板列表图标、查看弹窗（form-create）与编辑向导的表单设计器。
   await clearSession(page)
   await uiLogin(page, 'admin')
-  await page.goto('/processSet/processTemplate')
+  await page.goto('/system/processSet/processTemplate')
   await expect(page.getByRole('heading', { name: '审批模板', level: 2 })).toBeVisible()
   await page.locator('.el-table__row').first().getByRole('button', { name: '查看' }).click()
   await expect(page.getByRole('dialog', { name: '查看审批模板' })).toBeVisible()

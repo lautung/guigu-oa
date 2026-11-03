@@ -53,6 +53,30 @@
             <if test="vo.createTimeEnd != null and vo.createTimeEnd != ''">
                 and a.create_time &lt;= #{vo.createTimeEnd}
             </if>
+            <!-- 配置实例查询的数据范围（ADR 0053/0057）：部门列 = 发起人部门 d.dept_id，
+                 本人列 = 发起人 a.user_id。查询侧只接受参数：#{} 绑定 + <foreach>，禁止 ${}。
+                 scope 为 null 的是「已发起」路径，保持办事列表不带数据范围。
+                 部门集为空且无本人行（且不是 unrestricted）时用 1 = 0 得零行，不是全部。 -->
+            <if test="scope != null and !scope.unrestricted">
+                <choose>
+                    <when test="scope.deptIds.size() > 0">
+                        and (d.dept_id in
+                        <foreach collection="scope.deptIds" item="deptId" open="(" separator="," close=")">
+                            #{deptId}
+                        </foreach>
+                        <if test="scope.selfUserId != null">
+                            or a.user_id = #{scope.selfUserId}
+                        </if>
+                        )
+                    </when>
+                    <when test="scope.selfUserId != null">
+                        and a.user_id = #{scope.selfUserId}
+                    </when>
+                    <otherwise>
+                        and 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
         </where>
         <!-- 已发起与配置实例查询共用这条读：显式最新在前（#179），同刻由审批 id 决胜；
              已发起侧排序由 idx_oa_process_user_create_time 反向扫描支撑（V108，#185）。

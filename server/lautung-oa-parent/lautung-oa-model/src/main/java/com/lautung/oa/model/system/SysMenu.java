@@ -24,7 +24,7 @@ public class SysMenu extends BaseEntity {
 	@TableField("name")
 	private String name;
 
-	@Schema(description = "类型(1:菜单,2:按钮)")
+	@Schema(description = "类型(0:目录,1:菜单,2:按钮)")
 	@TableField("type")
 	private Integer type;
 

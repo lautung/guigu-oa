@@ -17,6 +17,8 @@ export interface ApiRequestConfig {
   url: string
   data?: unknown
   params?: Record<string, string | number | boolean | null | undefined>
+  /** 二进制读（公告图片）：响应体不是业务信封，由 request 模块直通 Blob。 */
+  responseType?: 'blob'
 }
 
 export interface ApiClient {
@@ -43,14 +45,15 @@ export interface MenuNode {
   children?: MenuNode[]
 }
 
-/** /info 下发的配置菜单条目：path 是绝对路径，parentPath 只用于展示层级。 */
-export interface ConfigMenuEntry {
+/** /info 下发的后台菜单条目：path 是绝对路径，parentPath 只用于展示层级。 */
+export interface BackofficeMenuEntry {
   path: string
   parentPath?: string | null
   title: string
   type: number
   hidden?: boolean
   sort?: number | null
+  icon?: string | null
 }
 
 export interface SidebarItem {
@@ -139,6 +142,8 @@ export interface RoleRecord {
   id?: EntityId | ''
   roleName?: string
   roleCode?: string
+  dataScope?: number
+  deptIds?: EntityId[]
   createTime?: string
 }
 
@@ -150,6 +155,14 @@ export interface RoleForm {
   id: EntityId | ''
   roleName: string
   roleCode: string
+  dataScope: number
+  deptIds: EntityId[]
+}
+
+export interface DeptOption {
+  id: EntityId
+  name: string
+  parentId?: EntityId
 }
 
 export interface UserRecord {
@@ -174,6 +187,79 @@ export interface UserForm {
   name: string
   phone: string
   status: number
+}
+
+/** 操作日志（ADR 0054）：审计行是历史事实，读侧只映射，不 join。 */
+export interface OperLogRecord {
+  id?: EntityId | ''
+  title?: string
+  businessType?: number
+  method?: string
+  requestMethod?: string
+  operId?: EntityId
+  operName?: string
+  deptId?: EntityId
+  deptName?: string
+  operUrl?: string
+  operIp?: string
+  operParam?: string
+  resultCode?: number
+  resultMessage?: string
+  status?: number
+  errorMsg?: string
+  costTime?: number
+  createTime?: string
+}
+
+export type AuditTagType = 'success' | 'danger' | 'warning' | 'info'
+
+export interface OperLogListItem extends OperLogRecord {
+  id: EntityId
+  businessTypeLabel: string
+  statusLabel: string
+  statusTagType: AuditTagType
+  costTimeText: string
+}
+
+/** 详情弹窗的展示投影：JSON 已经格式化，缺省值统一成空串。 */
+export interface OperLogDetail {
+  id: EntityId | ''
+  title: string
+  businessTypeLabel: string
+  operName: string
+  deptName: string
+  operIp: string
+  requestMethod: string
+  operUrl: string
+  method: string
+  statusLabel: string
+  statusTagType: AuditTagType
+  resultCodeText: string
+  resultMessage: string
+  errorMsg: string
+  costTimeText: string
+  operParamText: string
+  createTime: string
+}
+
+/** 登录日志（ADR 0054）：一行即全貌，没有详情端点。 */
+export interface LoginLogRecord {
+  id?: EntityId | ''
+  username?: string
+  userId?: EntityId
+  deptId?: EntityId
+  ip?: string
+  browser?: string
+  os?: string
+  status?: number
+  msg?: string
+  createTime?: string
+}
+
+export interface LoginLogListItem extends LoginLogRecord {
+  id: EntityId
+  statusLabel: string
+  statusTagType: AuditTagType
 }
 
 export interface ProcessInstanceRecord {
@@ -296,7 +382,9 @@ export interface LoginTokens {
 export interface UserInfo {
   name: string
   avatar?: string
-  configMenus?: ConfigMenuEntry[]
+  roles?: string[]
+  permissions?: string[]
+  menus?: BackofficeMenuEntry[]
 }
 
 export interface FormRule {
@@ -318,4 +406,78 @@ export interface FormDesignerState {
 export interface Profile {
   name: string
   phone: string
+}
+
+/** 公告（ADR 0055）：type 1 通知 / 2 公告；status 0 草稿 / 1 已发布 / 2 已撤回。 */
+export interface NoticeFeedRecord {
+  id?: EntityId | ''
+  title?: string
+  type?: number
+  publisherName?: string
+  publishTime?: string
+  read?: boolean
+}
+
+export interface NoticeFeedItem extends NoticeFeedRecord {
+  id: EntityId
+  title: string
+  typeLabel: string
+  typeTagType: AuditTagType
+  publisherName: string
+  publishTime: string
+  read: boolean
+  readLabel: string
+  readTagType: AuditTagType
+}
+
+export interface NoticeDetailRecord extends NoticeFeedRecord {
+  publisherId?: EntityId
+  content?: string
+}
+
+/** 详情页的展示投影：缺省值统一成空串，正文原样交给唯一渲染面。 */
+export interface NoticeDetailView {
+  id: EntityId
+  title: string
+  type?: number
+  typeLabel: string
+  typeTagType: AuditTagType
+  publisherId: EntityId | ''
+  publisherName: string
+  publishTime: string
+  content: string
+  read: boolean
+}
+
+/** 管理侧（#220）：列表行不含正文，详情含草稿正文。 */
+export interface NoticeAdminRecord {
+  id?: EntityId | ''
+  title?: string
+  type?: number
+  status?: number
+  publisherId?: EntityId
+  publisherName?: string
+  publishTime?: string
+  createTime?: string
+  updateTime?: string
+  content?: string
+}
+
+export interface NoticeAdminListItem extends NoticeAdminRecord {
+  id: EntityId
+  title: string
+  typeLabel: string
+  statusLabel: string
+  statusTagType: AuditTagType
+}
+
+export interface NoticeWritePayload {
+  title: string
+  type: number
+  content: string
+}
+
+export interface NoticeImageResult {
+  id: EntityId
+  url: string
 }

@@ -1,6 +1,6 @@
 package com.lautung.oa.auth.service.impl;
 
-import com.lautung.oa.auth.grant.ConfigurationGrant;
+import com.lautung.oa.auth.grant.BackofficeGrant;
 import com.lautung.oa.auth.service.SysRoleMenuService;
 import com.lautung.oa.auth.service.PermissionCacheInvalidator;
 import com.lautung.oa.auth.utils.MenuHelper;
@@ -31,8 +31,10 @@ import java.util.stream.Collectors;
 @Service
 public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
 
+    // 落库形状：#221 把审批两棵树迁入 /system，根行的 path 是相对段 processSet/processMgr，
+    // 不是旧的顶层绝对路径；保护集必须跟着库里的 raw path 走，否则根目录可以被删掉或改名。
     private static final Set<String> PROTECTED_MENU_PATHS = Set.of(
-            "sysUser", "sysRole", "sysMenu", "/system", "/processSet", "/processMgr");
+            "/system/sysUser", "/system/sysRole", "/system/sysMenu", "/system", "processSet", "processMgr");
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
@@ -41,7 +43,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     private PermissionCacheInvalidator permissionCacheInvalidator;
 
     @Autowired
-    private ConfigurationGrant configurationGrant;
+    private BackofficeGrant backofficeGrant;
 
     @Override
     @Transactional
@@ -66,7 +68,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     //菜单列表接口
     @Override
     public List<SysMenu> findNodes() {
-        return MenuHelper.buildTree(configurationGrant.configurationMenus());
+        return MenuHelper.buildTree(backofficeGrant.backofficeMenus());
     }
 
     //删除菜单
@@ -95,7 +97,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     public List<SysMenu> findMenuByRoleId(Long roleId) {
         //1 只取配置类菜单，并只保留启用项
-        List<SysMenu> allSysMenuList = configurationGrant.configurationMenus().stream()
+        List<SysMenu> allSysMenuList = backofficeGrant.backofficeMenus().stream()
                 .filter(item -> Objects.equals(item.getStatus(), 1))
                 .collect(Collectors.toList());
 
@@ -132,24 +134,27 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .collect(Collectors.toSet());
 
         List<Long> requestedMenuIds = assginMenuVo.getMenuIdList();
-        List<Long> assignableMenuIds = new ArrayList<>();
+        Set<Long> requested = new LinkedHashSet<>();
         if (requestedMenuIds != null) {
-            for (Long menuId : requestedMenuIds) {
-                if (menuId == null) {
+            requestedMenuIds.stream().filter(Objects::nonNull).forEach(requested::add);
+        }
+        List<Long> assignableMenuIds = new ArrayList<>();
+        for (Long menuId : requested) {
+            SysMenu menu = baseMapper.selectById(menuId);
+            if (!backofficeGrant.isGrantableBackofficeMenu(menu)) {
+                // Drop legacy non-config-menu grants when the role is resubmitted.
+                // A newly requested invalid ID still rejects the whole assignment.
+                if (existingMenuIds.contains(menuId)) {
                     continue;
                 }
-
-                SysMenu menu = baseMapper.selectById(menuId);
-                if (!configurationGrant.isGrantableConfigurationMenu(menu)) {
-                    // Drop legacy button/work-menu grants when the role is resubmitted.
-                    // A newly requested invalid ID still rejects the whole assignment.
-                    if (existingMenuIds.contains(menuId)) {
-                        continue;
-                    }
-                    throw new BusinessException(201, "只能授予配置菜单");
-                }
-                assignableMenuIds.add(menuId);
+                throw new BusinessException(201, "只能授予配置菜单");
             }
+            // 隐藏页不单独构成权限（ADR 0056）：可见父页面未同时提交时不落库。
+            Long visibleParentId = backofficeGrant.visiblePageParentId(menu);
+            if (visibleParentId != null && !requested.contains(visibleParentId)) {
+                continue;
+            }
+            assignableMenuIds.add(menuId);
         }
 
         //1 根据角色id 删除菜单角色表 分配数据
@@ -177,15 +182,16 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (sysMenu != null && isProtectedMenuPath(sysMenu.getPath())) {
             throw new BusinessException(201, "菜单路由不可重定义");
         }
-        if (sysMenu == null || !configurationGrant.isConfigurationMenu(sysMenu)) {
+        if (sysMenu == null || !backofficeGrant.isBackofficeMenu(sysMenu)) {
             throw new BusinessException(201, "只能维护配置菜单");
         }
+        validateButtonShape(sysMenu, null);
         save(sysMenu);
     }
 
     @Override
     public void updateMenu(SysMenu sysMenu) {
-        if (sysMenu == null || !configurationGrant.isConfigurationMenu(sysMenu)) {
+        if (sysMenu == null || !backofficeGrant.isBackofficeMenu(sysMenu)) {
             throw new BusinessException(201, "只能维护配置菜单");
         }
         SysMenu existingMenu = sysMenu.getId() == null ? null : baseMapper.selectById(sysMenu.getId());
@@ -207,7 +213,54 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (landsAsPageWithoutComponent(sysMenu, existingMenu)) {
             throw new BusinessException(201, "类型为菜单时组件路径不能为空");
         }
+        validateButtonShape(sysMenu, existingMenu);
         updateById(sysMenu);
+    }
+
+    /**
+     * 按钮点的落库形状（ADR 0056）：必须挂在页面上，perms 必填，path/component 为空。
+     * 更新请求省略的字段沿用旧行，因此按最终形状判，而不是只看请求体。
+     */
+    private void validateButtonShape(SysMenu update, SysMenu existing) {
+        Integer type = update.getType() != null
+                ? update.getType()
+                : (existing == null ? null : existing.getType());
+        if (!Objects.equals(type, 2)) {
+            return;
+        }
+        Long parentId = update.getParentId() != null
+                ? update.getParentId()
+                : (existing == null ? null : existing.getParentId());
+        SysMenu parent = parentId == null ? null : baseMapper.selectById(parentId);
+        if (parent == null || !Objects.equals(parent.getType(), 1)) {
+            throw new BusinessException(201, "按钮必须挂在页面下");
+        }
+        String perms = update.getPerms() != null
+                ? update.getPerms()
+                : (existing == null ? null : existing.getPerms());
+        String path = update.getPath() != null
+                ? update.getPath()
+                : (existing == null ? null : existing.getPath());
+        String component = update.getComponent() != null
+                ? update.getComponent()
+                : (existing == null ? null : existing.getComponent());
+        if (!StringUtils.hasText(perms)) {
+            throw new BusinessException(201, "按钮权限标识不能为空");
+        }
+        if (StringUtils.hasText(path)) {
+            throw new BusinessException(201, "按钮的路由地址必须为空");
+        }
+        if (StringUtils.hasText(component)) {
+            throw new BusinessException(201, "按钮的组件路径必须为空");
+        }
+        LambdaQueryWrapper<SysMenu> duplicatePerms = new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getPerms, perms);
+        if (existing != null && existing.getId() != null) {
+            duplicatePerms.ne(SysMenu::getId, existing.getId());
+        }
+        if (baseMapper.selectCount(duplicatePerms) > 0) {
+            throw new BusinessException(201, "权限标识已存在");
+        }
     }
 
     /** 更新落库后的最终形状：请求字段为空沿用旧行。目录转成菜单页而组件仍为空时拒绝。 */
@@ -225,24 +278,4 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         return path != null && PROTECTED_MENU_PATHS.contains(path);
     }
 
-    //5 根据用户id获取用户可以操作按钮列表
-    @Override
-    public List<String> findUserPermsByUserId(Long userId) {
-        List<SysMenu> sysMenuList = findUserMenuEntities(userId);
-
-        //3 从查询出来的数据里面，获取可以操作按钮值的list集合，返回
-        List<String> permsList = sysMenuList.stream()
-                .filter(item -> item.getType() == 2)
-                .map(item -> item.getPerms())
-                .collect(Collectors.toList());
-
-        return permsList;
-    }
-
-    private List<SysMenu> findUserMenuEntities(Long userId) {
-        if (userId == null) {
-            return List.of();
-        }
-        return baseMapper.findMenuListByUserId(userId);
-    }
 }

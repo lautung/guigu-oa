@@ -5,9 +5,13 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.CustomUser;
 import com.lautung.oa.security.login.InvalidLoginInputException;
 import com.lautung.oa.security.login.LoginAttemptLimiter;
+import com.lautung.oa.security.login.LoginAudit;
+import com.lautung.oa.security.login.LoginEvent;
+import com.lautung.oa.security.login.LoginEventType;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -38,28 +42,34 @@ public class TokenLoginFilterTest {
 
     private static final String SECRET =
             "test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000";
+    private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
 
     private final LoginAttemptLimiter limiter = mock(LoginAttemptLimiter.class);
+    private final LoginAudit audit = mock(LoginAudit.class);
     private final JwtHelper jwtHelper = new JwtHelper(SECRET);
 
     @Test
     public void aBlockedAccountIsRefusedBeforeThePasswordIsChecked() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
         when(limiter.isBlocked("alice", "127.0.0.1")).thenReturn(true);
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         assertThrows(LockedException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
         verifyNoInteractions(manager);
-        verify(limiter, never()).recordFailure(any(), any());
+        verify(limiter, never()).recordFailure(any(), any(), any());
+
+        LoginEvent event = onlyAuditedEvent(false);
+        assertEquals(LoginEventType.LOCKED, event.type());
+        assertEquals("alice", event.username());
     }
 
     @Test
     public void aBlankUsernameIsRejectedBeforeTheLimiterAndManager() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
                 () -> filter.attemptAuthentication(
@@ -68,12 +78,13 @@ public class TokenLoginFilterTest {
         assertEquals("用户名不能为空", failure.getMessage());
         verifyNoInteractions(manager);
         verifyNoInteractions(limiter);
+        verifyNoInteractions(audit);
     }
 
     @Test
     public void aBlankPasswordIsRejectedWithoutCountingAFailure() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
                 () -> filter.attemptAuthentication(
@@ -82,12 +93,12 @@ public class TokenLoginFilterTest {
         assertEquals("密码不能为空", failure.getMessage());
         verifyNoInteractions(manager);
         verifyNoInteractions(limiter);
+        verifyNoInteractions(audit);
     }
 
     @Test
     public void anUnreadableBodyIsRejectedAsInvalidLoginInput() {
-        TokenLoginFilter filter = new TokenLoginFilter(
-                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(mock(AuthenticationManager.class));
 
         InvalidLoginInputException failure = assertThrows(InvalidLoginInputException.class,
                 () -> filter.attemptAuthentication(
@@ -95,12 +106,12 @@ public class TokenLoginFilterTest {
 
         assertEquals("请输入用户名和密码", failure.getMessage());
         verifyNoInteractions(limiter);
+        verifyNoInteractions(audit);
     }
 
     @Test
     public void anInvalidInputIsReportedWithItsFieldMessage() throws Exception {
-        TokenLoginFilter filter = new TokenLoginFilter(
-                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(mock(AuthenticationManager.class));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.unsuccessfulAuthentication(
@@ -117,11 +128,12 @@ public class TokenLoginFilterTest {
         AuthenticationManager manager = authentication -> {
             throw new BadCredentialsException("bad credentials");
         };
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         assertThrows(BadCredentialsException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
-        verify(limiter).recordFailure("alice", "127.0.0.1");
+        verify(limiter).recordFailure("alice", "127.0.0.1", USER_AGENT);
+        verifyNoInteractions(audit);
     }
 
     @Test
@@ -129,11 +141,12 @@ public class TokenLoginFilterTest {
         AuthenticationManager manager = authentication -> {
             throw new InternalAuthenticationServiceException("database is down");
         };
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         assertThrows(InternalAuthenticationServiceException.class,
                 () -> filter.attemptAuthentication(loginRequest("alice", "secret"), new MockHttpServletResponse()));
-        verify(limiter, never()).recordFailure(any(), any());
+        verify(limiter, never()).recordFailure(any(), any(), any());
+        verifyNoInteractions(audit);
     }
 
     @Test
@@ -141,7 +154,7 @@ public class TokenLoginFilterTest {
         CustomUser principal = user("alice", 1, 7L);
         AuthenticationManager manager = authentication ->
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of());
-        TokenLoginFilter filter = new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(manager);
 
         Authentication authentication = filter.attemptAuthentication(
                 loginRequest("alice", "111111"), new MockHttpServletResponse());
@@ -157,15 +170,20 @@ public class TokenLoginFilterTest {
         assertEquals(7L, jwtHelper.readAccessToken(token).tokenVersion());
         assertEquals(7L, jwtHelper.readRefreshToken(refreshToken).tokenVersion());
         verify(limiter).recordSuccess("alice", "127.0.0.1");
+
+        LoginEvent event = onlyAuditedEvent(true);
+        assertEquals(LoginEventType.SUCCESS, event.type());
+        assertEquals("alice", event.username());
+        assertEquals("127.0.0.1", event.sourceAddress());
+        assertEquals(USER_AGENT, event.userAgent(), "the event must carry the request user-agent");
     }
 
     @Test
-    public void aCorrectPasswordThatArrivesAfterAConcurrentLockGetsNoToken() throws Exception {
+    public void aCorrectPasswordThatArrivesAfterAConcurrentLockGetsNoTokenAndIsLogOnly() throws Exception {
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user("alice", 1), null, List.of());
         when(limiter.isBlocked("alice", "127.0.0.1")).thenReturn(true);
-        TokenLoginFilter filter = new TokenLoginFilter(
-                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(mock(AuthenticationManager.class));
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
@@ -176,14 +194,17 @@ public class TokenLoginFilterTest {
         assertTrue(body.get("message").asString().contains("频繁"));
         assertTrue(body.path("data").path("token").asString("").isEmpty());
         verify(limiter, never()).recordSuccess(any(), any());
+
+        LoginEvent event = onlyAuditedEvent(false);
+        assertEquals(LoginEventType.LOCKED, event.type());
+        assertEquals("登录尝试过于频繁，未签发令牌", event.msg());
     }
 
     @Test
-    public void aDisabledAccountIsRefusedWithoutClearingItsFailures() throws Exception {
+    public void aDisabledAccountIsRefusedWithoutClearingItsFailuresButIsAudited() throws Exception {
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user("alice", 0), null, List.of());
-        TokenLoginFilter filter = new TokenLoginFilter(
-                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(mock(AuthenticationManager.class));
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.successfulAuthentication(loginRequest("alice", "111111"), response, null, authentication);
@@ -193,12 +214,15 @@ public class TokenLoginFilterTest {
         assertEquals(209, body.get("code").asInt());
         assertEquals("账号已停用", body.get("message").asString());
         verify(limiter, never()).recordSuccess(any(), any());
+
+        LoginEvent event = onlyAuditedEvent(true);
+        assertEquals(LoginEventType.FAILURE, event.type());
+        assertEquals("账号已停用", event.msg());
     }
 
     @Test
     public void aLockedExceptionIsReportedWithTheTooFrequentMessage() throws Exception {
-        TokenLoginFilter filter = new TokenLoginFilter(
-                mock(AuthenticationManager.class), jwtHelper, limiter, VALIDATOR);
+        TokenLoginFilter filter = filter(mock(AuthenticationManager.class));
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.unsuccessfulAuthentication(
@@ -209,6 +233,23 @@ public class TokenLoginFilterTest {
         assertEquals(208, body.get("code").asInt());
         assertTrue(body.get("message").asString().contains("频繁"));
         assertTrue(body.path("data").path("token").asString("").isEmpty());
+    }
+
+    private TokenLoginFilter filter(AuthenticationManager manager) {
+        return new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR, audit);
+    }
+
+    /** Exactly one event through the durable or the log-only path, never both. */
+    private LoginEvent onlyAuditedEvent(boolean durable) {
+        ArgumentCaptor<LoginEvent> durableEvent = ArgumentCaptor.forClass(LoginEvent.class);
+        if (durable) {
+            verify(audit).record(durableEvent.capture());
+            verify(audit, never()).recordLogOnly(any());
+        } else {
+            verify(audit).recordLogOnly(durableEvent.capture());
+            verify(audit, never()).record(any());
+        }
+        return durableEvent.getValue();
     }
 
     private static CustomUser user(String username, int status) {
@@ -232,6 +273,7 @@ public class TokenLoginFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/admin/system/index/login");
         request.setContentType(MediaType.APPLICATION_JSON_VALUE);
         request.setContent(json.getBytes(StandardCharsets.UTF_8));
+        request.addHeader("User-Agent", USER_AGENT);
         return request;
     }
 }

@@ -75,7 +75,23 @@ const menuTree = [
     type: 0,
     path: '/system',
     children: [
-      { id: 2, name: '用户管理', type: 1, path: '/system/sysUser', select: true },
+      {
+        id: 2,
+        name: '用户管理',
+        type: 1,
+        path: '/system/sysUser',
+        select: true,
+        children: [
+          {
+            id: 21,
+            name: '新增用户',
+            type: 2,
+            perms: 'system:user:add',
+            select: true,
+            children: [],
+          },
+        ],
+      },
       { id: 9, name: '待办', type: 1, path: '/work/pending' },
     ],
   },
@@ -259,13 +275,13 @@ describe('AssignAuth page', () => {
       methods: {
         setCheckedKeys() {},
         getCheckedNodes() {
-          return [{ id: 2 }]
+          return [{ id: 2 }, { id: 21 }]
         },
       },
     }
   }
 
-  it('reads the granted menus and saves the checked ids', async () => {
+  it('reads the granted menus, keeps their buttons, and saves every checked id', async () => {
     const { pinia, recognition } = setupSession({
       recognition: fakeRecognition({ resume: vi.fn(async () => {}) }),
     })
@@ -284,11 +300,16 @@ describe('AssignAuth page', () => {
     expect(sysMenuApi.getByIdForAssign).toHaveBeenCalledWith('3')
     expect(wrapper.vm.fullTree).toHaveLength(1)
     expect(wrapper.vm.menuTree).toHaveLength(1)
+    expect(wrapper.vm.menuTree[0].children[0].children[0]).toMatchObject({
+      id: 21,
+      type: 2,
+      perms: 'system:user:add',
+    })
 
     wrapper.vm.save()
     await flushPromises()
 
-    expect(sysMenuApi.doAssign).toHaveBeenCalledWith('3', [2])
+    expect(sysMenuApi.doAssign).toHaveBeenCalledWith('3', [2, 21])
     expect(success).toHaveBeenCalledWith('保存成功')
     expect(recognition.resume).toHaveBeenCalled()
     expect(wrapper.vm.saving).toBe(false)

@@ -25,5 +25,9 @@ public class SysRole extends BaseEntity {
 	//描述
 	@TableField("description")
 	private String description;
+
+	//数据范围：1 全部 / 2 自定部门 / 3 本部门 / 4 本部门及以下 / 5 仅本人（ADR 0056）
+	@TableField("data_scope")
+	private Integer dataScope;
 }
 

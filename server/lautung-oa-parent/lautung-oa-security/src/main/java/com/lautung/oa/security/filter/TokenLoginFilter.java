@@ -9,6 +9,9 @@ import com.lautung.oa.security.custom.CustomUser;
 import com.lautung.oa.security.login.ClientAddress;
 import com.lautung.oa.security.login.InvalidLoginInputException;
 import com.lautung.oa.security.login.LoginAttemptLimiter;
+import com.lautung.oa.security.login.LoginAudit;
+import com.lautung.oa.security.login.LoginEvent;
+import com.lautung.oa.security.login.LoginEventType;
 import com.lautung.oa.security.response.AuthenticationFailure;
 import com.lautung.oa.security.response.AuthenticationRejections;
 import com.lautung.oa.vo.system.LoginVo;
@@ -42,17 +45,20 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
     private final JwtHelper jwtHelper;
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final Validator validator;
+    private final LoginAudit loginAudit;
 
     public TokenLoginFilter(
             AuthenticationManager authenticationManager,
             JwtHelper jwtHelper,
             LoginAttemptLimiter loginAttemptLimiter,
-            Validator validator
+            Validator validator,
+            LoginAudit loginAudit
     ) {
         this.setAuthenticationManager(authenticationManager);
         this.jwtHelper = jwtHelper;
         this.loginAttemptLimiter = loginAttemptLimiter;
         this.validator = validator;
+        this.loginAudit = loginAudit;
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
@@ -68,6 +74,9 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         String sourceAddress = ClientAddress.of(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // Refused before the password is checked, so a locked account cannot be guessed.
+            // Deliberately log-only: a locked-out attempt must not add a database row (ADR 0054).
+            loginAudit.recordLogOnly(new LoginEvent(
+                    LoginEventType.LOCKED, username, sourceAddress, userAgent(request), "登录尝试过于频繁，未校验密码"));
             throw new LockedException("too many failed login attempts");
         }
         try {
@@ -78,7 +87,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
             if (!(e instanceof InternalAuthenticationServiceException)) {
                 // A lookup or database outage is not a guessed password and must not count towards
                 // the limit; a wrong password and an unknown username both arrive as BadCredentials.
-                loginAttemptLimiter.recordFailure(username, sourceAddress);
+                loginAttemptLimiter.recordFailure(username, sourceAddress, userAgent(request));
             }
             throw e;
         }
@@ -113,13 +122,20 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
             throws IOException, ServletException {
         String username = auth.getName();
         String sourceAddress = ClientAddress.of(request);
+        String userAgent = userAgent(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // A concurrent request may have locked the account while this password was checked.
+            // Log-only: the password was checked but no token is issued (ADR 0054).
+            loginAudit.recordLogOnly(new LoginEvent(
+                    LoginEventType.LOCKED, username, sourceAddress, userAgent, "登录尝试过于频繁，未签发令牌"));
             AuthenticationRejections.write(response, AuthenticationFailure.INVALID_TOKEN, TOO_FREQUENT_MESSAGE);
             return;
         }
         CustomUser customUser = (CustomUser) auth.getPrincipal();
         if (!AccountStatus.isEnabled(customUser.getSysUser().getStatus())) {
+            // Disabled is not a guessed password (ADR 0023): it does not count, but audit keeps a row.
+            loginAudit.record(new LoginEvent(
+                    LoginEventType.FAILURE, username, sourceAddress, userAgent, "账号已停用"));
             AuthenticationRejections.write(response, AuthenticationFailure.ACCOUNT_DISABLED);
             return;
         }
@@ -128,11 +144,16 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                 customUser.getSysUser().getId(),
                 customUser.getSysUser().getUsername(),
                 customUser.getSysUser().tokenVersionOrDefault());
+        loginAudit.record(new LoginEvent(LoginEventType.SUCCESS, username, sourceAddress, userAgent, null));
 
         Map<String, Object> map = new HashMap<>();
         map.put("token", tokenPair.token());
         map.put("refreshToken", tokenPair.refreshToken());
         ResponseUtil.out(response, Result.ok(map));
+    }
+
+    private static String userAgent(HttpServletRequest request) {
+        return request.getHeader("User-Agent");
     }
 
     @Override

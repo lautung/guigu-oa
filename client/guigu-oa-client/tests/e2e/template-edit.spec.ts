@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 function deferred() {
   let resolve!: () => void
@@ -58,21 +59,21 @@ async function setup(
     if (path === '/admin/system/index/info')
       return json(route, {
         name: 'Alice',
-        configMenus:
+        menus:
           options.menus === false
             ? []
             : [
-                { path: '/processSet', title: '审批设置', type: 0, sort: 2 },
+                { path: '/system/processSet', title: '审批设置', type: 0, sort: 2 },
                 {
-                  path: '/processSet/processTemplate',
-                  parentPath: '/processSet',
+                  path: '/system/processSet/processTemplate',
+                  parentPath: '/system/processSet',
                   title: '审批模板',
                   type: 1,
                   sort: 2,
                 },
                 {
-                  path: '/processSet/templateSet',
-                  parentPath: '/processSet/processTemplate',
+                  path: '/system/processSet/templateSet',
+                  parentPath: '/system/processSet/processTemplate',
                   title: '审批模板设置',
                   type: 1,
                   hidden: true,
@@ -104,6 +105,7 @@ async function setup(
       return json(route, { records: [original], total: 1, pages: 1 })
     if (path.startsWith('/admin/process/findPending/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
   return { errors, saved, uploads }
@@ -123,7 +125,7 @@ async function file(page: Page, name: string) {
 test('真实设计器往返三步后提交完整设计，保存仍为未发布', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   const h = await setup(page)
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await page
     .locator('.el-form-item')
     .filter({ hasText: '审批名称' })
@@ -136,7 +138,7 @@ test('真实设计器往返三步后提交完整设计，保存仍为未发布',
   await expect(page.locator('._fc-m').getByRole('textbox')).toBeVisible()
   await page.getByRole('button', { name: '下一步', exact: true }).click()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved).toHaveLength(1)
   expect(h.saved[0]).toMatchObject({
     id: '97',
@@ -160,7 +162,7 @@ test('已有旧包时，新上传在途与失败均不能保存，明确恢复�
       await route.abort('failed')
     },
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   const uploading = page.waitForRequest('**/uploadProcessDefinition')
   await file(page, 'replacement.zip')
@@ -173,7 +175,7 @@ test('已有旧包时，新上传在途与失败均不能保存，明确恢复�
   await page.getByRole('button', { name: /恢复.*zip/ }).click()
   await expect(page.getByText('opaque/old.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
     processDefinitionPath: 'opaque/old.zip',
     processDefinitionKey: 'old',
@@ -195,7 +197,7 @@ test('上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B', as
       })
     },
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   await file(page, 'A.zip')
   await expect.poll(() => count).toBe(1)
@@ -206,7 +208,7 @@ test('上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B', as
   await responseA
   await expect(page.getByText('opaque/B.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
     processDefinitionPath: 'opaque/B.zip',
     processDefinitionKey: 'B',
@@ -217,7 +219,7 @@ test('上传 A 后选择 B，A 的迟到结果不能覆盖最终采用的 B', as
 test('保存断网后保留待确认快照，另开列表不释放限制，刷新不恢复未保存内容', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   const h = await setup(page, { save: (route) => route.abort('failed') })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await page
     .locator('.el-form-item')
     .filter({ hasText: '审批名称' })
@@ -258,7 +260,7 @@ test('保存断网后保留待确认快照，另开列表不释放限制，刷�
   const popup = page.context().waitForEvent('page')
   await page.getByRole('button', { name: '另开模板列表核实', exact: true }).click()
   const list = await popup
-  await expect(list).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(list).toHaveURL(/\/system\/processSet\/processTemplate$/)
   await expect(page.getByText('模板保存结果待确认', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
   expect(h.saved).toHaveLength(1)
@@ -277,7 +279,7 @@ test('认证恢复重发保存后断网，仍进入待确认且不再次自动�
   const h = await setup(page, {
     save: (route) => (++requests === 1 ? json(route, null, 208) : route.abort('failed')),
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page.getByText('模板保存结果待确认', { exact: true })).toBeVisible()
@@ -298,7 +300,7 @@ test('上传逐请求采用刷新后的凭据，再上传新包使用当前身�
             processDefinitionKey: 'renewed',
           }),
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   await file(page, 'renewed.zip')
   await expect(page.getByText('opaque/renewed.zip')).toBeVisible()
@@ -318,7 +320,7 @@ for (const [name, record] of [
   test(`${name}不会降级为空白新建或覆盖`, async ({ page }) => {
     test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
     const h = await setup(page, { record })
-    await page.goto('/processSet/templateSet?id=97')
+    await page.goto('/system/processSet/templateSet?id=97')
     await expect(page.getByRole('button', { name: /重试|重新读取/ })).toBeVisible()
     await expect(page.getByRole('button', { name: '下一步', exact: true })).toBeDisabled()
     expect(h.saved).toHaveLength(0)
@@ -328,7 +330,7 @@ for (const [name, record] of [
 
 test('手机尺寸与缺少配置菜单时不能占用模板编辑页', async ({ page }) => {
   const h = await setup(page, { menus: false })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await expect(page).toHaveURL(/\/work\/pending$/)
   await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
   expect(h.saved).toHaveLength(0)
@@ -338,7 +340,7 @@ test('手机尺寸与缺少配置菜单时不能占用模板编辑页', async ({
 test('有配置菜单的手机也不能占用模板编辑页', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) > 768, '验证手机配置进入规则')
   const h = await setup(page)
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await expect(page).toHaveURL(/\/work\/pending$/)
   await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
   expect(h.saved).toHaveLength(0)
@@ -347,7 +349,7 @@ test('有配置菜单的手机也不能占用模板编辑页', async ({ page }) 
 test('新建的合法空设计在有效上传后保存为未发布', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   const h = await setup(page)
-  await page.goto('/processSet/templateSet')
+  await page.goto('/system/processSet/templateSet')
   await page.getByLabel('审批名称', { exact: true }).fill('空设计新建')
   await page.getByText('请选择审批类型', { exact: true }).click()
   await page.getByRole('option', { name: '请假', exact: true }).click()
@@ -356,7 +358,7 @@ test('新建的合法空设计在有效上传后保存为未发布', async ({ pa
   await file(page, 'empty.zip')
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved).toHaveLength(1)
   expect(h.saved[0]).not.toHaveProperty('id')
   expect(h.saved[0]).toMatchObject({
@@ -377,7 +379,7 @@ test('B 成功后 C 返回不完整结果，明确恢复时采用最近成功的
         ? json(route, { processDefinitionPath: 'opaque/B.zip', processDefinitionKey: 'B' })
         : json(route, { processDefinitionPath: 'opaque/C.zip' }),
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   await file(page, 'B.zip')
   await expect(page.getByText('opaque/B.zip')).toBeVisible()
@@ -387,7 +389,7 @@ test('B 成功后 C 返回不完整结果，明确恢复时采用最近成功的
   await page.getByRole('button', { name: '恢复旧 zip', exact: true }).click()
   await expect(page.getByText('opaque/B.zip')).toBeVisible()
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved[0]).toMatchObject({
     processDefinitionPath: 'opaque/B.zip',
     processDefinitionKey: 'B',
@@ -404,7 +406,7 @@ test('保存中冻结内容，确认离开后重新进入同地址不接受旧�
       await json(route, null)
     },
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await page.getByLabel('审批名称', { exact: true }).fill('在途提交快照')
   await flowStep(page)
   const sending = page.waitForRequest('**/processTemplate/update')
@@ -415,7 +417,7 @@ test('保存中冻结内容，确认离开后重新进入同地址不接受旧�
   await page.getByRole('button', { name: '返回', exact: true }).click()
   await expect(page.getByRole('dialog')).toContainText('不撤销')
   await page.getByRole('button', { name: '确认离开', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   await page
     .locator('.el-table__row')
     .filter({ hasText: '模板时序测试' })
@@ -436,7 +438,7 @@ test('保存中冻结内容，确认离开后重新进入同地址不接受旧�
 test('普通离开可取消，缩到手机时优先强制离开并关闭丢弃确认', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '从桌面缩为手机')
   const h = await setup(page)
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await page.getByLabel('审批名称', { exact: true }).fill('尚未保存的编辑')
   await page.getByRole('link', { name: '待处理', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -455,7 +457,7 @@ test('普通离开可取消，缩到手机时优先强制离开并关闭丢弃�
 test('结束待确认编辑前说明重复写入风险，取消结束仍保留快照', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   const h = await setup(page, { save: (route) => json(route, null, 599) })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await flowStep(page)
   await page.getByRole('button', { name: '提交保存', exact: true }).click()
   await expect(page.getByText('模板保存结果待确认', { exact: true })).toBeVisible()
@@ -466,7 +468,7 @@ test('结束待确认编辑前说明重复写入风险，取消结束仍保留�
   await expect(page.getByRole('button', { name: '提交保存', exact: true })).toBeDisabled()
   await page.getByRole('alert').getByRole('button', { name: '结束本次编辑', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: '结束本次编辑', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   expect(h.saved).toHaveLength(1)
   await expect(page.getByText('保存失败', { exact: true })).toHaveCount(0)
   expect(h.errors).toEqual([])
@@ -484,10 +486,10 @@ test('读取在途离开后重开同地址，旧读取不覆盖本次内容', as
     },
   })
   const reading = page.waitForRequest('**/processTemplate/get/97')
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await reading
   await page.getByRole('link', { name: '审批模板', exact: true }).click()
-  await expect(page).toHaveURL(/\/processSet\/processTemplate$/)
+  await expect(page).toHaveURL(/\/system\/processSet\/processTemplate$/)
   await page.locator('.el-table__row').getByRole('button', { name: '编辑', exact: true }).click()
   await expect(page.getByLabel('审批名称', { exact: true })).toHaveValue('本次重新读取')
   const oldResponse = page.waitForResponse('**/processTemplate/get/97')
@@ -510,7 +512,7 @@ test('进入结果被替换时清理编辑，旧上传结果不影响重新进�
       })
     },
   })
-  await page.goto('/processSet/templateSet?id=97')
+  await page.goto('/system/processSet/templateSet?id=97')
   await page.getByLabel('审批名称', { exact: true }).fill('旧身份未保存内容')
   await flowStep(page)
   const uploading = page.waitForRequest('**/uploadProcessDefinition')

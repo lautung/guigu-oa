@@ -19,15 +19,34 @@ const baseURL = import.meta.env.VITE_APP_BASE_API || '/dev-api'
 
 export interface ScopedRequestConfig extends ApiRequestConfig, TransportScopeFields {}
 
+/** 二进制读的入口（公告图片）：响应体直通 Blob，不经过业务信封。 */
+export type BinaryRequestConfig = ApiRequestConfig & { responseType: 'blob' }
+
+export type BinaryClient = (config: ScopedRequestConfig & { responseType: 'blob' }) => Promise<Blob>
+
+export interface BinaryRequestOptions {
+  /** 背景取图失败不弹全局提示；默认与普通请求一致。 */
+  notifyNormalErrors?: boolean
+}
+
 type RefreshableRequestConfig = InternalAxiosRequestConfig & TransportScopeFields
+
+interface RequestTransport {
+  client: ApiClient
+  binary: BinaryClient
+}
 
 /**
  * 业务信封的统一处理（#145 后两个入口共用）：HTTP 200 响应体与 401/404/405 等
  * 错误响应体都是 {code,message,data} 信封。成功 200 直通；208 交给续期 module
  * （ADR 0048）裁决重放；其余按业务码拒绝。只有没有信封体的传输错误才走
  * transportFailure。
+ *
+ * 二进制读（`responseType: 'blob'`）是唯一例外：图片响应体不是信封，成功时直通
+ * Blob；错误响应仍是 4xx/5xx，落回传输失败分支（图片失败不弹全局提示，由调用方
+ * 保持原 `src`）。续期状态机与 JSON 入口共用同一个 transport。
  */
-export function createRequestClient(recognition: Recognition): ApiClient {
+function createTransport(recognition: Recognition): RequestTransport {
   const service = axios.create({ baseURL, timeout: 15000 })
   const resend = (config: RenewableRequestConfig) =>
     service(config) as unknown as Promise<ApiResponse<unknown>>
@@ -43,6 +62,10 @@ export function createRequestClient(recognition: Recognition): ApiClient {
   async function handleResponse(response: AxiosResponse<ApiResponse<unknown>>) {
     const config = response.config as RefreshableRequestConfig
     const context = config._recognition || recognition.capture(isInfo(config.url))
+    if (config.responseType === 'blob') {
+      recognition.assertCurrent(context)
+      return response.data as unknown as AxiosResponse
+    }
     return processEnvelope(config, context, response.data)
   }
 
@@ -82,7 +105,15 @@ export function createRequestClient(recognition: Recognition): ApiClient {
       )
     },
   )
-  return service as unknown as ApiClient
+  return {
+    client: service as unknown as ApiClient,
+    binary: ((config: ScopedRequestConfig & { responseType: 'blob' }) =>
+      service(config)) as unknown as BinaryClient,
+  }
+}
+
+export function createRequestClient(recognition: Recognition): ApiClient {
+  return createTransport(recognition).client
 }
 
 function isInfo(url = ''): boolean {
@@ -90,11 +121,24 @@ function isInfo(url = ''): boolean {
 }
 
 let client: ApiClient | undefined
+let binary: BinaryClient | undefined
 export function configureRequest(recognition: Recognition): void {
-  client = createRequestClient(recognition)
+  const transport = createTransport(recognition)
+  client = transport.client
+  binary = transport.binary
 }
 const request: ApiClient = (config) => {
   if (!client) throw new Error('认出 module 尚未接入')
   return client(config)
 }
+
+/** 二进制读的模块级入口：与 JSON 入口共用同一个 transport（含认证头与续期）。 */
+export function requestBinary(
+  config: BinaryRequestConfig,
+  options: BinaryRequestOptions = {},
+): Promise<Blob> {
+  if (!binary) throw new Error('认出 module 尚未接入')
+  return binary({ ...config, _notifyNormalErrors: options.notifyNormalErrors })
+}
+
 export default request

@@ -10,6 +10,7 @@
       :data="menuTree"
       node-key="id"
       show-checkbox
+      check-strictly
       default-expand-all
       :props="treeProps"
     />
@@ -26,6 +27,7 @@ import { defineComponent } from 'vue'
 
 import { doAssign, getByIdForAssign } from '@/api/sysMenu'
 import {
+  assignMenuLabel,
   collectCheckedIds,
   mergeAssignMenuIds,
   presentAssignableConfigMenus,
@@ -52,7 +54,7 @@ export default defineComponent({
       menuTree: [] as MenuNode[],
       treeProps: {
         children: 'children',
-        label: 'name',
+        label: (node: MenuNode) => assignMenuLabel(node),
       },
     }
   },

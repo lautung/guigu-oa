@@ -62,6 +62,24 @@ export interface RoleRecord {
   description?: string
 }
 
+/** 操作日志行（ADR 0054，#214）：查询面只读物理表，没有 is_deleted。 */
+export interface OperLogRecord {
+  id: number
+  title: string
+  businessType?: number
+  operId?: number
+  operName?: string
+  deptId?: number
+  deptName?: string
+  operParam?: string | null
+  resultCode?: number | null
+  resultMessage?: string | null
+  status?: number
+  errorMsg?: string | null
+  costTime?: number
+  createTime?: string
+}
+
 export interface MenuRecord {
   id: number
   parentId: number
@@ -75,20 +93,36 @@ export interface MenuRecord {
   children?: MenuRecord[]
 }
 
-export interface ConfigMenu {
+/** 登录日志行（ADR 0054，#216）：一行即全貌，没有详情端点。 */
+export interface LoginLogRecord {
+  id: number
+  username?: string
+  userId?: number | null
+  deptId?: number | null
+  ip?: string
+  browser?: string | null
+  os?: string | null
+  status?: number
+  msg?: string | null
+  createTime?: string
+}
+
+export interface BackofficeMenu {
   path: string
   parentPath?: string | null
   title: string
   type: number
-  hidden: boolean
+  hidden?: boolean
+  sort?: number | null
+  icon?: string | null
 }
 
 export interface InfoPayload {
   name?: string
-  roles?: string
+  roles?: string[]
   avatar?: string
-  configMenus: ConfigMenu[]
-  buttons: string[]
+  permissions: string[]
+  menus: BackofficeMenu[]
 }
 
 export interface TemplateRecord {

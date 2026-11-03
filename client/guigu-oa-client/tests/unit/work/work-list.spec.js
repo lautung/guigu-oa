@@ -465,10 +465,12 @@ describe('work/work-list', () => {
     })
 
     it('treats a config detail route as a read-only 视角 returning to its list', () => {
-      expect(workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })).toEqual({
+      expect(
+        workListPerspectiveFromRoute({ path: '/system/processMgr/process/5', meta: {} }),
+      ).toEqual({
         kind: null,
         title: '',
-        returnPath: '/processMgr/process',
+        returnPath: '/system/processMgr/process',
         readOnly: true,
         emphasis: '',
       })

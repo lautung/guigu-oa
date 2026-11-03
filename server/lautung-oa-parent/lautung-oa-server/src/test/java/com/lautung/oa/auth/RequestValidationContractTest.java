@@ -214,7 +214,7 @@ public class RequestValidationContractTest {
                         .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("菜单名称不能为空；上级菜单不能为空；路由地址不能为空；菜单类型不能为空"));
+                .andExpect(jsonPath("$.message").value("菜单名称不能为空；路由地址不能为空；上级菜单不能为空；菜单类型不能为空"));
     }
 
     @Test
@@ -225,7 +225,7 @@ public class RequestValidationContractTest {
                         .content("{\"parentId\":1,\"name\":\"异常菜单\",\"type\":5,\"path\":\"odd\",\"component\":\"system/sysUser/list\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("菜单类型只能为 0 或 1"));
+                .andExpect(jsonPath("$.message").value("菜单类型只能为 0、1 或 2"));
     }
 
     @Test
@@ -248,7 +248,7 @@ public class RequestValidationContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value(
-                        "菜单名称不能为空；类型为菜单时组件路径不能为空；上级菜单不能为空；路由地址不能为空"));
+                        "菜单名称不能为空；类型为菜单时组件路径不能为空；路由地址不能为空；上级菜单不能为空"));
     }
 
     @Test
@@ -281,7 +281,7 @@ public class RequestValidationContractTest {
                         .content("{\"id\":1,\"type\":9}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("菜单类型只能为 0 或 1"));
+                .andExpect(jsonPath("$.message").value("菜单类型只能为 0、1 或 2"));
     }
 
     @Test

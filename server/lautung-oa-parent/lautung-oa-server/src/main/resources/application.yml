@@ -3,6 +3,12 @@ spring:
     name: lautung-oa-server
   profiles:
     active: dev
+  servlet:
+    multipart:
+      # 公告图片单张上限 5MB（ADR 0055）：容器先放到 6MB，业务规则在 NoticeImageService
+      # 再拒 5MB 以上；不抬高附件（附件走预签名直传，不经容器上传）。
+      max-file-size: 6MB
+      max-request-size: 6MB
   datasource:
     hikari:
       data-source-properties:

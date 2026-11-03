@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
 function deferred() {
   let resolve!: () => void
@@ -91,7 +92,7 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
       state.infoCalls += 1
       return json(route, {
         name: 'Alice',
-        configMenus: [
+        menus: [
           { path: '/system', title: '系统管理', type: 0, sort: 1 },
           {
             path: '/system/sysUser',
@@ -116,6 +117,7 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
       state.assignments.push(route.request().postDataJSON() as Record<string, unknown>)
       return options.assign ? options.assign(route) : json(route, null)
     }
+    if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
   await page.goto('/system/sysUser')

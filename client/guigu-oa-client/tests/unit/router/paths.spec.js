@@ -5,6 +5,8 @@ import {
   PATHS,
   WORK_LIST_KINDS,
   assignAuthPath,
+  noticeDetailPath,
+  noticeEditPath,
   processInstanceDetailPath,
   processTemplateListPath,
   returnPathOfRoute,
@@ -44,6 +46,39 @@ describe('路径 module', () => {
     expect(auth.query).toEqual({ id: '3', roleName: '审批人' })
     expect(resolve(processInstanceDetailPath(12)).name).toBe('ProcessMgrDetail')
     expect(resolve(sysRolePath()).name).toBe('SysRole')
+    expect(resolve(PATHS.NOTICE).name).toBe('NoticeList')
+    expect(resolve(noticeDetailPath(19)).name).toBe('NoticeDetail')
+    expect(resolve(noticeDetailPath(19)).params.id).toBe('19')
+  })
+
+  it('公告是内置读面：不进配置组、不套页面授予', () => {
+    expect(resolve(PATHS.NOTICE).meta.menuGroup).toBeUndefined()
+    expect(resolve(PATHS.NOTICE).meta.title).toBe('全部公告')
+    expect(resolve(noticeDetailPath(1)).meta.menuGroup).toBeUndefined()
+    expect(resolve(noticeDetailPath(1)).meta.title).toBe('公告详情')
+  })
+
+  it('公告详情返回全部公告', () => {
+    expect(returnPathOfRoute(PATHS.NOTICE)).toBe(PATHS.NOTICE)
+    expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
+  })
+
+  it('公告发布管理页的列表与编辑路径落在配置组', () => {
+    expect(resolve(PATHS.SYSTEM_NOTICE).name).toBe('SysNotice')
+    expect(resolve(PATHS.SYSTEM_NOTICE).meta).toMatchObject({
+      title: '通知公告',
+      menuGroup: 'config',
+    })
+    expect(resolve(noticeEditPath()).name).toBe('SysNoticeEdit')
+    expect(resolve(noticeEditPath()).params.id).toBeUndefined()
+    expect(resolve(noticeEditPath(7)).name).toBe('SysNoticeEdit')
+    expect(resolve(noticeEditPath(7)).params.id).toBe('7')
+    expect(resolve(noticeEditPath(7)).meta).toMatchObject({
+      title: '编辑公告',
+      menuGroup: 'config',
+    })
+    expect(returnPathOfRoute(PATHS.SYSTEM_NOTICE)).toBe(PATHS.SYSTEM_NOTICE)
+    expect(returnPathOfRoute(noticeEditPath(7))).toBe(PATHS.SYSTEM_NOTICE)
   })
 
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {
@@ -57,6 +92,8 @@ describe('路径 module', () => {
       PATHS.SYSTEM_SYS_USER,
       PATHS.SYSTEM_SYS_ROLE,
       PATHS.SYSTEM_SYS_MENU,
+      PATHS.SYSTEM_LOG_OPER,
+      PATHS.SYSTEM_LOG_LOGIN,
       PATHS.SYSTEM_ASSIGN_AUTH,
       PATHS.PROCESS_SET_PROCESS_TYPE,
       PATHS.PROCESS_SET_PROCESS_TEMPLATE,
@@ -70,6 +107,17 @@ describe('路径 module', () => {
     )
   })
 
+  it('审批页面挂在系统管理下，旧根路径不再注册', () => {
+    expect(PATHS.PROCESS_SET).toBe('/system/processSet')
+    expect(PATHS.PROCESS_MGR).toBe('/system/processMgr')
+    expect(resolve('/system/processSet/processType').name).toBe('ProcessType')
+    expect(resolve('/system/processSet/processTemplate').name).toBe('ProcessTemplate')
+    expect(resolve('/system/processMgr/process').name).toBe('ProcessMgr')
+    expect(resolve('/processSet/processType').matched).toEqual([])
+    expect(resolve('/processSet/processTemplate').matched).toEqual([])
+    expect(resolve('/processMgr/process').matched).toEqual([])
+  })
+
   it('返回路径覆盖列表、详情、隐藏页与未知路径', () => {
     expect(returnPathOfRoute(PATHS.WORK_PENDING)).toBe(PATHS.WORK_PENDING)
     expect(returnPathOfRoute('/work/pending/12/task-9')).toBe(PATHS.WORK_PENDING)
@@ -78,7 +126,9 @@ describe('路径 module', () => {
     expect(returnPathOfRoute('/work/copied/23')).toBe(PATHS.WORK_COPIED)
     expect(returnPathOfRoute('/work/start/11')).toBe(PATHS.WORK_START)
     expect(returnPathOfRoute(PATHS.SYSTEM_SYS_USER)).toBe(PATHS.SYSTEM_SYS_USER)
-    expect(returnPathOfRoute('/processMgr/process/9')).toBe(PATHS.PROCESS_MGR_PROCESS)
+    expect(returnPathOfRoute(PATHS.SYSTEM_LOG_OPER)).toBe(PATHS.SYSTEM_LOG_OPER)
+    expect(returnPathOfRoute(PATHS.SYSTEM_LOG_LOGIN)).toBe(PATHS.SYSTEM_LOG_LOGIN)
+    expect(returnPathOfRoute('/system/processMgr/process/9')).toBe(PATHS.PROCESS_MGR_PROCESS)
     expect(returnPathOfRoute(PATHS.SYSTEM_ASSIGN_AUTH)).toBe(PATHS.SYSTEM_SYS_ROLE)
     expect(returnPathOfRoute(PATHS.PROCESS_SET_TEMPLATE_SET)).toBe(
       PATHS.PROCESS_SET_PROCESS_TEMPLATE,
@@ -92,7 +142,9 @@ describe('路径 module', () => {
         workListPerspectiveFromRoute({ path: workListPath(kind), meta: { workListKind: kind } }),
       ).toMatchObject({ kind, returnPath: workListPath(kind) })
     }
-    expect(workListPerspectiveFromRoute({ path: '/processMgr/process/5', meta: {} })).toEqual({
+    expect(
+      workListPerspectiveFromRoute({ path: '/system/processMgr/process/5', meta: {} }),
+    ).toEqual({
       kind: null,
       title: '',
       returnPath: PATHS.PROCESS_MGR_PROCESS,

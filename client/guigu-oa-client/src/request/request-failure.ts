@@ -44,10 +44,20 @@ export class BusinessRequestFailure extends RequestFailure {
   }
 }
 
+/** 页面/按钮点拒绝（ADR 0052）：即使作用域关闭普通错误提示，也要把服务端文案提示一次。 */
+export class PermissionRequestFailure extends BusinessRequestFailure {
+  constructor(message = '没有操作权限') {
+    super('forbidden', message, 205)
+  }
+}
+
 export function businessFailure(
   response: Partial<ApiResponse<unknown>>,
   operation: 'request' | 'refresh' = 'request',
 ): RequestFailure {
+  if (response.code === 205) {
+    return new PermissionRequestFailure(response.message || '没有操作权限')
+  }
   const kind =
     response.code === 208
       ? 'invalid'
@@ -112,7 +122,9 @@ export function rejectRequest(
   error: unknown,
 ): RecognitionFailure {
   const silent = context.silent || config._isRelevant?.() === false
-  return recognition.reject({ ...context, silent }, error, config._notifyNormalErrors !== false)
+  const notifyNormal =
+    config._notifyNormalErrors !== false || error instanceof PermissionRequestFailure
+  return recognition.reject({ ...context, silent }, error, notifyNormal)
 }
 
 /** #155：refresh 失败以「原业务请求被明确拒绝」的形状上报，统一带上原始业务码。 */
