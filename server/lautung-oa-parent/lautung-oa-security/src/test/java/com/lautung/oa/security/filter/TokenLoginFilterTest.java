@@ -8,6 +8,8 @@ import com.lautung.oa.security.login.LoginAttemptLimiter;
 import com.lautung.oa.security.login.LoginAudit;
 import com.lautung.oa.security.login.LoginEvent;
 import com.lautung.oa.security.login.LoginEventType;
+import com.lautung.oa.security.session.OnlineSessionLogin;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,7 @@ public class TokenLoginFilterTest {
 
     private final LoginAttemptLimiter limiter = mock(LoginAttemptLimiter.class);
     private final LoginAudit audit = mock(LoginAudit.class);
+    private final OnlineSessionRegistry onlineSessionRegistry = mock(OnlineSessionRegistry.class);
     private final JwtHelper jwtHelper = new JwtHelper(SECRET);
 
     @Test
@@ -171,6 +174,18 @@ public class TokenLoginFilterTest {
         assertEquals(7L, jwtHelper.readRefreshToken(refreshToken).tokenVersion());
         verify(limiter).recordSuccess("alice", "127.0.0.1");
 
+        // 登录成功与审计同点登记（ADR 0060）：sessionId 取自签发的令牌，姓名是登录快照。
+        ArgumentCaptor<OnlineSessionLogin> registration = ArgumentCaptor.forClass(OnlineSessionLogin.class);
+        verify(onlineSessionRegistry).register(registration.capture());
+        OnlineSessionLogin login = registration.getValue();
+        assertEquals(jwtHelper.readAccessToken(token).sessionId(), login.sessionId());
+        assertEquals(1L, login.userId());
+        assertEquals("alice", login.username());
+        assertEquals("爱丽丝", login.name());
+        assertEquals("127.0.0.1", login.ip());
+        assertEquals(USER_AGENT, login.userAgent());
+        assertEquals(7L, login.tokenVersion());
+
         LoginEvent event = onlyAuditedEvent(true);
         assertEquals(LoginEventType.SUCCESS, event.type());
         assertEquals("alice", event.username());
@@ -236,7 +251,7 @@ public class TokenLoginFilterTest {
     }
 
     private TokenLoginFilter filter(AuthenticationManager manager) {
-        return new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR, audit);
+        return new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR, audit, onlineSessionRegistry);
     }
 
     /** Exactly one event through the durable or the log-only path, never both. */
@@ -260,6 +275,7 @@ public class TokenLoginFilterTest {
         SysUser sysUser = new SysUser();
         sysUser.setId(1L);
         sysUser.setUsername(username);
+        sysUser.setName("爱丽丝");
         sysUser.setStatus(status);
         sysUser.setTokenVersion(tokenVersion);
         return new CustomUser(sysUser, List.of());

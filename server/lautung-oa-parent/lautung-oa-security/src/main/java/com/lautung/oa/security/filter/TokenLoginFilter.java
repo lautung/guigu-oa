@@ -14,6 +14,8 @@ import com.lautung.oa.security.login.LoginEvent;
 import com.lautung.oa.security.login.LoginEventType;
 import com.lautung.oa.security.response.AuthenticationFailure;
 import com.lautung.oa.security.response.AuthenticationRejections;
+import com.lautung.oa.security.session.OnlineSessionLogin;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.vo.system.LoginVo;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -46,19 +48,22 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final Validator validator;
     private final LoginAudit loginAudit;
+    private final OnlineSessionRegistry onlineSessionRegistry;
 
     public TokenLoginFilter(
             AuthenticationManager authenticationManager,
             JwtHelper jwtHelper,
             LoginAttemptLimiter loginAttemptLimiter,
             Validator validator,
-            LoginAudit loginAudit
+            LoginAudit loginAudit,
+            OnlineSessionRegistry onlineSessionRegistry
     ) {
         this.setAuthenticationManager(authenticationManager);
         this.jwtHelper = jwtHelper;
         this.loginAttemptLimiter = loginAttemptLimiter;
         this.validator = validator;
         this.loginAudit = loginAudit;
+        this.onlineSessionRegistry = onlineSessionRegistry;
         this.setPostOnly(false);
         this.setRequiresAuthenticationRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/admin/system/index/login"));
@@ -144,6 +149,15 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                 customUser.getSysUser().getId(),
                 customUser.getSysUser().getUsername(),
                 customUser.getSysUser().tokenVersionOrDefault());
+        // 与审计 SUCCESS 同点登记（ADR 0060）：一次登录一行，姓名是登录时快照。
+        onlineSessionRegistry.register(new OnlineSessionLogin(
+                tokenPair.sessionId(),
+                customUser.getSysUser().getId(),
+                customUser.getSysUser().getUsername(),
+                customUser.getSysUser().getName(),
+                sourceAddress,
+                userAgent,
+                customUser.getSysUser().tokenVersionOrDefault()));
         loginAudit.record(new LoginEvent(LoginEventType.SUCCESS, username, sourceAddress, userAgent, null));
 
         Map<String, Object> map = new HashMap<>();
