@@ -67,7 +67,9 @@ class FlywayMigrationContractTest {
             "oa_notice_read",
             "oa_notice_image",
             "sys_oper_log",
-            "sys_login_log");
+            "sys_login_log",
+            "sys_job",
+            "sys_job_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
@@ -78,7 +80,8 @@ class FlywayMigrationContractTest {
             "system:operLog:remove", "system:operLog:clean",
             "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
             "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish",
-            "monitor:online:forceLogout", "monitor:cache:clean");
+            "monitor:online:forceLogout", "monitor:cache:clean",
+            "monitor:job:edit", "monitor:job:run");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
