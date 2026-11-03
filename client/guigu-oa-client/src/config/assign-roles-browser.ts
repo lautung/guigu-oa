@@ -1,5 +1,4 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { configPermission } from '@/config/permission'
 import router from '@/router'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
@@ -69,11 +68,6 @@ export function useAssignRoles() {
         }
       },
       refreshOperator: () => recognition.recognize().then(() => undefined),
-      occupancy: () =>
-        configPermission(userStore.menus).occupancyOf({
-          path: router.currentRoute.value.path,
-          hasToken: !!userStore.token,
-        }),
       confirm: async (message, kind) => {
         const ending = kind === 'end-assignment'
         try {

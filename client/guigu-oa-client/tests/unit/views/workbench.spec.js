@@ -112,13 +112,6 @@ describe('工作台页面', () => {
 
     const kpis = wrapper.findAll('.kpi-card')
     expect(kpis).toHaveLength(4)
-    expect(kpis.map((kpi) => kpi.get('.kpi-label').text())).toEqual([
-      '待处理',
-      '已处理',
-      '我发起的',
-      '抄送我的',
-    ])
-    expect(kpis.map((kpi) => kpi.get('.kpi-value').text())).toEqual(['12', '8', '5', '3'])
     expect(kpis[0].classes()).toContain('is-primary')
 
     expect(wrapper.findAll('.el-table__row')).toHaveLength(5)

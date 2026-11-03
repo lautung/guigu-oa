@@ -9,7 +9,6 @@ import {
   initialShellTabs,
   isFixedTab,
   openShellTab,
-  type ShellTab,
 } from './shell-tabs'
 import {
   applyShellTheme,
@@ -38,14 +37,6 @@ export const useShellStore = defineStore('shell', {
       theme: preferences.theme as ShellTheme,
       density: preferences.density as ShellDensity,
     }
-  },
-  getters: {
-    activeTab(state): ShellTab | null {
-      return state.tabs.find((tab) => tab.path === state.activePath) || null
-    },
-    hasDrawer(state): boolean {
-      return state.drawerOpen
-    },
   },
   actions: {
     syncRoute({ path, fullPath, title }: ShellRouteInput): void {
@@ -84,14 +75,8 @@ export const useShellStore = defineStore('shell', {
     toggleCollapsed(): void {
       this.collapsed = !this.collapsed
     },
-    setCollapsed(collapsed: boolean): void {
-      this.collapsed = collapsed
-    },
     toggleDrawer(): void {
       this.drawerOpen = !this.drawerOpen
-    },
-    openDrawer(): void {
-      this.drawerOpen = true
     },
     closeDrawer(): void {
       this.drawerOpen = false

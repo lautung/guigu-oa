@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DESKTOP_HINT,
   SHELL_MODULE_DEFINITIONS,
   activeModuleKey,
   buildShellNav,
   isShellLeafActive,
   lastTabPathForModule,
   moduleTitleOf,
-  tabModuleKey,
 } from '@/shell/shell-nav'
 
 const SYSTEM_MENUS = [
@@ -152,7 +150,7 @@ describe('shell 一级导航', () => {
     expect(activeModuleKey('/monitor')).toBe('monitor')
     expect(activeModuleKey('/tool')).toBe('tool')
     expect(activeModuleKey('/unknown')).toBeNull()
-    expect(tabModuleKey('/work/processed?page=2')).toBe('work')
+    expect(activeModuleKey('/work/processed?page=2')).toBe('work')
   })
 
   it('finds the most recent tab for a module', () => {
@@ -177,9 +175,5 @@ describe('shell 一级导航', () => {
     expect(isShellLeafActive('/system/assignAuth', '/system/sysRole')).toBe(true)
     expect(isShellLeafActive('/work/pending', '/work/processed')).toBe(false)
     expect(isShellLeafActive('/work/started', '/work/start')).toBe(false)
-  })
-
-  it('exposes the narrow-screen desktop hint copy', () => {
-    expect(DESKTOP_HINT).toBe('建议桌面')
   })
 })

@@ -3,20 +3,7 @@
     <template #reference>
       <el-badge class="notice-badge" :value="badgeText" :hidden="unreadCount === 0">
         <button type="button" class="notice-bell" aria-label="公告" title="公告">
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M18 16v-5a6 6 0 1 0-12 0v5l-1.6 2h15.2L18 16Z" />
-            <path d="M10 21a2 2 0 0 0 4 0" />
-          </svg>
+          <component :is="shellIcon('Bell')" class="notice-bell-icon" />
         </button>
       </el-badge>
     </template>
@@ -43,6 +30,7 @@ import { useRouter } from 'vue-router'
 import { PATHS, noticeDetailPath } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import { useNoticeUnread } from '@/notice/unread-browser'
+import { shellIcon } from './shell-icons'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -95,11 +83,17 @@ defineExpose({ openNotice, openAll })
   width: 32px;
   height: 32px;
   padding: 0;
+  font-size: 20px;
   color: var(--el-text-color-regular);
   background: transparent;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.notice-bell-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .notice-bell:hover,

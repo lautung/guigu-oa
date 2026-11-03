@@ -96,40 +96,37 @@ function handleResize(): void {
   viewportWidth.value = window.innerWidth
 }
 
+function pushIfChanged(path: string): void {
+  if (path !== route.fullPath) void router.push(path)
+}
+
 function switchModule(key: ShellModuleKey): void {
   const module = navModules.value.find((candidate) => candidate.key === key)
   if (!module || !module.firstPath) return
   shell.closeDrawer()
   if (shell.activeModule === key) return
 
-  const target = lastTabPathForModule(shell.tabs, key) || module.firstPath
-  if (target && target !== route.fullPath) void router.push(target)
+  pushIfChanged(lastTabPathForModule(shell.tabs, key) || module.firstPath)
 }
 
 function activateTab(path: string): void {
-  if (path !== route.fullPath) void router.push(path)
+  pushIfChanged(path)
 }
 
 function closeTab(path: string): void {
-  const next = shell.closeTab(path)
-  if (next !== route.fullPath) void router.push(next)
+  pushIfChanged(shell.closeTab(path))
 }
 
 function handleTabCommand(command: string): void {
   if (command === 'current') {
-    const next = shell.closeCurrentTab()
-    if (next !== route.fullPath) void router.push(next)
+    pushIfChanged(shell.closeCurrentTab())
     return
   }
   if (command === 'others') {
-    const next = shell.closeOtherTabs()
-    if (next !== route.fullPath) void router.push(next)
+    pushIfChanged(shell.closeOtherTabs())
     return
   }
-  if (command === 'all') {
-    const next = shell.closeAllTabs()
-    if (next !== route.fullPath) void router.push(next)
-  }
+  if (command === 'all') pushIfChanged(shell.closeAllTabs())
 }
 
 watch(

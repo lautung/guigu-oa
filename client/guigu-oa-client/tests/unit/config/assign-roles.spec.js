@@ -22,7 +22,6 @@ function harness(overrides = {}) {
   const values = new Map()
   let entry = 'entry-alice'
   let generation = 1
-  let occupancy = { action: 'allow' }
   const storage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => {
@@ -44,7 +43,6 @@ function harness(overrides = {}) {
     })),
     assign: vi.fn(async () => ({ kind: 'saved' })),
     refreshOperator: vi.fn(async () => {}),
-    occupancy: () => occupancy,
     confirm: vi.fn(async () => true),
     dismissConfirm: vi.fn(),
     notify: (message, kind) => effects.push(['notify', message, kind]),
@@ -62,9 +60,6 @@ function harness(overrides = {}) {
     },
     setGeneration: (value) => {
       generation = value
-    },
-    occupancy: (value) => {
-      occupancy = value
     },
   }
 }
@@ -134,7 +129,6 @@ describe('分配角色 interface', () => {
       read: vi.fn((userId) => (String(userId) === String(alice.id) ? readA.promise : readB())),
     })
     const a = h.module.open(alice)
-    h.occupancy({ action: 'redirect', to: '/work/pending' })
     await a.requestLeave()
     const b = await open(h, bob)
     expect(b.view.value).toMatchObject({
@@ -387,12 +381,10 @@ describe('分配角色 interface', () => {
     expect(h.module.pendingUserIds.value).toEqual(['11'])
   })
 
-  it('releases without confirmation and discards the opening when occupancy no longer holds', async () => {
+  it('releases an unchanged opening without confirmation and rereads on the next opening', async () => {
     const h = harness()
     const page = await open(h)
-    page.select([2])
     expect(page.released.value).toBe(false)
-    h.occupancy({ action: 'redirect', to: '/work/pending' })
 
     expect(await page.requestLeave()).toBe(true)
     expect(page.released.value).toBe(true)
@@ -404,7 +396,7 @@ describe('分配角色 interface', () => {
     expect(again.view.value.selectedRoleIds).toEqual([1])
   })
 
-  it('lets an environment change preempt a pending confirmation without navigating twice', async () => {
+  it('lets an identity replacement preempt a pending confirmation without navigating twice', async () => {
     const confirming = deferred()
     const h = harness({ confirm: vi.fn(() => confirming.promise) })
     const page = await open(h)
@@ -412,10 +404,10 @@ describe('分配角色 interface', () => {
     const leaving = page.requestLeave()
     await vi.waitFor(() => expect(h.adapter.confirm).toHaveBeenCalledTimes(1))
 
-    h.occupancy({ action: 'redirect', to: '/work/pending' })
+    h.setEntry('entry-bob')
     await page.environmentChanged()
     expect(h.adapter.dismissConfirm).toHaveBeenCalledTimes(1)
-    expect(h.adapter.replace).toHaveBeenCalledWith('/work/pending')
+    expect(h.adapter.replace).toHaveBeenCalledWith(getDefaultPostLoginRoute())
     expect(page.released.value).toBe(true)
 
     confirming.resolve(false)
@@ -445,7 +437,7 @@ describe('分配角色 interface', () => {
     expect(second.adapter.confirm).not.toHaveBeenCalled()
   })
 
-  it('keeps the opening untouched when occupancy still holds and the identity is unchanged', async () => {
+  it('keeps the opening untouched when the identity is unchanged', async () => {
     const h = harness()
     const page = await open(h)
     page.select([2])
@@ -457,22 +449,22 @@ describe('分配角色 interface', () => {
     expect(h.adapter.replace).not.toHaveBeenCalled()
   })
 
-  it('forces a saving opening to release but keeps the record and the late operator refresh', async () => {
+  it('releases a saving opening on identity replacement and drops the late result', async () => {
     const flight = deferred()
     const h = harness({ assign: vi.fn(() => flight.promise) })
     const page = await open(h)
     const saving = page.save()
-    h.occupancy({ action: 'redirect', to: '/work/pending' })
+    h.setEntry('entry-bob')
     await page.environmentChanged()
     expect(page.released.value).toBe(true)
     expect(h.values.size).toBe(1)
-    expect(h.adapter.replace).toHaveBeenCalledWith('/work/pending')
+    expect(h.adapter.replace).toHaveBeenCalledWith(getDefaultPostLoginRoute())
     expect(h.adapter.confirm).not.toHaveBeenCalled()
 
     flight.resolve({ kind: 'saved' })
     await saving
-    expect(h.adapter.refreshOperator).toHaveBeenCalledTimes(1)
-    expect(h.effects).not.toContainEqual(['notify', '分配角色成功', 'success'])
+    expect(h.adapter.refreshOperator).not.toHaveBeenCalled()
+    expect(h.effects).toEqual([])
     expect(h.values.size).toBe(0)
   })
 })

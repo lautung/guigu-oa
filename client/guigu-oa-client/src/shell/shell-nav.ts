@@ -47,8 +47,6 @@ export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = [
   { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL, placeholder: true },
 ] as const
 
-export const DESKTOP_HINT = '建议桌面'
-
 const SYSTEM_EMPTY_HINT = '暂无可用页面'
 const PLACEHOLDER_EMPTY_HINT = '页面将在后续版本提供'
 
@@ -64,16 +62,16 @@ const WORK_ICONS: Record<string, string> = {
 /** 配置页按真实菜单形态分组：这三段前缀成为嵌套分组标题，其余 `/system/*` 平铺。 */
 const SYSTEM_GROUP_DEFINITIONS = [
   { title: '日志管理', prefix: `${PATHS.SYSTEM}/log/`, icon: 'Document' },
-  { title: '审批设置', prefix: `${PATHS.SYSTEM}/processSet/`, icon: 'Setting' },
-  { title: '审批管理', prefix: `${PATHS.SYSTEM}/processMgr/`, icon: 'Files' },
+  { title: '审批设置', prefix: `${PATHS.PROCESS_SET}/`, icon: 'Setting' },
+  { title: '审批管理', prefix: `${PATHS.PROCESS_MGR}/`, icon: 'Files' },
 ] as const
 
 /** 目录本身不是页面：即使菜单授予里带目录行，也不在侧栏渲染成可点项。 */
 const SYSTEM_DIRECTORY_ROOTS = new Set([
   PATHS.SYSTEM,
   `${PATHS.SYSTEM}/log`,
-  `${PATHS.SYSTEM}/processSet`,
-  `${PATHS.SYSTEM}/processMgr`,
+  PATHS.PROCESS_SET,
+  PATHS.PROCESS_MGR,
 ])
 
 function normalizePath(path: string | undefined): string {
@@ -188,11 +186,6 @@ export function activeModuleKey(path: string): ShellModuleKey | null {
   if (normalized === PATHS.MONITOR || normalized.startsWith(`${PATHS.MONITOR}/`)) return 'monitor'
   if (normalized === PATHS.TOOL || normalized.startsWith(`${PATHS.TOOL}/`)) return 'tool'
   return null
-}
-
-/** 标签落在哪个模块；切回一级时据此找回该模块最近的标签。 */
-export function tabModuleKey(path: string): ShellModuleKey | null {
-  return activeModuleKey(path)
 }
 
 export function moduleTitleOf(key: ShellModuleKey): string {

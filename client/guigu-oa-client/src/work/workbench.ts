@@ -127,7 +127,7 @@ export function workbenchNotices(items: readonly NoticeFeedItem[] = []): NoticeF
 }
 
 export function workbenchUnreadCount(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0
+  return typeof value === 'number' ? countOf(value) : 0
 }
 
 export interface WorkbenchRequests {

@@ -149,7 +149,6 @@ import {
   type TemplateEditorOpening,
 } from '@/config/template-editor'
 import { TEMPLATE_ICONS } from '@/config/process-template'
-import { configPermission } from '@/config/permission'
 import { templateSetPath } from '@/router/paths'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
@@ -169,11 +168,6 @@ if (!recognition) throw new Error('认出 module 尚未接入')
 const editor = createTemplateEditor({
   openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
   entryId: () => recognition.capture().entryId,
-  occupancy: () =>
-    configPermission(userStore.menus).occupancyOf({
-      path: route.path,
-      hasToken: !!userStore.token,
-    }),
   designer: async () => {
     await nextTick()
     if (!designer.value) throw new Error('表单设计器暂不可用，请重试或返回')
@@ -232,16 +226,15 @@ watch(
     if (route.path === templateSetPath()) open()
   },
 )
-watch(() => [userStore.token, userStore.menus] as const, environmentChanged, { deep: true })
+watch(() => userStore.token, environmentChanged)
 onMounted(() => {
   open()
-  window.addEventListener('resize', environmentChanged)
+  // 另一标签完成登录会让 entryId 变化，focus 是唯一不依赖 token watch 的察觉点。
   window.addEventListener('focus', environmentChanged)
 })
 onBeforeUnmount(() => {
   edit.value?.dispose()
   ElMessageBox.close()
-  window.removeEventListener('resize', environmentChanged)
   window.removeEventListener('focus', environmentChanged)
 })
 </script>

@@ -27,7 +27,7 @@
 | 手机 × WebKit | `mobile-webkit` | 390×844，`isMobile` + `hasTouch` | 全量 mock e2e + 六页扫描 |
 | 桌面 1440 扫描 | `desktop-1440-chromium` | 1440×900 | 只跑 `compatibility-pages.spec.ts` |
 
-- 平板 768 不设格：`isMobileViewport` 由客户端单测覆盖，「从桌面缩为手机强制离开」由既有 e2e 覆盖。
+- 平板 768 不设格：`isMobileViewport` 由客户端单测覆盖。
 - 1440 不新增全量 project：内容区 `max-width: 960px`，1440 与 1280 只差两侧留白，只对关键页截图并断言横向溢出。
 
 ## 3. 关键页（六页七态）
@@ -35,8 +35,8 @@
 登录、发起审批（模板列表 + 表单两态）、待处理列表、审批详情、配置-模板编辑、配置-分配角色。
 截图命名 `<engine>-<viewport>-<page>-<state>.png`，同时落一份同名 `.console.json`。
 
-配置页在手机视口是**产品规则**而非异常：直接访问落回待处理（ADR 0010/0015），扫描记录为
-`config-template-edit-forced-pending` / `config-assign-roles-forced-pending`。
+配置页在手机可打开，顶栏提示「建议桌面」（ADR 0051），扫描记录为
+`config-template-edit-basic-info` / `config-assign-roles-dialog`。
 
 ## 4. 判定口径（#114 §5）
 
@@ -47,8 +47,7 @@
 3. **办事主链路不可完成**：登录 → 发起审批（选模板、填表、抄送、附件、提交）→ 待处理 → 详情 → 通过/拒绝，
    复用 `workflow-smoke.spec.ts`。
 
-产品规则必过项（复用既有 e2e，不新增浏览器用例）：办事在手机视口可完成；配置页在手机或未授予时落到待处理；
-已打开配置页后变手机强制离开。
+产品规则必过项（复用既有 e2e，不新增浏览器用例）：办事在手机视口可完成；配置页在手机可打开，顶栏提示「建议桌面」（ADR 0051）。
 
 ### 豁免清单
 

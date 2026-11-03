@@ -92,14 +92,24 @@ function groupActive(group: ShellNavGroup): boolean {
 </script>
 
 <style lang="scss" scoped>
+/* ADR 0059 的深色侧栏例外：颜色只在这里定义，主题切换不改变侧栏。 */
 .app-sidebar {
+  --shell-sidebar-bg: #1f2733;
+  --shell-sidebar-text: #c8d1dc;
+  --shell-sidebar-muted: #7c8899;
+  --shell-sidebar-child-text: #aab6c4;
+  --shell-sidebar-strong: #fff;
+  --shell-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --shell-sidebar-border: rgba(255, 255, 255, 0.08);
+  --shell-sidebar-shadow: rgba(0, 0, 0, 0.25);
+
   width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #1f2733;
-  color: #c8d1dc;
+  background: var(--shell-sidebar-bg);
+  color: var(--shell-sidebar-text);
   transition: width 0.16s ease;
 }
 
@@ -118,7 +128,7 @@ function groupActive(group: ShellNavGroup): boolean {
 .side-label {
   padding: 6px 10px;
   font-size: 11px;
-  color: #7c8899;
+  color: var(--shell-sidebar-muted);
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
@@ -127,7 +137,7 @@ function groupActive(group: ShellNavGroup): boolean {
   margin: 8px 10px;
   font-size: 12px;
   line-height: 1.5;
-  color: #7c8899;
+  color: var(--shell-sidebar-muted);
 }
 
 .side-item {
@@ -137,7 +147,7 @@ function groupActive(group: ShellNavGroup): boolean {
   gap: 9px;
   padding: 8px 10px;
   border-radius: 7px;
-  color: #c8d1dc;
+  color: var(--shell-sidebar-text);
   font-size: 13px;
   text-decoration: none;
   white-space: nowrap;
@@ -145,18 +155,18 @@ function groupActive(group: ShellNavGroup): boolean {
 }
 
 .side-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--shell-sidebar-hover-bg);
+  color: var(--shell-sidebar-strong);
 }
 
 .side-item.active {
   background: var(--el-color-primary);
-  color: #fff;
+  color: var(--shell-sidebar-strong);
 }
 
 .side-item.is-child {
   padding-left: 34px;
-  color: #aab6c4;
+  color: var(--shell-sidebar-child-text);
 }
 
 .side-group {
@@ -168,14 +178,14 @@ function groupActive(group: ShellNavGroup): boolean {
   align-items: center;
   gap: 9px;
   padding: 9px 10px 5px;
-  color: #7c8899;
+  color: var(--shell-sidebar-muted);
   font-size: 11px;
   white-space: nowrap;
   text-decoration: none;
 }
 
 .side-group-title.is-link:hover {
-  color: #fff;
+  color: var(--shell-sidebar-strong);
 }
 
 .side-group-title.active {
@@ -188,15 +198,15 @@ function groupActive(group: ShellNavGroup): boolean {
   display: grid;
   place-items: center;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--shell-sidebar-border);
   background: transparent;
-  color: #7c8899;
+  color: var(--shell-sidebar-muted);
   cursor: pointer;
 }
 
 .collapse-btn:hover,
 .collapse-btn:focus-visible {
-  color: #fff;
+  color: var(--shell-sidebar-strong);
   outline: none;
 }
 
@@ -235,7 +245,7 @@ function groupActive(group: ShellNavGroup): boolean {
     z-index: 120;
     transform: translateX(-100%);
     transition: transform 0.18s ease;
-    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.25);
+    box-shadow: 12px 0 30px var(--shell-sidebar-shadow);
   }
 
   .app-sidebar.open {

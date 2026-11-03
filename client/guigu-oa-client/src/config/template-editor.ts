@@ -25,12 +25,10 @@ interface Designer {
   getRule(): unknown
   getOption(): unknown
 }
-type Occupancy = { action: 'allow' } | { action: 'redirect'; to: string }
 interface EditorOptions {
   openScope: () => RequestScope
   entryId(): string
   designer(): Promise<Designer>
-  occupancy(): Occupancy
   confirm(message: string, kind: 'leave' | 'end-editing'): Promise<boolean>
   dismissConfirm(): void
   notify(message: string, level: 'success' | 'warning'): void
@@ -394,8 +392,7 @@ export function createTemplateEditor(options: EditorOptions) {
       if (state.leaving || confirming) options.dismissConfirm()
     }
     async function requestLeave() {
-      const occupancy = options.occupancy()
-      if (!current() || occupancy.action === 'redirect') {
+      if (!current()) {
         dismissPendingConfirm()
         release()
         return true
@@ -436,13 +433,6 @@ export function createTemplateEditor(options: EditorOptions) {
         const liveEntry = options.entryId()
         release()
         if (liveEntry) options.replace(getDefaultPostLoginRoute())
-        return
-      }
-      const occupancy = options.occupancy()
-      if (occupancy.action === 'redirect') {
-        dismissPendingConfirm()
-        release()
-        options.replace(occupancy.to)
       }
     }
     async function back() {
