@@ -5,6 +5,7 @@ import db.migration.V113__AuditOperLogMenu;
 import db.migration.V115__AuditLoginLogMenu;
 import db.migration.V116__NoticeSchemaAndMenu;
 import db.migration.V117__MonitorOnlineMenu;
+import db.migration.V118__MonitorPages;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -132,6 +133,8 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '116' AND success = TRUE"));
         // 系统监控目录与在线用户页/强退按钮（#235，ADR 0060）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '117' AND success = TRUE"));
+        // 服务监控与数据监控页面（#236，ADR 0060）：无按钮点，页面授予覆盖读。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '118' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu "
                 + "WHERE path = '/monitor' AND parent_id = 0 AND type = 0 AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
@@ -144,6 +147,21 @@ class FlywayMigrationContractTest {
                 + "JOIN sys_menu m ON m.id = rm.menu_id "
                 + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
                 + "AND (m.path = '/monitor/online' OR m.perms = 'monitor:online:forceLogout')"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/server' AND c.type = 1 "
+                + "AND c.component = 'monitor/server/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/data' AND c.type = 1 "
+                + "AND c.component = 'monitor/data/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(2, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.path IN ('/monitor/server', '/monitor/data')"));
+        // ADR 0056/0060：监控只读页不设按钮点。
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b WHERE b.type = 2 AND b.is_deleted = 0 "
+                + "AND b.perms LIKE 'monitor:server:%'"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b WHERE b.type = 2 AND b.is_deleted = 0 "
+                + "AND b.perms LIKE 'monitor:data:%'"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = '/system/notice' AND c.type = 1 "
                 + "AND c.component = 'system/notice/list' AND p.path = '/system' AND p.type = 0"));
@@ -265,7 +283,9 @@ class FlywayMigrationContractTest {
                         "/system/log/loginLog",
                         "/system/notice",
                         "/monitor",
-                        "/monitor/online")))
+                        "/monitor/online",
+                        "/monitor/server",
+                        "/monitor/data")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -291,6 +311,8 @@ class FlywayMigrationContractTest {
             // 通知公告（#218）：Java 迁移的建表/索引与 SQL 种子都必须可重复执行。
             new V116__NoticeSchemaAndMenu().migrate(context);
             new V117__MonitorOnlineMenu().migrate(context);
+            // 监控页面种子（#236）也必须幂等可重放。
+            new V118__MonitorPages().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

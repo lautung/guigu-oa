@@ -1,5 +1,6 @@
 package com.lautung.oa.observability;
 
+import com.lautung.oa.framework.observability.SlowSqlCollector;
 import com.lautung.oa.framework.observability.SlowSqlLoggingInterceptor;
 import org.apache.ibatis.builder.StaticSqlSource;
 import org.apache.ibatis.executor.Executor;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -116,6 +118,51 @@ class SlowSqlLoggingInterceptorTest {
         String logs = output.toString();
         assertTrue(logs.contains("slow sql statement=" + STATEMENT_ID), logs);
         assertTrue(logs.contains("sql=<unavailable>"), logs);
+    }
+
+    /** ADR 0060：collector 在打 WARN 的同点写入；未超阈值不写，缓冲与日志同生同灭。 */
+    @Test
+    void overThresholdAlsoRecordsIntoTheCollectorAtTheSamePoint() throws Throwable {
+        SlowSqlCollector collector = new SlowSqlCollector();
+        SlowSqlLoggingInterceptor interceptor = new SlowSqlLoggingInterceptor(0L, collector);
+        Executor executor = executorQueryReturning(List.of("row-1", "row-2"));
+
+        interceptor.intercept(queryInvocation(executor, Map.of("id", 1L)));
+
+        List<SlowSqlCollector.SlowSqlEntry> entries = collector.snapshot();
+        assertEquals(1, entries.size());
+        assertEquals(STATEMENT_ID, entries.get(0).statementId());
+        assertEquals(2L, entries.get(0).rows());
+        assertEquals(SQL_TEXT, entries.get(0).sql());
+        assertTrue(entries.get(0).timestamp() > 0);
+    }
+
+    @Test
+    void underThresholdDoesNotRecordIntoTheCollector() throws Throwable {
+        SlowSqlCollector collector = new SlowSqlCollector();
+        SlowSqlLoggingInterceptor interceptor = new SlowSqlLoggingInterceptor(Long.MAX_VALUE, collector);
+        Executor executor = executorQueryReturning(List.of("row-1"));
+
+        interceptor.intercept(queryInvocation(executor, Map.of("id", 1L)));
+
+        assertTrue(collector.snapshot().isEmpty(), "未超阈值不应写入缓冲");
+    }
+
+    /** 缓冲带参数等于给 API 留一条绕过打码的路径（ADR 0039）：记录的是原文 SQL，参数不落缓冲。 */
+    @Test
+    void collectorEntryCarriesSqlButNotParameters() throws Throwable {
+        SlowSqlCollector collector = new SlowSqlCollector();
+        SlowSqlLoggingInterceptor interceptor = new SlowSqlLoggingInterceptor(0L, collector);
+        Executor executor = executorQueryReturning(List.of("row-1"));
+
+        interceptor.intercept(queryInvocation(executor, Map.of("phone", "13800138000")));
+
+        List<SlowSqlCollector.SlowSqlEntry> entries = collector.snapshot();
+        assertEquals(1, entries.size());
+        assertEquals("SELECT id, username FROM sys_user WHERE id = ?", entries.get(0).sql());
+        String entryText = entries.get(0).toString();
+        org.junit.jupiter.api.Assertions.assertFalse(entryText.contains("13800138000"),
+                "缓冲条目不得携带参数值");
     }
 
     private Executor executorQueryReturning(List<?> rows) throws java.sql.SQLException {
