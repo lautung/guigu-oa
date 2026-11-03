@@ -1,7 +1,6 @@
 import { configPermission } from '@/config/permission'
 import { WORK_BUILTIN_ITEMS } from '@/navigation/constants'
 import { PATHS, returnPathOfRoute } from '@/router/paths'
-import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
 export type ShellModuleKey = 'workbench' | 'work' | 'system' | 'monitor' | 'tool'
@@ -24,7 +23,10 @@ export interface ShellModule {
   icon: string
   items: ShellNavLeaf[]
   groups: ShellNavGroup[]
+  /** 一级入口落点；空串表示当前用户没有可进入的页面（顶栏置灰）。 */
   firstPath: string
+  /** 侧栏空态文案；有页面时为空串。 */
+  emptyHint: string
 }
 
 export interface ShellModuleDefinition {
@@ -32,18 +34,23 @@ export interface ShellModuleDefinition {
   title: string
   icon: string
   prefix: string
+  /** 暂无页面的模块：保留一级入口与空态，不渲染死链。 */
+  placeholder?: boolean
 }
 
-/** 五个一级模块定义（ADR 0059）。没有页面或授予的模块不进程导航，不显示死入口。 */
+/** 五个一级模块定义（ADR 0059）：顶部固定五项，不随权限增减。 */
 export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = [
   { key: 'workbench', title: '工作台', icon: 'HomeFilled', prefix: PATHS.WORKBENCH },
   { key: 'work', title: '办事', icon: 'Tickets', prefix: PATHS.WORK },
   { key: 'system', title: '系统管理', icon: 'Setting', prefix: PATHS.SYSTEM },
-  { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: '/monitor' },
-  { key: 'tool', title: '系统工具', icon: 'Tools', prefix: '/tool' },
+  { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: PATHS.MONITOR, placeholder: true },
+  { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL, placeholder: true },
 ] as const
 
 export const DESKTOP_HINT = '建议桌面'
+
+const SYSTEM_EMPTY_HINT = '暂无可用页面'
+const PLACEHOLDER_EMPTY_HINT = '页面将在后续版本提供'
 
 const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_START]: 'EditPen',
@@ -53,6 +60,21 @@ const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_COPIED]: 'Share',
   [PATHS.WORK_PROFILE]: 'User',
 }
+
+/** 配置页按真实菜单形态分组：这三段前缀成为嵌套分组标题，其余 `/system/*` 平铺。 */
+const SYSTEM_GROUP_DEFINITIONS = [
+  { title: '日志管理', prefix: `${PATHS.SYSTEM}/log/`, icon: 'Document' },
+  { title: '审批设置', prefix: `${PATHS.SYSTEM}/processSet/`, icon: 'Setting' },
+  { title: '审批管理', prefix: `${PATHS.SYSTEM}/processMgr/`, icon: 'Files' },
+] as const
+
+/** 目录本身不是页面：即使菜单授予里带目录行，也不在侧栏渲染成可点项。 */
+const SYSTEM_DIRECTORY_ROOTS = new Set([
+  PATHS.SYSTEM,
+  `${PATHS.SYSTEM}/log`,
+  `${PATHS.SYSTEM}/processSet`,
+  `${PATHS.SYSTEM}/processMgr`,
+])
 
 function normalizePath(path: string | undefined): string {
   const value = (path || '').split('?')[0].split('#')[0]
@@ -85,6 +107,7 @@ function workbenchModule(): ShellModule {
     items,
     groups: [],
     firstPath: PATHS.WORKBENCH,
+    emptyHint: '',
   }
 }
 
@@ -101,40 +124,27 @@ function workModule(): ShellModule {
     items,
     groups: [],
     firstPath: items[0]?.path || PATHS.WORK,
+    emptyHint: '',
   }
 }
 
-function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule | null {
+function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
   const permission = configPermission([...menus])
-  if (!permission.hasConfigPermission) return null
+  const leaves = permission.grantedMenus
+    .flatMap((root) => leavesOf(root))
+    .filter((leaf) => !SYSTEM_DIRECTORY_ROOTS.has(leaf.path))
 
-  const items: ShellNavLeaf[] = []
-  const groups: ShellNavGroup[] = []
-
-  function addNode(node: SidebarItem, depth: number): void {
-    const path = normalizePath(node.path)
-
-    if (!node.children?.length) {
-      if (depth === 0 && path === PATHS.SYSTEM) return
-      items.push(leafOf(node))
-      return
-    }
-
-    if (depth === 0 && path === PATHS.SYSTEM) {
-      node.children.forEach((child) => addNode(child, 1))
-      return
-    }
-
-    const leaves = node.children.flatMap((child) => leavesOf(child))
-    if (!leaves.length) return
-    groups.push({ title: node.title, icon: node.icon || 'Folder', items: leaves })
-  }
-
-  permission.grantedMenus.forEach((root) => addNode(root, 0))
+  const items = leaves.filter(
+    (leaf) => !SYSTEM_GROUP_DEFINITIONS.some((group) => leaf.path.startsWith(group.prefix)),
+  )
+  const groups: ShellNavGroup[] = SYSTEM_GROUP_DEFINITIONS.flatMap((definition) => {
+    const groupItems = leaves.filter((leaf) => leaf.path.startsWith(definition.prefix))
+    return groupItems.length
+      ? [{ title: definition.title, icon: definition.icon, items: groupItems }]
+      : []
+  })
 
   const firstPath = items[0]?.path || groups[0]?.items[0]?.path || ''
-  if (!firstPath) return null
-
   return {
     key: 'system',
     title: '系统管理',
@@ -142,56 +152,41 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule | null
     items,
     groups,
     firstPath,
+    emptyHint: firstPath ? '' : SYSTEM_EMPTY_HINT,
   }
 }
 
-/** 监控与工具暂无页面；有静态路由后再按同一形状派生，绝不渲染空模块。 */
-function staticModule(definition: ShellModuleDefinition): ShellModule | null {
-  const hasPages = ROUTE_GROUP_ENTRIES.some(
-    (entry) => entry.path === definition.prefix || entry.path.startsWith(`${definition.prefix}/`),
-  )
-  if (!hasPages) return null
-
+function placeholderModule(definition: ShellModuleDefinition): ShellModule {
   return {
     key: definition.key,
     title: definition.title,
     icon: definition.icon,
     items: [],
     groups: [],
-    firstPath: '',
+    firstPath: definition.prefix,
+    emptyHint: PLACEHOLDER_EMPTY_HINT,
   }
 }
 
-/** 从静态路由与 `/info.menus` 派生当前可进入的一级模块。 */
+/** 五个一级模块固定返回；系统管理只由已授予页面填充，监控/工具保留空态入口。 */
 export function buildShellNav(menus: BackofficeMenuEntry[] = []): ShellModule[] {
-  const modules = new Map<ShellModuleKey, ShellModule>()
-  modules.set('workbench', workbenchModule())
-  modules.set('work', workModule())
-
-  const system = systemModule(menus)
-  if (system) modules.set('system', system)
-
-  for (const definition of SHELL_MODULE_DEFINITIONS) {
-    if (modules.has(definition.key)) continue
-    const module = staticModule(definition)
-    if (module?.firstPath) modules.set(definition.key, module)
-  }
-
-  return SHELL_MODULE_DEFINITIONS.flatMap((definition) => {
-    const module = modules.get(definition.key)
-    return module ? [module] : []
+  return SHELL_MODULE_DEFINITIONS.map((definition) => {
+    if (definition.key === 'workbench') return workbenchModule()
+    if (definition.key === 'work') return workModule()
+    if (definition.key === 'system') return systemModule(menus)
+    return placeholderModule(definition)
   })
 }
 
-/** 当前路径属于哪个一级模块。路径优先于机构，未知路径不属于任何模块。 */
+/** 当前路径属于哪个一级模块。路径优先，未知路径不属于任何模块。 */
 export function activeModuleKey(path: string): ShellModuleKey | null {
   const normalized = normalizePath(path)
   if (normalized === PATHS.WORKBENCH || normalized === PATHS.NOTICE) return 'workbench'
   if (normalized.startsWith(`${PATHS.NOTICE}/`)) return 'workbench'
   if (normalized === PATHS.WORK || normalized.startsWith(`${PATHS.WORK}/`)) return 'work'
   if (normalized === PATHS.SYSTEM || normalized.startsWith(`${PATHS.SYSTEM}/`)) return 'system'
-  if (normalized === '/monitor' || normalized.startsWith('/monitor/')) return 'monitor'
-  if (normalized === '/tool' || normalized.startsWith('/tool/')) return 'tool'
+  if (normalized === PATHS.MONITOR || normalized.startsWith(`${PATHS.MONITOR}/`)) return 'monitor'
+  if (normalized === PATHS.TOOL || normalized.startsWith(`${PATHS.TOOL}/`)) return 'tool'
   return null
 }
 

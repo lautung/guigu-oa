@@ -11,7 +11,9 @@
         @mousedown.middle.prevent="$emit('close', tab.path)"
         @auxclick.middle.prevent="$emit('close', tab.path)"
       >
-        <el-icon v-if="isFixedTab(tab.path)" class="tab-pin"><HomeFilled /></el-icon>
+        <el-icon v-if="isFixedTab(tab.path)" class="tab-pin">
+          <component :is="shellIcon('HomeFilled')" />
+        </el-icon>
         <span class="tab-title" :title="tab.title">{{ tab.title }}</span>
         <el-icon
           v-if="!isFixedTab(tab.path)"
@@ -19,14 +21,14 @@
           title="关闭"
           @click.stop="$emit('close', tab.path)"
         >
-          <Close />
+          <component :is="shellIcon('Close')" />
         </el-icon>
       </button>
     </div>
 
     <el-dropdown trigger="click" @command="onCommand">
       <button type="button" class="tab-more" title="标签操作" aria-label="标签操作">
-        <el-icon><ArrowDown /></el-icon>
+        <el-icon><component :is="shellIcon('ArrowDown')" /></el-icon>
       </button>
       <template #dropdown>
         <el-dropdown-menu>
@@ -40,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, Close, HomeFilled } from '@element-plus/icons-vue'
 import { isFixedTab, type ShellTab } from './shell-tabs'
+import { shellIcon } from './shell-icons'
 
 defineProps<{
   tabs: ShellTab[]

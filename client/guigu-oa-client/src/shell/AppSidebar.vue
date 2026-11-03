@@ -48,6 +48,8 @@
           <span>{{ leaf.title }}</span>
         </router-link>
       </div>
+
+      <p v-if="module?.emptyHint" class="side-empty">{{ module.emptyHint }}</p>
     </div>
 
     <button
@@ -58,13 +60,12 @@
       :aria-label="collapsed ? '展开菜单' : '收起菜单'"
       @click="$emit('toggle-collapse')"
     >
-      <el-icon><component :is="collapsed ? Expand : Fold" /></el-icon>
+      <el-icon><component :is="shellIcon(collapsed ? 'Expand' : 'Fold')" /></el-icon>
     </button>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { Expand, Fold } from '@element-plus/icons-vue'
 import { isShellLeafActive, type ShellModule, type ShellNavGroup } from './shell-nav'
 import { shellIcon } from './shell-icons'
 
@@ -120,6 +121,13 @@ function groupActive(group: ShellNavGroup): boolean {
   color: #7c8899;
   letter-spacing: 0.06em;
   white-space: nowrap;
+}
+
+.side-empty {
+  margin: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7c8899;
 }
 
 .side-item {
@@ -194,7 +202,8 @@ function groupActive(group: ShellNavGroup): boolean {
 
 .collapsed .side-label,
 .collapsed .side-item span,
-.collapsed .side-group-title span {
+.collapsed .side-group-title span,
+.collapsed .side-empty {
   display: none;
 }
 

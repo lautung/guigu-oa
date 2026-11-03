@@ -115,6 +115,11 @@ describe('面包屑', () => {
     ).toEqual(['首页', '系统管理', '用户管理'])
   })
 
+  it('renders 首页 / 一级 for the empty 监控 and 工具 modules', () => {
+    expect(buildBreadcrumb({ path: '/monitor', title: '系统监控' })).toEqual(['首页', '系统监控'])
+    expect(buildBreadcrumb({ path: '/tool', title: '系统工具' })).toEqual(['首页', '系统工具'])
+  })
+
   it('renders only 首页 for unknown paths', () => {
     expect(buildBreadcrumb({ path: '/unknown', title: '' })).toEqual(['首页', '办事', '待处理'])
   })

@@ -24,6 +24,21 @@ const SYSTEM_MENUS = [
     type: 1,
     sort: 1,
   },
+  { path: '/system/processMgr', parentPath: '/system', title: '审批管理', type: 0, sort: 4 },
+  {
+    path: '/system/processMgr/process',
+    parentPath: '/system/processMgr',
+    title: '审批实例查询',
+    type: 1,
+    sort: 1,
+  },
+]
+
+/** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
+const FLAT_SYSTEM_MENUS = [
+  { path: '/system/log/operLog', title: '操作日志', type: 1, sort: 2 },
+  { path: '/system/processSet/processTemplate', title: '审批模板', type: 1, sort: 3 },
+  { path: '/system/sysUser', title: '用户管理', type: 1, sort: 1 },
 ]
 
 describe('shell 一级导航', () => {
@@ -37,10 +52,28 @@ describe('shell 一级导航', () => {
     ])
   })
 
-  it('always exposes 工作台 and the six 办事 built-ins', () => {
+  it('always returns the five modules, even without any grant or page', () => {
     const modules = buildShellNav([])
 
-    expect(modules.map((module) => module.key)).toEqual(['workbench', 'work'])
+    expect(modules.map((module) => module.key)).toEqual([
+      'workbench',
+      'work',
+      'system',
+      'monitor',
+      'tool',
+    ])
+    const system = modules.find((module) => module.key === 'system')
+    expect(system.items).toEqual([])
+    expect(system.groups).toEqual([])
+    expect(system.firstPath).toBe('')
+    expect(system.emptyHint).toBe('暂无可用页面')
+    expect(modules.find((module) => module.key === 'monitor').firstPath).toBe('/monitor')
+    expect(modules.find((module) => module.key === 'tool').firstPath).toBe('/tool')
+  })
+
+  it('always exposes 工作台 entries and the six 办事 built-ins', () => {
+    const modules = buildShellNav([])
+
     expect(modules[0].items.map((item) => item.title)).toEqual(['工作台', '全部公告'])
     expect(modules[1].items.map((item) => item.title)).toEqual([
       '发起审批',
@@ -53,27 +86,48 @@ describe('shell 一级导航', () => {
     expect(modules[1].firstPath).toBe('/work/start')
   })
 
-  it('hides 系统管理 until a page is granted, and never shows empty 监控/工具', () => {
-    expect(buildShellNav([]).some((module) => module.key === 'system')).toBe(false)
-    expect(
-      buildShellNav([{ path: '/system', title: '系统管理', type: 0 }]).some(
-        (module) => module.key === 'system',
-      ),
-    ).toBe(false)
-    expect(buildShellNav(SYSTEM_MENUS).map((module) => module.key)).toEqual([
-      'workbench',
-      'work',
-      'system',
-    ])
-  })
-
-  it('splits direct pages from nested group headings', () => {
+  it('splits direct 系统管理 pages from the three path-prefix groups', () => {
     const system = buildShellNav(SYSTEM_MENUS).find((module) => module.key === 'system')
 
     expect(system.items.map((item) => item.title)).toEqual(['用户管理'])
-    expect(system.groups.map((group) => group.title)).toEqual(['日志管理', '审批设置'])
+    expect(system.groups.map((group) => group.title)).toEqual(['日志管理', '审批设置', '审批管理'])
     expect(system.groups[0].items.map((item) => item.title)).toEqual(['操作日志', '登录日志'])
+    expect(system.groups[1].items.map((item) => item.title)).toEqual(['审批类型'])
+    expect(system.groups[2].items.map((item) => item.title)).toEqual(['审批实例查询'])
     expect(system.firstPath).toBe('/system/sysUser')
+    expect(system.emptyHint).toBe('')
+  })
+
+  it('groups by path prefix even when menus omit the directory rows', () => {
+    const system = buildShellNav(FLAT_SYSTEM_MENUS).find((module) => module.key === 'system')
+
+    expect(system.items.map((item) => item.title)).toEqual(['用户管理'])
+    expect(system.groups.map((group) => group.title)).toEqual(['日志管理', '审批设置'])
+    expect(system.groups[0].items.map((item) => item.path)).toEqual(['/system/log/operLog'])
+    expect(system.groups[1].items.map((item) => item.path)).toEqual([
+      '/system/processSet/processTemplate',
+    ])
+  })
+
+  it('keeps hidden pages out of the sidebar and falls 系统管理 to its granted pages', () => {
+    const modules = buildShellNav([
+      ...SYSTEM_MENUS,
+      {
+        path: '/system/assignAuth',
+        parentPath: '/system/sysRole',
+        title: '菜单授权',
+        type: 1,
+        hidden: true,
+        sort: 9,
+      },
+    ])
+    const system = modules.find((module) => module.key === 'system')
+    const titles = [...system.items, ...system.groups.flatMap((group) => group.items)].map(
+      (item) => item.title,
+    )
+
+    expect(titles).not.toContain('菜单授权')
+    expect(titles).toContain('用户管理')
   })
 
   it('uses the top module title even when the menu root is called 组织与权限', () => {
@@ -95,7 +149,8 @@ describe('shell 一级导航', () => {
     expect(activeModuleKey('/work/pending/9/task-1')).toBe('work')
     expect(activeModuleKey('/system/sysUser')).toBe('system')
     expect(activeModuleKey('/system/processSet/templateSet')).toBe('system')
-    expect(activeModuleKey('/monitor/online')).toBe('monitor')
+    expect(activeModuleKey('/monitor')).toBe('monitor')
+    expect(activeModuleKey('/tool')).toBe('tool')
     expect(activeModuleKey('/unknown')).toBeNull()
     expect(tabModuleKey('/work/processed?page=2')).toBe('work')
   })

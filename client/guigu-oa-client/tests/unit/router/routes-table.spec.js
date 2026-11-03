@@ -13,12 +13,26 @@ describe('route table', () => {
     expect(shell.redirect).toBe(PATHS.WORK_PENDING)
     expect(shell.children.map((route) => route.path)).toEqual([
       PATHS.WORKBENCH,
+      PATHS.MONITOR,
+      PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
       PATHS.SYSTEM,
       PATHS.PROCESS_SET,
       PATHS.PROCESS_MGR,
     ])
+  })
+
+  it('registers 系统监控 and 系统工具 as empty placeholder pages', () => {
+    const monitor = shell.children.find((route) => route.path === PATHS.MONITOR)
+    const tool = shell.children.find((route) => route.path === PATHS.TOOL)
+
+    expect(monitor.name).toBe('Monitor')
+    expect(monitor.meta).toEqual({ title: '系统监控' })
+    expect(tool.name).toBe('Tool')
+    expect(tool.meta).toEqual({ title: '系统工具' })
+    expect(monitor.meta.menuGroup).toBeUndefined()
+    expect(tool.meta.menuGroup).toBeUndefined()
   })
 
   it('keeps child paths relative to their parent', () => {

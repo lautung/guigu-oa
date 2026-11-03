@@ -31,7 +31,7 @@ async function mockApi(page: Page): Promise<void> {
     if (path === '/admin/system/index/info') {
       return json(route, { name: 'Alice', roles: ['super_admin'], permissions: [], menus })
     }
-    if (path.startsWith('/admin/process/findPending/')) {
+    if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
     }
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path)) {
@@ -65,6 +65,13 @@ test('顶部一级切换、标签打开/关闭与面包屑', async ({ page }) =>
   await openShell(page)
 
   const tabs = page.locator('.shell-tab')
+  await expect(page.locator('.top-nav-item')).toHaveText([
+    '工作台',
+    '办事',
+    '系统管理',
+    '系统监控',
+    '系统工具',
+  ])
   await expect(tabs).toHaveText(['工作台', '待处理'])
   await expect(page.locator('.shell-breadcrumb')).toContainText('首页')
   await expect(page.locator('.shell-breadcrumb')).toContainText('办事')
@@ -147,27 +154,53 @@ test('窄屏隐藏标签条，侧栏改抽屉，配置页提示建议桌面', as
   await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
 })
 
-test('亮/暗与三档密度可切换并记住选择', async ({ page }) => {
+test('系统监控与系统工具是固定一级空态，不打开死链', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
   await openShell(page)
 
-  await page.getByRole('button', { name: '外观' }).click()
-  await page.locator('.el-dropdown-menu__item', { hasText: '暗色' }).click()
-  await expect(page.locator('html')).toHaveClass(/dark/)
-  await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('guigu_oa_shell_theme')))
-    .toBe('dark')
+  await topModule(page, '系统监控').click()
+  await expect(page).toHaveURL(/\/monitor$/)
+  await expect(page.locator('.shell-tab', { hasText: '系统监控' })).toHaveClass(/active/)
+  await expect(page.locator('.module-placeholder')).toContainText('系统监控暂无可用页面')
+  await expect(page.locator('.app-sidebar')).toContainText('页面将在后续版本提供')
+  await expect(page.locator('.shell-breadcrumb')).toContainText('系统监控')
 
-  await page.getByRole('button', { name: '外观' }).click()
-  await page.locator('.el-dropdown-menu__item', { hasText: '宽松' }).click()
-  await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('guigu_oa_shell_density')))
-    .toBe('large')
+  await topModule(page, '系统工具').click()
+  await expect(page).toHaveURL(/\/tool$/)
+  await expect(page.locator('.module-placeholder')).toContainText('系统工具暂无可用页面')
+  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '待处理', '系统监控', '系统工具'])
+})
 
-  await page.reload()
+test('没有配置授予时系统管理置灰，仍是五项之一', async ({ page }) => {
+  await page.context().addCookies([
+    { name: 'guigu_oa_client_token', value: 'shell-token', url: e2eCookieURL() },
+    { name: 'guigu_oa_client_refresh_token', value: 'shell-refresh', url: e2eCookieURL() },
+    { name: 'guigu_oa_client_entry', value: 'shell-entry', url: e2eCookieURL() },
+  ])
+  await page.route('**/dev-api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
+    if (path === '/admin/system/index/info') {
+      return json(route, { name: 'Alice', roles: ['user'], permissions: [], menus: [] })
+    }
+    if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
+      return json(route, { records: [], total: 0, pages: 0 })
+    }
+    if (await fulfillNoticeUnread(route, path)) return
+    throw new Error(`Unexpected request ${path}`)
+  })
+
+  await page.goto('/work/pending')
   await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
-  await expect(page.locator('html')).toHaveClass(/dark/)
 
-  await page.getByRole('button', { name: '外观' }).click()
-  await page.locator('.el-dropdown-menu__item', { hasText: '亮色' }).click()
-  await expect(page.locator('html')).not.toHaveClass(/dark/)
+  await expect(page.locator('.top-nav-item')).toHaveText([
+    '工作台',
+    '办事',
+    '系统管理',
+    '系统监控',
+    '系统工具',
+  ])
+  const system = topModule(page, '系统管理')
+  await expect(system).toHaveClass(/disabled/)
+  await expect(system).toBeDisabled()
+  await expect(page.locator('.top-nav-item', { hasText: '系统监控' })).toBeEnabled()
 })

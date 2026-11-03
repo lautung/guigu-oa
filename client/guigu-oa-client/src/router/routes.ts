@@ -217,8 +217,22 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '工作台' },
       },
       {
+        // 监控与工具暂无页面（ADR 0059）：保留一级入口，落在空态占位页。
+        path: PATHS.MONITOR,
+        name: 'Monitor',
+        component: () => import('@/shell/ModulePlaceholder.vue'),
+        meta: { title: '系统监控' },
+      },
+      {
+        path: PATHS.TOOL,
+        name: 'Tool',
+        component: () => import('@/shell/ModulePlaceholder.vue'),
+        meta: { title: '系统工具' },
+      },
+      {
         path: PATHS.WORK,
-        redirect: getDefaultPostLoginRoute(),
+        // 办事模块自身的入口仍是待处理；登录落点改的是 `/` 与守卫回落（#229）。
+        redirect: PATHS.WORK_PENDING,
         meta: { menuGroup: 'work' },
         children: workChildren,
       },

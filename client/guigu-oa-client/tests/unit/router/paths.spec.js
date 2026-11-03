@@ -63,6 +63,11 @@ describe('路径 module', () => {
     expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
   })
 
+  it('监控与工具的空态页返回自身', () => {
+    expect(returnPathOfRoute(PATHS.MONITOR)).toBe(PATHS.MONITOR)
+    expect(returnPathOfRoute(PATHS.TOOL)).toBe(PATHS.TOOL)
+  })
+
   it('公告发布管理页的列表与编辑路径落在配置组', () => {
     expect(resolve(PATHS.SYSTEM_NOTICE).name).toBe('SysNotice')
     expect(resolve(PATHS.SYSTEM_NOTICE).meta).toMatchObject({
@@ -84,6 +89,8 @@ describe('路径 module', () => {
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {
     const staticPaths = [
       PATHS.WORKBENCH,
+      PATHS.MONITOR,
+      PATHS.TOOL,
       PATHS.WORK_START,
       PATHS.WORK_PENDING,
       PATHS.WORK_PROCESSED,

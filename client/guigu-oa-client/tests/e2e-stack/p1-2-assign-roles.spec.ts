@@ -1,6 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { poll } from './helpers/oracle'
-import { topModules, uiLoginExpectWork, uiLogout } from './helpers/ui'
+import { uiLoginExpectWork, uiLogout } from './helpers/ui'
 
 /**
  * P1-2（#121）：分配角色后菜单权限生效（ADR 0006/0015）。admin 在用户管理给 user
@@ -40,32 +40,35 @@ test('分配配置角色后 user 的配置菜单生效，撤销后消失', async
     })
     expect(assigned, '分配应最终落库').toBe(true)
 
-    // 重新进入：系统管理一级模块出现，配置页可以打开。
+    // 重新进入：系统管理一级模块启用，配置页可以打开。
     await uiLogout(page)
-    await loginUntilTopModules(page, 'user', 3)
+    await loginUntilSystemModule(page, 'user', true)
     await page.goto('/system/processSet/processType')
     await expect(page.getByRole('heading', { name: '审批类型', level: 2 })).toBeVisible()
   } finally {
     await oracle.assignRoles('admin', userId, [])
   }
 
-  // 撤销后回到只办事（重新进入才重新读取菜单，同样等缓存失效）。
+  // 撤销后系统管理重新置灰（重新进入才重新读取菜单，同样等缓存失效）。
   await uiLogout(page)
-  await loginUntilTopModules(page, 'user', 2)
+  await loginUntilSystemModule(page, 'user', false)
 })
 
-/** 登录后核对一级模块数；权限缓存失效有延迟，重试几次重新登录。 */
-async function loginUntilTopModules(
+/** 登录后核对「系统管理」入口是否可用；权限缓存失效有延迟，重试几次重新登录。 */
+async function loginUntilSystemModule(
   page: import('@playwright/test').Page,
   username: string,
-  modules: number,
+  enabled: boolean,
 ): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     await uiLoginExpectWork(page, username)
-    const matched = (await topModules(page).count()) === modules
+    const system = page.locator('.top-nav-item', { hasText: '系统管理' })
+    const matched = enabled ? await system.isEnabled() : await system.isDisabled()
     if (matched || attempt >= 5) break
     await uiLogout(page)
     await page.waitForTimeout(1_000)
   }
-  await expect(topModules(page)).toHaveCount(modules)
+  const system = page.locator('.top-nav-item', { hasText: '系统管理' })
+  if (enabled) await expect(system).toBeEnabled()
+  else await expect(system).toBeDisabled()
 }

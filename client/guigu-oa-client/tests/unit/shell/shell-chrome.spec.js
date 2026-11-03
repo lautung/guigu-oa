@@ -5,7 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import AppShell from '@/shell/AppShell.vue'
 import AppSidebar from '@/shell/AppSidebar.vue'
 import AppTopBar from '@/shell/AppTopBar.vue'
-import AppearanceMenu from '@/shell/AppearanceMenu.vue'
 import NoticeBell from '@/shell/NoticeBell.vue'
 import ShellTabs from '@/shell/ShellTabs.vue'
 import {
@@ -38,6 +37,8 @@ function shellRouter(initial = '/work/pending') {
       { path: '/notice', component: page('notice'), meta: { title: '全部公告' } },
       { path: '/system/sysUser', component: page('sysUser'), meta: { title: '用户管理' } },
       { path: '/system/log/operLog', component: page('operLog'), meta: { title: '操作日志' } },
+      { path: '/monitor', component: page('monitor'), meta: { title: '系统监控' } },
+      { path: '/tool', component: page('tool'), meta: { title: '系统工具' } },
     ],
   })
   router.push(initial)
@@ -71,6 +72,7 @@ const sidebarModule = {
     },
   ],
   firstPath: '/system/sysUser',
+  emptyHint: '',
 }
 
 describe('AppShell', () => {
@@ -86,7 +88,13 @@ describe('AppShell', () => {
     await router.isReady()
     const wrapper = mount(AppShell, shellOptions(pinia, router))
 
-    expect(wrapper.findAll('.top-nav-item').map((item) => item.text())).toEqual(['工作台', '办事'])
+    expect(wrapper.findAll('.top-nav-item').map((item) => item.text())).toEqual([
+      '工作台',
+      '办事',
+      '系统管理',
+      '系统监控',
+      '系统工具',
+    ])
     expect(wrapper.find('.app-sidebar').text()).toContain('待处理')
     expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toContain('待处理')
     expect(
@@ -114,6 +122,8 @@ describe('AppShell', () => {
       '工作台',
       '办事',
       '系统管理',
+      '系统监控',
+      '系统工具',
     ])
     expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toEqual([
       '工作台',
@@ -180,21 +190,31 @@ describe('AppShell', () => {
     expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toEqual(['工作台'])
   })
 
-  it('switches theme and density from the shell control', async () => {
+  it('applies stored theme and density through the config provider', async () => {
+    localStorage.setItem('guigu_oa_shell_theme', 'dark')
+    localStorage.setItem('guigu_oa_shell_density', 'large')
     const { pinia } = setupSession({ name: 'Alice' })
     const router = shellRouter()
     await router.isReady()
     const wrapper = mount(AppShell, shellOptions(pinia, router))
 
-    const appearance = wrapper.findComponent(AppearanceMenu)
-    appearance.vm.handleCommand('theme:dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
-    await flushPromises()
-    expect(wrapper.find('.el-config-provider-stub').attributes('data-size')).toBe('small')
-
-    appearance.vm.handleCommand('density:large')
-    await flushPromises()
     expect(wrapper.find('.el-config-provider-stub').attributes('data-size')).toBe('large')
+  })
+
+  it('switches to 系统监控 and shows the empty module state', async () => {
+    const { pinia } = setupSession({ name: 'Alice' })
+    const router = shellRouter()
+    await router.isReady()
+    const wrapper = mount(AppShell, shellOptions(pinia, router))
+
+    const monitor = wrapper.findAll('.top-nav-item').find((item) => item.text() === '系统监控')
+    await monitor.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/monitor')
+    expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toContain('系统监控')
+    expect(wrapper.find('.app-sidebar').text()).toContain('页面将在后续版本提供')
   })
 
   it('turns the sidebar into a drawer under 900px and shows the desktop hint on config pages', async () => {
@@ -336,6 +356,27 @@ describe('AppSidebar', () => {
     expect(wrapper.find('.app-sidebar').classes()).not.toContain('collapsed')
     expect(wrapper.find('.collapse-btn').exists()).toBe(false)
   })
+
+  it('shows the module empty hint when it has no pages', () => {
+    const wrapper = mount(AppSidebar, {
+      props: {
+        module: {
+          ...sidebarModule,
+          items: [],
+          groups: [],
+          firstPath: '',
+          emptyHint: '暂无可用页面',
+        },
+        activePath: '/system/sysUser',
+        collapsed: false,
+        narrow: false,
+        drawerOpen: false,
+      },
+      global: mountOptions(undefined, router).global,
+    })
+
+    expect(wrapper.find('.side-empty').text()).toBe('暂无可用页面')
+  })
 })
 
 describe('AppTopBar', () => {
@@ -384,10 +425,44 @@ describe('AppTopBar', () => {
     expect(wrapper.find('.top-nav-item.active').text()).toBe('办事')
     expect(wrapper.find('.desktop-hint').text()).toBe('建议桌面')
     expect(wrapper.find('.username').text()).toBe('Alice')
+    expect(wrapper.find('.logout-btn').text()).toBe('退出')
 
-    wrapper.vm.handleUserCommand('logout')
+    await wrapper.vm.handleLogout()
     await flushPromises()
     expect(recognition.exit).toHaveBeenCalled()
+  })
+
+  it('disables a module without a landing page', async () => {
+    const { pinia } = setupSession({ name: 'Alice' })
+    const router = shellRouter()
+    const wrapper = mount(AppTopBar, {
+      props: {
+        modules: [
+          {
+            key: 'system',
+            title: '系统管理',
+            icon: 'Setting',
+            items: [],
+            groups: [],
+            firstPath: '',
+            emptyHint: '暂无可用页面',
+          },
+        ],
+        activeModule: 'work',
+        narrow: false,
+        desktopHint: false,
+      },
+      global: {
+        ...mountOptions(pinia, router).global,
+        stubs: { ...elementStubs, NoticeBell: true },
+      },
+    })
+
+    const item = wrapper.find('.top-nav-item')
+    expect(item.attributes('disabled')).toBeDefined()
+    expect(item.attributes('aria-disabled')).toBe('true')
+    await item.trigger('click')
+    expect(wrapper.emitted('switch-module')).toBeUndefined()
   })
 
   it('emits switch-module and toggle-menu', async () => {

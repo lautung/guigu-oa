@@ -10,9 +10,8 @@ export async function openShellLink(page: Page, title: string): Promise<void> {
   await page.locator('.app-sidebar').getByRole('link', { name: title, exact: true }).click()
 }
 
-/** 用户菜单里的退出登录；窄屏与桌面走同一入口。 */
+/** 顶栏退出登录；窄屏与桌面走同一入口。 */
 export async function logoutFromShell(page: Page): Promise<void> {
-  await page.locator('.user-trigger').click()
-  await page.locator('.el-dropdown-menu__item', { hasText: '退出登录' }).click()
+  await page.locator('.logout-btn').click()
   await expect(page.getByPlaceholder('用户名')).toBeVisible()
 }

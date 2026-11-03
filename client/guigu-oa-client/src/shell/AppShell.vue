@@ -98,7 +98,7 @@ function handleResize(): void {
 
 function switchModule(key: ShellModuleKey): void {
   const module = navModules.value.find((candidate) => candidate.key === key)
-  if (!module) return
+  if (!module || !module.firstPath) return
   shell.closeDrawer()
   if (shell.activeModule === key) return
 

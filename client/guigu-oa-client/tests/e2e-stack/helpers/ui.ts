@@ -45,8 +45,7 @@ export async function uiSwitchModule(page: Page, title: string): Promise<void> {
 }
 
 export async function uiLogout(page: Page): Promise<void> {
-  await page.locator('.user-trigger').click()
-  await page.locator('.el-dropdown-menu__item', { hasText: '退出登录' }).click()
+  await page.locator('.logout-btn').click()
   await expect(page.getByPlaceholder('用户名')).toBeVisible()
 }
 

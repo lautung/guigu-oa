@@ -9,7 +9,7 @@
         aria-label="菜单"
         @click="$emit('toggle-menu')"
       >
-        <el-icon><Menu /></el-icon>
+        <el-icon><component :is="shellIcon('Menu')" /></el-icon>
       </button>
       <div class="brand">
         <span class="brand-logo">云</span>
@@ -21,7 +21,9 @@
           :key="module.key"
           type="button"
           class="top-nav-item"
-          :class="{ active: module.key === activeModule }"
+          :class="{ active: module.key === activeModule, disabled: !module.firstPath }"
+          :disabled="!module.firstPath"
+          :aria-disabled="!module.firstPath"
           @click="$emit('switch-module', module.key)"
         >
           <el-icon><component :is="shellIcon(module.icon)" /></el-icon>
@@ -35,32 +37,17 @@
         建议桌面
       </el-tag>
       <notice-bell />
-      <appearance-menu />
-      <el-dropdown trigger="click" @command="handleUserCommand">
-        <button type="button" class="user-trigger" title="用户菜单">
-          <img :src="avatarSrc" class="avatar" alt="" />
-          <span v-if="userStore.name" class="username">{{ userStore.name }}</span>
-          <el-icon><ArrowDown /></el-icon>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-            <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <img :src="avatarSrc" class="avatar" alt="" />
+      <span v-if="userStore.name" class="username">{{ userStore.name }}</span>
+      <button type="button" class="logout-btn" @click="handleLogout">退出</button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ArrowDown, Menu } from '@element-plus/icons-vue'
-import { PATHS } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import NoticeBell from './NoticeBell.vue'
-import AppearanceMenu from './AppearanceMenu.vue'
 import { shellIcon } from './shell-icons'
 import type { ShellModule, ShellModuleKey } from './shell-nav'
 
@@ -78,21 +65,14 @@ defineEmits<{
   (event: 'toggle-menu'): void
 }>()
 
-const router = useRouter()
 const userStore = useUserStore()
 const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
 
-function handleUserCommand(command: string): void {
-  if (command === 'profile') {
-    void router.push(PATHS.WORK_PROFILE)
-    return
-  }
-  if (command === 'logout') {
-    void userStore.logout()
-  }
+async function handleLogout(): Promise<void> {
+  await userStore.logout()
 }
 
-defineExpose({ handleUserCommand })
+defineExpose({ handleLogout })
 </script>
 
 <style lang="scss" scoped>
@@ -180,6 +160,15 @@ defineExpose({ handleUserCommand })
   font-weight: 600;
 }
 
+.top-nav-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.top-nav-item.disabled:hover {
+  background: transparent;
+}
+
 .top-tools {
   display: flex;
   align-items: center;
@@ -207,21 +196,20 @@ defineExpose({ handleUserCommand })
   outline: none;
 }
 
-.user-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
+.logout-btn {
+  padding: 4px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--el-text-color-regular);
+  font-size: 13px;
   cursor: pointer;
 }
 
-.user-trigger:hover,
-.user-trigger:focus-visible {
+.logout-btn:hover,
+.logout-btn:focus-visible {
   background: var(--el-fill-color-light);
+  color: var(--el-color-primary);
   outline: none;
 }
 
@@ -253,6 +241,10 @@ defineExpose({ handleUserCommand })
 @media (max-width: 899px) {
   .top-bar {
     gap: 8px;
+  }
+
+  .username {
+    display: none;
   }
 }
 </style>

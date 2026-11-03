@@ -29,7 +29,6 @@
     "check:v-html": "node scripts/check-v-html.mjs"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "2.3.2",
     "@form-create/designer": "3.5.0",
     "@form-create/element-ui": "3.3.3",
     "@vue/shared": "3.5.41",
