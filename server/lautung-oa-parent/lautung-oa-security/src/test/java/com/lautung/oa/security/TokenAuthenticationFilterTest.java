@@ -169,6 +169,28 @@ public class TokenAuthenticationFilterTest {
     }
 
     @Test
+    public void authoritiesAreReadFromThePrefixedPermissionCacheKeyNotTheBareUsername() throws Exception {
+        JwtHelper.TokenClaims claims = new JwtHelper.TokenClaims(1L, "alice", "sid-1", 7L, new Date());
+        when(sessionVerifier.verify(any(), any()))
+                .thenReturn(new SessionVerifier.Outcome.Recognized(claims, user()));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("perm:cache:alice"))
+                .thenReturn("[{\"authority\":\"monitor:cache:clean\"}]");
+
+        filter("/admin/system/index/info", "valid-token", new RecordingFilterChain());
+
+        UsernamePasswordAuthenticationToken authentication = assertInstanceOf(
+                UsernamePasswordAuthenticationToken.class,
+                SecurityContextHolder.getContext().getAuthentication());
+        assertEquals(java.util.Set.of("monitor:cache:clean"), authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toSet()));
+        // ADR 0060：权限缓存键唯一构造点，读面不再碰裸 username 键。
+        verify(valueOperations).get("perm:cache:alice");
+        verify(valueOperations, org.mockito.Mockito.never()).get("alice");
+    }
+
+    @Test
     public void aRecognizedVerdictExposesTheSessionIdOnlyWhileTheChainRuns() throws Exception {
         JwtHelper.TokenClaims claims = new JwtHelper.TokenClaims(1L, "alice", "sid-1", 7L, new Date());
         when(sessionVerifier.verify(any(), any()))

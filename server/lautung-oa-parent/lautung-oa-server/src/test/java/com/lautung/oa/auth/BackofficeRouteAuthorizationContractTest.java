@@ -7,6 +7,7 @@ import com.lautung.oa.auth.controller.SysMenuController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.monitor.controller.CacheMonitorController;
 import com.lautung.oa.monitor.controller.DataMonitorController;
 import com.lautung.oa.monitor.controller.OnlineSessionController;
 import com.lautung.oa.monitor.controller.ServerMonitorController;
@@ -78,6 +79,7 @@ class BackofficeRouteAuthorizationContractTest {
             SysLoginLogController.class,
             NoticeAdminController.class,
             OnlineSessionController.class,
+            CacheMonitorController.class,
             ServerMonitorController.class,
             DataMonitorController.class);
 
@@ -138,6 +140,11 @@ class BackofficeRouteAuthorizationContractTest {
         // 服务监控与数据监控（#236，ADR 0060）：只读快照，无按钮点。
         expect(ServerMonitorController.class, "/monitor/server", null, "index");
         expect(DataMonitorController.class, "/monitor/data", null, "index");
+        // 缓存监控与缓存列表（#237，ADR 0060）：缓存监控只读；缓存列表读 + 两个清理动作共一个按钮点。
+        expect(CacheMonitorController.class, "/monitor/cache", null, "info");
+        expect(CacheMonitorController.class, "/monitor/cacheList", null, "keys");
+        expect(CacheMonitorController.class, "/monitor/cacheList",
+                "monitor:cache:clean", "deleteKey", "clearPerm");
     }
 
     @Autowired
@@ -309,7 +316,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "process:template:upload", "process:template:publish",
                         "system:operLog:remove", "system:operLog:clean",
                         "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
-                        "monitor:online:forceLogout")))
+                        "monitor:online:forceLogout", "monitor:cache:clean")))
                 .andExpect(jsonPath("$.data.menus[*].path", hasItems(
                         "/system",
                         "/system/sysUser",
@@ -327,7 +334,9 @@ class BackofficeRouteAuthorizationContractTest {
                         "/monitor",
                         "/monitor/online",
                         "/monitor/server",
-                        "/monitor/data")))
+                        "/monitor/data",
+                        "/monitor/cache",
+                        "/monitor/cacheList")))
                 .andExpect(jsonPath("$.data.menus[*].type", not(hasItem(2))))
                 .andExpect(jsonPath("$.data.menus[?(@.path == '/system/sysUser')].parentPath",
                         hasItem("/system")))
