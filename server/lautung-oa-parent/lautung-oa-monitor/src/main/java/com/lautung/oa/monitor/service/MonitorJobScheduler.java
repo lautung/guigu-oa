@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>线程池是本组件私有的 {@link ThreadPoolTaskScheduler}（核心 2）：刻意不注册为
  * {@link TaskScheduler} bean，附件清理与公告图片清理的既有 {@code @Scheduled} 仍走
  * Spring Boot 的默认调度设施，互不占用线程（ADR 0060：既有 @Scheduled 不动）。
- * 登记先于 demo 播种（{@code @Order(0)}），演示种子才能改名任务行。
+ * 登记先于 demo 播种（{@code @Order} 取 {@code Ordered.HIGHEST_PRECEDENCE}），演示种子才能改名任务行。
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
