@@ -22,7 +22,7 @@
 - **数据监控不落库**：Hikari 实时指标（active/idle/total/waiting/max + 累计获取/超时）与慢 SQL 的**内存环形缓冲最近 200 条**同页展示。缓冲由 `SlowSqlCollector` 持有，现有 `SlowSqlLoggingInterceptor` 打日志时顺带写入；**不存参数**（ADR 0039 的手机号打码在日志输出层，缓冲若带参数等于给 API 留一条绕过打码的路径），只存时间、语句 id、elapsedMs、rows 与截断到 1024 字符的 SQL。采集跟随 `lautung.oa.sql.slow-sql.enabled`，关闭时页面显示「采集未开启」；不做采样、不做保留期、不建表。demo profile 打开慢 SQL，让演示有内容。
 - **缓存监控两页**：缓存监控页只取 Redis `INFO` 的 `server / memory / clients / stats / keyspace` 五段并解析成字段；缓存列表页用 `SCAN` + 游标分页浏览，**只接受前缀白名单** `perm: / login:session: / login:attempt: / token:revoked:`，不用 `KEYS`。为此把权限缓存键从裸 username 改为 `perm:cache:<username>`：新增一个 key 构造点，读、写、失效三处共用；写入新键时顺手删旧裸键，存量键随各用户下一次登录自然清掉。
 - **缓存清理只允许 `perm:*`**：单键删除与按前缀清空权限缓存两个动作，都挂 `monitor:cache:clean` 按钮点并二次确认；其余前缀**只读**——删掉 `token:revoked:*` 等于把已退出的会话复活。不做通用按键删除，也不做 flushdb。
-- **定时任务 = 注解注册 + 表驱动启停**：任务是实现 `MonitorJob` 接口（`defaultCron()` + `execute()`）的 Spring bean，启动时把 bean 名登记进 `sys_job`（缺行插入、有行不覆盖用户改过的 cron）；表里 bean 不存在或 bean 不在表里的都不执行，前者在读侧标「异常」。调度用 `ThreadPoolTaskScheduler`：启动时装载启用的行，启停或改 cron 时 cancel + reschedule；单机语义，不处理集群。不引入 Quartz，也不接收任意类名或调用串（GLOSSARY「定时任务」已定）。
+- **定时任务 = 注解注册 + 表驱动启停**：任务是实现 `MonitorJob` 接口（`defaultCron()` + `execute()`）的 Spring bean，启动时把 bean 名登记进 `sys_job`（缺行插入、有行不覆盖用户改过的 cron）；表里 bean 不存在或 bean 不在表里的都不执行，前者在读侧标「异常」。**任务行由启动登记产生，页面不提供新增与删除**（删掉的行下次启动会被补回），只能改 cron / 启停 / 并发 / 备注并手动执行。调度用 `ThreadPoolTaskScheduler`：启动时装载启用的行，启停或改 cron 时 cancel + reschedule；单机语义，不处理集群。不引入 Quartz，也不接收任意类名或调用串（GLOSSARY「定时任务」已定）。
 - **任务表与执行记录**：`sys_job(id, name, bean_name 唯一, cron, enabled, concurrency, remark, 公共字段, is_deleted)` + `sys_job_log(id, job_id, job_name 快照, trigger_type, status, message, started_at, finished_at, duration_ms)`。`trigger_type` 1 自动 / 2 手动；`status` 1 成功 / 2 失败 / 3 跳过。
 - **并发两档**：`0 禁止`（默认，前一执行未完则本次直接记一条「跳过」）/ `1 允许`；不做「单机」档——项目单实例部署，该档没有可表达的语义。cron 在写入时用 Spring `CronExpression` 校验，非法按 201 拒绝。
 - **失败可见性**：任务页的行上「执行记录」抽屉，不单开菜单页；失败存截断到 1000 字符的错误信息。保留策略在写入时执行：每个任务保留最近 20 条、全局最近 500 条，不做告警、不做导出、不做清空按钮。
@@ -36,7 +36,7 @@
   | 缓存监控 | `/monitor/cache` | —（只读） |
   | 缓存列表 | `/monitor/cacheList` | `monitor:cache:clean` |
   | 数据监控 | `/monitor/data` | —（只读） |
-  | 定时任务 | `/monitor/job` | `monitor:job:add` / `:edit` / `:remove` / `:run` |
+  | 定时任务 | `/monitor/job` | `monitor:job:edit` / `:run` |
 
   目录 `/monitor`（type 0）与六个页面（type 1）随各自服务端票一次性种下并给 `super_admin` 补授；启停并入 `edit`，任务日志读不设点。监控不套数据范围（ADR 0053 已定），页面授予覆盖全部读。
 - **演示数据**：在线用户不种（运行时产物，demo 登录自然产生）；定时任务在 demo profile 种一条 **disabled** 的演示任务，演示时手动执行一次即产生执行记录；服务/缓存/数据页不种，真实 Redis/MySQL 即有内容。
