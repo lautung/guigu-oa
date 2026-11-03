@@ -18,6 +18,8 @@ describe('route table', () => {
       PATHS.MONITOR_ONLINE,
       PATHS.MONITOR_SERVER,
       PATHS.MONITOR_DATA,
+      PATHS.MONITOR_CACHE,
+      PATHS.MONITOR_CACHE_LIST,
       PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
@@ -54,6 +56,16 @@ describe('route table', () => {
     expect(server.meta).toEqual({ title: '服务监控', menuGroup: 'config' })
     expect(data.name).toBe('MonitorData')
     expect(data.meta).toEqual({ title: '数据监控', menuGroup: 'config' })
+  })
+
+  it('registers 缓存监控 and 缓存列表 as grant-checked monitor pages (#241)', () => {
+    const cache = shell.children.find((route) => route.path === PATHS.MONITOR_CACHE)
+    const cacheList = shell.children.find((route) => route.path === PATHS.MONITOR_CACHE_LIST)
+
+    expect(cache.name).toBe('MonitorCache')
+    expect(cache.meta).toEqual({ title: '缓存监控', menuGroup: 'config' })
+    expect(cacheList.name).toBe('MonitorCacheList')
+    expect(cacheList.meta).toEqual({ title: '缓存列表', menuGroup: 'config' })
   })
 
   it('keeps child paths relative to their parent', () => {
@@ -93,6 +105,8 @@ describe('route table', () => {
         PATHS.MONITOR_ONLINE,
         PATHS.MONITOR_SERVER,
         PATHS.MONITOR_DATA,
+        PATHS.MONITOR_CACHE,
+        PATHS.MONITOR_CACHE_LIST,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,
