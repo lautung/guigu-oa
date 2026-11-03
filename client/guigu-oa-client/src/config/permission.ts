@@ -1,4 +1,3 @@
-import { isMobileViewport } from '@/navigation/constants'
 import { ROUTE_GROUP_ENTRIES, type RouteGroupEntry } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
@@ -118,6 +117,7 @@ function buildSidebar(entries: readonly BackofficeMenuEntry[]): SidebarItem[] {
         return {
           path,
           title: entry.title,
+          ...(entry.icon ? { icon: entry.icon } : {}),
           ...(children.length > 0 ? { children } : {}),
         }
       })
@@ -128,33 +128,32 @@ function buildSidebar(entries: readonly BackofficeMenuEntry[]): SidebarItem[] {
 export function configPermission(menus: BackofficeMenuEntry[] = []) {
   const pages = grantedPages(menus)
 
+  /** 页面授予：精确页面、目录下的已授页面，或已授页面下的详情子路径。 */
+  function coversPage(path: string): boolean {
+    const normalized = normalizePath(path)
+    if (!normalized) return false
+    return pathCoveredByGrant(normalized, pages)
+  }
+
+  function entryOf(path: string): { path: string; group: MenuGroup } | null {
+    const normalized = normalizePath(path)
+    if (!normalized) return null
+
+    const route = routeEntryOf(normalized)
+    if (route) {
+      return {
+        path: route.hiddenParentPath || route.path,
+        group: route.group,
+      }
+    }
+
+    return publicGrantedEntry(grantedEntryOf(normalized, menus))
+  }
+
   return {
     hasConfigPermission: pages.length > 0,
     grantedMenus: buildSidebar(menus),
-    /** 页面授予：精确页面、目录下的已授页面，或已授页面下的详情子路径。 */
-    coversPage(path: string): boolean {
-      const normalized = normalizePath(path)
-      if (!normalized) return false
-      return pathCoveredByGrant(normalized, pages)
-    },
-    entryOf(path: string): { path: string; group: MenuGroup } | null {
-      const normalized = normalizePath(path)
-      if (!normalized) return null
-
-      const route = routeEntryOf(normalized)
-      if (route) {
-        return {
-          path: route.hiddenParentPath || route.path,
-          group: route.group,
-        }
-      }
-
-      return publicGrantedEntry(grantedEntryOf(normalized, menus))
-    },
-    canOccupy({ path, viewportWidth }: { path: string; viewportWidth: number }): boolean {
-      const normalized = normalizePath(path)
-      if (!normalized || isMobileViewport(viewportWidth)) return false
-      return pathCoveredByGrant(normalized, pages)
-    },
+    coversPage,
+    entryOf,
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { createTemplateEditor, formRules } from '@/config/template-editor'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { emptyMessageOf } from '../support/form-rules'
 
 function deferred() {
@@ -36,7 +37,6 @@ function harness() {
   let design = { rule: [], option: {} }
   let designerFailure = ''
   let confirm = true
-  let occupancy = { action: 'allow' }
   function openScope() {
     const context = { generation: 1, entryId }
     const scope = {
@@ -60,7 +60,6 @@ function harness() {
   const options = {
     openScope,
     entryId: () => entryId,
-    occupancy: () => occupancy,
     dismissConfirm: () => dismissals.push('dismiss'),
     designer: async () => {
       if (designerFailure) throw new Error(designerFailure)
@@ -104,9 +103,6 @@ function harness() {
     },
     confirm: (value) => {
       confirm = value
-    },
-    occupancy: (value) => {
-      occupancy = value
     },
     identity: () => {
       entryId = 'entry-2'
@@ -396,22 +392,7 @@ it('仅设计器中的尚未保存修改也需要离开确认；dispose 只清�
   expect(edit.state.form.formProps).toBe('')
 })
 
-it('占用不成立时直接释放并用 replace 导航，不请求确认', async () => {
-  const h = harness()
-  const edit = h.module.open('A')
-  await flushPromises()
-  h.reads[0].resolve({ code: 200, data: record() })
-  await edit.ready
-  edit.updateBasic({ description: '尚未保存' })
-  h.occupancy({ action: 'redirect', to: '/work/pending' })
-  await edit.environmentChanged()
-  expect(edit.state.phase).toBe('closed')
-  expect(h.confirmations).toEqual([])
-  expect(h.replacements).toEqual(['/work/pending'])
-  expect(h.dismissals).toEqual([])
-})
-
-it('占用变化抢在进行中的确认之前，关闭确认且迟到结果不再导航', async () => {
+it('身份替换抢在进行中的确认之前，关闭确认且迟到结果不再导航', async () => {
   const h = harness()
   const confirming = deferred()
   h.options.confirm = (message) => {
@@ -426,18 +407,18 @@ it('占用变化抢在进行中的确认之前，关闭确认且迟到结果不�
   const leaving = edit.back()
   await flushPromises()
   expect(h.confirmations).toHaveLength(1)
-  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  h.identity()
   await edit.environmentChanged()
   expect(h.dismissals).toEqual(['dismiss'])
   expect(edit.state.phase).toBe('closed')
-  expect(h.replacements).toEqual(['/work/pending'])
+  expect(h.replacements).toEqual([getDefaultPostLoginRoute()])
   confirming.resolve(false)
   await leaving
-  expect(h.replacements).toEqual(['/work/pending'])
+  expect(h.replacements).toEqual([getDefaultPostLoginRoute()])
   expect(h.navigation).toEqual([])
 })
 
-it('身份被替换时释放并落到待处理；进入结果清空时只释放不导航', async () => {
+it('身份被替换时释放并落到默认落点；进入结果清空时只释放不导航', async () => {
   const first = harness()
   const edit = first.module.open('A')
   await flushPromises()
@@ -448,7 +429,7 @@ it('身份被替换时释放并落到待处理；进入结果清空时只释放�
   await edit.environmentChanged()
   expect(edit.state.phase).toBe('closed')
   expect(first.confirmations).toEqual([])
-  expect(first.replacements).toEqual(['/work/pending'])
+  expect(first.replacements).toEqual([getDefaultPostLoginRoute()])
 
   const second = harness()
   const other = second.module.open('A')
@@ -462,7 +443,7 @@ it('身份被替换时释放并落到待处理；进入结果清空时只释放�
   expect(second.replacements).toEqual([])
 })
 
-it('占用仍成立且身份未变时环境变化不打断编辑', async () => {
+it('身份未变时环境变化不打断编辑', async () => {
   const h = harness()
   const edit = h.module.open('A')
   await flushPromises()
@@ -477,20 +458,7 @@ it('占用仍成立且身份未变时环境变化不打断编辑', async () => {
   expect(h.dismissals).toEqual([])
 })
 
-it('requestLeave 自身读取占用结论，强制离开不弹确认', async () => {
-  const h = harness()
-  const edit = h.module.open('A')
-  await flushPromises()
-  h.reads[0].resolve({ code: 200, data: record() })
-  await edit.ready
-  edit.updateBasic({ description: '尚未保存' })
-  h.occupancy({ action: 'redirect', to: '/work/pending' })
-  expect(await edit.requestLeave()).toBe(true)
-  expect(edit.state.phase).toBe('closed')
-  expect(h.confirmations).toEqual([])
-})
-
-it('保存中强制离开不确认，迟到成功不提示也不抢导航', async () => {
+it('保存中身份被替换时释放不确认，迟到成功不提示也不抢导航', async () => {
   const h = harness()
   const edit = h.module.open('A')
   await flushPromises()
@@ -498,7 +466,7 @@ it('保存中强制离开不确认，迟到成功不提示也不抢导航', asyn
   await edit.ready
   const saving = edit.save()
   await flushPromises()
-  h.occupancy({ action: 'redirect', to: '/work/pending' })
+  h.identity()
   await edit.environmentChanged()
   expect(edit.state.phase).toBe('closed')
   expect(h.confirmations).toEqual([])
@@ -506,7 +474,7 @@ it('保存中强制离开不确认，迟到成功不提示也不抢导航', asyn
   await saving
   expect(h.notices).toEqual([])
   expect(h.navigation).toEqual([])
-  expect(h.replacements).toEqual(['/work/pending'])
+  expect(h.replacements).toEqual([getDefaultPostLoginRoute()])
 })
 
 it.each([208, 209])('明确拒绝 %s 恢复正常重试；重发后断网仍待确认', async (code) => {

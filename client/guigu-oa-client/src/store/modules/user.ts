@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getToken, getRefreshToken } from '@/utils/auth'
 import { login, logout as logoutRequest } from '@/api/user'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import type { Recognition, RecoveryState } from '@/recognition'
 import type { BackofficeMenuEntry, LoginCredentials, UserInfo } from '@/types/domain'
 
@@ -53,7 +54,7 @@ export const useUserStore = defineStore('user', {
           // 本地退出优先：网络或服务端拒绝都不留在已进入状态。
         }
       }
-      recognition?.exit()
+      recognition?.exit(getDefaultPostLoginRoute())
     },
     resetToken() {
       this.recognition?.forget()

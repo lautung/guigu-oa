@@ -209,8 +209,8 @@ export function createRecognition(adapter: RecognitionAdapter) {
     }
   }
 
-  function exit(): void {
-    const destination = target()
+  /** 退出后登录回哪里由应用传入（工作台），不把「刚才在哪」当落点。 */
+  function exit(destination = target()): void {
     forget()
     adapter.goToLogin(destination)
   }

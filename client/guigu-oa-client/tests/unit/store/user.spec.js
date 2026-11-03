@@ -89,6 +89,7 @@ describe('browser adapter with real Pinia and navigation', () => {
     expect(getToken()).toBeUndefined()
     expect(getRefreshToken()).toBeUndefined()
     expect(h.router.currentRoute.value.path).toBe('/login')
+    expect(h.router.currentRoute.value.query.redirect).toBe('/workbench')
     expect(calls.map((call) => call.url)).toEqual([
       '/admin/system/index/login',
       '/admin/system/index/info',

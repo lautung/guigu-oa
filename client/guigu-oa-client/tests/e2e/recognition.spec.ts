@@ -1,6 +1,7 @@
 import { expect, test, type Route, type BrowserContext, type Page } from '@playwright/test'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
+import { logoutFromShell } from './helpers/shell'
 
 const pageErrors = new WeakMap<Page, string[]>()
 test.beforeEach(({ page }) => {
@@ -99,7 +100,7 @@ test('旧业务请求迟到失败不会提示或清掉新用户', async ({ page,
   await page.goto('/work/pending')
   await expect(page.getByText('Alice', { exact: true })).toBeVisible()
   await expect.poll(() => !!releaseOld).toBe(true)
-  await page.getByRole('button', { name: '退出' }).click()
+  await logoutFromShell(page)
   await page.getByPlaceholder('用户名').fill('bob')
   await page.getByPlaceholder('密码').fill('111111')
   await page.getByRole('button', { name: '登录' }).click()
@@ -111,7 +112,7 @@ test('旧业务请求迟到失败不会提示或清掉新用户', async ({ page,
   await oldResponse
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
   await expect(page.locator('.el-message')).toHaveCount(0)
-  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page).toHaveURL(/\/workbench$/)
   expect(
     (await context.cookies()).find((cookie) => cookie.name === 'guigu_oa_client_token')?.value,
   ).toBe('bob-only')
@@ -143,7 +144,7 @@ test('另一标签的新进入结果不会被旧标签迟到刷新覆盖', async
   await expect.poll(() => !!releaseRefresh).toBe(true)
   const bobPage = await context.newPage()
   await bobPage.goto('/work/pending')
-  await bobPage.getByRole('button', { name: '退出' }).click()
+  await logoutFromShell(bobPage)
   await bobPage.getByPlaceholder('用户名').fill('bob')
   await bobPage.getByPlaceholder('密码').fill('111111')
   await bobPage.getByRole('button', { name: '登录' }).click()

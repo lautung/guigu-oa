@@ -11,7 +11,7 @@ import { fulfillNoticeUnread } from './helpers/notice-mocks'
  *
  * 每格对六页（登录、发起审批列表/表单、待处理、审批详情、模板编辑、分配角色）截图，
  * 并判定 `#114 §5` 的前两条：页面级横向溢出、控制台 pageerror/error。
- * 办事主链路由 `workflow-smoke.spec.ts` 在各格复用；配置页在手机视口落回待处理是产品规则。
+ * 办事主链路由 `workflow-smoke.spec.ts` 在各格复用；配置页在手机视口可打开，顶栏提示「建议桌面」（ADR 0051）。
  */
 
 const EVIDENCE_DIR = resolve('test-results/compatibility')
@@ -156,6 +156,8 @@ async function mockApi(page: Page) {
       return json(route, { records: [], total: 0, pages: 0 })
     if (path.startsWith('/admin/process/findStarted/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (path.startsWith('/admin/process/findCarbonCopied/'))
+      return json(route, { records: [], total: 0, pages: 0 })
     if (path === '/admin/process/show/A')
       return json(route, {
         process: { ...pendingRecord, title: '审批 A' },
@@ -194,8 +196,8 @@ async function mockApi(page: Page) {
   })
 }
 
-function isMobileViewport(page: Page): boolean {
-  return (page.viewportSize()?.width ?? 0) <= 768
+function isNarrowShell(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 0) < 900
 }
 
 function evidenceBase(page: Page, testInfo: TestInfo, name: string, state: string): string {
@@ -239,6 +241,16 @@ test('登录页在矩阵内可渲染', async ({ page }, testInfo) => {
   await capture(page, testInfo, 'login', 'idle')
 })
 
+test('工作台在矩阵内可渲染', async ({ page }, testInfo) => {
+  await seedSession(page)
+  await mockApi(page)
+  await page.goto('/workbench')
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page.locator('.kpi-card')).toHaveCount(4)
+  await expect(page.getByText('请假申请', { exact: true }).first()).toBeVisible()
+  await capture(page, testInfo, 'workbench', 'dashboard')
+})
+
 test('发起审批的模板列表与表单在矩阵内可渲染', async ({ page }, testInfo) => {
   await seedSession(page)
   await mockApi(page)
@@ -268,34 +280,28 @@ test('待处理列表与审批详情在矩阵内可渲染', async ({ page }, tes
   await capture(page, testInfo, 'detail', 'pending')
 })
 
-test('配置-模板编辑：桌面可占用，手机落回待处理', async ({ page }, testInfo) => {
+test('配置-模板编辑：桌面与手机都可打开', async ({ page }, testInfo) => {
   await seedSession(page)
   await mockApi(page)
   await page.goto('/system/processSet/templateSet?id=97')
 
-  if (isMobileViewport(page)) {
-    await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
-    await capture(page, testInfo, 'config-template-edit', 'forced-pending')
-    return
-  }
-
   await expect(page.getByRole('button', { name: '下一步', exact: true })).toBeVisible()
   await expect(page.getByLabel('审批名称')).toHaveValue('请假申请')
+  if (isNarrowShell(page)) {
+    await expect(page.locator('.desktop-hint')).toHaveText('建议桌面')
+  }
   await capture(page, testInfo, 'config-template-edit', 'basic-info')
 })
 
-test('配置-分配角色：桌面可打开弹窗，手机落回待处理', async ({ page }, testInfo) => {
+test('配置-分配角色：桌面与手机都可打开弹窗', async ({ page }, testInfo) => {
   await seedSession(page)
   await mockApi(page)
   await page.goto('/system/sysUser')
 
-  if (isMobileViewport(page)) {
-    await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
-    await capture(page, testInfo, 'config-assign-roles', 'forced-pending')
-    return
-  }
-
   await expect(page.getByRole('heading', { name: '用户管理', exact: true })).toBeVisible()
+  if (isNarrowShell(page)) {
+    await expect(page.locator('.desktop-hint')).toHaveText('建议桌面')
+  }
   await page
     .getByRole('row')
     .filter({ hasText: 'alice' })

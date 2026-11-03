@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { configPermission } from '@/config/permission'
-import { MOBILE_BREAKPOINT } from '@/navigation/constants'
-
-const DESKTOP_WIDTH = 1200
-const MOBILE_WIDTH = 375
 
 const USER_PAGE = [
   { path: '/system', title: '组织与权限', type: 0, sort: 1 },
@@ -82,8 +78,8 @@ const CUSTOM_HIDDEN_PAGE = [
   },
 ]
 
-function canOccupy(permission, path, viewportWidth = DESKTOP_WIDTH) {
-  return permission.canOccupy({ path, viewportWidth })
+function coversPage(permission, path) {
+  return permission.coversPage(path)
 }
 
 function flattenTitles(items = []) {
@@ -142,106 +138,103 @@ describe('配置权限', () => {
       ])
 
       expect(permission.hasConfigPermission).toBe(false)
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
+      expect(coversPage(permission, '/system/assignAuth')).toBe(false)
     })
 
     it('answers from the current grant, not a previous one', () => {
       const before = configPermission(USER_PAGE)
       const after = configPermission(ROLE_PAGE)
 
-      expect(canOccupy(before, '/system/sysUser')).toBe(true)
-      expect(canOccupy(before, '/system/sysRole')).toBe(false)
-      expect(canOccupy(after, '/system/sysRole')).toBe(true)
-      expect(canOccupy(after, '/system/sysUser')).toBe(false)
+      expect(coversPage(before, '/system/sysUser')).toBe(true)
+      expect(coversPage(before, '/system/sysRole')).toBe(false)
+      expect(coversPage(after, '/system/sysRole')).toBe(true)
+      expect(coversPage(after, '/system/sysUser')).toBe(false)
     })
   })
 
-  describe('canOccupy', () => {
-    it('can occupy a granted page and its parent directory on desktop', () => {
+  describe('coversPage', () => {
+    it('covers a granted page and its parent directory', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/system/sysUser')).toBe(true)
-      expect(canOccupy(permission, '/system/sysUser/9')).toBe(true)
-      expect(canOccupy(permission, '/system')).toBe(true)
+      expect(coversPage(permission, '/system/sysUser')).toBe(true)
+      expect(coversPage(permission, '/system/sysUser/9')).toBe(true)
+      expect(coversPage(permission, '/system')).toBe(true)
     })
 
-    it('cannot occupy a page that was not granted', () => {
+    it('does not cover a page that was not granted', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/system/sysRole')).toBe(false)
-      expect(canOccupy(permission, '/system/sysMenu')).toBe(false)
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
-      expect(canOccupy(permission, '/system/processSet/processType')).toBe(false)
+      expect(coversPage(permission, '/system/sysRole')).toBe(false)
+      expect(coversPage(permission, '/system/sysMenu')).toBe(false)
+      expect(coversPage(permission, '/system/assignAuth')).toBe(false)
+      expect(coversPage(permission, '/system/processSet/processType')).toBe(false)
     })
 
-    it('can occupy a hidden page when its visible parent is granted', () => {
+    it('covers a hidden page when its visible parent is granted', () => {
       const permission = configPermission(ROLE_PAGE)
 
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(true)
-      expect(canOccupy(permission, '/system/assignAuth/9')).toBe(true)
+      expect(coversPage(permission, '/system/assignAuth')).toBe(true)
+      expect(coversPage(permission, '/system/assignAuth/9')).toBe(true)
     })
 
-    it('cannot occupy a hidden page when the parent is granted but the entry is absent', () => {
+    it('does not cover a hidden page when the parent is granted but the entry is absent', () => {
       const permission = configPermission([
         { path: '/system', title: '组织与权限', type: 0, sort: 1 },
         { path: '/system/sysRole', parentPath: '/system', title: '角色管理', type: 1, sort: 2 },
       ])
 
-      expect(canOccupy(permission, '/system/assignAuth')).toBe(false)
+      expect(coversPage(permission, '/system/assignAuth')).toBe(false)
     })
 
-    it('can occupy the 审批模板 wizard when 审批模板 is granted', () => {
+    it('covers the 审批模板 wizard when 审批模板 is granted', () => {
       const permission = configPermission(TEMPLATE_PAGE)
 
-      expect(canOccupy(permission, '/system/processSet/templateSet')).toBe(true)
+      expect(coversPage(permission, '/system/processSet/templateSet')).toBe(true)
     })
 
-    it('cannot occupy the 审批模板 wizard when only 审批类型 is granted', () => {
+    it('does not cover the 审批模板 wizard when only 审批类型 is granted', () => {
       const permission = configPermission(PROCESS_TYPE_PAGE)
 
-      expect(canOccupy(permission, '/system/processSet/templateSet')).toBe(false)
+      expect(coversPage(permission, '/system/processSet/templateSet')).toBe(false)
     })
 
-    it('can occupy 审批实例详情 when 审批实例查询 is granted', () => {
+    it('covers 审批实例详情 when 审批实例查询 is granted', () => {
       const permission = configPermission(PROCESS_INSTANCE_PAGE)
 
-      expect(canOccupy(permission, '/system/processMgr/process')).toBe(true)
-      expect(canOccupy(permission, '/system/processMgr/process/9')).toBe(true)
-      expect(canOccupy(permission, '/system/processMgr')).toBe(true)
+      expect(coversPage(permission, '/system/processMgr/process')).toBe(true)
+      expect(coversPage(permission, '/system/processMgr/process/9')).toBe(true)
+      expect(coversPage(permission, '/system/processMgr')).toBe(true)
     })
 
-    it('cannot occupy 配置 on mobile even when granted', () => {
+    it('covers a granted 配置 page regardless of viewport', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_WIDTH)).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT)).toBe(false)
-      expect(canOccupy(permission, '/system/sysUser', MOBILE_BREAKPOINT + 1)).toBe(true)
+      expect(coversPage(permission, '/system/sysUser')).toBe(true)
     })
 
-    it('does not treat 办事 paths as 配置 occupancy', () => {
+    it('does not cover 办事 paths', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/work/pending')).toBe(false)
+      expect(coversPage(permission, '/work/pending')).toBe(false)
     })
 
-    it('allows a custom granted page and its parent directory', () => {
+    it('covers a custom granted page and its parent directory', () => {
       const permission = configPermission(CUSTOM_PAGE)
 
-      expect(canOccupy(permission, '/office/users')).toBe(true)
-      expect(canOccupy(permission, '/office/users/9')).toBe(true)
-      expect(canOccupy(permission, '/office')).toBe(true)
-      expect(canOccupy(permission, '/office/roles')).toBe(false)
+      expect(coversPage(permission, '/office/users')).toBe(true)
+      expect(coversPage(permission, '/office/users/9')).toBe(true)
+      expect(coversPage(permission, '/office')).toBe(true)
+      expect(coversPage(permission, '/office/roles')).toBe(false)
     })
 
-    it('can occupy a custom hidden page through its visible page parent', () => {
+    it('covers a custom hidden page through its visible page parent', () => {
       const permission = configPermission(CUSTOM_HIDDEN_PAGE)
 
-      expect(canOccupy(permission, '/office/userDetail')).toBe(true)
-      expect(canOccupy(permission, '/office/userDetail/9')).toBe(true)
-      expect(canOccupy(permission, '/office/userDetail', MOBILE_WIDTH)).toBe(false)
+      expect(coversPage(permission, '/office/userDetail')).toBe(true)
+      expect(coversPage(permission, '/office/userDetail/9')).toBe(true)
     })
 
-    it('cannot occupy a custom hidden page whose visible parent has no grant', () => {
+    it('does not cover a custom hidden page whose visible parent has no grant', () => {
       const permission = configPermission([
         {
           path: '/office/userDetail',
@@ -252,14 +245,14 @@ describe('配置权限', () => {
         },
       ])
 
-      expect(canOccupy(permission, '/office/userDetail')).toBe(false)
+      expect(coversPage(permission, '/office/userDetail')).toBe(false)
     })
 
-    it('does not occupy unknown paths', () => {
+    it('does not cover unknown paths', () => {
       const permission = configPermission(USER_PAGE)
 
-      expect(canOccupy(permission, '/unknown/path')).toBe(false)
-      expect(canOccupy(permission, '/dashboard')).toBe(false)
+      expect(coversPage(permission, '/unknown/path')).toBe(false)
+      expect(coversPage(permission, '/dashboard')).toBe(false)
     })
   })
 

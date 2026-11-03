@@ -63,6 +63,11 @@ describe('路径 module', () => {
     expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
   })
 
+  it('监控与工具的空态页返回自身', () => {
+    expect(returnPathOfRoute(PATHS.MONITOR)).toBe(PATHS.MONITOR)
+    expect(returnPathOfRoute(PATHS.TOOL)).toBe(PATHS.TOOL)
+  })
+
   it('公告发布管理页的列表与编辑路径落在配置组', () => {
     expect(resolve(PATHS.SYSTEM_NOTICE).name).toBe('SysNotice')
     expect(resolve(PATHS.SYSTEM_NOTICE).meta).toMatchObject({
@@ -83,6 +88,9 @@ describe('路径 module', () => {
 
   it('静态路径都能解析，隐藏页的可见父级来自同一份声明', () => {
     const staticPaths = [
+      PATHS.WORKBENCH,
+      PATHS.MONITOR,
+      PATHS.TOOL,
       PATHS.WORK_START,
       PATHS.WORK_PENDING,
       PATHS.WORK_PROCESSED,
@@ -116,6 +124,12 @@ describe('路径 module', () => {
     expect(resolve('/processSet/processType').matched).toEqual([])
     expect(resolve('/processSet/processTemplate').matched).toEqual([])
     expect(resolve('/processMgr/process').matched).toEqual([])
+  })
+
+  it('工作台路由在壳内，返回路径是自身', () => {
+    expect(resolve(PATHS.WORKBENCH).name).toBe('Workbench')
+    expect(resolve(PATHS.WORKBENCH).meta.title).toBe('工作台')
+    expect(returnPathOfRoute(PATHS.WORKBENCH)).toBe(PATHS.WORKBENCH)
   })
 
   it('返回路径覆盖列表、详情、隐藏页与未知路径', () => {

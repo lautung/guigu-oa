@@ -20,8 +20,6 @@ export interface RoleAssignmentRead {
 export type AssignResult =
   { kind: 'saved' } | { kind: 'rejected'; message: string } | { kind: 'unconfirmed' }
 
-export type AssignOccupancy = { action: 'allow' } | { action: 'redirect'; to: string }
-
 export interface AssignRolesAdapter {
   entryId(): string
   capture(): { generation: number; entryId: string }
@@ -29,7 +27,6 @@ export interface AssignRolesAdapter {
   read(userId: EntityId): Promise<RoleAssignmentRead>
   assign(userId: EntityId, roleIds: readonly EntityId[]): Promise<AssignResult>
   refreshOperator(): Promise<void>
-  occupancy(): AssignOccupancy
   confirm(message: string, kind: 'leave' | 'end-assignment'): Promise<boolean>
   dismissConfirm(): void
   notify(message: string, kind: 'success' | 'warning' | 'error'): void
@@ -467,12 +464,6 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
 
     async function requestLeave(): Promise<boolean> {
       if (!state.active) return true
-      if (adapter.occupancy().action === 'redirect') {
-        dismissPendingConfirm()
-        discardIfIdle()
-        releaseLease()
-        return true
-      }
       if (state.leaving) return false
       state.leaving = true
       try {
@@ -509,14 +500,6 @@ export function createAssignRoles(adapter: AssignRolesAdapter) {
         discardIfIdle()
         releaseLease()
         if (entry) adapter.replace(getDefaultPostLoginRoute())
-        return
-      }
-      const occupancy = adapter.occupancy()
-      if (occupancy.action === 'redirect') {
-        dismissPendingConfirm()
-        discardIfIdle()
-        releaseLease()
-        adapter.replace(occupancy.to)
       }
     }
 

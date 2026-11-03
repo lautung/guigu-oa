@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'normalize.css/normalize.css'
 import formCreate from '@form-create/element-ui'
 import autoImport from '@form-create/element-ui/auto-import'

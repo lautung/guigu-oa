@@ -14,9 +14,17 @@ export async function uiLogin(page: Page, username: string, password = PASSWORD)
   await page.getByRole('button', { name: '登录' }).click()
 }
 
+/**
+ * 登录后先确认落点是工作台（#229），再显式进待处理。
+ * 既有用例都以待处理为起点；落点由 p0-1/p1-9 单独断言，避免所有 spec 重写。
+ */
 export async function uiLoginExpectWork(page: Page, username: string): Promise<void> {
   await uiLogin(page, username)
-  await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
+
+  await page.getByRole('button', { name: '处理待办', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
 }
 
 // 办事列表的定位/等待/翻页收在共享 helper（#226）：这里只 re-export，
@@ -32,12 +40,23 @@ export {
 } from '../../helpers/work-list'
 
 export async function openWorkList(page: Page, title: string): Promise<void> {
-  await page.getByRole('link', { name: title }).click()
+  // 侧栏链接与面包屑都叫「待处理」：列表入口固定在侧栏，面包屑只用于回到列表。
+  await page.locator('.app-sidebar').getByRole('link', { name: title }).click()
   await expect(page.getByRole('heading', { name: title, level: 2 })).toBeVisible()
 }
 
-export function sidebarGroups(page: Page): Locator {
-  return page.locator('.app-sidebar .sidebar-group')
+export function topModules(page: Page): Locator {
+  return page.locator('.top-nav-item')
+}
+
+export async function uiSwitchModule(page: Page, title: string): Promise<void> {
+  await page.locator('.top-nav-item', { hasText: title }).click()
+}
+
+export async function uiLogout(page: Page): Promise<void> {
+  await page.locator('.user-trigger').click()
+  await page.locator('.logout-btn').click()
+  await expect(page.getByPlaceholder('用户名')).toBeVisible()
 }
 
 /** 统一客户端发起页的演示表单：请假原因 + 请假天数（演示模板 formProps）。 */

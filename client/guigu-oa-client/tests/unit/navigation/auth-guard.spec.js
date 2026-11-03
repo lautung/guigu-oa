@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { resolveAuthGuard } from '@/navigation'
-import { AUTH_WHITELIST, ROUTES } from '@/navigation/constants'
+import { AUTH_WHITELIST, ROUTES, getDefaultPostLoginRoute } from '@/navigation/constants'
+import { PATHS } from '@/router/paths'
 import { setupNavigation } from '@/router/guard'
 import { useUserStore } from '@/store/modules/user'
 
 describe('认证守卫', () => {
+  it('lands authenticated users on the workbench', () => {
+    expect(getDefaultPostLoginRoute()).toBe(PATHS.WORKBENCH)
+  })
+
   it('redirects unauthenticated users to login with the return path', () => {
     expect(
       resolveAuthGuard({
@@ -26,10 +31,10 @@ describe('认证守卫', () => {
     })
   })
 
-  it('redirects authenticated users away from login to 待处理', () => {
+  it('redirects authenticated users away from login to 工作台', () => {
     expect(resolveAuthGuard({ path: ROUTES.LOGIN, hasToken: true })).toEqual({
       action: 'redirect',
-      to: ROUTES.PENDING,
+      to: PATHS.WORKBENCH,
     })
   })
 
@@ -61,10 +66,10 @@ describe('后台页面授予守卫', () => {
     )
   })
 
-  it('redirects an authenticated user off an ungranted backoffice page to 待处理', () => {
+  it('redirects an authenticated user off an ungranted backoffice page to 工作台', () => {
     expect(resolveAuthGuard({ path: '/system/sysUser', hasToken: true, menus: [] })).toEqual({
       action: 'redirect',
-      to: ROUTES.PENDING,
+      to: PATHS.WORKBENCH,
     })
   })
 
@@ -83,7 +88,7 @@ describe('后台页面授予守卫', () => {
       resolveAuthGuard({ path: '/system/processMgr', hasToken: true, menus: USER_PAGE }),
     ).toEqual({
       action: 'redirect',
-      to: ROUTES.PENDING,
+      to: PATHS.WORKBENCH,
     })
   })
 
@@ -111,7 +116,7 @@ describe('后台页面授予守卫', () => {
     ).toEqual({ action: 'allow' })
     expect(
       resolveAuthGuard({ path: '/system/notice/edit/7', hasToken: true, menus: USER_PAGE }),
-    ).toEqual({ action: 'redirect', to: ROUTES.PENDING })
+    ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
   })
 
   it('allows a hidden page only through its own menus entry', () => {
@@ -136,7 +141,7 @@ describe('后台页面授予守卫', () => {
     ).toEqual({ action: 'allow' })
     expect(
       resolveAuthGuard({ path: '/system/assignAuth', hasToken: true, menus: roleWithoutHidden }),
-    ).toEqual({ action: 'redirect', to: ROUTES.PENDING })
+    ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
   })
 
   it('redirects an undeclared backoffice path that menus cannot cover', () => {
@@ -144,7 +149,7 @@ describe('后台页面授予守卫', () => {
       resolveAuthGuard({ path: '/system/not-a-page', hasToken: true, menus: USER_PAGE }),
     ).toEqual({
       action: 'redirect',
-      to: ROUTES.PENDING,
+      to: PATHS.WORKBENCH,
     })
   })
 
@@ -156,6 +161,18 @@ describe('后台页面授予守卫', () => {
       action: 'allow',
     })
   })
+
+  it('keeps the built-in workbench and notice pages allowed without menus', () => {
+    expect(resolveAuthGuard({ path: '/workbench', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+    expect(resolveAuthGuard({ path: '/notice', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+    expect(resolveAuthGuard({ path: '/notice/7', hasToken: true, menus: [] })).toEqual({
+      action: 'allow',
+    })
+  })
 })
 
 function createTestRouter() {
@@ -164,6 +181,7 @@ function createTestRouter() {
     routes: [
       { path: ROUTES.LOGIN, component: { render: () => null } },
       { path: ROUTES.PENDING, component: { render: () => null } },
+      { path: PATHS.WORKBENCH, component: { render: () => null } },
       { path: '/system/sysUser', component: { render: () => null } },
     ],
   })
@@ -189,12 +207,12 @@ describe('导航集成', () => {
     expect(router.currentRoute.value.path).toBe('/system/sysUser')
   })
 
-  it('falls back to 待处理 when an authenticated user opens an ungranted 配置 address', async () => {
+  it('falls back to 工作台 when an authenticated user opens an ungranted 配置 address', async () => {
     const router = setupAppNavigation({ token: 'token' })
 
     await router.push('/system/sysUser')
 
-    expect(router.currentRoute.value.path).toBe(ROUTES.PENDING)
+    expect(router.currentRoute.value.path).toBe(PATHS.WORKBENCH)
   })
 
   it('sends an unauthenticated user to login with the return path', async () => {

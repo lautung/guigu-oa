@@ -1,6 +1,6 @@
 import { test, expect } from './helpers/fixtures'
 import { poll } from './helpers/oracle'
-import { sidebarGroups, uiLoginExpectWork } from './helpers/ui'
+import { uiLoginExpectWork, uiLogout } from './helpers/ui'
 
 /**
  * P1-2（#121）：分配角色后菜单权限生效（ADR 0006/0015）。admin 在用户管理给 user
@@ -18,7 +18,7 @@ test('分配配置角色后 user 的配置菜单生效，撤销后消失', async
     await uiLoginExpectWork(page, 'admin')
     await page.goto('/system/sysUser')
     await page.getByPlaceholder('用户名/姓名/手机号码').fill('user')
-    await page.getByRole('button', { name: '搜索' }).click()
+    await page.getByRole('button', { name: '搜索', exact: true }).click()
     const row = page.locator('.el-table__row', { hasText: 'user' }).first()
     await expect(row).toBeVisible()
     await row.getByRole('button', { name: '分配角色' }).click()
@@ -40,32 +40,35 @@ test('分配配置角色后 user 的配置菜单生效，撤销后消失', async
     })
     expect(assigned, '分配应最终落库').toBe(true)
 
-    // 重新进入：配置组出现，配置页可以占用。
-    await page.locator('.logout-btn').click()
-    await loginUntilSidebarGroups(page, 'user', 2)
+    // 重新进入：系统管理一级模块启用，配置页可以打开。
+    await uiLogout(page)
+    await loginUntilSystemModule(page, 'user', true)
     await page.goto('/system/processSet/processType')
     await expect(page.getByRole('heading', { name: '审批类型', level: 2 })).toBeVisible()
   } finally {
     await oracle.assignRoles('admin', userId, [])
   }
 
-  // 撤销后回到只办事（重新进入才重新读取菜单，同样等缓存失效）。
-  await page.locator('.logout-btn').click()
-  await loginUntilSidebarGroups(page, 'user', 1)
+  // 撤销后系统管理重新置灰（重新进入才重新读取菜单，同样等缓存失效）。
+  await uiLogout(page)
+  await loginUntilSystemModule(page, 'user', false)
 })
 
-/** 登录后核对侧栏分组数；权限缓存失效有延迟，重试几次重新登录。 */
-async function loginUntilSidebarGroups(
+/** 登录后核对「系统管理」入口是否可用；权限缓存失效有延迟，重试几次重新登录。 */
+async function loginUntilSystemModule(
   page: import('@playwright/test').Page,
   username: string,
-  groups: number,
+  enabled: boolean,
 ): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     await uiLoginExpectWork(page, username)
-    const matched = (await sidebarGroups(page).count()) === groups
+    const system = page.locator('.top-nav-item', { hasText: '系统管理' })
+    const matched = enabled ? await system.isEnabled() : await system.isDisabled()
     if (matched || attempt >= 5) break
-    await page.locator('.logout-btn').click()
+    await uiLogout(page)
     await page.waitForTimeout(1_000)
   }
-  await expect(sidebarGroups(page)).toHaveCount(groups)
+  const system = page.locator('.top-nav-item', { hasText: '系统管理' })
+  if (enabled) await expect(system).toBeEnabled()
+  else await expect(system).toBeDisabled()
 }

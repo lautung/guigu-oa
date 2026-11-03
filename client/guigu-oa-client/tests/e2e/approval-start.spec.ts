@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { isKnownBrowserNoise } from './helpers/known-noise'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
+import { openShellLink, expectWorkbench, openPendingFromWorkbench } from './helpers/shell'
 function deferred() {
   let resolve!: () => void
   const promise = new Promise<void>((yes) => {
@@ -46,6 +47,7 @@ async function setup(page: Page): Promise<State> {
     if (path.endsWith('/info')) return json(route, { name: 'Alice', menus: [] })
     if (path.includes('/findPending/') || path.includes('/findProcessed/'))
       return json(route, { records: [], total: 0 })
+    if (path.includes('/findCarbonCopied/')) return json(route, { records: [], total: 0 })
     if (path.includes('/findStarted/'))
       return json(route, {
         records: state.created ? [{ id: 100, title: '请假申请', status: 1 }] : [],
@@ -114,8 +116,9 @@ async function setup(page: Page): Promise<State> {
   await page.getByPlaceholder('用户名').fill('alice')
   await page.getByPlaceholder('密码').fill('111111')
   await page.getByRole('button', { name: '登录' }).click()
-  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: '发起审批', exact: true }).click()
+  await expectWorkbench(page)
+  await openPendingFromWorkbench(page)
+  await openShellLink(page, '发起审批')
   await page.getByRole('button', { name: '请假申请', exact: true }).click()
   await expect(page.getByRole('heading', { name: '请假申请', exact: true })).toBeVisible()
   await expect(page.getByText('暂无附件', { exact: true })).toBeVisible()

@@ -248,23 +248,21 @@ test('关闭保存中的弹窗后迟到成功不关闭新弹窗，但仍刷新�
   expect(state.errors).toEqual([])
 })
 
-test('变成手机尺寸时强制离开配置并丢弃未保存勾选', async ({ page }) => {
-  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+test('缩到手机不强制离开配置，未保存勾选保留', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '从桌面缩为手机')
   const state = await setup(page)
   const dialog = await openAssignment(page, 'alice')
   await dialog.getByText('审批人', { exact: true }).click()
+  await expect(dialog.getByRole('checkbox', { name: '审批人' })).toBeChecked()
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page).toHaveURL(/\/work\/pending$/)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.locator('.el-message-box')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/system\/sysUser$/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(dialog.getByRole('checkbox', { name: '审批人' })).toBeChecked()
 
   await page.setViewportSize({ width: 1280, height: 900 })
-  await page.goto('/system/sysUser')
-  await expect(page.getByRole('heading', { name: '用户管理', exact: true })).toBeVisible()
-  const reopened = await openAssignment(page, 'alice')
-  await expect(reopened.getByRole('checkbox', { name: '管理员' })).toBeChecked()
-  await expect(reopened.getByRole('checkbox', { name: '审批人' })).not.toBeChecked()
-  expect(state.reads).toBe(2)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(dialog.getByRole('checkbox', { name: '审批人' })).toBeChecked()
+  expect(state.reads).toBe(1)
   expect(state.errors).toEqual([])
 })

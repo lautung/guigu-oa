@@ -1,7 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router'
 import { openRequestScope } from '@/request/request-scope'
-import { resolveClientSurface } from '@/surface/client-surface'
 import { useUserStore } from '@/store/modules/user'
 import { getEntryId } from '@/utils/auth'
 import { classifySubmissionFailure } from '@/request/submission-outcome'
@@ -69,13 +68,6 @@ export function useAssignRoles() {
         }
       },
       refreshOperator: () => recognition.recognize().then(() => undefined),
-      occupancy: () =>
-        resolveClientSurface({
-          path: router.currentRoute.value.path,
-          hasToken: !!userStore.token,
-          menus: userStore.menus,
-          viewportWidth: window.innerWidth,
-        }).occupancy,
       confirm: async (message, kind) => {
         const ending = kind === 'end-assignment'
         try {

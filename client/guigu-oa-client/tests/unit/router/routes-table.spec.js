@@ -3,13 +3,53 @@ import { describe, expect, it } from 'vitest'
 import router, { constantRoutes } from '@/router'
 import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import { PATHS } from '@/router/paths'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 
 describe('route table', () => {
+  const shell = constantRoutes.find((route) => route.path === '/')
+
+  it('keeps /login outside the single authenticated shell', () => {
+    expect(constantRoutes.filter((route) => route.path === PATHS.LOGIN)).toHaveLength(1)
+    expect(shell.children.some((route) => route.path === PATHS.LOGIN)).toBe(false)
+    expect(shell.redirect).toBe(getDefaultPostLoginRoute())
+    expect(shell.children.map((route) => route.path)).toEqual([
+      PATHS.WORKBENCH,
+      PATHS.MONITOR,
+      PATHS.TOOL,
+      PATHS.WORK,
+      PATHS.NOTICE,
+      PATHS.SYSTEM,
+      PATHS.PROCESS_SET,
+      PATHS.PROCESS_MGR,
+    ])
+  })
+
+  it('registers 系统监控 and 系统工具 as empty placeholder pages', () => {
+    const monitor = shell.children.find((route) => route.path === PATHS.MONITOR)
+    const tool = shell.children.find((route) => route.path === PATHS.TOOL)
+
+    expect(monitor.name).toBe('Monitor')
+    expect(monitor.meta).toEqual({ title: '系统监控' })
+    expect(tool.name).toBe('Tool')
+    expect(tool.meta).toEqual({ title: '系统工具' })
+    expect(monitor.meta.menuGroup).toBeUndefined()
+    expect(tool.meta.menuGroup).toBeUndefined()
+  })
+
   it('keeps child paths relative to their parent', () => {
-    const work = constantRoutes.find((route) => route.path === PATHS.WORK)
+    const work = shell.children.find((route) => route.path === PATHS.WORK)
     expect(work.children[0].path).toBe('start')
     expect(work.children.map((child) => child.path)).toContain('pending/:id/:taskId')
     expect(work.redirect).toBe(PATHS.WORK_PENDING)
+  })
+
+  it('registers the workbench route as the default landing', () => {
+    const workbench = shell.children.find((route) => route.path === PATHS.WORKBENCH)
+
+    expect(workbench.name).toBe('Workbench')
+    expect(workbench.meta.title).toBe('工作台')
+    expect(workbench.meta.menuGroup).toBeUndefined()
+    expect(shell.redirect).toBe(getDefaultPostLoginRoute())
   })
 
   it('declares group membership for every visible menu route', () => {
@@ -70,8 +110,9 @@ describe('route table', () => {
     expect(router.options.scrollBehavior()).toEqual({ top: 0 })
   })
 
-  // 全量并行时动态导入几十个组件会逼近 5s 默认线（单跑 ~3.3s），放宽超时。
-  it('resolves every lazily loaded route component', { timeout: 15_000 }, async () => {
+  // 全量并行时动态导入几十个组件会逼近默认线；#229 的工作台换成真实页面后又重了一档，
+  // 单跑 ~7s、verify 并行时会超过 15s，所以留到 30s。
+  it('resolves every lazily loaded route component', { timeout: 30_000 }, async () => {
     const loaders = []
     const walk = (routes) => {
       for (const route of routes) {

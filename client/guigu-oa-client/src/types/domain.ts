@@ -59,6 +59,7 @@ export interface BackofficeMenuEntry {
 export interface SidebarItem {
   path: string
   title: string
+  icon?: string | null
   children?: SidebarItem[]
 }
 

@@ -154,15 +154,11 @@ export default defineComponent({
       assignRolesVisible.value = true
     }
 
-    watch(() => [userStore.token, userStore.menus] as const, environmentChanged, { deep: true })
+    watch(() => userStore.token, environmentChanged)
     onBeforeRouteLeave(async () => requestAssignRolesLeave())
-    onMounted(() => {
-      window.addEventListener('resize', environmentChanged)
-      window.addEventListener('focus', environmentChanged)
-    })
+    onMounted(() => window.addEventListener('focus', environmentChanged))
     onBeforeUnmount(() => {
       list.release()
-      window.removeEventListener('resize', environmentChanged)
       window.removeEventListener('focus', environmentChanged)
     })
 
