@@ -2,6 +2,7 @@ package com.lautung.oa.observability;
 
 import com.lautung.oa.auth.LoginAuthContractTest;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.support.ContractFixtures;
 import com.lautung.oa.support.InMemoryRedisTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,8 +54,7 @@ class ActuatorExposureContractTest {
     @AfterEach
     void resetFixtures() {
         ((InMemoryRedisTemplate) redisTemplate).clear();
-        jdbcTemplate.update("UPDATE sys_user SET status = 1, is_deleted = 0, token_version = 0 "
-                + "WHERE id IN (1, 2)");
+        ContractFixtures.resetSeededUsers(jdbcTemplate);
     }
 
     @Test

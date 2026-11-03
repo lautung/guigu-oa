@@ -103,7 +103,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     }
 
     /**
-     * 演示定时任务的行化妆：登记（{@code @Order(0)} 的调度器，先于本 seeder）已把
+     * 演示定时任务的行化妆：登记（{@code @Order} 取 {@code Ordered.HIGHEST_PRECEDENCE} 的调度器，先于本 seeder）已把
      * {@code demoLogMonitorJob} 种成 disabled 行，这里补上可读的名字与备注。
      * 只 UPDATE，不碰 enabled / cron / 并发。
      */

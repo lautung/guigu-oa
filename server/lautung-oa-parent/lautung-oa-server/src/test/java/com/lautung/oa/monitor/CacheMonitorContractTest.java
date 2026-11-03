@@ -2,6 +2,7 @@ package com.lautung.oa.monitor;
 
 import com.lautung.oa.auth.LoginAuthContractTest;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.support.ContractFixtures;
 import com.lautung.oa.support.InMemoryRedisTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,11 +83,8 @@ class CacheMonitorContractTest {
     @AfterEach
     void resetFixtures() {
         redis().clear();
-        jdbcTemplate.update("UPDATE sys_user SET status = 1, is_deleted = 0, token_version = 0 "
-                + "WHERE id IN (1, 2)");
-        jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_role WHERE id = ?", READ_ONLY_ROLE_ID);
+        ContractFixtures.resetSeededUsers(jdbcTemplate);
+        ContractFixtures.deleteAdHocRole(jdbcTemplate, READ_ONLY_ROLE_ID);
     }
 
     @Test
@@ -238,6 +236,11 @@ class CacheMonitorContractTest {
                 .andExpect(jsonPath("$.message").value("游标不合法"));
         mockMvc.perform(get("/admin/monitor/cache/keys")
                         .param("prefix", "perm:").param("count", "0").header("token", token))
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("count 不合法"));
+        // 超上限同样 201（上限见 CacheMonitorService.MAX_KEY_COUNT）。
+        mockMvc.perform(get("/admin/monitor/cache/keys")
+                        .param("prefix", "perm:").param("count", "1001").header("token", token))
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("count 不合法"));
     }

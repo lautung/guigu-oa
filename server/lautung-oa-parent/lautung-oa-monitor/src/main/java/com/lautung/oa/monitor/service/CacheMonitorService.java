@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit;
  *   <li>INFO：一次 {@code INFO} 取回后只解析 server/memory/clients/stats/keyspace 五段为
  *       字段，不整段回传；读不到时各段为空，不 500。</li>
  *   <li>列表：{@code SCAN}（不用 {@code KEYS}）+ 前缀白名单四个；结果在内存里排序后按
- *       游标窗口切页（与在线列表同口径），每键附 TTL（秒，-1 无过期）。</li>
+ *       游标窗口切页（与在线列表同口径），单页上限 {@link #MAX_KEY_COUNT}（超界 201），
+ *       每键附 TTL（秒，-1 无过期）。</li>
  *   <li>清理：单键删除只收 {@code perm:} 前缀，清空只收 {@code perm:cache:*}；
  *       其余前缀只读——删掉 {@code token:revoked:*} 等于把已退出的会话复活。</li>
  * </ul>
@@ -42,6 +43,13 @@ public class CacheMonitorService {
 
     /** 单键删除的清理白名单：只允许权限缓存家族（perm:*），ADR 0060。 */
     static final String DELETE_PREFIX = "perm:";
+
+    /**
+     * 列表单页条数上限（超界 201，与 count&lt;1 同一条消息，对齐 #238 logs 上限先例）。
+     * 取 1000 而非更小的轻量档：客户端删除键后会把 count 设成已累计行数、整段重读累计窗口，
+     * 上限必须容纳窗口里的累计行数，太小会打断删除后重读路径；再大的浏览量走游标翻页。
+     */
+    static final long MAX_KEY_COUNT = 1000;
 
     private static final int SCAN_HINT = 200;
 
@@ -69,7 +77,7 @@ public class CacheMonitorService {
         if (cursor < 0) {
             throw new BusinessException(201, "游标不合法");
         }
-        if (count < 1) {
+        if (count < 1 || count > MAX_KEY_COUNT) {
             throw new BusinessException(201, "count 不合法");
         }
         List<String> matched = new ArrayList<>();
@@ -82,7 +90,7 @@ public class CacheMonitorService {
         Collections.sort(matched);
 
         int from = (int) Math.min(cursor, matched.size());
-        int to = (int) Math.min(from + Math.min(count, Integer.MAX_VALUE), matched.size());
+        int to = (int) Math.min(from + count, matched.size());
         List<CacheKeyVo> keys = new ArrayList<>();
         for (String key : matched.subList(from, to)) {
             keys.add(new CacheKeyVo(key, ttlOf(key)));

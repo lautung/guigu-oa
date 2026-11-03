@@ -2,6 +2,7 @@ package com.lautung.oa.monitor;
 
 import com.lautung.oa.auth.LoginAuthContractTest;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.support.ContractFixtures;
 import com.lautung.oa.support.InMemoryRedisTemplate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,20 +67,14 @@ class OnlineSessionContractTest {
     @BeforeEach
     void resetSessionsAndUsers() {
         redis().clear();
-        jdbcTemplate.update("UPDATE sys_user SET status = 1, is_deleted = 0, token_version = 0 "
-                + "WHERE id IN (1, 2)");
-        jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_role WHERE id = ?", READ_ONLY_ROLE_ID);
+        ContractFixtures.resetSeededUsers(jdbcTemplate);
+        ContractFixtures.deleteAdHocRole(jdbcTemplate, READ_ONLY_ROLE_ID);
     }
 
     @AfterEach
     void restoreSeededUsers() {
-        jdbcTemplate.update("UPDATE sys_user SET status = 1, is_deleted = 0, token_version = 0 "
-                + "WHERE id IN (1, 2)");
-        jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id = ?", READ_ONLY_ROLE_ID);
-        jdbcTemplate.update("DELETE FROM sys_role WHERE id = ?", READ_ONLY_ROLE_ID);
+        ContractFixtures.resetSeededUsers(jdbcTemplate);
+        ContractFixtures.deleteAdHocRole(jdbcTemplate, READ_ONLY_ROLE_ID);
     }
 
     @Test
