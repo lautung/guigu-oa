@@ -2,10 +2,13 @@ package com.lautung.oa.support;
 
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.types.Expiration;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisServerCommands;
 
 import java.lang.reflect.Proxy;
 import java.time.Duration;
@@ -15,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -26,17 +30,47 @@ import java.util.regex.Pattern;
  * <p>ADR 0060 之后每次认证请求都会走会话节流（{@code SET NX EX 60} + {@code HSET}），
  * 只有值操作的旧 fake 会抛 {@code UnsupportedOperationException}。这里把同一份实现给所有
  * {@code @SpringBootTest} 使用，避免每个套件各抄一份互不兼容的代理。
+ *
+ * <p>#237 补齐缓存监控面需要的三块：{@code getExpire}（缓存列表逐键 TTL）、
+ * {@code execute(RedisCallback)} 与连接级 {@code serverCommands().info()}（INFO 五段，
+ * 测试用 {@code setInfo} 注入形状）、{@code clear} 一并复位 INFO。
  */
 public class InMemoryRedisTemplate extends RedisTemplate<String, String> {
 
     private final Map<String, String> values = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> hashes = new ConcurrentHashMap<>();
     private final Map<String, Long> expiresAt = new ConcurrentHashMap<>();
+    private final Properties infoProperties = new Properties();
 
     public void clear() {
         values.clear();
         hashes.clear();
         expiresAt.clear();
+        infoProperties.clear();
+    }
+
+    /** 注入 {@code INFO} 的解析后形状（驱动语义：仅 {@code key:value} 行，无段头）。 */
+    public void setInfo(Properties info) {
+        infoProperties.clear();
+        if (info != null) {
+            infoProperties.putAll(info);
+        }
+    }
+
+    /** 按 INFO 原文形状注入（{@code key:value} 行，{@code # 段头} 与空行被忽略）。 */
+    public void setInfoText(String infoText) {
+        Properties parsed = new Properties();
+        if (infoText != null) {
+            for (String line : infoText.split("\\r?\\n")) {
+                String trimmed = line.trim();
+                int separator = trimmed.indexOf(':');
+                if (trimmed.isEmpty() || trimmed.startsWith("#") || separator <= 0) {
+                    continue;
+                }
+                parsed.setProperty(trimmed.substring(0, separator), trimmed.substring(separator + 1));
+            }
+        }
+        setInfo(parsed);
     }
 
     /** 剩余 TTL；没有设置过期时间时返回 null，已过期返回 {@link Duration#ZERO}。 */
@@ -225,6 +259,60 @@ public class InMemoryRedisTemplate extends RedisTemplate<String, String> {
     public Cursor<String> scan(ScanOptions options) {
         String pattern = options == null ? "*" : options.getPattern();
         return cursor(new ArrayList<>(matching(pattern == null ? "*" : pattern)));
+    }
+
+    @Override
+    public Long getExpire(String key, TimeUnit unit) {
+        Long deadline = expiresAt.get(key);
+        if (deadline != null && deadline <= System.currentTimeMillis()) {
+            values.remove(key);
+            hashes.remove(key);
+            expiresAt.remove(key);
+            return -2L;
+        }
+        if (!values.containsKey(key) && !hashes.containsKey(key)) {
+            return -2L;
+        }
+        if (deadline == null) {
+            return -1L;
+        }
+        long remainingMillis = Math.max(0L, deadline - System.currentTimeMillis());
+        return unit.convert(remainingMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public <T> T execute(RedisCallback<T> callback) {
+        return callback.doInRedis((RedisConnection) Proxy.newProxyInstance(
+                RedisConnection.class.getClassLoader(),
+                new Class<?>[]{RedisConnection.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
+                    if ("serverCommands".equals(name)) {
+                        return serverCommands();
+                    }
+                    if ("toString".equals(name)) {
+                        return "InMemoryRedisConnection";
+                    }
+                    throw new UnsupportedOperationException(name);
+                }));
+    }
+
+    private Object serverCommands() {
+        return Proxy.newProxyInstance(
+                RedisServerCommands.class.getClassLoader(),
+                new Class<?>[]{RedisServerCommands.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
+                    if ("info".equals(name)) {
+                        Properties snapshot = new Properties();
+                        snapshot.putAll(infoProperties);
+                        return snapshot;
+                    }
+                    if ("toString".equals(name)) {
+                        return "InMemoryRedisServerCommands";
+                    }
+                    throw new UnsupportedOperationException(name);
+                });
     }
 
     /** 直接删字段的 Redis 语义；本 fake 只支持 {@code delete(key, Object... fields)} 的常见形状。 */

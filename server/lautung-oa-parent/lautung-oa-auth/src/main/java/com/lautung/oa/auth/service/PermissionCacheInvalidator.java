@@ -4,6 +4,7 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.model.system.SysUserRole;
 import com.lautung.oa.model.system.SysRoleMenu;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lautung.oa.security.cache.PermissionCacheKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Invalidates the authority JSON cached by username in {@code IndexController}. */
+/**
+ * Invalidates the authority JSON cached under {@code perm:cache:<username>}（#237，ADR 0060
+ * 的唯一 key 构造点；失效路径不再触碰迁移前的裸 username 键）.
+ */
 @Service
 public class PermissionCacheInvalidator {
 
@@ -97,7 +101,8 @@ public class PermissionCacheInvalidator {
             return;
         }
 
-        Runnable deleteCachedAuthorities = () -> usernames.forEach(redisTemplate::delete);
+        Runnable deleteCachedAuthorities = () -> usernames.forEach(username ->
+                redisTemplate.delete(PermissionCacheKey.of(username)));
         if (TransactionSynchronizationManager.isActualTransactionActive()
                 && TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

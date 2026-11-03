@@ -1,6 +1,7 @@
 package com.lautung.oa.auth;
 
 import com.lautung.oa.auth.service.SysRoleService;
+import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.auth.service.SysMenuService;
 import com.lautung.oa.auth.service.SysUserRoleService;
 import com.lautung.oa.model.system.SysMenu;
@@ -43,6 +44,11 @@ class PermissionCacheInvalidationTest {
     private static final String CACHE_BOB = "cache-bob";
     private static final String CACHE_CAROL = "cache-carol";
 
+    /** #237 迁移后的键形状：失效断言都落在唯一构造点的 perm:cache: 前缀上。 */
+    private static String key(String username) {
+        return PermissionCacheKey.of(username);
+    }
+
     @Autowired
     private SysRoleService sysRoleService;
 
@@ -63,95 +69,95 @@ class PermissionCacheInvalidationTest {
 
     @Test
     void changingUsersRolesImmediatelyRemovesOnlyThatUsersCachedPermissionJson() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_BOB), "[{\"authority\":\"bnt.approval.view\"}]");
 
         AssginRoleVo assignment = new AssginRoleVo();
         assignment.setUserId(CACHE_ALICE_ID);
         assignment.setRoleIdList(List.of(11L));
         sysRoleService.doAssign(assignment);
 
-        assertFalse(permissionCache.containsKey(CACHE_ALICE), "被改角色的用户不能继续使用旧权限 JSON");
-        assertTrue(permissionCache.containsKey(CACHE_BOB), "未改角色的用户缓存应保留");
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)), "被改角色的用户不能继续使用旧权限 JSON");
+        assertTrue(permissionCache.containsKey(key(CACHE_BOB)), "未改角色的用户缓存应保留");
     }
 
     @Test
     void changingMenusForARoleImmediatelyRemovesPermissionJsonForEveryMember() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_CAROL, "[{\"authority\":\"bnt.manage.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_BOB), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_CAROL), "[{\"authority\":\"bnt.manage.view\"}]");
 
         AssginMenuVo assignment = new AssginMenuVo();
         assignment.setRoleId(10L);
         assignment.setMenuIdList(List.of(21L));
         sysMenuService.doAssign(assignment);
 
-        assertFalse(permissionCache.containsKey(CACHE_ALICE), "角色菜单变化后应清除第一位成员的旧权限");
-        assertFalse(permissionCache.containsKey(CACHE_BOB), "角色菜单变化后应清除第二位成员的旧权限");
-        assertTrue(permissionCache.containsKey(CACHE_CAROL), "无关角色成员缓存应保留");
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)), "角色菜单变化后应清除第一位成员的旧权限");
+        assertFalse(permissionCache.containsKey(key(CACHE_BOB)), "角色菜单变化后应清除第二位成员的旧权限");
+        assertTrue(permissionCache.containsKey(key(CACHE_CAROL)), "无关角色成员缓存应保留");
     }
 
     @Test
     void changingRoleDetailsRemovesCachedPermissionJsonForEveryMember() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_CAROL, "[{\"authority\":\"bnt.manage.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_BOB), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_CAROL), "[{\"authority\":\"bnt.manage.view\"}]");
 
         SysRole role = sysRoleService.getById(10L);
         role.setRoleName("已更新审批人");
         assertTrue(sysRoleService.updateById(role));
 
-        assertFalse(permissionCache.containsKey(CACHE_ALICE));
-        assertFalse(permissionCache.containsKey(CACHE_BOB));
-        assertTrue(permissionCache.containsKey(CACHE_CAROL));
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)));
+        assertFalse(permissionCache.containsKey(key(CACHE_BOB)));
+        assertTrue(permissionCache.containsKey(key(CACHE_CAROL)));
     }
 
     @Test
     void deletingRoleRemovesCachedPermissionJsonForItsMembers() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_CAROL, "[{\"authority\":\"bnt.manage.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_BOB), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_CAROL), "[{\"authority\":\"bnt.manage.view\"}]");
 
         assertTrue(sysRoleService.removeById(10L));
 
-        assertFalse(permissionCache.containsKey(CACHE_ALICE));
-        assertFalse(permissionCache.containsKey(CACHE_BOB));
-        assertTrue(permissionCache.containsKey(CACHE_CAROL));
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)));
+        assertFalse(permissionCache.containsKey(key(CACHE_BOB)));
+        assertTrue(permissionCache.containsKey(key(CACHE_CAROL)));
     }
 
     @Test
     void changingMenuDetailsRemovesCachedPermissionJsonForRoleMembers() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_BOB, "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_CAROL, "[{\"authority\":\"bnt.manage.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_BOB), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_CAROL), "[{\"authority\":\"bnt.manage.view\"}]");
 
         SysMenu menu = sysMenuService.getById(20L);
         menu.setStatus(0);
         assertTrue(sysMenuService.updateById(menu));
 
-        assertFalse(permissionCache.containsKey(CACHE_ALICE));
-        assertFalse(permissionCache.containsKey(CACHE_BOB));
-        assertTrue(permissionCache.containsKey(CACHE_CAROL));
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)));
+        assertFalse(permissionCache.containsKey(key(CACHE_BOB)));
+        assertTrue(permissionCache.containsKey(key(CACHE_CAROL)));
     }
 
     @Test
     void adminIsInvalidatedAsARoleMemberNotAsASeedAccount() {
-        permissionCache.put("admin", "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key("admin"), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
         jdbcTemplate.update("INSERT INTO sys_user_role (id, user_id, role_id, is_deleted) VALUES (40, 1, 10, 0)");
 
         SysMenu menu = sysMenuService.getById(20L);
         menu.setStatus(0);
         assertTrue(sysMenuService.updateById(menu));
 
-        assertFalse(permissionCache.containsKey("admin"), "admin 是角色成员，按成员失效");
-        assertFalse(permissionCache.containsKey(CACHE_ALICE));
+        assertFalse(permissionCache.containsKey(key("admin")), "admin 是角色成员，按成员失效");
+        assertFalse(permissionCache.containsKey(key(CACHE_ALICE)));
     }
 
     @Test
     void creatingAndDeletingUnassignedMenuKeepsCachedPermissionJson() {
-        permissionCache.put("admin", "[{\"authority\":\"bnt.approval.view\"}]");
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key("admin"), "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
 
         SysMenu menu = new SysMenu();
         menu.setParentId(0L);
@@ -162,17 +168,17 @@ class PermissionCacheInvalidationTest {
         menu.setStatus(1);
         assertTrue(sysMenuService.save(menu));
 
-        assertTrue(permissionCache.containsKey("admin"));
-        assertTrue(permissionCache.containsKey(CACHE_ALICE));
+        assertTrue(permissionCache.containsKey(key("admin")));
+        assertTrue(permissionCache.containsKey(key(CACHE_ALICE)));
 
         sysMenuService.removeMenuById(menu.getId());
-        assertTrue(permissionCache.containsKey("admin"));
-        assertTrue(permissionCache.containsKey(CACHE_ALICE));
+        assertTrue(permissionCache.containsKey(key("admin")));
+        assertTrue(permissionCache.containsKey(key(CACHE_ALICE)));
     }
 
     @Test
     void rollingBackRoleChangesKeepsTheExistingPermissionJson() {
-        permissionCache.put(CACHE_ALICE, "[{\"authority\":\"bnt.approval.view\"}]");
+        permissionCache.put(key(CACHE_ALICE), "[{\"authority\":\"bnt.approval.view\"}]");
 
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         assertThrows(IllegalStateException.class, () -> transaction.executeWithoutResult(status -> {
@@ -183,7 +189,7 @@ class PermissionCacheInvalidationTest {
             throw new IllegalStateException("force database rollback");
         }));
 
-        assertTrue(permissionCache.containsKey(CACHE_ALICE));
+        assertTrue(permissionCache.containsKey(key(CACHE_ALICE)));
         LambdaQueryWrapper<SysUserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysUserRole::getUserId, CACHE_ALICE_ID);
         assertEquals(10L, sysUserRoleService.list(wrapper).get(0).getRoleId());
