@@ -39,6 +39,8 @@ const MONITOR_MENUS = [
   { path: '/monitor/server', parentPath: '/monitor', title: '服务监控', type: 1, sort: 2 },
   { path: '/monitor/data', parentPath: '/monitor', title: '数据监控', type: 1, sort: 3 },
   { path: '/monitor/cache', parentPath: '/monitor', title: '缓存监控', type: 1, sort: 4 },
+  { path: '/monitor/cacheList', parentPath: '/monitor', title: '缓存列表', type: 1, sort: 5 },
+  { path: '/monitor/job', parentPath: '/monitor', title: '定时任务', type: 1, sort: 6 },
 ]
 
 /** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
@@ -218,6 +220,8 @@ describe('系统监控模块翻真（#239/#240）', () => {
       '/monitor/online',
       '/monitor/server',
       '/monitor/data',
+      '/monitor/cache',
+      '/monitor/cacheList',
     ])
     expect(monitor.items[0].title).toBe('在线用户')
     expect(monitor.firstPath).toBe('/monitor/online')
@@ -227,7 +231,8 @@ describe('系统监控模块翻真（#239/#240）', () => {
   it('renders no dead links for granted pages without a client route', () => {
     const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
 
-    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/cache')
+    // /monitor/cache、/monitor/cacheList 已随 #241 落路由；/monitor/job（定时任务）还没有。
+    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/job')
   })
 
   it('keeps only the /monitor subtree even when other modules are granted', () => {
@@ -239,13 +244,16 @@ describe('系统监控模块翻真（#239/#240）', () => {
       '/monitor/online',
       '/monitor/server',
       '/monitor/data',
+      '/monitor/cache',
+      '/monitor/cacheList',
     ])
   })
 
   it('falls back to 暂无可用页面 without any routed monitor grant', () => {
     const monitor = buildShellNav([
       { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
-      { path: '/monitor/cache', parentPath: '/monitor', title: '缓存监控', type: 1, sort: 2 },
+      // /monitor/job（定时任务）尚无客户端路由（#241 起缓存两页已落路由）。
+      { path: '/monitor/job', parentPath: '/monitor', title: '定时任务', type: 1, sort: 2 },
     ]).find((module) => module.key === 'monitor')
 
     expect(monitor.items).toEqual([])

@@ -247,6 +247,20 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '数据监控', menuGroup: 'config' },
       },
       {
+        // 缓存监控（#241，ADR 0060）：Redis INFO 五段快照面板；授予判定同在线用户。
+        path: PATHS.MONITOR_CACHE,
+        name: 'MonitorCache',
+        component: () => import('@/views/monitor/cache/index.vue'),
+        meta: { title: '缓存监控', menuGroup: 'config' },
+      },
+      {
+        // 缓存列表（#241，ADR 0060）：白名单前缀键浏览 + 受限清理；授予判定同在线用户。
+        path: PATHS.MONITOR_CACHE_LIST,
+        name: 'MonitorCacheList',
+        component: () => import('@/views/monitor/cacheList/index.vue'),
+        meta: { title: '缓存列表', menuGroup: 'config' },
+      },
+      {
         path: PATHS.TOOL,
         name: 'Tool',
         component: () => import('@/shell/ModulePlaceholder.vue'),

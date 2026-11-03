@@ -361,6 +361,48 @@ export interface MonitorDataSnapshot {
   } | null
 }
 
+/** 缓存监控/缓存列表（ADR 0060，#237）：镜像 CacheMonitorVo 的五段解析字段。 */
+export interface CacheMonitorSnapshot {
+  server?: {
+    redisVersion?: string | null
+    uptimeSeconds?: number | null
+  } | null
+  memory?: {
+    usedMemoryBytes?: number | null
+    usedMemoryHuman?: string | null
+    /** 0 表示未设上限（Redis 原值）。 */
+    maxMemoryBytes?: number | null
+  } | null
+  clients?: {
+    connectedClients?: number | null
+  } | null
+  stats?: {
+    keyspaceHits?: number | null
+    keyspaceMisses?: number | null
+    expiredKeys?: number | null
+  } | null
+  keyspace?:
+    | {
+        db?: string | null
+        keys?: number | null
+        expires?: number | null
+        avgTtlMs?: number | null
+      }[]
+    | null
+}
+
+export interface CacheKeyRecord {
+  key?: string | null
+  /** 秒；-1 无过期（服务端把扫描间隙消失的 -2 也归 -1）。 */
+  ttl?: number | null
+}
+
+export interface CacheKeyPage {
+  keys?: CacheKeyRecord[] | null
+  /** 0 表示扫描结束。 */
+  nextCursor?: number | null
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string
