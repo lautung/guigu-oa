@@ -23,6 +23,11 @@ const SYSTEM_MENUS = [
   { path: '/system/log/operLog', parentPath: '/system/log', title: '操作日志', type: 1, sort: 1 },
 ]
 
+const MONITOR_MENUS = [
+  { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
+  { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
+]
+
 const page = (name) => ({ template: `<div class="page-${name}">${name}</div>` })
 
 function shellRouter(initial = '/work/pending') {
@@ -38,6 +43,7 @@ function shellRouter(initial = '/work/pending') {
       { path: '/system/sysUser', component: page('sysUser'), meta: { title: '用户管理' } },
       { path: '/system/log/operLog', component: page('operLog'), meta: { title: '操作日志' } },
       { path: '/monitor', component: page('monitor'), meta: { title: '系统监控' } },
+      { path: '/monitor/online', component: page('online'), meta: { title: '在线用户' } },
       { path: '/tool', component: page('tool'), meta: { title: '系统工具' } },
     ],
   })
@@ -221,7 +227,7 @@ describe('AppShell', () => {
     expect(wrapper.find('.el-config-provider-stub').attributes('data-size')).toBe('large')
   })
 
-  it('switches to 系统监控 and shows the empty module state', async () => {
+  it('keeps 系统监控 disabled and on the current page without monitor grants', async () => {
     const { pinia } = setupSession({ name: 'Alice' })
     const router = shellRouter()
     await router.isReady()
@@ -231,9 +237,22 @@ describe('AppShell', () => {
     await monitor.trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/monitor')
-    expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toContain('系统监控')
-    expect(wrapper.find('.app-sidebar').text()).toContain('页面将在后续版本提供')
+    expect(router.currentRoute.value.path).toBe('/work/pending')
+    expect(monitor.attributes('disabled')).toBeDefined()
+  })
+
+  it('switches to 在线用户 when monitor pages are granted', async () => {
+    const { pinia } = setupSession({ name: 'Alice', menus: MONITOR_MENUS })
+    const router = shellRouter()
+    await router.isReady()
+    const wrapper = mount(AppShell, shellOptions(pinia, router))
+
+    const monitor = wrapper.findAll('.top-nav-item').find((item) => item.text() === '系统监控')
+    await monitor.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/monitor/online')
+    expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toContain('在线用户')
   })
 
   it('turns the sidebar into a drawer under 900px and shows the desktop hint on config pages', async () => {

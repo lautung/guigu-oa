@@ -32,6 +32,13 @@ const SYSTEM_MENUS = [
   },
 ]
 
+/** 真实种子形状（V117–V118）：/monitor 目录 + 已授予的监控页面；服务监控还没有客户端路由。 */
+const MONITOR_MENUS = [
+  { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
+  { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
+  { path: '/monitor/server', parentPath: '/monitor', title: '服务监控', type: 1, sort: 2 },
+]
+
 /** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
 const FLAT_SYSTEM_MENUS = [
   { path: '/system/log/operLog', title: '操作日志', type: 1, sort: 2 },
@@ -65,8 +72,14 @@ describe('shell 一级导航', () => {
     expect(system.groups).toEqual([])
     expect(system.firstPath).toBe('')
     expect(system.emptyHint).toBe('暂无可用页面')
-    expect(modules.find((module) => module.key === 'monitor').firstPath).toBe('/monitor')
     expect(modules.find((module) => module.key === 'tool').firstPath).toBe('/tool')
+  })
+
+  it('does not flag 系统监控 as a placeholder module any more', () => {
+    expect(SHELL_MODULE_DEFINITIONS.find((module) => module.key === 'monitor').placeholder).toBe(
+      undefined,
+    )
+    expect(SHELL_MODULE_DEFINITIONS.find((module) => module.key === 'tool').placeholder).toBe(true)
   })
 
   it('always exposes 工作台 entries and the six 办事 built-ins', () => {
@@ -105,6 +118,20 @@ describe('shell 一级导航', () => {
     expect(system.groups[1].items.map((item) => item.path)).toEqual([
       '/system/processSet/processTemplate',
     ])
+  })
+
+  it('keeps monitor leaves out of the 系统管理 sidebar when both modules are granted', () => {
+    const system = buildShellNav([...SYSTEM_MENUS, ...MONITOR_MENUS]).find(
+      (module) => module.key === 'system',
+    )
+    const titles = [...system.items, ...system.groups.flatMap((group) => group.items)].map(
+      (item) => item.title,
+    )
+
+    expect(titles).toContain('用户管理')
+    expect(titles).not.toContain('在线用户')
+    expect(titles).not.toContain('服务监控')
+    expect(system.firstPath).toBe('/system/sysUser')
   })
 
   it('keeps hidden pages out of the sidebar and falls 系统管理 to its granted pages', () => {
@@ -148,6 +175,7 @@ describe('shell 一级导航', () => {
     expect(activeModuleKey('/system/sysUser')).toBe('system')
     expect(activeModuleKey('/system/processSet/templateSet')).toBe('system')
     expect(activeModuleKey('/monitor')).toBe('monitor')
+    expect(activeModuleKey('/monitor/online')).toBe('monitor')
     expect(activeModuleKey('/tool')).toBe('tool')
     expect(activeModuleKey('/unknown')).toBeNull()
     expect(activeModuleKey('/work/processed?page=2')).toBe('work')
@@ -175,5 +203,51 @@ describe('shell 一级导航', () => {
     expect(isShellLeafActive('/system/assignAuth', '/system/sysRole')).toBe(true)
     expect(isShellLeafActive('/work/pending', '/work/processed')).toBe(false)
     expect(isShellLeafActive('/work/started', '/work/start')).toBe(false)
+  })
+})
+
+describe('系统监控模块翻真（#239）', () => {
+  it('lists granted monitor pages flat, first path wins, no groups', () => {
+    const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
+
+    expect(monitor.title).toBe('系统监控')
+    expect(monitor.groups).toEqual([])
+    expect(monitor.items.map((item) => item.path)).toEqual(['/monitor/online'])
+    expect(monitor.items[0].title).toBe('在线用户')
+    expect(monitor.firstPath).toBe('/monitor/online')
+    expect(monitor.emptyHint).toBe('')
+  })
+
+  it('renders no dead links for granted pages without a client route', () => {
+    const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
+
+    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/server')
+  })
+
+  it('keeps only the /monitor subtree even when other modules are granted', () => {
+    const monitor = buildShellNav([...SYSTEM_MENUS, ...MONITOR_MENUS]).find(
+      (module) => module.key === 'monitor',
+    )
+
+    expect(monitor.items.map((item) => item.path)).toEqual(['/monitor/online'])
+  })
+
+  it('falls back to 暂无可用页面 without any routed monitor grant', () => {
+    const monitor = buildShellNav([
+      { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
+      { path: '/monitor/server', parentPath: '/monitor', title: '服务监控', type: 1, sort: 2 },
+    ]).find((module) => module.key === 'monitor')
+
+    expect(monitor.items).toEqual([])
+    expect(monitor.firstPath).toBe('')
+    expect(monitor.emptyHint).toBe('暂无可用页面')
+  })
+
+  it('without any monitor grant the module is empty and disabled', () => {
+    const monitor = buildShellNav(SYSTEM_MENUS).find((module) => module.key === 'monitor')
+
+    expect(monitor.items).toEqual([])
+    expect(monitor.firstPath).toBe('')
+    expect(monitor.emptyHint).toBe('暂无可用页面')
   })
 })
