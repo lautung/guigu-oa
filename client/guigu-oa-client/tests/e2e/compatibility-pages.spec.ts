@@ -156,6 +156,8 @@ async function mockApi(page: Page) {
       return json(route, { records: [], total: 0, pages: 0 })
     if (path.startsWith('/admin/process/findStarted/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (path.startsWith('/admin/process/findCarbonCopied/'))
+      return json(route, { records: [], total: 0, pages: 0 })
     if (path === '/admin/process/show/A')
       return json(route, {
         process: { ...pendingRecord, title: '审批 A' },
@@ -237,6 +239,16 @@ test('登录页在矩阵内可渲染', async ({ page }, testInfo) => {
   await expect(page.getByPlaceholder('用户名')).toBeVisible()
   await expect(page.getByRole('button', { name: '登录', exact: true })).toBeVisible()
   await capture(page, testInfo, 'login', 'idle')
+})
+
+test('工作台在矩阵内可渲染', async ({ page }, testInfo) => {
+  await seedSession(page)
+  await mockApi(page)
+  await page.goto('/workbench')
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page.locator('.kpi-card')).toHaveCount(4)
+  await expect(page.getByText('请假申请', { exact: true }).first()).toBeVisible()
+  await capture(page, testInfo, 'workbench', 'dashboard')
 })
 
 test('发起审批的模板列表与表单在矩阵内可渲染', async ({ page }, testInfo) => {

@@ -1,4 +1,4 @@
-import { ROUTES } from '@/router/paths'
+import { PATHS, ROUTES } from '@/router/paths'
 
 export { ROUTES }
 
@@ -13,6 +13,7 @@ export const WORK_BUILTIN_ITEMS = [
   { path: ROUTES.PROFILE, title: '基本信息' },
 ] as const
 
+/** 登录落点统一为工作台（ADR 0051/0059）：不按权限分流，也不落介绍页。 */
 export function getDefaultPostLoginRoute(): string {
-  return ROUTES.PENDING
+  return PATHS.WORKBENCH
 }

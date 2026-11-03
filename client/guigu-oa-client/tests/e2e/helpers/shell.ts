@@ -10,6 +10,17 @@ export async function openShellLink(page: Page, title: string): Promise<void> {
   await page.locator('.app-sidebar').getByRole('link', { name: title, exact: true }).click()
 }
 
+/** 登录落点（#229）：工作台是默认页，后续用例再显式切到待处理。 */
+export async function expectWorkbench(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
+}
+
+export async function openPendingFromWorkbench(page: Page): Promise<void> {
+  await page.getByRole('button', { name: '处理待办', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
+}
+
 /** 顶栏退出登录；窄屏与桌面走同一入口。 */
 export async function logoutFromShell(page: Page): Promise<void> {
   await page.locator('.logout-btn').click()

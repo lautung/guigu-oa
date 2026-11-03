@@ -112,7 +112,7 @@ test('旧业务请求迟到失败不会提示或清掉新用户', async ({ page,
   await oldResponse
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
   await expect(page.locator('.el-message')).toHaveCount(0)
-  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page).toHaveURL(/\/workbench$/)
   expect(
     (await context.cookies()).find((cookie) => cookie.name === 'guigu_oa_client_token')?.value,
   ).toBe('bob-only')

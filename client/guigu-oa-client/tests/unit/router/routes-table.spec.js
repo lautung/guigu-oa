@@ -43,7 +43,7 @@ describe('route table', () => {
     expect(work.redirect).toBe(PATHS.WORK_PENDING)
   })
 
-  it('registers the workbench placeholder without changing the landing route', () => {
+  it('registers the workbench route as the default landing', () => {
     const workbench = shell.children.find((route) => route.path === PATHS.WORKBENCH)
 
     expect(workbench.name).toBe('Workbench')
@@ -110,8 +110,9 @@ describe('route table', () => {
     expect(router.options.scrollBehavior()).toEqual({ top: 0 })
   })
 
-  // 全量并行时动态导入几十个组件会逼近 5s 默认线（单跑 ~3.3s），放宽超时。
-  it('resolves every lazily loaded route component', { timeout: 15_000 }, async () => {
+  // 全量并行时动态导入几十个组件会逼近默认线；#229 的工作台换成真实页面后又重了一档，
+  // 单跑 ~7s、verify 并行时会超过 15s，所以留到 30s。
+  it('resolves every lazily loaded route component', { timeout: 30_000 }, async () => {
     const loaders = []
     const walk = (routes) => {
       for (const route of routes) {

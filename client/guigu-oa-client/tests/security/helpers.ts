@@ -11,5 +11,9 @@ export async function uiLogin(page: Page, username: string): Promise<void> {
   await page.getByPlaceholder('用户名').fill(username)
   await page.getByPlaceholder('密码').fill(PASSWORD)
   await page.getByRole('button', { name: '登录' }).click()
+  // 登录落点是工作台（#229）；安全用例仍从待处理开始，显式切过去。
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
+  await page.getByRole('button', { name: '处理待办', exact: true }).click()
   await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
 }

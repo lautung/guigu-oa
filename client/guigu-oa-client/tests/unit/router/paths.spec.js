@@ -126,7 +126,7 @@ describe('路径 module', () => {
     expect(resolve('/processMgr/process').matched).toEqual([])
   })
 
-  it('工作台占位路由在壳内，返回路径是自身', () => {
+  it('工作台路由在壳内，返回路径是自身', () => {
     expect(resolve(PATHS.WORKBENCH).name).toBe('Workbench')
     expect(resolve(PATHS.WORKBENCH).meta.title).toBe('工作台')
     expect(returnPathOfRoute(PATHS.WORKBENCH)).toBe(PATHS.WORKBENCH)

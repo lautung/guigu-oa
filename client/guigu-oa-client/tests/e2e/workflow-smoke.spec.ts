@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
-import { openShellLink } from './helpers/shell'
+import { expectWorkbench, openPendingFromWorkbench, openShellLink } from './helpers/shell'
 
 const templateId = 101
 const processId = 'smoke-process-1'
@@ -105,6 +105,9 @@ async function mockApi(page: Page): Promise<SmokeState> {
       state.startPayload = request.postDataJSON() as Record<string, unknown>
       return json(route, null)
     }
+    if (path.startsWith('/admin/process/findCarbonCopied/') && method === 'GET') {
+      return json(route, { records: [], total: 0, pages: 0 })
+    }
     if (path.startsWith('/admin/process/findStarted/') && method === 'GET') {
       return json(route, {
         records: state.startPayload ? [processRecord(state, 1)] : [],
@@ -184,7 +187,8 @@ for (const approval of approvalCases) {
     await page.getByPlaceholder('用户名').fill('alice')
     await page.getByPlaceholder('密码').fill('111111')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
+    await expectWorkbench(page)
+    await openPendingFromWorkbench(page)
 
     await openShellLink(page, '发起审批')
     await page.getByRole('button', { name: '请假申请' }).click()

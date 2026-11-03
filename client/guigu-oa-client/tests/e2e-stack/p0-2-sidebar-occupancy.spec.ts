@@ -2,7 +2,7 @@ import { test, expect } from './helpers/fixtures'
 import { topModules, uiLoginExpectWork, uiSwitchModule } from './helpers/ui'
 
 /**
- * P0-2（#121）：admin 与 user 的一级模块差异；user 直达配置 URL 落到待处理；
+ * P0-2（#121）：admin 与 user 的一级模块差异；user 直达配置 URL 落到工作台；
  * admin 可进配置页。对应 GLOSSARY「后台」「后台页」「页面授予」。
  */
 
@@ -26,11 +26,11 @@ test('user 顶部仍固定五项，系统管理置灰', async ({ page }) => {
   await expect(page.locator('.app-sidebar').getByText('用户管理')).toHaveCount(0)
 })
 
-test('user 直达配置 URL 落到待处理', async ({ page }) => {
+test('user 直达配置 URL 落到工作台', async ({ page }) => {
   await uiLoginExpectWork(page, 'user')
   await page.goto('/system/sysUser')
-  await expect(page).toHaveURL(/\/work\/pending$/)
-  await expect(page.getByRole('heading', { name: '待处理', level: 2 })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
 })
 
 test('admin 可以进入用户管理', async ({ page }) => {

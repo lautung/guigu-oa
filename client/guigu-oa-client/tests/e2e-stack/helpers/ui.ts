@@ -14,9 +14,17 @@ export async function uiLogin(page: Page, username: string, password = PASSWORD)
   await page.getByRole('button', { name: '登录' }).click()
 }
 
+/**
+ * 登录后先确认落点是工作台（#229），再显式进待处理。
+ * 既有用例都以待处理为起点；落点由 p0-1/p1-9 单独断言，避免所有 spec 重写。
+ */
 export async function uiLoginExpectWork(page: Page, username: string): Promise<void> {
   await uiLogin(page, username)
-  await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
+
+  await page.getByRole('button', { name: '处理待办', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
 }
 
 // 办事列表的定位/等待/翻页收在共享 helper（#226）：这里只 re-export，

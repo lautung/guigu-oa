@@ -105,6 +105,12 @@ async function setup(
       return json(route, { records: [original], total: 1, pages: 1 })
     if (path.startsWith('/admin/process/findPending/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (
+      path.startsWith('/admin/process/findProcessed/') ||
+      path.startsWith('/admin/process/findStarted/') ||
+      path.startsWith('/admin/process/findCarbonCopied/')
+    )
+      return json(route, { records: [], total: 0, pages: 0 })
     if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
@@ -331,9 +337,9 @@ for (const [name, record] of [
 test('缺少配置菜单时不能占用模板编辑页', async ({ page }) => {
   const h = await setup(page, { menus: false })
   await page.goto('/system/processSet/templateSet?id=97')
-  // 落点随产品默认页变化（#229 改为工作台），这里只钉“被拦回默认落点”。
-  await expect(page).toHaveURL(/\/(workbench|work\/pending)$/)
-  await expect(page.getByRole('heading', { name: /^(工作台|待处理)$/ })).toBeVisible()
+  // 落点统一为工作台（#229），未授予的配置页被拦回默认页。
+  await expect(page).toHaveURL(/\/workbench$/)
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
   expect(h.saved).toHaveLength(0)
   expect(h.errors).toEqual([])
 })
@@ -531,7 +537,7 @@ test('进入结果被替换时清理编辑，旧上传结果不影响重新进�
       { name: 'guigu_oa_client_entry', value: 'replacement-entry', url: e2eCookieURL() },
     ])
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
-  await expect(page).toHaveURL(/\/work\/pending$/)
+  await expect(page).toHaveURL(/\/workbench$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   const oldResponse = page.waitForResponse('**/uploadProcessDefinition')
   gate.resolve()

@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { expectWorkbench } from './helpers/shell'
 
 const unavailableMessage = '暂不可发起，需核实原审批内容'
 const templateId = 195
@@ -108,7 +109,7 @@ test('keeps unverified published templates frozen and blocks direct start URLs',
   await page.getByPlaceholder('用户名').fill('alice')
   await page.getByPlaceholder('密码').fill('111111')
   await page.getByRole('button', { name: '登录' }).click()
-  await expect(page.getByRole('heading', { name: '待处理' })).toBeVisible()
+  await expectWorkbench(page)
 
   await page.goto('/system/processSet/processTemplate')
   const templateRow = page.locator('.el-table__row').filter({ hasText: '历史请假模板' })

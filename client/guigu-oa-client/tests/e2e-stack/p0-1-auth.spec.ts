@@ -6,9 +6,10 @@ import { uiLogin, uiLoginExpectWork, uiLogout } from './helpers/ui'
  * 直达 URL 被拦。对应 GLOSSARY「登录」「停用」「退出」「统一客户端」。
  */
 
-test('登录成功落到待处理', async ({ page }) => {
-  await uiLoginExpectWork(page, 'alice')
-  await expect(page).toHaveURL(/\/work\/pending$/)
+test('登录成功落到工作台', async ({ page }) => {
+  await uiLogin(page, 'alice')
+  await expect(page.getByRole('heading', { name: '工作台', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workbench$/)
 })
 
 test('密码错误与用户不存在都提示认证失败（不区分）', async ({ page }) => {
