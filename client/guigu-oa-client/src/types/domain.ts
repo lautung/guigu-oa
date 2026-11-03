@@ -288,6 +288,79 @@ export interface OnlineSessionListItem {
   current: boolean
 }
 
+/** 服务监控/数据监控（ADR 0060）：字段镜像 lautung-oa-model 的 monitor VO，单位字节/百分比(0-100)/秒。 */
+export interface HikariMetrics {
+  activeConnections?: number | null
+  idleConnections?: number | null
+  totalConnections?: number | null
+  threadsAwaiting?: number | null
+  maxPoolSize?: number | null
+  connectionTimeoutSeconds?: number | null
+  totalAcquired?: number | null
+  totalTimeouts?: number | null
+}
+
+export interface MemorySegmentMetrics {
+  usedBytes?: number | null
+  committedBytes?: number | null
+  maxBytes?: number | null
+}
+
+export interface ThreadMetrics {
+  threadCount?: number | null
+  peakThreadCount?: number | null
+  daemonThreadCount?: number | null
+}
+
+export interface JvmMetrics {
+  uptimeSeconds?: number | null
+  heap?: MemorySegmentMetrics | null
+  nonHeap?: MemorySegmentMetrics | null
+  pools?: { name?: string; usage?: MemorySegmentMetrics | null }[] | null
+  threads?: ThreadMetrics | null
+}
+
+export interface ServerMetrics {
+  cpu?: {
+    usagePercent?: number | null
+    systemLoad?: number | null
+    availableProcessors?: number | null
+  } | null
+  memory?: {
+    totalBytes?: number | null
+    freeBytes?: number | null
+    usagePercent?: number | null
+  } | null
+  jvm?: JvmMetrics | null
+  disks?:
+    | {
+        mountPoint?: string | null
+        totalBytes?: number | null
+        usableBytes?: number | null
+        usedBytes?: number | null
+        usagePercent?: number | null
+      }[]
+    | null
+  hikari?: HikariMetrics | null
+}
+
+export interface SlowSqlEntry {
+  timestamp?: number | null
+  statementId?: string | null
+  elapsedMs?: number | null
+  rows?: number | null
+  sql?: string | null
+}
+
+export interface MonitorDataSnapshot {
+  hikari?: HikariMetrics | null
+  slowSql?: {
+    enabled?: boolean | null
+    thresholdMs?: number | null
+    entries?: SlowSqlEntry[] | null
+  } | null
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string
