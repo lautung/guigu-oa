@@ -49,7 +49,7 @@ test('CSP 生效时主要页面无安全策略违规', async ({ page, request },
 
   // 办事侧：列表与详情（form-create 渲染检查表单、附件区）。
   await uiLogin(page, 'bob')
-  await page.getByRole('link', { name: '待处理' }).click()
+  await page.locator('.app-sidebar').getByRole('link', { name: '待处理' }).click()
   await expect(page.getByRole('heading', { name: '待处理', level: 2 })).toBeVisible()
   // 首行点击前先等列表加载正信号（#226）：loading 中行未渲染，裸点会空转 15s。
   await expectWorkListLoaded(page)

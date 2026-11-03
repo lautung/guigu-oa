@@ -18,7 +18,7 @@ test('分配配置角色后 user 的配置菜单生效，撤销后消失', async
     await uiLoginExpectWork(page, 'admin')
     await page.goto('/system/sysUser')
     await page.getByPlaceholder('用户名/姓名/手机号码').fill('user')
-    await page.getByRole('button', { name: '搜索' }).click()
+    await page.getByRole('button', { name: '搜索', exact: true }).click()
     const row = page.locator('.el-table__row', { hasText: 'user' }).first()
     await expect(row).toBeVisible()
     await row.getByRole('button', { name: '分配角色' }).click()

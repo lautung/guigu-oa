@@ -68,7 +68,7 @@ test('用户：建、删', async ({ page }) => {
   await expect(dialog).toBeHidden()
 
   await page.getByPlaceholder('用户名/姓名/手机号码').fill(name)
-  await page.getByRole('button', { name: '搜索' }).click()
+  await page.getByRole('button', { name: '搜索', exact: true }).click()
   const row = await rowAcrossPages(page, name)
   expect(row).toBeTruthy()
   await row!.getByRole('button', { name: '删除' }).click()

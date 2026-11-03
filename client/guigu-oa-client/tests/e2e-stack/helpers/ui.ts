@@ -40,7 +40,8 @@ export {
 } from '../../helpers/work-list'
 
 export async function openWorkList(page: Page, title: string): Promise<void> {
-  await page.getByRole('link', { name: title }).click()
+  // 侧栏链接与面包屑都叫「待处理」：列表入口固定在侧栏，面包屑只用于回到列表。
+  await page.locator('.app-sidebar').getByRole('link', { name: title }).click()
   await expect(page.getByRole('heading', { name: title, level: 2 })).toBeVisible()
 }
 
