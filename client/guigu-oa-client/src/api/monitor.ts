@@ -1,6 +1,14 @@
 import request from '@/request/request'
+import { dataMetricsRequest } from '@/config/monitor-data'
+import { serverMetricsRequest } from '@/config/monitor-server'
 import { forceLogoutRequest, listRequest } from '@/config/monitor-online'
-import type { ApiResponse, OnlineSessionRecord, PageResult } from '@/types/domain'
+import type {
+  ApiResponse,
+  MonitorDataSnapshot,
+  OnlineSessionRecord,
+  PageResult,
+  ServerMetrics,
+} from '@/types/domain'
 
 export function findPage(
   page: number,
@@ -12,4 +20,14 @@ export function findPage(
 
 export function forceLogout(sessionId: string): Promise<ApiResponse<void>> {
   return request<void>(forceLogoutRequest(sessionId))
+}
+
+/** 服务监控快照（ADR 0060）：不代理 actuator，只读自研接口；页面走作用域发的 serverMetricsRequest。 */
+export function getServerMetrics(): Promise<ApiResponse<ServerMetrics | null>> {
+  return request<ServerMetrics | null>(serverMetricsRequest())
+}
+
+/** 数据监控快照（ADR 0060）：Hikari 实时段 + 慢 SQL 内存环；执行包装同上。 */
+export function getDataMetrics(): Promise<ApiResponse<MonitorDataSnapshot | null>> {
+  return request<MonitorDataSnapshot | null>(dataMetricsRequest())
 }

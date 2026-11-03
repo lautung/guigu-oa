@@ -16,6 +16,8 @@ describe('route table', () => {
       PATHS.WORKBENCH,
       PATHS.MONITOR,
       PATHS.MONITOR_ONLINE,
+      PATHS.MONITOR_SERVER,
+      PATHS.MONITOR_DATA,
       PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
@@ -42,6 +44,16 @@ describe('route table', () => {
 
     expect(online.name).toBe('MonitorOnline')
     expect(online.meta).toEqual({ title: '在线用户', menuGroup: 'config' })
+  })
+
+  it('registers 服务监控 and 数据监控 as grant-checked monitor pages (#240)', () => {
+    const server = shell.children.find((route) => route.path === PATHS.MONITOR_SERVER)
+    const data = shell.children.find((route) => route.path === PATHS.MONITOR_DATA)
+
+    expect(server.name).toBe('MonitorServer')
+    expect(server.meta).toEqual({ title: '服务监控', menuGroup: 'config' })
+    expect(data.name).toBe('MonitorData')
+    expect(data.meta).toEqual({ title: '数据监控', menuGroup: 'config' })
   })
 
   it('keeps child paths relative to their parent', () => {
@@ -79,6 +91,8 @@ describe('route table', () => {
         PATHS.WORK_PROFILE,
         PATHS.SYSTEM,
         PATHS.MONITOR_ONLINE,
+        PATHS.MONITOR_SERVER,
+        PATHS.MONITOR_DATA,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,

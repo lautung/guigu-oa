@@ -233,6 +233,20 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '在线用户', menuGroup: 'config' },
       },
       {
+        // 服务监控（#240，ADR 0060）：运行时快照面板；授予判定同在线用户。
+        path: PATHS.MONITOR_SERVER,
+        name: 'MonitorServer',
+        component: () => import('@/views/monitor/server/index.vue'),
+        meta: { title: '服务监控', menuGroup: 'config' },
+      },
+      {
+        // 数据监控（#240，ADR 0060）：Hikari 实时 + 慢 SQL 内存环；授予判定同在线用户。
+        path: PATHS.MONITOR_DATA,
+        name: 'MonitorData',
+        component: () => import('@/views/monitor/data/index.vue'),
+        meta: { title: '数据监控', menuGroup: 'config' },
+      },
+      {
         path: PATHS.TOOL,
         name: 'Tool',
         component: () => import('@/shell/ModulePlaceholder.vue'),

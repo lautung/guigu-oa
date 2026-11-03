@@ -32,11 +32,13 @@ const SYSTEM_MENUS = [
   },
 ]
 
-/** 真实种子形状（V117–V118）：/monitor 目录 + 已授予的监控页面；服务监控还没有客户端路由。 */
+/** 真实种子形状（V117+）：/monitor 目录 + 已授予的监控页面；缓存监控还没有客户端路由。 */
 const MONITOR_MENUS = [
   { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
   { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
   { path: '/monitor/server', parentPath: '/monitor', title: '服务监控', type: 1, sort: 2 },
+  { path: '/monitor/data', parentPath: '/monitor', title: '数据监控', type: 1, sort: 3 },
+  { path: '/monitor/cache', parentPath: '/monitor', title: '缓存监控', type: 1, sort: 4 },
 ]
 
 /** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
@@ -206,13 +208,17 @@ describe('shell 一级导航', () => {
   })
 })
 
-describe('系统监控模块翻真（#239）', () => {
+describe('系统监控模块翻真（#239/#240）', () => {
   it('lists granted monitor pages flat, first path wins, no groups', () => {
     const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
 
     expect(monitor.title).toBe('系统监控')
     expect(monitor.groups).toEqual([])
-    expect(monitor.items.map((item) => item.path)).toEqual(['/monitor/online'])
+    expect(monitor.items.map((item) => item.path)).toEqual([
+      '/monitor/online',
+      '/monitor/server',
+      '/monitor/data',
+    ])
     expect(monitor.items[0].title).toBe('在线用户')
     expect(monitor.firstPath).toBe('/monitor/online')
     expect(monitor.emptyHint).toBe('')
@@ -221,7 +227,7 @@ describe('系统监控模块翻真（#239）', () => {
   it('renders no dead links for granted pages without a client route', () => {
     const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
 
-    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/server')
+    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/cache')
   })
 
   it('keeps only the /monitor subtree even when other modules are granted', () => {
@@ -229,13 +235,17 @@ describe('系统监控模块翻真（#239）', () => {
       (module) => module.key === 'monitor',
     )
 
-    expect(monitor.items.map((item) => item.path)).toEqual(['/monitor/online'])
+    expect(monitor.items.map((item) => item.path)).toEqual([
+      '/monitor/online',
+      '/monitor/server',
+      '/monitor/data',
+    ])
   })
 
   it('falls back to 暂无可用页面 without any routed monitor grant', () => {
     const monitor = buildShellNav([
       { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
-      { path: '/monitor/server', parentPath: '/monitor', title: '服务监控', type: 1, sort: 2 },
+      { path: '/monitor/cache', parentPath: '/monitor', title: '缓存监控', type: 1, sort: 2 },
     ]).find((module) => module.key === 'monitor')
 
     expect(monitor.items).toEqual([])
