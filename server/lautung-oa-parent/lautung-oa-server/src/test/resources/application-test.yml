@@ -37,3 +37,24 @@ logging:
   level:
     root: WARN
     com.lautung.oa: INFO
+
+# 合同测试无外部环境（CI 裸 runner 没有本地 MySQL/Redis），而 /actuator 暴露面合同
+# （ActuatorExposureContractTest）钉的是「只暴露 health + 匿名白名单」，不是聚合健康
+# 真相——环境绑定的 health contributor 在合同测试里一律关闭，保证 /actuator/health
+# 聚合 UP 在任何环境确定性成立（此前本地有 Redis 而真 CI 没有，RedisHealthIndicator
+# 直连未被替换的 RedisConnectionFactory，CI 端 /actuator/health 503 两连红；
+# ObservabilityContractTest 曾被迫在类上单点关闭同一配置，已下沉到这里统一）。
+#   redis：spring-boot-starter-data-redis 在 classpath，Boot 自动配置直连 factory。
+#   mail：jakarta.mail 类经 flowable-mail 在 classpath；当前无 MailSender bean，
+#         indicator 本就不激活——防御未来出现 spring.mail.* 配置时静默绑定外部 SMTP。
+#   diskspace：默认开启、绑定 runner 本机磁盘（路径 + 剩余空间阈值），与暴露面合同
+#         无关，关闭换取任何 runner 上聚合 UP 的确定性。
+# datasource health 不关：合同测试的 datasource 是进程内 H2，确定性，不依赖外部环境。
+management:
+  health:
+    redis:
+      enabled: false
+    mail:
+      enabled: false
+    diskspace:
+      enabled: false
