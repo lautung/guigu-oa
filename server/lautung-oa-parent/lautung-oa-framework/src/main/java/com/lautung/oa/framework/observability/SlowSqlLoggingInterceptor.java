@@ -32,8 +32,16 @@ public class SlowSqlLoggingInterceptor implements Interceptor {
 
     private final long thresholdMs;
 
+    /** ADR 0060：慢 SQL 内存环；为 null 时只打日志，不写缓冲。 */
+    private final SlowSqlCollector collector;
+
     public SlowSqlLoggingInterceptor(long thresholdMs) {
+        this(thresholdMs, null);
+    }
+
+    public SlowSqlLoggingInterceptor(long thresholdMs, SlowSqlCollector collector) {
         this.thresholdMs = thresholdMs;
+        this.collector = collector;
     }
 
     public long getThresholdMs() {
@@ -51,15 +59,20 @@ public class SlowSqlLoggingInterceptor implements Interceptor {
             Object rows = result instanceof List<?> list ? list.size()
                     : result instanceof Integer affected ? affected : -1;
             // getBoundSql 会对动态 SQL 做第二次求值；求值失败不得把已成功的语句变成失败请求。
-            String sql;
+            String rawSql;
             try {
-                sql = summarize(statement.getBoundSql(parameter).getSql(), MAX_SQL_LENGTH);
+                rawSql = statement.getBoundSql(parameter).getSql();
             } catch (RuntimeException e) {
-                sql = "<unavailable>";
+                rawSql = "<unavailable>";
+            }
+            if (collector != null) {
+                // 缓冲与日志同点写入；缓冲只收原文 SQL（在 collector 内截断），参数一律不进缓冲。
+                collector.record(statement.getId(), elapsedMs, ((Number) rows).longValue(), rawSql);
             }
             log.warn("slow sql statement={} elapsedMs={} thresholdMs={} rows={} params={} sql={}",
                     statement.getId(), elapsedMs, thresholdMs, rows,
-                    summarize(String.valueOf(parameter), MAX_PARAMS_LENGTH), sql);
+                    summarize(String.valueOf(parameter), MAX_PARAMS_LENGTH),
+                    summarize(rawSql, MAX_SQL_LENGTH));
         }
         return result;
     }

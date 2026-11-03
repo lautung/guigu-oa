@@ -7,7 +7,9 @@ import com.lautung.oa.auth.controller.SysMenuController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.monitor.controller.DataMonitorController;
 import com.lautung.oa.monitor.controller.OnlineSessionController;
+import com.lautung.oa.monitor.controller.ServerMonitorController;
 import com.lautung.oa.notice.controller.NoticeAdminController;
 import com.lautung.oa.process.controller.OaProcessController;
 import com.lautung.oa.process.controller.OaProcessTemplateController;
@@ -75,7 +77,9 @@ class BackofficeRouteAuthorizationContractTest {
             SysOperLogController.class,
             SysLoginLogController.class,
             NoticeAdminController.class,
-            OnlineSessionController.class);
+            OnlineSessionController.class,
+            ServerMonitorController.class,
+            DataMonitorController.class);
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
@@ -131,6 +135,9 @@ class BackofficeRouteAuthorizationContractTest {
         expect(OnlineSessionController.class, "/monitor/online", null, "index");
         expect(OnlineSessionController.class, "/monitor/online",
                 "monitor:online:forceLogout", "forceLogout");
+        // 服务监控与数据监控（#236，ADR 0060）：只读快照，无按钮点。
+        expect(ServerMonitorController.class, "/monitor/server", null, "index");
+        expect(DataMonitorController.class, "/monitor/data", null, "index");
     }
 
     @Autowired
@@ -318,7 +325,9 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system/log/operLog",
                         "/system/log/loginLog",
                         "/monitor",
-                        "/monitor/online")))
+                        "/monitor/online",
+                        "/monitor/server",
+                        "/monitor/data")))
                 .andExpect(jsonPath("$.data.menus[*].type", not(hasItem(2))))
                 .andExpect(jsonPath("$.data.menus[?(@.path == '/system/sysUser')].parentPath",
                         hasItem("/system")))
