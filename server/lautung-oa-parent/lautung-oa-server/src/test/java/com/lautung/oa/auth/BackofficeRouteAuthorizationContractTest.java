@@ -7,6 +7,7 @@ import com.lautung.oa.auth.controller.SysMenuController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.monitor.controller.OnlineSessionController;
 import com.lautung.oa.notice.controller.NoticeAdminController;
 import com.lautung.oa.process.controller.OaProcessController;
 import com.lautung.oa.process.controller.OaProcessTemplateController;
@@ -73,7 +74,8 @@ class BackofficeRouteAuthorizationContractTest {
             OaProcessController.class,
             SysOperLogController.class,
             SysLoginLogController.class,
-            NoticeAdminController.class);
+            NoticeAdminController.class,
+            OnlineSessionController.class);
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
@@ -125,6 +127,10 @@ class BackofficeRouteAuthorizationContractTest {
         expect(NoticeAdminController.class, "/system/notice", "system:notice:edit", "update");
         expect(NoticeAdminController.class, "/system/notice", "system:notice:remove", "delete");
         expect(NoticeAdminController.class, "/system/notice", "system:notice:publish", "publish", "withdraw");
+        // 在线用户（#235，ADR 0060）：读走页面授予，强退要自己的按钮点。
+        expect(OnlineSessionController.class, "/monitor/online", null, "index");
+        expect(OnlineSessionController.class, "/monitor/online",
+                "monitor:online:forceLogout", "forceLogout");
     }
 
     @Autowired
@@ -295,7 +301,8 @@ class BackofficeRouteAuthorizationContractTest {
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
                         "system:operLog:remove", "system:operLog:clean",
-                        "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock")))
+                        "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
+                        "monitor:online:forceLogout")))
                 .andExpect(jsonPath("$.data.menus[*].path", hasItems(
                         "/system",
                         "/system/sysUser",
@@ -309,7 +316,9 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system/processMgr/process",
                         "/system/log",
                         "/system/log/operLog",
-                        "/system/log/loginLog")))
+                        "/system/log/loginLog",
+                        "/monitor",
+                        "/monitor/online")))
                 .andExpect(jsonPath("$.data.menus[*].type", not(hasItem(2))))
                 .andExpect(jsonPath("$.data.menus[?(@.path == '/system/sysUser')].parentPath",
                         hasItem("/system")))

@@ -14,6 +14,8 @@ import com.lautung.oa.security.login.RedisLoginAttemptLimiter;
 import com.lautung.oa.security.login.Slf4jLoginAudit;
 import com.lautung.oa.security.revocation.RedisTokenRevocation;
 import com.lautung.oa.security.revocation.TokenRevocation;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
+import com.lautung.oa.security.session.RedisOnlineSessionRegistry;
 import com.lautung.oa.security.session.SessionVerifier;
 import jakarta.validation.Validator;
 import org.springframework.beans.factory.ObjectProvider;
@@ -54,6 +56,15 @@ public class WebSecurityConfig {
     @Bean
     public TokenRevocation tokenRevocation(RedisTemplate<String, String> redisTemplate) {
         return new RedisTokenRevocation(redisTemplate);
+    }
+
+    /** 在线会话登记端口（ADR 0060）：登录写登记、核验写最后活跃、强退 = 吊销 + 注销。 */
+    @Bean
+    public OnlineSessionRegistry onlineSessionRegistry(
+            RedisTemplate<String, String> redisTemplate,
+            TokenRevocation tokenRevocation
+    ) {
+        return new RedisOnlineSessionRegistry(redisTemplate, tokenRevocation);
     }
 
     /** 会话核验 module（#173）：过滤器与续期端点共用的唯一凭证判定。 */
@@ -106,7 +117,8 @@ public class WebSecurityConfig {
             AuthenticationManager authenticationManager,
             LoginAttemptLimiter loginAttemptLimiter,
             Validator validator,
-            ObjectProvider<LoginAudit> loginAudit
+            ObjectProvider<LoginAudit> loginAudit,
+            OnlineSessionRegistry onlineSessionRegistry
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -122,10 +134,11 @@ public class WebSecurityConfig {
                         .authenticationEntryPoint(new RestAuthenticationEntryPoint())
                         .accessDeniedHandler(new RestAccessDeniedHandler()))
                 .addFilterBefore(
-                        new TokenAuthenticationFilter(sessionVerifier, redisTemplate),
+                        new TokenAuthenticationFilter(sessionVerifier, redisTemplate, onlineSessionRegistry),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilter(new TokenLoginFilter(
-                        authenticationManager, jwtHelper, loginAttemptLimiter, validator, auditOrFallback(loginAudit)))
+                        authenticationManager, jwtHelper, loginAttemptLimiter, validator,
+                        auditOrFallback(loginAudit), onlineSessionRegistry))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

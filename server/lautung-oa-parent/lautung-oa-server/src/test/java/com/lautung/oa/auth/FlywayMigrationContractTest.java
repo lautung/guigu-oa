@@ -4,6 +4,7 @@ import db.migration.V110__BackofficePermissionBase;
 import db.migration.V113__AuditOperLogMenu;
 import db.migration.V115__AuditLoginLogMenu;
 import db.migration.V116__NoticeSchemaAndMenu;
+import db.migration.V117__MonitorOnlineMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -75,7 +76,8 @@ class FlywayMigrationContractTest {
             "process:template:upload", "process:template:publish",
             "system:operLog:remove", "system:operLog:clean",
             "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
-            "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish");
+            "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish",
+            "monitor:online:forceLogout");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -128,6 +130,20 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '115' AND success = TRUE"));
         // 通知公告三张表、菜单页与按钮点（#218，ADR 0055）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '116' AND success = TRUE"));
+        // 系统监控目录与在线用户页/强退按钮（#235，ADR 0060）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '117' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu "
+                + "WHERE path = '/monitor' AND parent_id = 0 AND type = 0 AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/online' AND c.type = 1 "
+                + "AND c.component = 'monitor/online/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/monitor/online' "
+                + "AND b.perms = 'monitor:online:forceLogout'"));
+        assertEquals(2, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/monitor/online' OR m.perms = 'monitor:online:forceLogout')"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = '/system/notice' AND c.type = 1 "
                 + "AND c.component = 'system/notice/list' AND p.path = '/system' AND p.type = 0"));
@@ -247,7 +263,9 @@ class FlywayMigrationContractTest {
                         "/system/log",
                         "/system/log/operLog",
                         "/system/log/loginLog",
-                        "/system/notice")))
+                        "/system/notice",
+                        "/monitor",
+                        "/monitor/online")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -272,6 +290,7 @@ class FlywayMigrationContractTest {
             new V115__AuditLoginLogMenu().migrate(context);
             // 通知公告（#218）：Java 迁移的建表/索引与 SQL 种子都必须可重复执行。
             new V116__NoticeSchemaAndMenu().migrate(context);
+            new V117__MonitorOnlineMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

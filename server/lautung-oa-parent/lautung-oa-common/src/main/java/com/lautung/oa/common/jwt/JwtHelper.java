@@ -41,7 +41,8 @@ public class JwtHelper {
         return new TokenPair(
                 createAccessToken(userId, username, sessionId, tokenVersion),
                 createToken(userId, username, REFRESH_TOKEN_TYPE, REFRESH_TOKEN_LIFETIME_MILLIS,
-                        sessionId, tokenVersion));
+                        sessionId, tokenVersion),
+                sessionId);
     }
 
     public String createAccessToken(
@@ -129,6 +130,7 @@ public class JwtHelper {
             long tokenVersion, Date expiresAt) {
     }
 
-    public record TokenPair(String token, String refreshToken) {
+    /** {@code sessionId} 与两张令牌里的声明一致，登录登记直接用它，不再反解令牌。 */
+    public record TokenPair(String token, String refreshToken, String sessionId) {
     }
 }

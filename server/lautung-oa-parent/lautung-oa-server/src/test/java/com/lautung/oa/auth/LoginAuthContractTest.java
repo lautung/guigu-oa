@@ -13,7 +13,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.lautung.oa.auth.service.SysUserService;
@@ -29,7 +28,6 @@ import io.jsonwebtoken.security.Keys;
 import com.jayway.jsonpath.JsonPath;
 
 import javax.crypto.SecretKey;
-import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,7 +35,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Date;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -750,50 +747,8 @@ public class LoginAuthContractTest {
         @Bean
         @Primary
         public RedisTemplate<String, String> redisTemplate() {
-            ConcurrentHashMap<String, String> store = new ConcurrentHashMap<>();
-            RedisTemplate<String, String> template = new RedisTemplate<String, String>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public ValueOperations<String, String> opsForValue() {
-                    return (ValueOperations<String, String>) Proxy.newProxyInstance(
-                            ValueOperations.class.getClassLoader(),
-                            new Class<?>[]{ValueOperations.class},
-                            (proxy, method, args) -> {
-                                if ("set".equals(method.getName()) && args != null && args.length >= 2) {
-                                    store.put(String.valueOf(args[0]), String.valueOf(args[1]));
-                                    return null;
-                                }
-                                if ("get".equals(method.getName()) && args != null && args.length >= 1) {
-                                    return store.get(args[0]);
-                                }
-                                if ("increment".equals(method.getName()) && args != null && args.length >= 1) {
-                                    String key = String.valueOf(args[0]);
-                                    return Long.valueOf(store.merge(
-                                            key, "1",
-                                            (current, ignored) -> String.valueOf(Long.parseLong(current) + 1)));
-                                }
-                                if ("toString".equals(method.getName())) {
-                                    return "InMemoryValueOperations";
-                                }
-                                throw new UnsupportedOperationException(method.getName());
-                            });
-                }
-
-                @Override
-                public Boolean delete(String key) {
-                    return store.remove(key) != null;
-                }
-
-                @Override
-                public Boolean expire(String key, long timeout, java.util.concurrent.TimeUnit unit) {
-                    return store.containsKey(key);
-                }
-
-                @Override
-                public void afterPropertiesSet() {
-                }
-            };
-            return template;
+            // 值/hash/TTL/SCAN 共用一份实现（ADR 0060 起认证请求会走会话节流与登记列举）。
+            return new com.lautung.oa.support.InMemoryRedisTemplate();
         }
 
         @Bean
