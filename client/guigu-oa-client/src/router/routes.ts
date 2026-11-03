@@ -261,6 +261,13 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '缓存列表', menuGroup: 'config' },
       },
       {
+        // 定时任务（#242，ADR 0060）：表驱动任务面，编辑与手动执行各挂按钮点；授予判定同在线用户。
+        path: PATHS.MONITOR_JOB,
+        name: 'MonitorJob',
+        component: () => import('@/views/monitor/job/index.vue'),
+        meta: { title: '定时任务', menuGroup: 'config' },
+      },
+      {
         path: PATHS.TOOL,
         name: 'Tool',
         component: () => import('@/shell/ModulePlaceholder.vue'),
