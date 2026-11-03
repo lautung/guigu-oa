@@ -32,7 +32,7 @@ const SYSTEM_MENUS = [
   },
 ]
 
-/** 真实种子形状（V117+）：/monitor 目录 + 已授予的监控页面；缓存监控还没有客户端路由。 */
+/** 真实种子形状（V117+）：/monitor 目录 + 六个监控页面；#242 起全部落了客户端路由。 */
 const MONITOR_MENUS = [
   { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
   { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
@@ -41,6 +41,12 @@ const MONITOR_MENUS = [
   { path: '/monitor/cache', parentPath: '/monitor', title: '缓存监控', type: 1, sort: 4 },
   { path: '/monitor/cacheList', parentPath: '/monitor', title: '缓存列表', type: 1, sort: 5 },
   { path: '/monitor/job', parentPath: '/monitor', title: '定时任务', type: 1, sort: 6 },
+]
+
+/** 合成的「服务端已授予、客户端还没落路由」页面：守卫死链语义用（#242 起真实页面已全部落路由）。 */
+const UNROUTED_MONITOR_MENUS = [
+  ...MONITOR_MENUS,
+  { path: '/monitor/future', parentPath: '/monitor', title: '未来页面', type: 1, sort: 7 },
 ]
 
 /** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
@@ -222,6 +228,7 @@ describe('系统监控模块翻真（#239/#240）', () => {
       '/monitor/data',
       '/monitor/cache',
       '/monitor/cacheList',
+      '/monitor/job',
     ])
     expect(monitor.items[0].title).toBe('在线用户')
     expect(monitor.firstPath).toBe('/monitor/online')
@@ -229,10 +236,11 @@ describe('系统监控模块翻真（#239/#240）', () => {
   })
 
   it('renders no dead links for granted pages without a client route', () => {
-    const monitor = buildShellNav(MONITOR_MENUS).find((module) => module.key === 'monitor')
+    const monitor = buildShellNav(UNROUTED_MONITOR_MENUS).find((module) => module.key === 'monitor')
 
-    // /monitor/cache、/monitor/cacheList 已随 #241 落路由；/monitor/job（定时任务）还没有。
-    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/job')
+    // 六个真实监控页已随 #239–#242 全部落路由；合成页代表「服务端先行、客户端未落地」的形状。
+    expect(monitor.items.map((item) => item.path)).not.toContain('/monitor/future')
+    expect(monitor.items.map((item) => item.title)).not.toContain('未来页面')
   })
 
   it('keeps only the /monitor subtree even when other modules are granted', () => {
@@ -246,14 +254,15 @@ describe('系统监控模块翻真（#239/#240）', () => {
       '/monitor/data',
       '/monitor/cache',
       '/monitor/cacheList',
+      '/monitor/job',
     ])
   })
 
   it('falls back to 暂无可用页面 without any routed monitor grant', () => {
     const monitor = buildShellNav([
       { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
-      // /monitor/job（定时任务）尚无客户端路由（#241 起缓存两页已落路由）。
-      { path: '/monitor/job', parentPath: '/monitor', title: '定时任务', type: 1, sort: 2 },
+      // 合成页尚无客户端路由：只授予它时模块仍为空。
+      { path: '/monitor/future', parentPath: '/monitor', title: '未来页面', type: 1, sort: 2 },
     ]).find((module) => module.key === 'monitor')
 
     expect(monitor.items).toEqual([])

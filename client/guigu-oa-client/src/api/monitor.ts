@@ -5,6 +5,14 @@ import {
   clearPermissionCacheRequest,
   deleteCacheKeyRequest,
 } from '@/config/monitor-cache'
+import {
+  DEFAULT_LOG_LIMIT,
+  jobLogsRequest,
+  jobsRequest,
+  runJobRequest,
+  updateJobRequest,
+  type MonitorJobUpdatePayload,
+} from '@/config/monitor-job'
 import { dataMetricsRequest } from '@/config/monitor-data'
 import { serverMetricsRequest } from '@/config/monitor-server'
 import { forceLogoutRequest, listRequest } from '@/config/monitor-online'
@@ -12,7 +20,10 @@ import type {
   ApiResponse,
   CacheKeyPage,
   CacheMonitorSnapshot,
+  EntityId,
   MonitorDataSnapshot,
+  MonitorJobLogRecord,
+  MonitorJobRecord,
   OnlineSessionRecord,
   PageResult,
   ServerMetrics,
@@ -62,4 +73,30 @@ export function deleteCacheKey(key: string): Promise<ApiResponse<void>> {
 /** 清空全部权限缓存键（perm:cache:*），返回删除数量；按钮点 monitor:cache:clean。 */
 export function clearPermissionCache(): Promise<ApiResponse<number>> {
   return request<number>(clearPermissionCacheRequest())
+}
+
+/** 定时任务列表（ADR 0060，#242）：行含可用性与最近一次执行摘要；读不设点。 */
+export function listJobs(): Promise<ApiResponse<MonitorJobRecord[]>> {
+  return request<MonitorJobRecord[]>(jobsRequest())
+}
+
+/** 编辑 cron / 启停 / 并发 / 备注（null 不覆盖）；按钮点 monitor:job:edit。 */
+export function updateJob(
+  id: EntityId,
+  payload: MonitorJobUpdatePayload,
+): Promise<ApiResponse<void>> {
+  return request<void>(updateJobRequest(id, payload))
+}
+
+/** 手动执行：异步触发立即返回；disabled 任务允许手跑；按钮点 monitor:job:run。 */
+export function runJob(id: EntityId): Promise<ApiResponse<void>> {
+  return request<void>(runJobRequest(id))
+}
+
+/** 最近 N 条执行记录（新在前），缺省 20、上界 100 由服务端把关。 */
+export function listJobLogs(
+  id: EntityId,
+  limit: number = DEFAULT_LOG_LIMIT,
+): Promise<ApiResponse<MonitorJobLogRecord[]>> {
+  return request<MonitorJobLogRecord[]>(jobLogsRequest(id, limit))
 }

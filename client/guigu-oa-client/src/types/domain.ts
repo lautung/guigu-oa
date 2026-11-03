@@ -403,6 +403,45 @@ export interface CacheKeyPage {
   nextCursor?: number | null
 }
 
+/**
+ * 定时任务行（ADR 0060，#238）：镜像 `MonitorJobVo`。`available` 是读侧判存活，
+ * false 表示 bean 已不存在（「异常」行）；`last*` 是最近一次执行摘要，没跑过为空。
+ */
+export interface MonitorJobRecord {
+  id?: EntityId
+  name?: string | null
+  beanName?: string | null
+  cron?: string | null
+  /** 0 停用 / 1 启用。 */
+  enabled?: number | null
+  /** 0 禁止并发（默认）/ 1 允许并发。 */
+  concurrency?: number | null
+  remark?: string | null
+  available?: boolean
+  lastTriggerType?: number | null
+  lastStatus?: number | null
+  /** dev profile 序列化成 `yyyy-MM-dd HH:mm:ss` 字符串；兜底 epoch 毫秒。 */
+  lastStartedAt?: string | number | null
+  lastDurationMs?: number | null
+  lastMessage?: string | null
+}
+
+/**
+ * 定时任务执行记录（ADR 0060，#238）：镜像 `SysJobLog`。trigger 1 自动 / 2 手动；
+ * status 1 成功 / 2 失败 / 3 跳过；保留策略每任务最近 20 条在服务端写入路径执行。
+ */
+export interface MonitorJobLogRecord {
+  id?: EntityId
+  jobId?: EntityId
+  jobName?: string | null
+  triggerType?: number | null
+  status?: number | null
+  message?: string | null
+  startedAt?: string | number | null
+  finishedAt?: string | number | null
+  durationMs?: number | null
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string

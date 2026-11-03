@@ -20,6 +20,7 @@ describe('route table', () => {
       PATHS.MONITOR_DATA,
       PATHS.MONITOR_CACHE,
       PATHS.MONITOR_CACHE_LIST,
+      PATHS.MONITOR_JOB,
       PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
@@ -68,6 +69,13 @@ describe('route table', () => {
     expect(cacheList.meta).toEqual({ title: '缓存列表', menuGroup: 'config' })
   })
 
+  it('registers 定时任务 as the last grant-checked monitor page (#242)', () => {
+    const job = shell.children.find((route) => route.path === PATHS.MONITOR_JOB)
+
+    expect(job.name).toBe('MonitorJob')
+    expect(job.meta).toEqual({ title: '定时任务', menuGroup: 'config' })
+  })
+
   it('keeps child paths relative to their parent', () => {
     const work = shell.children.find((route) => route.path === PATHS.WORK)
     expect(work.children[0].path).toBe('start')
@@ -107,6 +115,7 @@ describe('route table', () => {
         PATHS.MONITOR_DATA,
         PATHS.MONITOR_CACHE,
         PATHS.MONITOR_CACHE_LIST,
+        PATHS.MONITOR_JOB,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,
