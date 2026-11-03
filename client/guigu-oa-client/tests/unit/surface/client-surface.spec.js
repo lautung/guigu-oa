@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveClientSurface } from '@/surface/client-surface'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 
 const SAMPLE_CONFIG_MENUS = [
   { path: '/system', title: '组织与权限', type: 0, sort: 1 },
@@ -93,7 +94,7 @@ describe('外壳表面判定', () => {
     expect(assignAuth.menuGroup).toBe('config')
     expect(assignAuth.density).toBe('wide')
     expect(assignAuth.occupancy).toEqual({ action: 'allow' })
-    expect(absent.occupancy).toEqual({ action: 'redirect', to: '/work/pending' })
+    expect(absent.occupancy).toEqual({ action: 'redirect', to: getDefaultPostLoginRoute() })
   })
 
   it('keeps a granted config page open regardless of viewport width', () => {
@@ -133,6 +134,6 @@ describe('外壳表面判定', () => {
       menus: ONLY_USER_MENUS,
     })
 
-    expect(surface.occupancy).toEqual({ action: 'redirect', to: '/work/pending' })
+    expect(surface.occupancy).toEqual({ action: 'redirect', to: getDefaultPostLoginRoute() })
   })
 })

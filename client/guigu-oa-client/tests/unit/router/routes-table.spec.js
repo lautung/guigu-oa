@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import router, { constantRoutes } from '@/router'
 import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import { PATHS } from '@/router/paths'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 
 describe('route table', () => {
   const shell = constantRoutes.find((route) => route.path === '/')
@@ -10,7 +11,7 @@ describe('route table', () => {
   it('keeps /login outside the single authenticated shell', () => {
     expect(constantRoutes.filter((route) => route.path === PATHS.LOGIN)).toHaveLength(1)
     expect(shell.children.some((route) => route.path === PATHS.LOGIN)).toBe(false)
-    expect(shell.redirect).toBe(PATHS.WORK_PENDING)
+    expect(shell.redirect).toBe(getDefaultPostLoginRoute())
     expect(shell.children.map((route) => route.path)).toEqual([
       PATHS.WORKBENCH,
       PATHS.MONITOR,
@@ -48,7 +49,7 @@ describe('route table', () => {
     expect(workbench.name).toBe('Workbench')
     expect(workbench.meta.title).toBe('工作台')
     expect(workbench.meta.menuGroup).toBeUndefined()
-    expect(shell.redirect).toBe(PATHS.WORK_PENDING)
+    expect(shell.redirect).toBe(getDefaultPostLoginRoute())
   })
 
   it('declares group membership for every visible menu route', () => {

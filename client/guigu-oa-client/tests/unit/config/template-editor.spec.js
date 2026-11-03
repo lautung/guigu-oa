@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { createTemplateEditor, formRules } from '@/config/template-editor'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { emptyMessageOf } from '../support/form-rules'
 
 function deferred() {
@@ -437,7 +438,7 @@ it('占用变化抢在进行中的确认之前，关闭确认且迟到结果不�
   expect(h.navigation).toEqual([])
 })
 
-it('身份被替换时释放并落到待处理；进入结果清空时只释放不导航', async () => {
+it('身份被替换时释放并落到默认落点；进入结果清空时只释放不导航', async () => {
   const first = harness()
   const edit = first.module.open('A')
   await flushPromises()
@@ -448,7 +449,7 @@ it('身份被替换时释放并落到待处理；进入结果清空时只释放�
   await edit.environmentChanged()
   expect(edit.state.phase).toBe('closed')
   expect(first.confirmations).toEqual([])
-  expect(first.replacements).toEqual(['/work/pending'])
+  expect(first.replacements).toEqual([getDefaultPostLoginRoute()])
 
   const second = harness()
   const other = second.module.open('A')

@@ -244,7 +244,7 @@ defineExpose({ handleLogout })
   }
 
   .username {
-    display: none;
+    max-width: 72px;
   }
 }
 </style>

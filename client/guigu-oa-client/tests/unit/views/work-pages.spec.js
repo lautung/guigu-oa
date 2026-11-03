@@ -15,6 +15,7 @@ vi.mock('element-plus', () => ({
 import { RecognitionFailure } from '@/recognition'
 import { PATHS } from '@/router/paths'
 import { WORK_LIST_KINDS } from '@/router/paths'
+import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import Login from '@/views/login/index.vue'
 import WorkListPage from '@/views/work/WorkListPage.vue'
 import Profile from '@/views/work/profile/index.vue'
@@ -55,6 +56,7 @@ function workRouter() {
     },
     { path: PATHS.WORK_STARTED, component: { template: '<div />' } },
     { path: PATHS.WORK_PROFILE, component: { template: '<div />' } },
+    { path: PATHS.WORKBENCH, component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
     { path: '/work/start/:processTemplateId', component: { template: '<div />' } },
   ])
@@ -258,7 +260,7 @@ describe('Login page', () => {
 
     await wrapper.vm.handleLogin()
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe(PATHS.WORK_PENDING)
+    expect(router.currentRoute.value.path).toBe(getDefaultPostLoginRoute())
   })
 
   it('does not call the API when validation fails', async () => {
