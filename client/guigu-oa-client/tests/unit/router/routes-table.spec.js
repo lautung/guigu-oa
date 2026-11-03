@@ -15,6 +15,7 @@ describe('route table', () => {
     expect(shell.children.map((route) => route.path)).toEqual([
       PATHS.WORKBENCH,
       PATHS.MONITOR,
+      PATHS.MONITOR_ONLINE,
       PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
@@ -34,6 +35,13 @@ describe('route table', () => {
     expect(tool.meta).toEqual({ title: '系统工具' })
     expect(monitor.meta.menuGroup).toBeUndefined()
     expect(tool.meta.menuGroup).toBeUndefined()
+  })
+
+  it('registers 在线用户 as the first grant-checked monitor page', () => {
+    const online = shell.children.find((route) => route.path === PATHS.MONITOR_ONLINE)
+
+    expect(online.name).toBe('MonitorOnline')
+    expect(online.meta).toEqual({ title: '在线用户', menuGroup: 'config' })
   })
 
   it('keeps child paths relative to their parent', () => {
@@ -70,6 +78,7 @@ describe('route table', () => {
         PATHS.WORK_COPIED_DETAIL,
         PATHS.WORK_PROFILE,
         PATHS.SYSTEM,
+        PATHS.MONITOR_ONLINE,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,

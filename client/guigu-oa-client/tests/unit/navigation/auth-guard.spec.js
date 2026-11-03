@@ -144,6 +144,21 @@ describe('后台页面授予守卫', () => {
     ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
   })
 
+  it('checks the monitor online page against the same grant projection (#239)', () => {
+    const onlinePage = [
+      { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
+      { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
+    ]
+
+    expect(
+      resolveAuthGuard({ path: '/monitor/online', hasToken: true, menus: onlinePage }),
+    ).toEqual({ action: 'allow' })
+    expect(resolveAuthGuard({ path: '/monitor/online', hasToken: true, menus: [] })).toEqual({
+      action: 'redirect',
+      to: PATHS.WORKBENCH,
+    })
+  })
+
   it('redirects an undeclared backoffice path that menus cannot cover', () => {
     expect(
       resolveAuthGuard({ path: '/system/not-a-page', hasToken: true, menus: USER_PAGE }),

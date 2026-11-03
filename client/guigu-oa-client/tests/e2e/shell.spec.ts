@@ -154,21 +154,75 @@ test('窄屏隐藏标签条，侧栏改抽屉，配置页提示建议桌面', as
   await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
 })
 
-test('系统监控与系统工具是固定一级空态，不打开死链', async ({ page }) => {
+test('系统监控无授予时置灰，系统工具仍是空态占位（#239）', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
   await openShell(page)
 
-  await topModule(page, '系统监控').click()
-  await expect(page).toHaveURL(/\/monitor$/)
-  await expect(page.locator('.shell-tab', { hasText: '系统监控' })).toHaveClass(/active/)
-  await expect(page.locator('.module-placeholder')).toContainText('系统监控暂无可用页面')
-  await expect(page.locator('.app-sidebar')).toContainText('页面将在后续版本提供')
-  await expect(page.locator('.shell-breadcrumb')).toContainText('系统监控')
+  // monitor 翻真后与系统管理同款语义：无授予的一级置灰，不再落到占位页。
+  const monitor = topModule(page, '系统监控')
+  await expect(monitor).toHaveClass(/disabled/)
+  await expect(monitor).toBeDisabled()
 
   await topModule(page, '系统工具').click()
   await expect(page).toHaveURL(/\/tool$/)
   await expect(page.locator('.module-placeholder')).toContainText('系统工具暂无可用页面')
-  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '待处理', '系统监控', '系统工具'])
+  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '待处理', '系统工具'])
+})
+
+test('授予在线用户后系统监控落在 /monitor/online（#239）', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
+  const monitorMenus = [
+    { path: '/monitor', title: '系统监控', type: 0, sort: 4 },
+    { path: '/monitor/online', parentPath: '/monitor', title: '在线用户', type: 1, sort: 1 },
+  ]
+  await seedSession(page)
+  await page.route('**/dev-api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
+    if (path === '/admin/system/index/info') {
+      return json(route, {
+        name: 'Alice',
+        roles: ['super_admin'],
+        permissions: ['monitor:online:forceLogout'],
+        menus: monitorMenus,
+      })
+    }
+    if (/^\/admin\/monitor\/online\/\d+\/\d+$/.test(path)) {
+      return json(route, {
+        records: [
+          {
+            sessionId: 'sess-current',
+            username: 'Alice',
+            name: '爱丽丝',
+            loginTime: '2026-01-01 08:00:00',
+            ip: '127.0.0.1',
+            browser: 'Chromium',
+            os: 'macOS',
+            lastActive: '2026-01-01 09:00:00',
+            current: true,
+          },
+        ],
+        total: 1,
+        pages: 1,
+      })
+    }
+    if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
+      return json(route, { records: [], total: 0, pages: 0 })
+    }
+    if (await fulfillNoticeUnread(route, path)) return
+    throw new Error(`Unexpected request ${path}`)
+  })
+  await page.goto('/work/pending')
+  await expect(page.getByRole('heading', { name: '待处理', exact: true })).toBeVisible()
+
+  await topModule(page, '系统监控').click()
+  await expect(page).toHaveURL(/\/monitor\/online$/)
+  await expect(page.getByRole('heading', { name: '在线用户', exact: true })).toBeVisible()
+  await expect(page.locator('.app-sidebar').getByText('在线用户')).toBeVisible()
+  await expect(page.locator('.shell-breadcrumb')).toContainText('系统监控')
+  const row = page.locator('.el-table__row', { hasText: 'Alice' })
+  await expect(row).toContainText('当前会话')
+  await expect(row.getByRole('button', { name: '强退' })).toBeDisabled()
+  await expect(page.locator('.page-header')).toContainText('共 1 条')
 })
 
 test('没有配置授予时系统管理置灰，仍是五项之一', async ({ page }) => {
@@ -202,7 +256,10 @@ test('没有配置授予时系统管理置灰，仍是五项之一', async ({ pa
   const system = topModule(page, '系统管理')
   await expect(system).toHaveClass(/disabled/)
   await expect(system).toBeDisabled()
-  await expect(page.locator('.top-nav-item', { hasText: '系统监控' })).toBeEnabled()
+  // 系统监控翻真（#239）后与系统管理同款：无监控授予时同样置灰。
+  const monitor = topModule(page, '系统监控')
+  await expect(monitor).toHaveClass(/disabled/)
+  await expect(monitor).toBeDisabled()
 })
 
 test('菜单搜索按标题打开页面，无结果给空态', async ({ page }) => {

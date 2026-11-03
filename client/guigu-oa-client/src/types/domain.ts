@@ -263,6 +263,31 @@ export interface LoginLogListItem extends LoginLogRecord {
   statusTagType: AuditTagType
 }
 
+/** 在线用户（ADR 0060）：一行 = 一次登录；current 由服务端按请求者自己的会话标出。 */
+export interface OnlineSessionRecord {
+  sessionId?: string
+  username?: string
+  name?: string
+  loginTime?: string
+  ip?: string
+  browser?: string
+  os?: string
+  lastActive?: string
+  current?: boolean
+}
+
+export interface OnlineSessionListItem {
+  sessionId: string
+  username: string
+  name: string
+  loginTime: string
+  ip: string
+  browser: string
+  os: string
+  lastActive: string
+  current: boolean
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string

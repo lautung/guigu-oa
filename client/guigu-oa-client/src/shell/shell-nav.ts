@@ -1,6 +1,7 @@
 import { configPermission } from '@/config/permission'
 import { WORK_BUILTIN_ITEMS } from '@/navigation/constants'
 import { PATHS, returnPathOfRoute } from '@/router/paths'
+import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
 export type ShellModuleKey = 'workbench' | 'work' | 'system' | 'monitor' | 'tool'
@@ -43,7 +44,7 @@ export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = [
   { key: 'workbench', title: '工作台', icon: 'HomeFilled', prefix: PATHS.WORKBENCH },
   { key: 'work', title: '办事', icon: 'Tickets', prefix: PATHS.WORK },
   { key: 'system', title: '系统管理', icon: 'Setting', prefix: PATHS.SYSTEM },
-  { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: PATHS.MONITOR, placeholder: true },
+  { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: PATHS.MONITOR },
   { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL, placeholder: true },
 ] as const
 
@@ -130,6 +131,7 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
   const permission = configPermission([...menus])
   const leaves = permission.grantedMenus
     .flatMap((root) => leavesOf(root))
+    .filter((leaf) => leaf.path.startsWith(`${PATHS.SYSTEM}/`))
     .filter((leaf) => !SYSTEM_DIRECTORY_ROOTS.has(leaf.path))
 
   const items = leaves.filter(
@@ -166,12 +168,47 @@ function placeholderModule(definition: ShellModuleDefinition): ShellModule {
   }
 }
 
-/** 五个一级模块固定返回；系统管理只由已授予页面填充，监控/工具保留空态入口。 */
+/**
+ * 客户端已落路由的监控页面（#239）：路由表里带 menuGroup 的 /monitor 子页。
+ * 服务端菜单先行（V117+ 全部监控页面都已授予），客户端页面随各自票落地；
+ * 还没有客户端路由的授予页不渲染成死链。
+ */
+function routedMonitorPages(): Set<string> {
+  return new Set(
+    ROUTE_GROUP_ENTRIES.filter(
+      (entry) => entry.group === 'config' && entry.path.startsWith(`${PATHS.MONITOR}/`),
+    ).map((entry) => entry.path),
+  )
+}
+
+/** 系统监控（ADR 0060）：平铺二级项，firstPath 取第一个已授予且有客户端路由的页面。 */
+function monitorModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
+  const routed = routedMonitorPages()
+  const permission = configPermission([...menus])
+  const items = permission.grantedMenus
+    .flatMap((root) => leavesOf(root))
+    .filter((leaf) => leaf.path.startsWith(`${PATHS.MONITOR}/`))
+    .filter((leaf) => routed.has(leaf.path))
+
+  const firstPath = items[0]?.path || ''
+  return {
+    key: 'monitor',
+    title: '系统监控',
+    icon: 'Monitor',
+    items,
+    groups: [],
+    firstPath,
+    emptyHint: firstPath ? '' : SYSTEM_EMPTY_HINT,
+  }
+}
+
+/** 五个一级模块固定返回；系统管理与系统监控只由已授予页面填充，工具保留空态入口。 */
 export function buildShellNav(menus: BackofficeMenuEntry[] = []): ShellModule[] {
   return SHELL_MODULE_DEFINITIONS.map((definition) => {
     if (definition.key === 'workbench') return workbenchModule()
     if (definition.key === 'work') return workModule()
     if (definition.key === 'system') return systemModule(menus)
+    if (definition.key === 'monitor') return monitorModule(menus)
     return placeholderModule(definition)
   })
 }
