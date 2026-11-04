@@ -27,7 +27,7 @@
 | `src/shell/lock-screen.ts` + `LockScreen.vue` | `useLockScreenStore` → `lock()` / `unlock(password)` / `isLocked()`；状态 `locked` / `failures` / `error` | 手动锁屏的状态机（#255）：`sessionStorage` 存锁状态（刷新保持、关标签页解除）；`unlock` 打 `POST /admin/system/index/verifyPassword`，错误口令是业务 201 且只计本地次数，连续 5 次失败复用 user store 的 `logout` 强制退出并清锁；`LockScreen.vue` 是全屏不透明遮罩，非模糊 |
 | `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」；锁屏时整壳 `inert` 且不渲染 `router-view`（业务内容不渲染，不是遮住） |
 | `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `ModulePlaceholder.vue` | 外壳 chrome 组件 | 一级药丸导航（无落点的模块置灰）、深色树（底部折叠为 62px 图标栏、窄屏抽屉）、卡片标签与关闭下拉、可点面包屑行、模块空态页（`/monitor` 占位复用它作直接访问兜底）；顶栏工具区依次为全屏、菜单搜索、公告铃铛、语言下拉（中文/English，#257）、用户菜单 |
-| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/profile`（第 6 波起；取代 `/work/profile`「基本信息」）、锁屏入口（#255：调 `useLockScreenStore().lock()`，入口文案「锁屏」）、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`） |
+| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/profile`（#254，取代 `/work/profile`「基本信息」）、锁屏入口（#255：调 `useLockScreenStore().lock()`，入口文案「锁屏」）、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`） |
 | `src/shell/MenuSearch.vue` | 菜单搜索弹层（顶栏） | 输入即过滤，↑/↓ 移动、回车打开当前项、点击打开结果；展示标题与面包屑，空查询给提示、无结果给空态；索引来自 `menu-search.ts`，只含已授权页面 |
 | `src/shell/FullscreenButton.vue` | 全屏按钮（顶栏） | 浏览器支持标准 Fullscreen API 时显示；按 `fullscreenchange` 同步「全屏/退出全屏」，不支持时整颗按钮隐藏 |
 | `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
@@ -148,12 +148,8 @@
 - 共享挂载工具在 `tests/unit/support/harness.js`（假 recognition、pinia 会话、axios adapter、Element Plus stub）；全局 setup 在 `tests/unit/setup.js`（auto-unmount、nprogress stub）。新测试直接复用，不要各写一份。
 - 每个模块的决策理由看对应 ADR（0011–0022），不要从页面反推 interface。
 
-## 基座补齐（第 4–9 波，计划）
+## 基座补齐（已落地）
 
-以下 module 尚未落地，形状按 ADR 0062 与蓝图 §11 预记；实现票落地时把这一节改成现有事实。
-第 4–9 波的计划项（`src/i18n/`、`src/config/user-export.ts`）均已落地，当前无待实现 module；新增计划项仍先登记在本表。
+第 4–9 波的 module 已全部落地（`src/i18n/`、`src/config/user-export.ts` 等），当前无待实现 module；新增待实现项先在这里登记，落地票再搬进上表。
 
-| 计划 module | interface / seam | 职责 |
-|---|---|---|
-
-路由计划：`/system/dict` 已由 #251 落地；`/register` 由 #253 落地为匿名、不套外壳的独立路由。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。
+路由：`/system/dict` 由 #251 落地；`/register` 由 #253 落地为匿名、不套外壳的独立路由。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。

@@ -7,13 +7,7 @@ const mapPath = join(root, 'docs/agents/client-modules.md')
 const clientRoot = join(root, 'client/guigu-oa-client')
 
 const text = readFileSync(mapPath, 'utf8')
-// 「基座补齐（计划）」段落预记尚未落地的 module，路径存在性只对已实现段落生效；
-// 计划项在落地票里搬进上表时再被本检查接管（ADR 0062）。
-const plannedIndex = text.indexOf('## 基座补齐')
-const implementedText = plannedIndex === -1 ? text : text.slice(0, plannedIndex)
-const paths = [
-  ...new Set([...implementedText.matchAll(/`(src\/[^`]+)`/g)].map((match) => match[1])),
-]
+const paths = [...new Set([...text.matchAll(/`(src\/[^`]+)`/g)].map((match) => match[1]))]
 const missing = paths.filter((path) => !existsSync(join(clientRoot, path)))
 
 if (missing.length) {
@@ -49,29 +43,15 @@ if (missingFromMap.length) {
 // 带省略号或通配的示意路径跳过（`lautung-oa-security/.../security/`、`…/V*.sql`）。
 const serverRoot = join(root, 'server/lautung-oa-parent')
 const serverText = readFileSync(join(root, 'docs/agents/server-modules.md'), 'utf8')
-const serverPathEntries = serverText.split('\n').flatMap((line) =>
-  [...line.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)]
-    .map((match) => match[1])
-    .filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
-    .map((path) => ({ path, planned: line.includes('计划') })),
-)
-const serverPaths = [...new Set(serverPathEntries.map((entry) => entry.path))]
-
-const missingServerPaths = [
+const serverPaths = [
   ...new Set(
-    serverPathEntries
-      .filter(({ path, planned }) => {
-        if (existsSync(path.startsWith('server/') ? join(root, path) : join(serverRoot, path))) {
-          return false
-        }
-        // 计划行引用的模块目录尚未创建：它属于预记，不算“地图指向不存在的文件”。
-        // 同一行里的现有模块路径仍照常校验。
-        const moduleDir = path.split('/')[0]
-        return !(planned && !path.startsWith('server/') && !existsSync(join(serverRoot, moduleDir)))
-      })
-      .map((entry) => entry.path),
+    [...serverText.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)].map((match) => match[1]),
   ),
-]
+].filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
+
+const missingServerPaths = serverPaths.filter(
+  (path) => !existsSync(path.startsWith('server/') ? join(root, path) : join(serverRoot, path)),
+)
 
 const serverModules = readdirSync(serverRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && entry.name.startsWith('lautung-oa-'))
