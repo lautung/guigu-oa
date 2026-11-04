@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   LOGIN_LOG_PERMISSIONS,
-  LOGIN_STATUS_OPTIONS,
   cleanRequest,
   listRequest,
-  loginStatusLabel,
   loginStatusTagType,
   presentListPage,
   presentListRecord,
@@ -15,18 +13,7 @@ import {
 
 describe('config/login-log', () => {
   describe('labels', () => {
-    it('maps the four login statuses to labels and tag types', () => {
-      expect(LOGIN_STATUS_OPTIONS).toEqual([
-        { value: 0, label: '成功' },
-        { value: 1, label: '失败' },
-        { value: 2, label: '锁定' },
-        { value: 3, label: '解锁' },
-      ])
-      expect(loginStatusLabel(0)).toBe('成功')
-      expect(loginStatusLabel(1)).toBe('失败')
-      expect(loginStatusLabel(2)).toBe('锁定')
-      expect(loginStatusLabel(3)).toBe('解锁')
-      expect(loginStatusLabel(undefined)).toBe('')
+    it('keeps only the visual tag types; labels come from the sys_login_status dictionary (#251)', () => {
       expect(loginStatusTagType(0)).toBe('success')
       expect(loginStatusTagType(1)).toBe('danger')
       expect(loginStatusTagType(2)).toBe('warning')
@@ -123,7 +110,6 @@ describe('config/login-log', () => {
         browser: 'Chrome',
         os: 'macOS',
         status: 2,
-        statusLabel: '锁定',
         statusTagType: 'warning',
         msg: '账号锁定',
         createTime: '2026-01-01 10:00:00',

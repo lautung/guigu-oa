@@ -22,7 +22,11 @@
 
     <article v-else-if="status === 'ready' && detail" class="notice-card">
       <div class="notice-head">
-        <el-tag :type="detail.typeTagType" size="small">{{ detail.typeLabel }}</el-tag>
+        <DictTag
+          :dict-type="DICT_TYPES.noticeType"
+          :value="detail.type"
+          :tag-type="detail.typeTagType"
+        />
         <h3 class="notice-title">{{ detail.title }}</h3>
         <p class="notice-meta">发布人：{{ detail.publisherName }} · {{ detail.publishTime }}</p>
       </div>
@@ -34,7 +38,9 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
+import { DICT_TYPES } from '@/config/dict'
 import NoticeContent from '@/notice/NoticeContent.vue'
 import { markNoticeRead } from '@/notice/api'
 import { detailRequest, presentDetail } from '@/notice/config'
@@ -50,7 +56,7 @@ import type { NoticeDetailRecord, NoticeDetailView } from '@/types/domain'
  */
 export default defineComponent({
   name: 'NoticeDetail',
-  components: { ListLoadError, NoticeContent },
+  components: { DictTag, ListLoadError, NoticeContent },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -58,6 +64,7 @@ export default defineComponent({
     const scope = openRequestScope(recognition, { notifyNormalErrors: false })
     return {
       scope,
+      DICT_TYPES,
       writeReadRequest: markNoticeRead,
       refreshUnread: refreshNoticeUnread,
     }

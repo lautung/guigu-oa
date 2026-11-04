@@ -60,7 +60,6 @@ export const CONCURRENCY_FORBID = 0
 export const CONCURRENCY_ALLOW = 1
 
 const TRIGGER_LABELS: Record<number, string> = { 1: '自动调度', 2: '手动执行' }
-const STATUS_LABELS: Record<number, string> = { 1: '成功', 2: '失败', 3: '跳过' }
 const STATUS_KINDS: Record<number, 'success' | 'danger' | 'info'> = {
   1: 'success',
   2: 'danger',
@@ -102,7 +101,6 @@ export interface MonitorJobRow {
   /** false = bean 已不存在（「异常」行）：禁用编辑、执行与再次启用。 */
   available: boolean
   lastStatus: number | null
-  lastStatusLabel: string
   lastStatusKind: StatusKind
   lastStartedAtLabel: string
   lastMessage: string
@@ -124,7 +122,6 @@ export function presentJobRow(record: MonitorJobRecord | undefined): MonitorJobR
     remark: record?.remark || '',
     available: record?.available !== false,
     lastStatus,
-    lastStatusLabel: labelOf(STATUS_LABELS, lastStatus),
     lastStatusKind: lastStatus === null ? '' : (STATUS_KINDS[lastStatus] ?? ''),
     lastStartedAtLabel: formatJobTime(record?.lastStartedAt),
     lastMessage: record?.lastMessage || '',
@@ -135,7 +132,7 @@ export interface MonitorJobLogRow {
   id: EntityId
   jobName: string
   triggerLabel: string
-  statusLabel: string
+  status: number | null
   statusKind: StatusKind
   startedAtLabel: string
   durationLabel: string
@@ -151,7 +148,7 @@ export function presentJobLogRow(record: MonitorJobLogRecord | undefined): Monit
     id: record?.id ?? '',
     jobName: record?.jobName || '',
     triggerLabel: labelOf(TRIGGER_LABELS, record?.triggerType),
-    statusLabel: labelOf(STATUS_LABELS, status),
+    status,
     statusKind: status === null ? '' : (STATUS_KINDS[status] ?? ''),
     startedAtLabel: formatJobTime(record?.startedAt),
     durationLabel: formatDurationMs(record?.durationMs),

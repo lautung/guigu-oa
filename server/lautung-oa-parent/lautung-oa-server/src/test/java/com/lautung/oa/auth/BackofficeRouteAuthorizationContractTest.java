@@ -11,6 +11,7 @@ import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.config.controller.SysConfigController;
+import com.lautung.oa.dict.controller.SysDictController;
 import com.lautung.oa.monitor.controller.CacheMonitorController;
 import com.lautung.oa.monitor.controller.DataMonitorController;
 import com.lautung.oa.monitor.controller.MonitorJobController;
@@ -80,6 +81,7 @@ class BackofficeRouteAuthorizationContractTest {
             SysDeptController.class,
             SysPostController.class,
             SysConfigController.class,
+            SysDictController.class,
             OaProcessTypeController.class,
             OaProcessTemplateController.class,
             OaProcessController.class,
@@ -132,6 +134,14 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysConfigController.class, "/system/config", "system:config:add", "save");
         expect(SysConfigController.class, "/system/config", "system:config:edit", "update", "refresh");
         expect(SysConfigController.class, "/system/config", "system:config:remove", "remove");
+        // 字典管理（#251，ADR 0062）：左类型/右数据两级读走页面授予；
+        // 三个 CRUD 共用 add/edit/remove 按钮点，手动刷新复用 edit。标签读是登录即有的读面。
+        expect(SysDictController.class, "/system/dict", null, "pageQueryType", "pageQueryData");
+        expect(SysDictController.class, "/system/dict", "system:dict:add", "saveType", "saveData");
+        expect(SysDictController.class, "/system/dict", "system:dict:edit",
+                "updateType", "updateData", "refresh");
+        expect(SysDictController.class, "/system/dict", "system:dict:remove",
+                "removeType", "removeData");
         expect(OaProcessTypeController.class, "/system/processSet/processType", null,
                 "findAll", "index", "get");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
@@ -352,6 +362,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "system:dept:add", "system:dept:edit", "system:dept:remove",
                         "system:post:add", "system:post:edit", "system:post:remove",
                         "system:config:add", "system:config:edit", "system:config:remove",
+                        "system:dict:add", "system:dict:edit", "system:dict:remove",
                         "process:type:add", "process:type:edit", "process:type:remove",
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
@@ -366,6 +377,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system/sysDept",
                         "/system/sysPost",
                         "/system/config",
+                        "/system/dict",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",

@@ -64,6 +64,8 @@ class FlywayMigrationContractTest {
             "sys_user_post",
             "sys_role_dept",
             "sys_config",
+            "sys_dict_type",
+            "sys_dict_data",
             "oa_process_type",
             "oa_process_template",
             "oa_process",
@@ -85,6 +87,7 @@ class FlywayMigrationContractTest {
             "system:dept:add", "system:dept:edit", "system:dept:remove",
             "system:post:add", "system:post:edit", "system:post:remove",
             "system:config:add", "system:config:edit", "system:config:remove",
+            "system:dict:add", "system:dict:edit", "system:dict:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
@@ -307,6 +310,7 @@ class FlywayMigrationContractTest {
                         "/system/sysDept",
                         "/system/sysPost",
                         "/system/config",
+                        "/system/dict",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
@@ -384,6 +388,29 @@ class FlywayMigrationContractTest {
                 + "JOIN sys_menu m ON m.id = rm.menu_id "
                 + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
                 + "AND m.perms = 'system:user:resetPwd'"));
+    }
+
+    @Test
+    void v130SeedsTheSysDictPageButtonsAndFourDictionaryGroups() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '126' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/dict' AND c.type = 1 "
+                + "AND c.component = 'system/dict/index' AND p.path = '/system' AND p.type = 0"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/dict' "
+                + "AND b.perms IN ('system:dict:add','system:dict:edit','system:dict:remove')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/dict' "
+                + "OR m.perms IN ('system:dict:add','system:dict:edit','system:dict:remove'))"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_dict_type WHERE dict_type IN "
+                + "('sys_notice_type','sys_notice_status','sys_job_status','sys_login_status') "
+                + "AND status = 1 AND is_deleted = 0"));
+        assertEquals(12, count("SELECT COUNT(*) FROM sys_dict_data WHERE dict_type IN "
+                + "('sys_notice_type','sys_notice_status','sys_job_status','sys_login_status') "
+                + "AND status = 1 AND is_deleted = 0"));
     }
 
     @Test

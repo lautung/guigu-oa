@@ -65,6 +65,8 @@ export function createTestRouter(routes = []) {
 }
 
 export const elementStubs = {
+  // 字典标签会走真实批量请求；页面级测试只关心接线，标签本身由 DictTag 单测覆盖。
+  DictTag: true,
   'el-alert': true,
   // 顶栏铃铛：stub 暴露 value/hidden，并渲染 reference 与内容两个插槽。
   'el-badge': {

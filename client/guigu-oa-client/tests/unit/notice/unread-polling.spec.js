@@ -44,7 +44,6 @@ describe('未读轮询', () => {
         id: 1,
         title: '系统维护',
         type: 1,
-        typeLabel: '通知',
         typeTagType: 'info',
         publisherName: '管理员',
         publishTime: '2026-11-03 10:00:00',

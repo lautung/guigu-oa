@@ -368,7 +368,6 @@ export interface LoginLogRecord {
 
 export interface LoginLogListItem extends LoginLogRecord {
   id: EntityId
-  statusLabel: string
   statusTagType: AuditTagType
 }
 
@@ -735,7 +734,6 @@ export interface NoticeFeedRecord {
 export interface NoticeFeedItem extends NoticeFeedRecord {
   id: EntityId
   title: string
-  typeLabel: string
   typeTagType: AuditTagType
   publisherName: string
   publishTime: string
@@ -754,7 +752,6 @@ export interface NoticeDetailView {
   id: EntityId
   title: string
   type?: number
-  typeLabel: string
   typeTagType: AuditTagType
   publisherId: EntityId | ''
   publisherName: string
@@ -780,8 +777,6 @@ export interface NoticeAdminRecord {
 export interface NoticeAdminListItem extends NoticeAdminRecord {
   id: EntityId
   title: string
-  typeLabel: string
-  statusLabel: string
   statusTagType: AuditTagType
 }
 
@@ -794,4 +789,59 @@ export interface NoticeWritePayload {
 export interface NoticeImageResult {
   id: EntityId
   url: string
+}
+
+/** 字典（#251，ADR 0062）：运行时可编辑的枚举；业务只存值，标签按 `dictType` 渲染。 */
+export interface DictOption {
+  dictLabel: string
+  dictValue: string
+  sortValue?: number
+}
+
+export interface DictTypeRecord {
+  id?: EntityId | ''
+  dictName?: string
+  dictType?: string
+  status?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface DictTypeListItem extends DictTypeRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface DictTypeForm {
+  id: EntityId | ''
+  dictName: string
+  dictType: string
+  status: number
+  remark: string
+}
+
+export interface DictDataRecord {
+  id?: EntityId | ''
+  dictType?: string
+  dictLabel?: string
+  dictValue?: string
+  sortValue?: number
+  status?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface DictDataListItem extends DictDataRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface DictDataForm {
+  id: EntityId | ''
+  dictType: string
+  dictLabel: string
+  dictValue: string
+  sortValue: number
+  status: number
+  remark: string
 }

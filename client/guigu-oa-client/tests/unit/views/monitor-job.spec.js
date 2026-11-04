@@ -92,6 +92,7 @@ function realOptions(pinia) {
   return {
     global: {
       plugins: [pinia, ElementPlus],
+      stubs: { DictTag: true },
       directives: { hasPermi },
     },
   }
@@ -133,7 +134,7 @@ describe('定时任务页', () => {
     expect(demoRow.text()).toContain('演示：示例日志任务')
     expect(demoRow.text()).toContain('0 0/10 * * * ?')
     expect(demoRow.text()).toContain('禁止')
-    expect(demoRow.text()).toContain('成功')
+    expect(wrapper.vm.rows[0].lastStatus).toBe(1)
     expect(demoRow.text()).toContain('2026-01-01 08:00:00')
     expect(demoRow.find('.broken-tag').exists()).toBe(false)
   })
@@ -285,11 +286,10 @@ describe('定时任务页', () => {
     expect(wrapper.vm.drawerVisible).toBe(true)
     expect(wrapper.vm.logRows[0].triggerLabel).toBe('手动执行')
     expect(wrapper.vm.logRows[1]).toMatchObject({
-      statusLabel: '失败',
       statusKind: 'danger',
       failed: true,
     })
-    expect(wrapper.vm.logRows[2].statusLabel).toBe('跳过')
+    expect(wrapper.vm.logRows[2].status).toBe(3)
     expect(wrapper.vm.logRows[1].message).toContain('\n\tat Demo.execute')
   })
 

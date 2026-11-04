@@ -77,7 +77,6 @@ describe('定时任务行投影', () => {
       remark: '演示用',
       available: true,
       lastStatus: 1,
-      lastStatusLabel: '成功',
       lastStatusKind: 'success',
       lastStartedAtLabel: '2026-01-01 08:00:00',
     })
@@ -89,21 +88,12 @@ describe('定时任务行投影', () => {
     expect(presentJobRow({ ...jobRecord, concurrency: 1 }).concurrencyLabel).toBe('允许')
   })
 
-  it('labels the three last-run states as success/danger/info tags', () => {
-    expect(presentJobRow({ ...jobRecord, lastStatus: 1 })).toMatchObject({
-      lastStatusLabel: '成功',
-      lastStatusKind: 'success',
-    })
-    expect(presentJobRow({ ...jobRecord, lastStatus: 2 })).toMatchObject({
-      lastStatusLabel: '失败',
-      lastStatusKind: 'danger',
-    })
-    expect(presentJobRow({ ...jobRecord, lastStatus: 3 })).toMatchObject({
-      lastStatusLabel: '跳过',
-      lastStatusKind: 'info',
-    })
+  it('keeps only the visual tag kinds; labels come from the sys_job_status dictionary (#251)', () => {
+    expect(presentJobRow({ ...jobRecord, lastStatus: 1 }).lastStatusKind).toBe('success')
+    expect(presentJobRow({ ...jobRecord, lastStatus: 2 }).lastStatusKind).toBe('danger')
+    expect(presentJobRow({ ...jobRecord, lastStatus: 3 }).lastStatusKind).toBe('info')
     expect(presentJobRow({ ...jobRecord, lastStatus: null, lastStartedAt: null })).toMatchObject({
-      lastStatusLabel: '—',
+      lastStatus: null,
       lastStatusKind: '',
       lastStartedAtLabel: '—',
     })
@@ -146,7 +136,6 @@ describe('执行记录行投影', () => {
 
     expect(row).toMatchObject({
       triggerLabel: '手动执行',
-      statusLabel: '成功',
       statusKind: 'success',
       startedAtLabel: '2026-01-01 08:00:00',
       durationLabel: '12 ms',
@@ -157,12 +146,10 @@ describe('执行记录行投影', () => {
   it('labels automatic runs and failed runs with the failure flag', () => {
     expect(presentJobLogRow({ triggerType: 1, status: 2, message: 'boom' })).toMatchObject({
       triggerLabel: '自动调度',
-      statusLabel: '失败',
       statusKind: 'danger',
       failed: true,
     })
     expect(presentJobLogRow({ triggerType: 2, status: 3 })).toMatchObject({
-      statusLabel: '跳过',
       statusKind: 'info',
       failed: false,
     })
@@ -176,7 +163,7 @@ describe('执行记录行投影', () => {
   it('shows placeholders for an empty log row', () => {
     expect(presentJobLogRow(undefined)).toMatchObject({
       triggerLabel: '—',
-      statusLabel: '—',
+      statusKind: '',
       startedAtLabel: '—',
       durationLabel: '—',
       message: '',

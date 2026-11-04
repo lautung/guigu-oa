@@ -7,13 +7,10 @@ import type {
   PageResult,
 } from '@/types/domain'
 
-/** 登录状态标签镜像服务端 LoginEventType 的四值（0 成功 / 1 失败 / 2 锁定 / 3 解锁）。 */
-export const LOGIN_STATUS_OPTIONS = [
-  { value: 0, label: '成功' },
-  { value: 1, label: '失败' },
-  { value: 2, label: '锁定' },
-  { value: 3, label: '解锁' },
-] as const
+/**
+ * 登录状态四值（0 成功 / 1 失败 / 2 锁定 / 3 解锁）的标签由字典
+ * `sys_login_status` 供值（#251，ADR 0062）；本文件只保留视觉 tag type。
+ */
 
 export const LOGIN_LOG_PERMISSIONS = {
   remove: 'system:loginLog:remove',
@@ -26,10 +23,6 @@ export interface LoginLogQuery {
   ip?: string
   status?: number | ''
   createTimes?: string[]
-}
-
-export function loginStatusLabel(value: number | null | undefined): string {
-  return LOGIN_STATUS_OPTIONS.find((option) => option.value === value)?.label || ''
 }
 
 export function loginStatusTagType(value: number | null | undefined): AuditTagType {
@@ -71,7 +64,6 @@ export function presentListRecord(record: LoginLogRecord = {}): LoginLogListItem
     browser: record.browser,
     os: record.os,
     status: record.status,
-    statusLabel: loginStatusLabel(record.status),
     statusTagType: loginStatusTagType(record.status),
     msg: record.msg,
     createTime: record.createTime,

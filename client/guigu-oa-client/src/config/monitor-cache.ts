@@ -14,13 +14,14 @@ export const MONITOR_CACHE_PERMISSIONS = {
   clean: 'monitor:cache:clean',
 } as const
 
-/** 浏览白名单（ADR 0060/0062）：五个前缀，与服务端 CacheMonitorService.LIST_PREFIXES 一致；顺序即下拉顺序。 */
+/** 浏览白名单（ADR 0060/0062）：六个前缀，与服务端 CacheMonitorService.LIST_PREFIXES 一致；顺序即下拉顺序。 */
 export const CACHE_PREFIX_OPTIONS = [
   'perm:',
   'login:session:',
   'login:attempt:',
   'token:revoked:',
   'config:',
+  'dict:',
 ] as const
 
 export type CachePrefix = (typeof CACHE_PREFIX_OPTIONS)[number]

@@ -24,9 +24,12 @@
       />
 
       <div class="notice-meta-row">
-        <el-tag v-if="state.status !== null" :type="statusTagType" size="small">
-          {{ statusLabel }}
-        </el-tag>
+        <DictTag
+          v-if="state.status !== null"
+          :dict-type="DICT_TYPES.noticeStatus"
+          :value="state.status"
+          :tag-type="statusTagType"
+        />
         <span v-if="state.readOnly" class="notice-readonly-hint">
           已撤回的公告只读，只能再次发布或删除。
         </span>
@@ -136,17 +139,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
 import NoticeContent from '@/notice/NoticeContent.vue'
 import QuillEditor from '@/notice/QuillEditor.vue'
 import { createNoticeEditorPage } from '@/notice/admin-browser'
 import { fetchNoticeImage, uploadNoticeImage } from '@/notice/api'
-import {
-  NOTICE_PERMISSIONS,
-  NOTICE_TYPES,
-  noticeStatusLabel,
-  noticeStatusTagType,
-} from '@/notice/config'
+import { DICT_TYPES } from '@/config/dict'
+import { useDict } from '@/dict/use-dict'
+import { NOTICE_PERMISSIONS, noticeStatusTagType } from '@/notice/config'
 import { hasPermission } from '@/permission'
 import { PATHS } from '@/router/paths'
 
@@ -163,7 +164,13 @@ const router = useRouter()
 const editor = createNoticeEditorPage(router)
 const state = editor.state
 const permissions = NOTICE_PERMISSIONS
-const typeOptions = NOTICE_TYPES
+const dict = useDict(DICT_TYPES.noticeType, DICT_TYPES.noticeStatus)
+const typeOptions = computed(() =>
+  dict.optionsOf(DICT_TYPES.noticeType).map((option) => ({
+    value: Number(option.dictValue),
+    label: option.dictLabel,
+  })),
+)
 const tab = ref('edit')
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement>()
@@ -173,7 +180,6 @@ const canUploadImage = computed(
   () => hasPermission(permissions.add) || hasPermission(permissions.edit),
 )
 const canCreate = computed(() => state.id !== '' || hasPermission(permissions.add))
-const statusLabel = computed(() => noticeStatusLabel(state.status))
 const statusTagType = computed(() => noticeStatusTagType(state.status))
 
 function routeId(): string | undefined {

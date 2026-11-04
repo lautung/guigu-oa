@@ -124,7 +124,6 @@ describe('工作台近期审批与公告投影', () => {
         id: index,
         title: `公告 ${index}`,
         type: index === 1 ? 2 : 1,
-        typeLabel: index === 1 ? '公告' : '通知',
         publisherName: '管理员',
         publishTime: '2026-11-02 10:00:00',
         read: false,
@@ -135,12 +134,12 @@ describe('工作台近期审批与公告投影', () => {
     expect(notices[0]).toMatchObject({
       id: 1,
       title: '公告 1',
-      typeLabel: '公告',
+      type: 2,
       publisherName: '管理员',
       publishTime: '2026-11-02 10:00:00',
       read: false,
     })
-    expect(notices[1].typeLabel).toBe('通知')
+    expect(notices[1].type).toBe(1)
   })
 
   it('normalizes an unread count from the wire', () => {
@@ -161,7 +160,6 @@ describe('工作台整体投影', () => {
           id: 1,
           title: '维护通知',
           type: 1,
-          typeLabel: '通知',
           publisherName: '管理员',
           publishTime: '11-02',
           read: false,

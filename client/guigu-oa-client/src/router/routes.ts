@@ -136,6 +136,13 @@ const configChildren: AppRoute[] = [
     meta: { title: '参数设置', menuGroup: 'config' },
   },
   {
+    // 字典管理（#251）：左类型、右数据两级；写后刷新与手动刷新缓存走各自的 list page。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_DICT),
+    name: 'SysDict',
+    component: () => import('@/views/config/dict/index.vue'),
+    meta: { title: '字典管理', menuGroup: 'config' },
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
     name: 'SysOperLog',
     component: () => import('@/views/config/operLog/index.vue'),

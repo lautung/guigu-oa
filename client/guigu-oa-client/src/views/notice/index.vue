@@ -25,7 +25,11 @@
       >
         <el-table-column label="类型" width="90" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.typeTagType" size="small">{{ scope.row.typeLabel }}</el-tag>
+            <DictTag
+              :dict-type="DICT_TYPES.noticeType"
+              :value="scope.row.type"
+              :tag-type="scope.row.typeTagType"
+            />
           </template>
         </el-table-column>
         <el-table-column label="标题" min-width="280">
@@ -58,8 +62,10 @@
 <script lang="ts">
 import { defineComponent, onBeforeUnmount } from 'vue'
 
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import { DICT_TYPES } from '@/config/dict'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import {
@@ -77,7 +83,7 @@ import type { EntityId, NoticeFeedItem, NoticeFeedRecord } from '@/types/domain'
 
 export default defineComponent({
   name: 'NoticeList',
-  components: { ListLoadError, ListPagination },
+  components: { DictTag, ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -92,7 +98,7 @@ export default defineComponent({
       ...effects,
     })
     onBeforeUnmount(() => list.release())
-    return { list, view: list.view, rows: list.rows, emptyText: list.emptyText }
+    return { list, DICT_TYPES, view: list.view, rows: list.rows, emptyText: list.emptyText }
   },
   data() {
     return { tab: 'all' as NoticeListTab }

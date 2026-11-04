@@ -22,6 +22,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  * common, framework, security, model, storage ← notice
  * common, framework, security, model, auth, storage ← process
  * common, framework, security, model ← monitor
+ * common, framework, security, model ← dict
  * common, framework, security, model ← config
  * common, framework, security, model, config ← auth
  * 全模块 ← server
@@ -46,6 +47,8 @@ class ArchitectureTest {
             .layer("Process").definedBy("com.lautung.oa.process..")
             // 系统监控（ADR 0060）：只调用 security 的会话端口与自己的只读 Mapper
             .layer("Monitor").definedBy("com.lautung.oa.monitor..")
+            // 字典模块（ADR 0062）：只访问 common/framework/security/model，向上只给 server
+            .layer("Dict").definedBy("com.lautung.oa.dict..")
             // 参数模块（ADR 0062）：只访问 common/framework/security/model，向上只给 auth 端口
             .layer("Config").definedBy("com.lautung.oa.config..")
             // 启动类在 com.lautung.oa 包根，demo seeder 在 com.lautung.oa.demo
@@ -65,25 +68,28 @@ class ArchitectureTest {
             .whereLayer("Process").mayOnlyAccessLayers(
                     "Common", "Framework", "Security", "Model", "Auth", "Storage")
             .whereLayer("Monitor").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
+            .whereLayer("Dict").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Config").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Server").mayOnlyAccessLayers(
                     "Common", "Framework", "Security", "Model", "Storage", "Audit", "Auth", "Notice",
-                    "Process", "Monitor", "Config")
+                    "Process", "Monitor", "Dict", "Config")
             .whereLayer("Common").mayOnlyBeAccessedByLayers(
                     "Framework", "Security", "Storage", "Audit", "Auth", "Notice", "Process", "Monitor",
-                    "Config", "Server")
+                    "Dict", "Config", "Server")
             .whereLayer("Framework").mayOnlyBeAccessedByLayers(
-                    "Audit", "Auth", "Notice", "Process", "Monitor", "Config", "Server")
+                    "Audit", "Auth", "Notice", "Process", "Monitor", "Dict", "Config", "Server")
             .whereLayer("Security").mayOnlyBeAccessedByLayers(
-                    "Audit", "Auth", "Notice", "Process", "Monitor", "Config", "Server")
+                    "Audit", "Auth", "Notice", "Process", "Monitor", "Dict", "Config", "Server")
             .whereLayer("Model").mayOnlyBeAccessedByLayers(
-                    "Security", "Audit", "Auth", "Notice", "Process", "Monitor", "Config", "Server")
+                    "Security", "Audit", "Auth", "Notice", "Process", "Monitor", "Dict", "Config",
+                    "Server")
             .whereLayer("Storage").mayOnlyBeAccessedByLayers("Auth", "Notice", "Process", "Server")
             .whereLayer("Audit").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Auth").mayOnlyBeAccessedByLayers("Process", "Server")
             .whereLayer("Notice").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Process").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Monitor").mayOnlyBeAccessedByLayers("Server")
+            .whereLayer("Dict").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Config").mayOnlyBeAccessedByLayers("Auth", "Server")
             .whereLayer("Server").mayNotBeAccessedByAnyLayer()
             // 新顶层包必须先归入某个层，否则会静默绕过上面的全部边

@@ -13,7 +13,10 @@
         <li v-for="item in recent" :key="item.id">
           <button type="button" class="notice-item" @click="openNotice(item.id)">
             <span class="notice-item-title">{{ item.title }}</span>
-            <span class="notice-item-meta"> {{ item.typeLabel }} · {{ item.publishTime }} </span>
+            <span class="notice-item-meta">
+              <DictTag :dict-type="DICT_TYPES.noticeType" :value="item.type" />
+              · {{ item.publishTime }}
+            </span>
           </button>
         </li>
       </ul>
@@ -27,6 +30,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import DictTag from '@/components/DictTag.vue'
+import { DICT_TYPES } from '@/config/dict'
 import { PATHS, noticeDetailPath } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import { useNoticeUnread } from '@/notice/unread-browser'

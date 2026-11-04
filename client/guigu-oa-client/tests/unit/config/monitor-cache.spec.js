@@ -191,13 +191,14 @@ describe('请求形状与白名单', () => {
     })
   })
 
-  it('offers exactly the five whitelist prefixes (ADR 0060/0062)', () => {
+  it('offers exactly the six whitelist prefixes (ADR 0060/0062)', () => {
     expect([...CACHE_PREFIX_OPTIONS]).toEqual([
       'perm:',
       'login:session:',
       'login:attempt:',
       'token:revoked:',
       'config:',
+      'dict:',
     ])
   })
 

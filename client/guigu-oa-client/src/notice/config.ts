@@ -14,20 +14,10 @@ import type {
 /**
  * 公告（ADR 0055）的读侧与管理侧请求形状、标签与展示投影。
  *
- * 读侧内置：登录即有，不设页面授予、不套数据范围。类型固定 1 通知 / 2 公告；
- * 状态 0 草稿 / 1 已发布 / 2 已撤回。标签由本文件一份常量渲染，不建字典。
+ * 读侧内置：登录即有，不设页面授予、不套数据范围。类型 1 通知 / 2 公告，
+ * 状态 0 草稿 / 1 已发布 / 2 已撤回——中文标签由字典 `sys_notice_type` /
+ * `sys_notice_status` 供值（#251，ADR 0062），本文件只保留视觉 tag type。
  */
-
-export const NOTICE_TYPES = [
-  { value: 1, label: '通知' },
-  { value: 2, label: '公告' },
-] as const
-
-export const NOTICE_STATUSES = [
-  { value: 0, label: '草稿' },
-  { value: 1, label: '已发布' },
-  { value: 2, label: '已撤回' },
-] as const
 
 export const NOTICE_PERMISSIONS = {
   add: 'system:notice:add',
@@ -55,17 +45,9 @@ export interface NoticeAdminQuery {
   [key: string]: string | number | undefined
 }
 
-export function noticeTypeLabel(value: number | null | undefined): string {
-  return NOTICE_TYPES.find((option) => option.value === value)?.label || ''
-}
-
 /** 通知偏提示、公告偏正式；同一个值在列表、详情与铃铛里保持同一种视觉。 */
 export function noticeTypeTagType(value: number | null | undefined): AuditTagType {
   return value === 2 ? 'warning' : 'info'
-}
-
-export function noticeStatusLabel(value: number | null | undefined): string {
-  return NOTICE_STATUSES.find((option) => option.value === value)?.label || ''
 }
 
 export function noticeStatusTagType(value: number | null | undefined): AuditTagType {
@@ -88,7 +70,6 @@ export function presentFeedItem(record: NoticeFeedRecord = {}): NoticeFeedItem {
     id: record.id ?? '',
     title: record.title || '',
     type: record.type,
-    typeLabel: noticeTypeLabel(record.type),
     typeTagType: noticeTypeTagType(record.type),
     publisherName: record.publisherName || '',
     publishTime: record.publishTime || '',
@@ -103,7 +84,6 @@ export function presentDetail(record: NoticeDetailRecord = {}): NoticeDetailView
     id: record.id ?? '',
     title: record.title || '',
     type: record.type,
-    typeLabel: noticeTypeLabel(record.type),
     typeTagType: noticeTypeTagType(record.type),
     publisherId: record.publisherId ?? '',
     publisherName: record.publisherName || '',
@@ -118,9 +98,7 @@ export function presentAdminListRecord(record: NoticeAdminRecord = {}): NoticeAd
     id: record.id ?? '',
     title: record.title || '',
     type: record.type,
-    typeLabel: noticeTypeLabel(record.type),
     status: record.status,
-    statusLabel: noticeStatusLabel(record.status),
     statusTagType: noticeStatusTagType(record.status),
     publisherName: record.publisherName || '',
     publishTime: record.publishTime || '',
