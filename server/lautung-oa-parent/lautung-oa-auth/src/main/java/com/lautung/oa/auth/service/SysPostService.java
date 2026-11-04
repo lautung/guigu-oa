@@ -24,4 +24,10 @@ public interface SysPostService extends IService<SysPost> {
      * 空列表合法（表示不挂岗位 / 清空）；null 由调用方按「未传」处理。
      */
     List<Long> validateAssignablePostIds(List<Long> postIds);
+
+    /**
+     * 用户页岗位多选的只读选项（#249）：只返回启用且未删除的岗位，按 sortValue、id 升序。
+     * 复用用户页的页面授予，不要求 {@code /system/sysPost} 页面授予。
+     */
+    List<SysPost> findEnabledOptions();
 }

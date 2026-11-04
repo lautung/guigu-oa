@@ -183,6 +183,11 @@ export interface DeptTreeNode extends DeptRecord {
   children: DeptTreeNode[]
 }
 
+/** 用户页的只读部门节点（#249）：左树 prepend「全部」（id=0），表单树按 status 置 disabled。 */
+export interface DeptSelectNode extends DeptTreeNode {
+  disabled?: boolean
+}
+
 export interface DeptForm {
   id: EntityId | ''
   parentId: EntityId
@@ -229,6 +234,8 @@ export interface UserRecord {
   name?: string
   phone?: string
   status?: number
+  deptId?: EntityId
+  postIds?: EntityId[]
   createTime?: string
 }
 
@@ -244,6 +251,14 @@ export interface UserForm {
   name: string
   phone: string
   status: number
+  deptId: EntityId | ''
+  postIds: EntityId[]
+}
+
+/** 用户表单的岗位选项（#249）：只读、只含启用岗位。 */
+export interface PostOption {
+  id: EntityId
+  name: string
 }
 
 /** 操作日志（ADR 0054）：审计行是历史事实，读侧只映射，不 join。 */

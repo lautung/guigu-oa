@@ -2,6 +2,8 @@ package com.lautung.oa.auth.controller;
 
 
 import com.lautung.oa.auth.datascope.DataScopeResolver;
+import com.lautung.oa.auth.service.SysDeptService;
+import com.lautung.oa.auth.service.SysPostService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.framework.operlog.BusinessType;
@@ -11,6 +13,7 @@ import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.AssginRoleVo;
+import com.lautung.oa.vo.system.SysUserDetailVo;
 import com.lautung.oa.vo.system.SysUserQueryVo;
 import com.lautung.oa.vo.system.SysUserResetPasswordRequest;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
@@ -27,6 +30,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -50,6 +54,12 @@ public class SysUserController {
 
     @Autowired
     private DataScopeResolver dataScopeResolver;
+
+    @Autowired
+    private SysDeptService sysDeptService;
+
+    @Autowired
+    private SysPostService sysPostService;
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新状态")
@@ -88,6 +98,17 @@ public class SysUserController {
         //le 小于等于
         if(!StringUtils.isEmpty(createTimeEnd)) {
             wrapper.le(SysUser::getCreateTime,createTimeEnd);
+        }
+        // 部门树过滤（#249）：选中部门按「本部门及以下」（ancestors 前缀，含自身）。
+        // 子树解析为空（部门不存在/已删）得到零行；它只是额外的 AND，不放宽数据范围。
+        Long deptId = sysUserQueryVo.getDeptId();
+        if (deptId != null) {
+            List<Long> subtreeIds = sysDeptService.findSubtreeIds(deptId);
+            if (subtreeIds.isEmpty()) {
+                wrapper.apply("1 = 0");
+            } else {
+                wrapper.in(SysUser::getDeptId, subtreeIds);
+            }
         }
         //数据范围（ADR 0057）：部门列 sys_user.dept_id，本人列 sys_user.id；空集是零行，不是全部。
         applyDataScope(wrapper, dataScopeResolver.resolve(LoginUserInfoHelper.getUserId()));
@@ -128,8 +149,30 @@ public class SysUserController {
     @Operation(summary = "获取用户")
     @GetMapping("get/{id}")
     public Result get(@PathVariable Long id) {
-        SysUser user = service.getById(id);
-        return Result.ok(user);
+        SysUserDetailVo detail = service.findDetail(id);
+        return Result.ok(detail);
+    }
+
+    /**
+     * 用户页左侧只读部门树（#249）：只判 {@code /system/sysUser} 页面授予，
+     * 不要求 {@code /system/sysDept}——部门维护入口仍在部门管理页，这里没有 CRUD。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
+    @Operation(summary = "用户页部门树（只读）")
+    @GetMapping("depts")
+    public Result depts() {
+        return Result.ok(sysDeptService.findTree());
+    }
+
+    /**
+     * 用户页表单的只读岗位选项（#249）：同样只判用户页授予；
+     * 只返回启用岗位，停用岗位不会出现在选择器里。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
+    @Operation(summary = "用户页岗位选项（只读）")
+    @GetMapping("posts")
+    public Result posts() {
+        return Result.ok(sysPostService.findEnabledOptions());
     }
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:add')")

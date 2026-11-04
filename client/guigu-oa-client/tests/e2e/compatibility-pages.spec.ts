@@ -181,6 +181,8 @@ async function mockApi(page: Page) {
         processDefinitionPath: 'opaque/old.zip',
         processDefinitionKey: 'old',
       })
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))
       return json(route, { records: users, total: users.length, pages: 1 })
     if (path.startsWith('/admin/system/sysRole/toAssign/'))

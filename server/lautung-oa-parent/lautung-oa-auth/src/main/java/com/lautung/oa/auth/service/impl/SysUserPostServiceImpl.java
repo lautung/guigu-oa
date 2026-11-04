@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class SysUserPostServiceImpl extends ServiceImpl<SysUserPostMapper, SysUserPost>
@@ -26,5 +27,19 @@ public class SysUserPostServiceImpl extends ServiceImpl<SysUserPostMapper, SysUs
             relation.setPostId(postId);
             save(relation);
         }
+    }
+
+    @Override
+    public List<Long> findUserPostIds(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return list(new LambdaQueryWrapper<SysUserPost>()
+                        .eq(SysUserPost::getUserId, userId)
+                        .orderByAsc(SysUserPost::getId))
+                .stream()
+                .map(SysUserPost::getPostId)
+                .filter(Objects::nonNull)
+                .toList();
     }
 }

@@ -91,7 +91,8 @@ class BackofficeRouteAuthorizationContractTest {
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
-                "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword");
+                "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
+                "depts", "posts");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateStatus");
         expect(SysUserController.class, "/system/sysUser", "system:user:add", "save");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateById");

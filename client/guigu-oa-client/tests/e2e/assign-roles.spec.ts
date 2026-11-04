@@ -106,6 +106,8 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
     }
     if (path.startsWith('/admin/process/findPending/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))
       return json(route, { records: users, total: users.length, pages: 1 })
     if (path.startsWith('/admin/system/sysRole/toAssign/')) {

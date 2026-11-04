@@ -1,5 +1,17 @@
-import type { ApiRequestConfig, EntityId, UserForm, UserListItem, UserRecord } from '@/types/domain'
+import type {
+  ApiRequestConfig,
+  DeptRecord,
+  DeptSelectNode,
+  DeptTreeNode,
+  EntityId,
+  PostOption,
+  PostRecord,
+  UserForm,
+  UserListItem,
+  UserRecord,
+} from '@/types/domain'
 import { lengthRule, requiredRule, type LengthRule, type RequiredRule } from './form-rules'
+import { presentDeptTree } from './sys-dept'
 
 /** 用户页的独立动作按钮点（ADR 0052/0056）：重置密码不复用编辑点。 */
 export const SYS_USER_PERMISSIONS = {
@@ -46,6 +58,53 @@ export function presentListPage(
 }
 
 const SYS_USER_API = '/admin/system/sysUser'
+
+/** 左树「全部」节点的 id：0 保留给「不过滤」，部门主键从 1 起。 */
+export const ALL_DEPTS_ID = 0
+
+/**
+ * 用户页的只读部门树（#249）：走用户页自己的端点，只判 `/system/sysUser` 页面授予，
+ * 不要求部门管理页的授予；写入口仍在部门管理页。
+ */
+export function deptTreeRequest(): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${SYS_USER_API}/depts`,
+  }
+}
+
+/** 表单岗位多选的只读选项（#249）：同样只判用户页授予，服务端只回启用岗位。 */
+export function postOptionsRequest(): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${SYS_USER_API}/posts`,
+  }
+}
+
+/** 左树：prepend「全部」根节点，部门保持服务端的嵌套与排序。 */
+export function presentDeptFilterTree(nodes: DeptRecord[] = []): DeptSelectNode[] {
+  return [{ id: ALL_DEPTS_ID, name: '全部', children: presentDeptTree(nodes) }]
+}
+
+function toSelectNode(node: DeptTreeNode): DeptSelectNode {
+  return {
+    ...node,
+    // 停用部门仍出现在左侧过滤树（历史用户仍归属它），但表单不能新选。
+    disabled: node.status !== 1,
+    children: node.children.map(toSelectNode),
+  }
+}
+
+/** 表单的部门树：停用部门置 disabled，服务端仍会再用 201 拒绝。 */
+export function presentDeptFormTree(nodes: DeptRecord[] = []): DeptSelectNode[] {
+  return presentDeptTree(nodes).map(toSelectNode)
+}
+
+export function presentPostOptions(records: PostRecord[] = []): PostOption[] {
+  return records
+    .filter((record) => record.id !== undefined && record.id !== '')
+    .map((record) => ({ id: record.id as EntityId, name: record.name || '' }))
+}
 
 export function listRequest(
   page: number,
@@ -131,12 +190,21 @@ function userPayload(form: UserForm | UserRecord, { includePassword = false } = 
     name?: string
     phone?: string
     status: number
+    deptId?: EntityId
+    postIds: EntityId[]
     password?: string
   } = {
     username: form.username,
     name: form.name,
     phone: form.phone,
     status: form.status == null ? 1 : form.status,
+    // update 空列表=清空、未传=保留；表单总是带上当前选择（含空数组），意图明确。
+    postIds: form.postIds || [],
+  }
+
+  // 空部门不发送：save 表示不归属，update 表示不覆盖（ADR 0034 的空字段语义）。
+  if (form.deptId !== undefined && form.deptId !== null && form.deptId !== '') {
+    data.deptId = form.deptId
   }
 
   if (form.id) {
@@ -174,6 +242,8 @@ export function emptyForm(): UserForm {
     name: '',
     phone: '',
     status: 1,
+    deptId: '',
+    postIds: [],
   }
 }
 
@@ -185,6 +255,8 @@ export function presentForm(record: UserRecord = {}): UserForm {
     name: record.name || '',
     phone: record.phone || '',
     status: record.status == null ? 1 : record.status,
+    deptId: record.deptId == null ? '' : record.deptId,
+    postIds: (record.postIds || []).filter((id) => id !== undefined && id !== null && id !== ''),
   }
 }
 

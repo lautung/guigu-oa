@@ -40,6 +40,8 @@ async function mockApi(page: Page, info: { menus?: unknown[] } = {}): Promise<vo
     if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
     }
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
     }

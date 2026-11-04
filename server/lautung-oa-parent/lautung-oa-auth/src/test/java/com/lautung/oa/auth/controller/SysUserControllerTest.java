@@ -46,6 +46,10 @@ class SysUserControllerTest {
     private final SysUserService service = mock(SysUserService.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final DataScopeResolver dataScopeResolver = mock(DataScopeResolver.class);
+    private final com.lautung.oa.auth.service.SysDeptService sysDeptService =
+            mock(com.lautung.oa.auth.service.SysDeptService.class);
+    private final com.lautung.oa.auth.service.SysPostService sysPostService =
+            mock(com.lautung.oa.auth.service.SysPostService.class);
     private final SysUserController controller = new SysUserController();
 
     @BeforeAll
@@ -59,6 +63,8 @@ class SysUserControllerTest {
         ReflectionTestUtils.setField(controller, "service", service);
         ReflectionTestUtils.setField(controller, "passwordEncoder", passwordEncoder);
         ReflectionTestUtils.setField(controller, "dataScopeResolver", dataScopeResolver);
+        ReflectionTestUtils.setField(controller, "sysDeptService", sysDeptService);
+        ReflectionTestUtils.setField(controller, "sysPostService", sysPostService);
         when(dataScopeResolver.resolve(any())).thenReturn(DataScope.unrestricted());
     }
 
@@ -150,12 +156,13 @@ class SysUserControllerTest {
     }
 
     @Test
-    void readsASingleUser() {
-        SysUser user = new SysUser();
-        user.setId(3L);
-        when(service.getById(3L)).thenReturn(user);
+    void readsASingleUserWithTheirPosts() {
+        com.lautung.oa.vo.system.SysUserDetailVo detail = new com.lautung.oa.vo.system.SysUserDetailVo();
+        detail.setId(3L);
+        detail.setPostIds(List.of(7L, 8L));
+        when(service.findDetail(3L)).thenReturn(detail);
 
-        assertEquals(user, controller.get(3L).getData());
+        assertEquals(detail, controller.get(3L).getData());
     }
 
     @Test

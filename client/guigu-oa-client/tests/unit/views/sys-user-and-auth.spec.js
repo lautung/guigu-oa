@@ -16,6 +16,8 @@ vi.mock('element-plus', async (importOriginal) => {
 })
 
 const sysUserApi = vi.hoisted(() => ({
+  findDeptTree: vi.fn(),
+  findPostOptions: vi.fn(),
   getById: vi.fn(),
   removeById: vi.fn(),
   resetPassword: vi.fn(),
@@ -59,8 +61,25 @@ const userRecord = {
   name: '鲍勃',
   phone: '13800000000',
   status: 1,
+  deptId: 11,
+  postIds: [301],
   createTime: '2026-01-01 10:00:00',
 }
+
+const deptTree = [
+  {
+    id: 10,
+    parentId: 0,
+    name: '研发部',
+    status: 1,
+    children: [{ id: 11, parentId: 10, name: '前端组', status: 1, children: [] }],
+  },
+]
+
+const postOptions = [
+  { id: 301, name: '经理', status: 1 },
+  { id: 302, name: '专员', status: 1 },
+]
 
 const roleAssignment = {
   allRolesList: [
@@ -101,6 +120,8 @@ const menuTree = [
 
 function responder(config) {
   const url = config.url || ''
+  if (/\/sysUser\/depts$/.test(url)) return ok(deptTree)
+  if (/\/sysUser\/posts$/.test(url)) return ok(postOptions)
   if (/\/sysUser\/\d+\/\d+$/.test(url)) return paged([userRecord])
   if (/\/sysRole\/toAssign\/\d+$/.test(url)) return ok(roleAssignment)
   if (/\/sysRole\/doAssign$/.test(url)) return ok(null)
@@ -132,6 +153,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   messageMock.mockReset()
   confirmMock.mockReset().mockResolvedValue('confirm')
+  sysUserApi.findDeptTree.mockResolvedValue(ok(deptTree))
+  sysUserApi.findPostOptions.mockResolvedValue(ok(postOptions))
   sysUserApi.getById.mockResolvedValue(ok(userRecord))
   sysUserApi.removeById.mockResolvedValue(ok(null))
   sysUserApi.resetPassword.mockResolvedValue(ok(null))
@@ -169,11 +192,15 @@ describe('SysUser list page', () => {
 
     await wrapper.vm.openEdit(3)
     expect(wrapper.vm.form.username).toBe('bob')
+    expect(wrapper.vm.form.deptId).toBe(11)
+    expect(wrapper.vm.form.postIds).toEqual([301])
     expect(wrapper.vm.dialogTitle).toBe('编辑用户')
 
     wrapper.vm.form = { ...wrapper.vm.form, name: '鲍勃2' }
     await wrapper.vm.save()
-    expect(sysUserApi.saveOrUpdate).toHaveBeenCalledWith(expect.objectContaining({ name: '鲍勃2' }))
+    expect(sysUserApi.saveOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '鲍勃2', deptId: 11, postIds: [301] }),
+    )
     expect(wrapper.vm.dialogVisible).toBe(false)
 
     await wrapper.vm.toggleStatus(3, true)
@@ -183,6 +210,45 @@ describe('SysUser list page', () => {
 
     await wrapper.vm.remove(3)
     expect(sysUserApi.removeById).toHaveBeenCalledWith(3)
+  })
+
+  it('filters by the left dept tree, resets to page one, and clears on a second click', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    // 左树带「全部」根节点；岗位选项来自用户页自己的只读端点。
+    expect(wrapper.vm.deptTree[0]).toMatchObject({ id: 0, name: '全部' })
+    expect(wrapper.vm.deptTree[0].children[0]).toMatchObject({ id: 10, name: '研发部' })
+    expect(wrapper.vm.postOptions).toEqual([
+      { id: 301, name: '经理' },
+      { id: 302, name: '专员' },
+    ])
+
+    wrapper.vm.list.handlePageChange(2)
+    await flushPromises()
+    expect(wrapper.vm.view.page).toBe(2)
+
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    expect(http.calls.at(-1).url).toMatch(/\/sysUser\/1\/10$/)
+    expect(http.calls.at(-1).params).toEqual({ deptId: 10 })
+
+    // 再点同一部门：清除过滤并回到全部。
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    expect(http.calls.at(-1).params).toEqual({})
+    expect(wrapper.vm.currentDeptId).toBe(0)
+
+    // 重置按钮同时清部门与关键字。
+    wrapper.vm.keyword = 'bob'
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    wrapper.vm.reset()
+    await flushPromises()
+    expect(wrapper.vm.keyword).toBe('')
+    expect(wrapper.vm.currentDeptId).toBe(0)
+    expect(http.calls.at(-1).params).toEqual({})
   })
 
   it('blocks the create with local required messages before the request', async () => {

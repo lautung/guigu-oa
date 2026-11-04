@@ -5,65 +5,88 @@
       <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
     </div>
 
-    <el-form :inline="true" class="filter-form" @submit.prevent="search">
-      <el-form-item label="关键字">
-        <el-input v-model="keyword" placeholder="用户名/姓名/手机号码" clearable />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="search">搜索</el-button>
-        <el-button @click="reset">重置</el-button>
-      </el-form-item>
-    </el-form>
+    <div class="user-layout">
+      <aside class="dept-filter">
+        <el-tree
+          ref="deptTreeRef"
+          :data="deptTree"
+          node-key="id"
+          :props="{ label: 'name', children: 'children' }"
+          highlight-current
+          default-expand-all
+          :expand-on-click-node="false"
+          @node-click="handleDeptClick"
+        />
+      </aside>
 
-    <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
+      <section class="user-main">
+        <el-form :inline="true" class="filter-form" @submit.prevent="search">
+          <el-form-item label="关键字">
+            <el-input v-model="keyword" placeholder="用户名/姓名/手机号码" clearable />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="search">搜索</el-button>
+            <el-button @click="reset">重置</el-button>
+          </el-form-item>
+        </el-form>
 
-    <el-table
-      v-loading="view.status === 'loading'"
-      :data="rows"
-      :empty-text="emptyText"
-      stripe
-      border
-    >
-      <el-table-column type="index" label="序号" width="70" align="center" :index="list.rowIndex" />
-      <el-table-column prop="username" label="用户名" />
-      <el-table-column prop="name" label="姓名" />
-      <el-table-column prop="phone" label="手机" />
-      <el-table-column label="状态" width="90" align="center">
-        <template #default="scope">
-          <el-switch
-            :value="scope.row.statusEnabled"
-            @change="toggleStatus(scope.row.id, scope.row.statusEnabled)"
+        <ListLoadError :status="view.status" :error="view.error" @retry="list.retry" />
+
+        <el-table
+          v-loading="view.status === 'loading'"
+          :data="rows"
+          :empty-text="emptyText"
+          stripe
+          border
+        >
+          <el-table-column
+            type="index"
+            label="序号"
+            width="70"
+            align="center"
+            :index="list.rowIndex"
           />
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" />
-      <el-table-column label="操作" width="330" align="center">
-        <template #default="scope">
-          <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
-          <span class="assign-action">
-            <el-button link @click="openAssignRoles(scope.row.id, scope.row.username)"
-              >分配角色</el-button
-            >
-            <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
-          </span>
-          <el-button
-            v-hasPermi="permissions.resetPassword"
-            link
-            @click="openResetPassword(scope.row.id, scope.row.username)"
-            >重置密码</el-button
-          >
-          <el-button link @click="remove(scope.row.id)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+          <el-table-column prop="username" label="用户名" />
+          <el-table-column prop="name" label="姓名" />
+          <el-table-column prop="phone" label="手机" />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="scope">
+              <el-switch
+                :value="scope.row.statusEnabled"
+                @change="toggleStatus(scope.row.id, scope.row.statusEnabled)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" />
+          <el-table-column label="操作" width="330" align="center">
+            <template #default="scope">
+              <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
+              <span class="assign-action">
+                <el-button link @click="openAssignRoles(scope.row.id, scope.row.username)"
+                  >分配角色</el-button
+                >
+                <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
+              </span>
+              <el-button
+                v-hasPermi="permissions.resetPassword"
+                link
+                @click="openResetPassword(scope.row.id, scope.row.username)"
+                >重置密码</el-button
+              >
+              <el-button link @click="remove(scope.row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-    <ListPagination
-      :page="view.page"
-      :size="view.size"
-      :total="view.total"
-      @page-change="list.handlePageChange"
-      @size-change="list.handleSizeChange"
-    />
+        <ListPagination
+          :page="view.page"
+          :size="view.size"
+          :total="view.total"
+          @page-change="list.handlePageChange"
+          @size-change="list.handleSizeChange"
+        />
+      </section>
+    </div>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="80px">
@@ -78,6 +101,29 @@
         </el-form-item>
         <el-form-item label="手机">
           <el-input v-model="form.phone" />
+        </el-form-item>
+        <el-form-item label="部门">
+          <!-- update 的「空=不覆盖」语义没有「清空部门」入口，所以只有新建可以清除。 -->
+          <el-tree-select
+            v-model="form.deptId"
+            :data="deptFormTree"
+            :props="{ label: 'name', children: 'children', disabled: 'disabled' }"
+            node-key="id"
+            check-strictly
+            :clearable="!form.id"
+            default-expand-all
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="岗位">
+          <el-select v-model="form.postIds" multiple clearable style="width: 100%">
+            <el-option
+              v-for="post in postOptions"
+              :key="post.id"
+              :label="post.name"
+              :value="post.id"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -136,17 +182,29 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
-import { getById, removeById, resetPassword, saveOrUpdate, updateStatus } from '@/api/sysUser'
+import {
+  findDeptTree,
+  findPostOptions,
+  getById,
+  removeById,
+  resetPassword,
+  saveOrUpdate,
+  updateStatus,
+} from '@/api/sysUser'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
 import {
+  ALL_DEPTS_ID,
   emptyForm,
   emptyResetPasswordForm,
   formRules,
   listRequest,
+  presentDeptFilterTree,
+  presentDeptFormTree,
   presentForm,
   presentListRecord,
+  presentPostOptions,
   resetPasswordRules,
   SYS_USER_PERMISSIONS,
 } from '@/config/sys-user'
@@ -154,13 +212,24 @@ import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
-import type { EntityId, UserListItem, UserRecord } from '@/types/domain'
+import type {
+  DeptRecord,
+  DeptSelectNode,
+  EntityId,
+  PostOption,
+  UserListItem,
+  UserRecord,
+} from '@/types/domain'
 import type { FormInstance } from 'element-plus'
 import AssignRolesDialog from './AssignRolesDialog.vue'
 
 interface AssignRolesDialogHandle {
   requestLeave(): Promise<boolean>
   environmentChanged(): void
+}
+
+interface DeptTreeHandle {
+  setCurrentKey(key?: EntityId): void
 }
 
 export default defineComponent({
@@ -233,6 +302,10 @@ export default defineComponent({
       saving: false,
       form: emptyForm(),
       formRules: formRules(),
+      // 只读部门树（含「全部」）与岗位选项；维护入口仍在部门/岗位管理页。
+      deptRecords: [] as DeptRecord[],
+      postOptions: [] as PostOption[],
+      currentDeptId: ALL_DEPTS_ID as EntityId,
       resetDialogVisible: false,
       resetting: false,
       resetTarget: null as { id: EntityId; username?: string } | null,
@@ -241,6 +314,12 @@ export default defineComponent({
     }
   },
   computed: {
+    deptTree(): DeptSelectNode[] {
+      return presentDeptFilterTree(this.deptRecords)
+    },
+    deptFormTree(): DeptSelectNode[] {
+      return presentDeptFormTree(this.deptRecords)
+    },
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
     },
@@ -249,16 +328,47 @@ export default defineComponent({
       return username ? `重置密码 — ${username}` : '重置密码'
     },
   },
+  mounted() {
+    void this.loadOptions()
+  },
   methods: {
+    /** 选项读失败不阻塞列表：请求层已提示，空选项只影响筛选与表单的可选范围。 */
+    async loadOptions() {
+      const [depts, posts] = await Promise.all([
+        this.list.settle(findDeptTree()),
+        this.list.settle(findPostOptions()),
+      ])
+      if (depts) this.deptRecords = depts.data || []
+      if (posts) this.postOptions = presentPostOptions(posts.data || [])
+    },
     searchObj(): Record<string, string | number> {
-      return this.keyword ? { keyword: this.keyword } : {}
+      const query: Record<string, string | number> = {}
+      if (this.keyword) query.keyword = this.keyword
+      if (this.currentDeptId !== ALL_DEPTS_ID) query.deptId = this.currentDeptId
+      return query
     },
     search() {
       this.list.search(this.searchObj())
     },
     reset() {
       this.keyword = ''
+      this.currentDeptId = ALL_DEPTS_ID
+      this.syncDeptSelection()
       this.search()
+    },
+    /** 左树点击（#249）：选中部门过滤，再点同一部门清除；「全部」节点等价于清除。 */
+    handleDeptClick(node?: { id?: EntityId }) {
+      const clicked = node?.id ?? ALL_DEPTS_ID
+      const clearing = clicked === ALL_DEPTS_ID || String(clicked) === String(this.currentDeptId)
+      this.currentDeptId = clearing ? ALL_DEPTS_ID : clicked
+      this.syncDeptSelection()
+      this.list.search(this.searchObj())
+    },
+    syncDeptSelection() {
+      void this.$nextTick(() => {
+        const tree = this.$refs.deptTreeRef as DeptTreeHandle | undefined
+        tree?.setCurrentKey?.(this.currentDeptId)
+      })
     },
     openCreate() {
       this.form = emptyForm()
@@ -350,6 +460,24 @@ export default defineComponent({
   margin: 0;
   font-size: 20px;
   color: #303133;
+}
+
+.user-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.dept-filter {
+  flex: 0 0 220px;
+  min-height: 320px;
+  padding-right: 12px;
+  border-right: 1px solid #e4e7ed;
+}
+
+.user-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .filter-form {

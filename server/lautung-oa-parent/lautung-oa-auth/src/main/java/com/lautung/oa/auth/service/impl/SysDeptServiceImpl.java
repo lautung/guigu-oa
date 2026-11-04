@@ -39,6 +39,15 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     }
 
     @Override
+    public List<Long> findSubtreeIds(Long deptId) {
+        // 已删/不存在的部门没有可选子树：返回空集让调用方得到零行，而不是整表。
+        if (deptId == null || getById(deptId) == null) {
+            return List.of();
+        }
+        return baseMapper.selectSubtreeIds(deptId);
+    }
+
+    @Override
     @Transactional
     public void saveDept(SysDept dept) {
         Long parentId = dept.getParentId() == null ? ROOT_PARENT_ID : dept.getParentId();

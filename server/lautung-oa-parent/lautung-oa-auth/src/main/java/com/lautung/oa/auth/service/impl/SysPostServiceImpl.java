@@ -6,6 +6,7 @@ import com.lautung.oa.auth.service.SysPostService;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysPost;
 import com.lautung.oa.model.system.SysUserPost;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,5 +68,13 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
             throw new BusinessException(201, "岗位已停用");
         }
         return normalized;
+    }
+
+    @Override
+    public List<SysPost> findEnabledOptions() {
+        return list(new LambdaQueryWrapper<SysPost>()
+                .eq(SysPost::getStatus, 1)
+                .orderByAsc(SysPost::getSortValue)
+                .orderByAsc(SysPost::getId));
     }
 }

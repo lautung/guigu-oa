@@ -16,6 +16,12 @@ public interface SysDeptService extends IService<SysDept> {
     /** 树列表：根节点按 sortValue、id 升序，children 逐层装配；停用部门同样出现在维护面。 */
     List<SysDept> findTree();
 
+    /**
+     * 选中部门及其全部下级（{@code ancestors} 前缀，含自身）；部门不存在/已删返回空列表。
+     * 只回答部门树范围，不放宽 DataScope（#249：调用方把它与数据范围 AND 起来）。
+     */
+    List<Long> findSubtreeIds(Long deptId);
+
     /** 新增部门：校验父级并回写 ancestors（根为 {@code ,0,id,}）。 */
     void saveDept(SysDept dept);
 
