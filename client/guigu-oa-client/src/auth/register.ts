@@ -89,6 +89,8 @@ export function createRegister(adapter: RegisterAdapter) {
   }
 
   async function submit(): Promise<boolean> {
+    // 输入框内连按 Enter 会绕过按钮 loading，状态机自己挡重入。
+    if (state.submitting) return false
     if (!state.enabled) {
       state.formError = REGISTER_TEXT.closed
       return false

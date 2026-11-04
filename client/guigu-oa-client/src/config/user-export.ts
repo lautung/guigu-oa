@@ -21,17 +21,6 @@ export const SYS_USER_IO_PERMISSIONS = {
   import: 'system:user:import',
 } as const
 
-/** 导出与导入模板共用的列（服务端唯一 owner 是 SysUserExcelService.COLUMNS）。 */
-export const USER_EXCEL_COLUMNS = [
-  '用户名',
-  '姓名',
-  '部门',
-  '岗位',
-  '手机',
-  '状态',
-  '创建时间',
-] as const
-
 /** 导出沿用列表当前筛选：空值不上送，服务端按「不过滤」处理。 */
 export function exportRequest(
   searchObj: Record<string, string | number> = {},

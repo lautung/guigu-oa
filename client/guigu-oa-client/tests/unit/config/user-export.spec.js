@@ -11,7 +11,6 @@ import {
   importTemplateRequest,
   presentImportResult,
   SYS_USER_IO_PERMISSIONS,
-  USER_EXCEL_COLUMNS,
   validateImportFile,
 } from '@/config/user-export'
 
@@ -33,18 +32,6 @@ describe('config/user-export', () => {
   it('omits empty filters instead of sending blank query values', () => {
     expect(exportRequest({ keyword: '', deptId: '', status: '' }).params).toEqual({})
     expect(exportRequest().params).toEqual({})
-  })
-
-  it('keeps the seven exported columns in one place', () => {
-    expect(USER_EXCEL_COLUMNS).toEqual([
-      '用户名',
-      '姓名',
-      '部门',
-      '岗位',
-      '手机',
-      '状态',
-      '创建时间',
-    ])
   })
 
   it('names the download with a stable local timestamp', () => {

@@ -13,7 +13,7 @@ function deferred() {
 
 const alice = { id: 11, username: 'alice', name: '爱丽丝' }
 const bob = { id: 12, username: 'bob', name: '鲍勃' }
-const carol = { id: 13, username: 'carol', name: '卡罗尔' }
+const carol = { id: 13, username: 'carol', name: '卡罗尔', phone: '13800002222' }
 const dave = { id: 14, username: 'dave', name: '戴夫' }
 const role = { id: 7, roleName: '审批人' }
 
@@ -179,10 +179,17 @@ describe('角色分配用户 interface', () => {
       canEnd: true,
     })
     expect(h.module.pendingRoleIds.value).toEqual(['7'])
-    expect(JSON.parse([...h.values.values()][0])).toMatchObject({
+    const saved = JSON.parse([...h.values.values()][0])
+    expect(saved).toMatchObject({
       phase: 'unconfirmed',
       submittedUserIds: [11, 12, 13],
     })
+    expect(saved.submittedUsers).toEqual([
+      { id: 11, username: 'alice', name: '爱丽丝' },
+      { id: 12, username: 'bob', name: '鲍勃' },
+      { id: 13, username: 'carol', name: '卡罗尔' },
+    ])
+    expect(JSON.stringify(saved)).not.toContain('phone')
 
     await page.reload()
     expect(page.view.value.latest).toEqual({ members: [bob, carol] })
@@ -198,7 +205,11 @@ describe('角色分配用户 interface', () => {
     expect(reopened.view.value).toMatchObject({
       phase: 'unconfirmed',
       submittedUserIds: [11, 12, 13],
-      submittedUsers: [alice, bob, carol],
+      submittedUsers: [
+        { id: 11, username: 'alice', name: '爱丽丝' },
+        { id: 12, username: 'bob', name: '鲍勃' },
+        { id: 13, username: 'carol', name: '卡罗尔' },
+      ],
     })
     await reopened.save()
     expect(h.adapter.assign).toHaveBeenCalledTimes(1)

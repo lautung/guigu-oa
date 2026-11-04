@@ -11,10 +11,10 @@ export const SUPPORTED_LOCALES = ['zh-CN', 'en'] as const
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number]
 
-/** 语言下拉的固定选项：语言名用自身语言书写，不随当前 locale 翻译。 */
-export const LOCALE_OPTIONS: readonly { value: AppLocale; label: string }[] = [
-  { value: 'zh-CN', label: '中文' },
-  { value: 'en', label: 'English' },
+/** 语言下拉的固定选项：两种 locale 下都写成自身语言（中文/English），标签走 i18n key。 */
+export const LOCALE_OPTIONS: readonly { value: AppLocale; labelKey: string }[] = [
+  { value: 'zh-CN', labelKey: 'shell.locale.zhCN' },
+  { value: 'en', labelKey: 'shell.locale.en' },
 ]
 
 type LocaleStorage = Pick<Storage, 'getItem' | 'setItem'>

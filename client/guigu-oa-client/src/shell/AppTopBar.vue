@@ -56,7 +56,7 @@
               :key="option.value"
               :command="option.value"
             >
-              {{ option.label }}
+              {{ t(option.labelKey) }}
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>

@@ -163,4 +163,30 @@ describe('auth/register module', () => {
     expect(await register.submit()).toBe(false)
     expect(register.state.formError).toBe('注册尝试过于频繁，请稍后再试')
   })
+
+  it('ignores a second submit while the first request is in flight', async () => {
+    let release
+    const adapter = fakeAdapter({
+      submit: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            release = resolve
+          }),
+      ),
+    })
+    const register = createRegister(adapter)
+    await register.loadSwitch()
+    filled(register)
+
+    const first = register.submit()
+    await Promise.resolve()
+    expect(register.state.submitting).toBe(true)
+
+    expect(await register.submit()).toBe(false)
+    expect(adapter.submit).toHaveBeenCalledTimes(1)
+
+    release()
+    expect(await first).toBe(true)
+    expect(register.state.submitting).toBe(false)
+  })
 })

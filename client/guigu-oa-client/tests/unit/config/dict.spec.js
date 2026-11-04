@@ -12,10 +12,8 @@ import {
   dictStatusLabel,
   emptyDataForm,
   emptyTypeForm,
-  presentDataPage,
   presentDataRecord,
   presentTypeForm,
-  presentTypePage,
   presentTypeRecord,
   refreshRequest,
   typeFormRules,
@@ -64,7 +62,6 @@ describe('config/dict 管理页投影与请求', () => {
       remark: 'r',
       createTime: '2026-11-04 10:00:00',
     })
-    expect(presentTypePage()).toEqual({ records: [], total: 0, pages: 0 })
   })
 
   it('projects data rows and pages with status labels', () => {
@@ -85,7 +82,6 @@ describe('config/dict 管理页投影与请求', () => {
       status: 0,
       statusLabel: '停用',
     })
-    expect(presentDataPage()).toEqual({ records: [], total: 0, pages: 0 })
   })
 
   it('builds the two-level list and remove request shapes', () => {

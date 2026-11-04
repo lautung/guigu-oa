@@ -9,6 +9,7 @@ import type {
   EntityId,
 } from '@/types/domain'
 import { requiredRule, type RequiredRule } from './form-rules'
+import { ENABLED_STATUS_OPTIONS } from './status'
 
 /**
  * 字典管理（#251，ADR 0062）：类型/数据两级请求形状、管理页投影与表单。
@@ -31,11 +32,8 @@ export const DICT_TYPES = {
   loginStatus: 'sys_login_status',
 } as const
 
-/** 字典管理页的状态两档（与 sys_post/部门同口径）：1 正常 / 0 停用。 */
-export const DICT_STATUS_OPTIONS = [
-  { value: 1, label: '正常' },
-  { value: 0, label: '停用' },
-] as const
+/** 字典管理页的状态两档（与 sys_post/部门同口径）。 */
+export const DICT_STATUS_OPTIONS = ENABLED_STATUS_OPTIONS
 
 export function dictStatusLabel(status: number | null | undefined): string {
   return DICT_STATUS_OPTIONS.find((option) => option.value === status)?.label || ''
@@ -53,16 +51,6 @@ export function presentTypeRecord(record: DictTypeRecord = {}): DictTypeListItem
   }
 }
 
-export function presentTypePage(
-  page: { records?: DictTypeRecord[]; total?: number; pages?: number } = {},
-) {
-  return {
-    records: (page.records || []).map(presentTypeRecord),
-    total: page.total || 0,
-    pages: page.pages || 0,
-  }
-}
-
 export function presentDataRecord(record: DictDataRecord = {}): DictDataListItem {
   return {
     id: record.id || '',
@@ -74,16 +62,6 @@ export function presentDataRecord(record: DictDataRecord = {}): DictDataListItem
     statusLabel: dictStatusLabel(record.status),
     remark: record.remark,
     createTime: record.createTime,
-  }
-}
-
-export function presentDataPage(
-  page: { records?: DictDataRecord[]; total?: number; pages?: number } = {},
-) {
-  return {
-    records: (page.records || []).map(presentDataRecord),
-    total: page.total || 0,
-    pages: page.pages || 0,
   }
 }
 

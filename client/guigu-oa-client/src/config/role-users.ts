@@ -1,3 +1,5 @@
+// TODO(ADR 0006 共享 phase/lease 机，待立票)：本文件的 phase/lease/待确认面板与
+// assign-roles.ts 同构，后续抽公共机时一并迁移；改一侧时另一侧需同步。
 import { readonly, shallowRef, type DeepReadonly, type Ref } from 'vue'
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import type { EntityId } from '@/types/domain'
@@ -273,7 +275,13 @@ export function createRoleUsers(adapter: RoleUsersAdapter) {
       roleId: session.target.id,
       roleName: session.target.roleName,
       phase,
-      submittedUsers: copy(session.submittedUsers),
+      submittedUsers: copy(
+        session.submittedUsers.map(({ id, username, name }) => ({
+          id,
+          username,
+          name,
+        })),
+      ),
       submittedUserIds: copy(session.submittedUserIds),
     }
     try {
