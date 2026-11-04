@@ -5,6 +5,7 @@ import db.migration.V113__AuditOperLogMenu;
 import db.migration.V115__AuditLoginLogMenu;
 import db.migration.V116__NoticeSchemaAndMenu;
 import db.migration.V117__MonitorOnlineMenu;
+import db.migration.V118__MonitorPages;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -66,7 +67,9 @@ class FlywayMigrationContractTest {
             "oa_notice_read",
             "oa_notice_image",
             "sys_oper_log",
-            "sys_login_log");
+            "sys_login_log",
+            "sys_job",
+            "sys_job_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
@@ -77,7 +80,8 @@ class FlywayMigrationContractTest {
             "system:operLog:remove", "system:operLog:clean",
             "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
             "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish",
-            "monitor:online:forceLogout");
+            "monitor:online:forceLogout", "monitor:cache:clean",
+            "monitor:job:edit", "monitor:job:run");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -132,6 +136,10 @@ class FlywayMigrationContractTest {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '116' AND success = TRUE"));
         // 系统监控目录与在线用户页/强退按钮（#235，ADR 0060）。
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '117' AND success = TRUE"));
+        // 服务监控与数据监控页面（#236，ADR 0060）：无按钮点，页面授予覆盖读。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '118' AND success = TRUE"));
+        // 缓存监控与缓存列表页、清理按钮点（#237，ADR 0060）。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '119' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu "
                 + "WHERE path = '/monitor' AND parent_id = 0 AND type = 0 AND is_deleted = 0"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
@@ -144,6 +152,38 @@ class FlywayMigrationContractTest {
                 + "JOIN sys_menu m ON m.id = rm.menu_id "
                 + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
                 + "AND (m.path = '/monitor/online' OR m.perms = 'monitor:online:forceLogout')"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/server' AND c.type = 1 "
+                + "AND c.component = 'monitor/server/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/data' AND c.type = 1 "
+                + "AND c.component = 'monitor/data/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(2, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.path IN ('/monitor/server', '/monitor/data')"));
+        // ADR 0056/0060：监控只读页不设按钮点。
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b WHERE b.type = 2 AND b.is_deleted = 0 "
+                + "AND b.perms LIKE 'monitor:server:%'"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b WHERE b.type = 2 AND b.is_deleted = 0 "
+                + "AND b.perms LIKE 'monitor:data:%'"));
+        // 缓存监控与缓存列表（#237）：两个页面行 + 清理按钮挂在缓存列表下，super_admin 三行补授。
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/cache' AND c.type = 1 "
+                + "AND c.component = 'monitor/cache/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/monitor/cacheList' AND c.type = 1 "
+                + "AND c.component = 'monitor/cacheList/index' AND p.path = '/monitor' AND p.type = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/monitor/cacheList' "
+                + "AND b.perms = 'monitor:cache:clean'"));
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/monitor/cache'"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path IN ('/monitor/cache', '/monitor/cacheList') "
+                + "OR m.perms = 'monitor:cache:clean')"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = '/system/notice' AND c.type = 1 "
                 + "AND c.component = 'system/notice/list' AND p.path = '/system' AND p.type = 0"));
@@ -265,7 +305,11 @@ class FlywayMigrationContractTest {
                         "/system/log/loginLog",
                         "/system/notice",
                         "/monitor",
-                        "/monitor/online")))
+                        "/monitor/online",
+                        "/monitor/server",
+                        "/monitor/data",
+                        "/monitor/cache",
+                        "/monitor/cacheList")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
@@ -291,6 +335,8 @@ class FlywayMigrationContractTest {
             // 通知公告（#218）：Java 迁移的建表/索引与 SQL 种子都必须可重复执行。
             new V116__NoticeSchemaAndMenu().migrate(context);
             new V117__MonitorOnlineMenu().migrate(context);
+            // 监控页面种子（#236）也必须幂等可重放。
+            new V118__MonitorPages().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

@@ -263,6 +263,185 @@ export interface LoginLogListItem extends LoginLogRecord {
   statusTagType: AuditTagType
 }
 
+/** 在线用户（ADR 0060）：一行 = 一次登录；current 由服务端按请求者自己的会话标出。 */
+export interface OnlineSessionRecord {
+  sessionId?: string
+  username?: string
+  name?: string
+  loginTime?: string
+  ip?: string
+  browser?: string
+  os?: string
+  lastActive?: string
+  current?: boolean
+}
+
+export interface OnlineSessionListItem {
+  sessionId: string
+  username: string
+  name: string
+  loginTime: string
+  ip: string
+  browser: string
+  os: string
+  lastActive: string
+  current: boolean
+}
+
+/** 服务监控/数据监控（ADR 0060）：字段镜像 lautung-oa-model 的 monitor VO，单位字节/百分比(0-100)/秒。 */
+export interface HikariMetrics {
+  activeConnections?: number | null
+  idleConnections?: number | null
+  totalConnections?: number | null
+  threadsAwaiting?: number | null
+  maxPoolSize?: number | null
+  connectionTimeoutSeconds?: number | null
+  totalAcquired?: number | null
+  totalTimeouts?: number | null
+}
+
+export interface MemorySegmentMetrics {
+  usedBytes?: number | null
+  committedBytes?: number | null
+  maxBytes?: number | null
+}
+
+export interface ThreadMetrics {
+  threadCount?: number | null
+  peakThreadCount?: number | null
+  daemonThreadCount?: number | null
+}
+
+export interface JvmMetrics {
+  uptimeSeconds?: number | null
+  heap?: MemorySegmentMetrics | null
+  nonHeap?: MemorySegmentMetrics | null
+  pools?: { name?: string; usage?: MemorySegmentMetrics | null }[] | null
+  threads?: ThreadMetrics | null
+}
+
+export interface ServerMetrics {
+  cpu?: {
+    usagePercent?: number | null
+    systemLoad?: number | null
+    availableProcessors?: number | null
+  } | null
+  memory?: {
+    totalBytes?: number | null
+    freeBytes?: number | null
+    usagePercent?: number | null
+  } | null
+  jvm?: JvmMetrics | null
+  disks?:
+    | {
+        mountPoint?: string | null
+        totalBytes?: number | null
+        usableBytes?: number | null
+        usedBytes?: number | null
+        usagePercent?: number | null
+      }[]
+    | null
+  hikari?: HikariMetrics | null
+}
+
+export interface SlowSqlEntry {
+  timestamp?: number | null
+  statementId?: string | null
+  elapsedMs?: number | null
+  rows?: number | null
+  sql?: string | null
+}
+
+export interface MonitorDataSnapshot {
+  hikari?: HikariMetrics | null
+  slowSql?: {
+    enabled?: boolean | null
+    thresholdMs?: number | null
+    entries?: SlowSqlEntry[] | null
+  } | null
+}
+
+/** 缓存监控/缓存列表（ADR 0060，#237）：镜像 CacheMonitorVo 的五段解析字段。 */
+export interface CacheMonitorSnapshot {
+  server?: {
+    redisVersion?: string | null
+    uptimeSeconds?: number | null
+  } | null
+  memory?: {
+    usedMemoryBytes?: number | null
+    usedMemoryHuman?: string | null
+    /** 0 表示未设上限（Redis 原值）。 */
+    maxMemoryBytes?: number | null
+  } | null
+  clients?: {
+    connectedClients?: number | null
+  } | null
+  stats?: {
+    keyspaceHits?: number | null
+    keyspaceMisses?: number | null
+    expiredKeys?: number | null
+  } | null
+  keyspace?:
+    | {
+        db?: string | null
+        keys?: number | null
+        expires?: number | null
+        avgTtlMs?: number | null
+      }[]
+    | null
+}
+
+export interface CacheKeyRecord {
+  key?: string | null
+  /** 秒；-1 无过期（服务端把扫描间隙消失的 -2 也归 -1）。 */
+  ttl?: number | null
+}
+
+export interface CacheKeyPage {
+  keys?: CacheKeyRecord[] | null
+  /** 0 表示扫描结束。 */
+  nextCursor?: number | null
+}
+
+/**
+ * 定时任务行（ADR 0060，#238）：镜像 `MonitorJobVo`。`available` 是读侧判存活，
+ * false 表示 bean 已不存在（「异常」行）；`last*` 是最近一次执行摘要，没跑过为空。
+ */
+export interface MonitorJobRecord {
+  id?: EntityId
+  name?: string | null
+  beanName?: string | null
+  cron?: string | null
+  /** 0 停用 / 1 启用。 */
+  enabled?: number | null
+  /** 0 禁止并发（默认）/ 1 允许并发。 */
+  concurrency?: number | null
+  remark?: string | null
+  available?: boolean
+  lastTriggerType?: number | null
+  lastStatus?: number | null
+  /** dev profile 序列化成 `yyyy-MM-dd HH:mm:ss` 字符串；兜底 epoch 毫秒。 */
+  lastStartedAt?: string | number | null
+  lastDurationMs?: number | null
+  lastMessage?: string | null
+}
+
+/**
+ * 定时任务执行记录（ADR 0060，#238）：镜像 `SysJobLog`。trigger 1 自动 / 2 手动；
+ * status 1 成功 / 2 失败 / 3 跳过；保留策略每任务最近 20 条在服务端写入路径执行。
+ */
+export interface MonitorJobLogRecord {
+  id?: EntityId
+  jobId?: EntityId
+  jobName?: string | null
+  triggerType?: number | null
+  status?: number | null
+  message?: string | null
+  startedAt?: string | number | null
+  finishedAt?: string | number | null
+  durationMs?: number | null
+}
+
 export interface ProcessInstanceRecord {
   id?: EntityId
   processCode?: string

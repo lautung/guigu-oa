@@ -218,10 +218,54 @@ export const constantRoutes: AppRoute[] = [
       },
       {
         // 监控与工具暂无页面（ADR 0059）：保留一级入口，落在空态占位页。
+        // /monitor 占位保留作直接访问兜底（#239）；监控页面是它的平级子路由。
         path: PATHS.MONITOR,
         name: 'Monitor',
         component: () => import('@/shell/ModulePlaceholder.vue'),
         meta: { title: '系统监控' },
+      },
+      {
+        // 在线用户（#239，ADR 0060）：监控首个真实页面；授予判定与配置页共用
+        // coversPage 路径，未授权回落工作台（ADR 0058）。
+        path: PATHS.MONITOR_ONLINE,
+        name: 'MonitorOnline',
+        component: () => import('@/views/monitor/online/index.vue'),
+        meta: { title: '在线用户', menuGroup: 'config' },
+      },
+      {
+        // 服务监控（#240，ADR 0060）：运行时快照面板；授予判定同在线用户。
+        path: PATHS.MONITOR_SERVER,
+        name: 'MonitorServer',
+        component: () => import('@/views/monitor/server/index.vue'),
+        meta: { title: '服务监控', menuGroup: 'config' },
+      },
+      {
+        // 数据监控（#240，ADR 0060）：Hikari 实时 + 慢 SQL 内存环；授予判定同在线用户。
+        path: PATHS.MONITOR_DATA,
+        name: 'MonitorData',
+        component: () => import('@/views/monitor/data/index.vue'),
+        meta: { title: '数据监控', menuGroup: 'config' },
+      },
+      {
+        // 缓存监控（#241，ADR 0060）：Redis INFO 五段快照面板；授予判定同在线用户。
+        path: PATHS.MONITOR_CACHE,
+        name: 'MonitorCache',
+        component: () => import('@/views/monitor/cache/index.vue'),
+        meta: { title: '缓存监控', menuGroup: 'config' },
+      },
+      {
+        // 缓存列表（#241，ADR 0060）：白名单前缀键浏览 + 受限清理；授予判定同在线用户。
+        path: PATHS.MONITOR_CACHE_LIST,
+        name: 'MonitorCacheList',
+        component: () => import('@/views/monitor/cacheList/index.vue'),
+        meta: { title: '缓存列表', menuGroup: 'config' },
+      },
+      {
+        // 定时任务（#242，ADR 0060）：表驱动任务面，编辑与手动执行各挂按钮点；授予判定同在线用户。
+        path: PATHS.MONITOR_JOB,
+        name: 'MonitorJob',
+        component: () => import('@/views/monitor/job/index.vue'),
+        meta: { title: '定时任务', menuGroup: 'config' },
       },
       {
         path: PATHS.TOOL,

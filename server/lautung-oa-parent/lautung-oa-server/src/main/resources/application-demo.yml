@@ -2,6 +2,14 @@ spring:
   flyway:
     locations: classpath:db/migration,classpath:db/demo-migration
 
+# 演示栈打开慢 SQL 采集（ADR 0060，#236）：数据监控页有内容；阈值沿用 base 的 500ms，与 dev 相同。
+# base 保持关闭，dev 也显式打开；生产临时排障用 LAUTUNG_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
+lautung:
+  oa:
+    sql:
+      slow-sql:
+        enabled: true
+
 management:
   endpoint:
     health:

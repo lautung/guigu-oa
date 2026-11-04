@@ -6,6 +6,7 @@ import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.security.response.AuthenticationRejections;
 import com.lautung.oa.security.revocation.TokenRevocation;
@@ -152,6 +153,10 @@ public class IndexController {
                 .filter(StringUtils::hasText)
                 .map(perm -> Map.of("authority", perm.trim()))
                 .collect(Collectors.toList());
-        redisTemplate.opsForValue().set(username, objectMapper.writeValueAsString(authorities));
+        // 权限缓存键唯一构造点（#237，ADR 0060）；写入新键时顺手清掉迁移前的裸 username 键，
+        // 存量裸键随各用户下一次 /info 自然消失，不做全局迁移。
+        redisTemplate.opsForValue().set(PermissionCacheKey.of(username),
+                objectMapper.writeValueAsString(authorities));
+        redisTemplate.delete(username);
     }
 }

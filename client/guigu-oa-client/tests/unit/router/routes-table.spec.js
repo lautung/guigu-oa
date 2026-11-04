@@ -15,6 +15,12 @@ describe('route table', () => {
     expect(shell.children.map((route) => route.path)).toEqual([
       PATHS.WORKBENCH,
       PATHS.MONITOR,
+      PATHS.MONITOR_ONLINE,
+      PATHS.MONITOR_SERVER,
+      PATHS.MONITOR_DATA,
+      PATHS.MONITOR_CACHE,
+      PATHS.MONITOR_CACHE_LIST,
+      PATHS.MONITOR_JOB,
       PATHS.TOOL,
       PATHS.WORK,
       PATHS.NOTICE,
@@ -34,6 +40,40 @@ describe('route table', () => {
     expect(tool.meta).toEqual({ title: '系统工具' })
     expect(monitor.meta.menuGroup).toBeUndefined()
     expect(tool.meta.menuGroup).toBeUndefined()
+  })
+
+  it('registers 在线用户 as the first grant-checked monitor page', () => {
+    const online = shell.children.find((route) => route.path === PATHS.MONITOR_ONLINE)
+
+    expect(online.name).toBe('MonitorOnline')
+    expect(online.meta).toEqual({ title: '在线用户', menuGroup: 'config' })
+  })
+
+  it('registers 服务监控 and 数据监控 as grant-checked monitor pages (#240)', () => {
+    const server = shell.children.find((route) => route.path === PATHS.MONITOR_SERVER)
+    const data = shell.children.find((route) => route.path === PATHS.MONITOR_DATA)
+
+    expect(server.name).toBe('MonitorServer')
+    expect(server.meta).toEqual({ title: '服务监控', menuGroup: 'config' })
+    expect(data.name).toBe('MonitorData')
+    expect(data.meta).toEqual({ title: '数据监控', menuGroup: 'config' })
+  })
+
+  it('registers 缓存监控 and 缓存列表 as grant-checked monitor pages (#241)', () => {
+    const cache = shell.children.find((route) => route.path === PATHS.MONITOR_CACHE)
+    const cacheList = shell.children.find((route) => route.path === PATHS.MONITOR_CACHE_LIST)
+
+    expect(cache.name).toBe('MonitorCache')
+    expect(cache.meta).toEqual({ title: '缓存监控', menuGroup: 'config' })
+    expect(cacheList.name).toBe('MonitorCacheList')
+    expect(cacheList.meta).toEqual({ title: '缓存列表', menuGroup: 'config' })
+  })
+
+  it('registers 定时任务 as the last grant-checked monitor page (#242)', () => {
+    const job = shell.children.find((route) => route.path === PATHS.MONITOR_JOB)
+
+    expect(job.name).toBe('MonitorJob')
+    expect(job.meta).toEqual({ title: '定时任务', menuGroup: 'config' })
   })
 
   it('keeps child paths relative to their parent', () => {
@@ -70,6 +110,12 @@ describe('route table', () => {
         PATHS.WORK_COPIED_DETAIL,
         PATHS.WORK_PROFILE,
         PATHS.SYSTEM,
+        PATHS.MONITOR_ONLINE,
+        PATHS.MONITOR_SERVER,
+        PATHS.MONITOR_DATA,
+        PATHS.MONITOR_CACHE,
+        PATHS.MONITOR_CACHE_LIST,
+        PATHS.MONITOR_JOB,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,

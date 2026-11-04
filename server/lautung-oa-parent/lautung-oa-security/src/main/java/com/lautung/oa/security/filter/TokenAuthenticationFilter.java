@@ -1,6 +1,7 @@
 package com.lautung.oa.security.filter;
 
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.config.PublicApiPaths;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.security.response.AuthenticationRejections;
@@ -84,7 +85,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         LoginUserInfoHelper.setUserId(claims.userId());
         LoginUserInfoHelper.setUsername(claims.username());
 
-        String authString = redisTemplate.opsForValue().get(claims.username());
+        String authString = redisTemplate.opsForValue().get(PermissionCacheKey.of(claims.username()));
         if (StringUtils.hasText(authString)) {
             try {
                 List<Map<String, String>> mapList = objectMapper.readValue(
