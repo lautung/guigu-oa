@@ -8,8 +8,15 @@ import {
   updateStatusRequest,
   writeRequest,
 } from '@/config/sys-user'
-import { exportRequest } from '@/config/user-export'
-import type { ApiResponse, DeptRecord, EntityId, PostRecord, UserRecord } from '@/types/domain'
+import { exportRequest, importRequest, importTemplateRequest } from '@/config/user-export'
+import type {
+  ApiResponse,
+  DeptRecord,
+  EntityId,
+  PostRecord,
+  UserImportResult,
+  UserRecord,
+} from '@/types/domain'
 
 export function getById(id: EntityId): Promise<ApiResponse<UserRecord>> {
   return request(getRequest(id))
@@ -45,4 +52,14 @@ export function findPostOptions(): Promise<ApiResponse<PostRecord[]>> {
 /** 按当前筛选导出 xlsx（#259）：二进制响应不与 JSON 信封混用。 */
 export function exportUsers(searchObj: Record<string, string | number>): Promise<Blob> {
   return requestBinary(exportRequest(searchObj))
+}
+
+/** 导入模板是空的 xlsx，下载走同一二进制入口（#259）。 */
+export function downloadImportTemplate(): Promise<Blob> {
+  return requestBinary(importTemplateRequest())
+}
+
+/** 逐行导入（#259）：multipart 字段 `file`，返回部分成功汇总。 */
+export function importUsers(file: File): Promise<ApiResponse<UserImportResult>> {
+  return request(importRequest(file))
 }

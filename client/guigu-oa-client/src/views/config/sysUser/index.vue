@@ -5,6 +5,7 @@
       <div class="page-actions">
         <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
         <el-button v-hasPermi="permissions.export" @click="handleExport">导出</el-button>
+        <el-button v-hasPermi="permissions.import" @click="openImport">导入</el-button>
       </div>
     </div>
 
@@ -188,6 +189,51 @@
     </el-dialog>
 
     <AssignRolesDialog ref="assignRolesDialog" v-model="assignRolesVisible" :user="assignUser" />
+
+    <el-dialog v-model="importDialogVisible" title="导入用户" width="720px" destroy-on-close>
+      <div class="import-toolbar">
+        <el-button link type="primary" @click="handleDownloadTemplate">下载模板</el-button>
+        <input
+          ref="importFileInput"
+          class="import-file-input"
+          type="file"
+          :accept="importAccept"
+          @change="handleImportFileChange"
+        />
+      </div>
+      <p class="import-hint">
+        仅支持 xlsx，单个文件不超过 2 MB；导入用户的初始密码为 {{ importDefaultPassword }}。
+        失败行不会写入，修正后可重新导入。
+      </p>
+      <p v-if="importError" class="import-error">{{ importError }}</p>
+      <template v-if="importResult">
+        <p class="import-summary">{{ importSummary }}</p>
+        <el-table
+          v-if="importResult.failures.length"
+          :data="importResult.failures"
+          size="small"
+          border
+          class="import-failures"
+        >
+          <el-table-column prop="rowNumber" label="行号" width="80" align="center" />
+          <el-table-column prop="username" label="用户名" width="170" />
+          <el-table-column prop="reason" label="失败原因" />
+        </el-table>
+        <p v-else class="import-all-success">全部导入成功。</p>
+      </template>
+      <template #footer>
+        <div>
+          <el-button @click="importDialogVisible = false">关闭</el-button>
+          <el-button
+            type="primary"
+            :loading="importing"
+            :disabled="!importFile"
+            @click="submitImport"
+            >开始导入</el-button
+          >
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -196,10 +242,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } fro
 import { onBeforeRouteLeave } from 'vue-router'
 
 import {
+  downloadImportTemplate,
   exportUsers,
   findDeptTree,
   findPostOptions,
   getById,
+  importUsers,
   removeById,
   resetPassword,
   saveOrUpdate,
@@ -223,9 +271,20 @@ import {
   SYS_USER_PERMISSIONS,
   USER_STATUS_OPTIONS,
 } from '@/config/sys-user'
-import { downloadBlob, exportFileName, SYS_USER_IO_PERMISSIONS } from '@/config/user-export'
+import {
+  downloadBlob,
+  exportFileName,
+  IMPORT_ACCEPT,
+  IMPORT_DEFAULT_PASSWORD,
+  IMPORT_TEMPLATE_FILE_NAME,
+  importResultSummary,
+  presentImportResult,
+  SYS_USER_IO_PERMISSIONS,
+  validateImportFile,
+} from '@/config/user-export'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
+import { failureMessage } from '@/request/request-failure'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type {
@@ -233,6 +292,7 @@ import type {
   DeptSelectNode,
   EntityId,
   PostOption,
+  UserImportResultView,
   UserListItem,
   UserRecord,
 } from '@/types/domain'
@@ -329,6 +389,13 @@ export default defineComponent({
       resetTarget: null as { id: EntityId; username?: string } | null,
       resetForm,
       resetRules: resetPasswordRules(() => resetForm),
+      importDialogVisible: false,
+      importing: false,
+      importFile: null as File | null,
+      importResult: null as UserImportResultView | null,
+      importError: '',
+      importAccept: IMPORT_ACCEPT,
+      importDefaultPassword: IMPORT_DEFAULT_PASSWORD,
     }
   },
   computed: {
@@ -344,6 +411,9 @@ export default defineComponent({
     resetDialogTitle() {
       const username = this.resetTarget?.username
       return username ? `重置密码 — ${username}` : '重置密码'
+    },
+    importSummary(): string {
+      return this.importResult ? importResultSummary(this.importResult) : ''
     },
   },
   mounted() {
@@ -380,6 +450,62 @@ export default defineComponent({
     async handleExport() {
       const blob = await this.list.settle(exportUsers(this.searchObj()))
       if (blob) downloadBlob(blob, exportFileName())
+    },
+    /** 导入弹窗每次打开都清掉上一次的文件与汇总，避免把旧结果当成新导入。 */
+    openImport() {
+      this.importFile = null
+      this.importResult = null
+      this.importError = ''
+      this.importDialogVisible = true
+      const input = this.$refs.importFileInput as HTMLInputElement | undefined
+      if (input) input.value = ''
+    },
+    async handleDownloadTemplate() {
+      const blob = await this.list.settle(downloadImportTemplate())
+      if (blob) {
+        downloadBlob(blob, IMPORT_TEMPLATE_FILE_NAME)
+      } else {
+        this.importError = '模板下载失败，请重试'
+      }
+    },
+    /** 选择文件先走本地预检；被拒的文件不留在输入框里，也不发请求。 */
+    handleImportFileChange(event: Event) {
+      const input = event.target as HTMLInputElement | null
+      const file = input?.files?.[0] ?? null
+      this.importResult = null
+      this.importError = ''
+      const reason = validateImportFile(file)
+      if (reason) {
+        this.importFile = null
+        this.importError = reason
+        if (input) input.value = ''
+        return
+      }
+      this.importFile = file
+    },
+    /**
+     * 逐行导入的部分成功：结果原样展示成功数与失败行，不把部分成功说成整体失败；
+     * 只有成功行 > 0 才刷新列表，失败行在弹窗里等用户修正。
+     */
+    async submitImport() {
+      const file = this.importFile
+      if (!file) return
+      const reason = validateImportFile(file)
+      if (reason) {
+        this.importError = reason
+        return
+      }
+      this.importing = true
+      this.importError = ''
+      try {
+        const response = await importUsers(file)
+        this.importResult = presentImportResult(response.data)
+        if (this.importResult.successCount > 0) this.list.refresh()
+      } catch (failure) {
+        this.importError = failureMessage(failure) || '导入失败，请重试'
+      } finally {
+        this.importing = false
+      }
     },
     /** 左树点击（#249）：选中部门过滤，再点同一部门清除；「全部」节点等价于清除。 */
     handleDeptClick(node?: { id?: EntityId }) {
@@ -519,5 +645,32 @@ export default defineComponent({
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.import-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.import-hint {
+  margin: 8px 0;
+  color: #909399;
+  font-size: 13px;
+}
+
+.import-error {
+  margin: 8px 0;
+  color: #f56c6c;
+}
+
+.import-summary {
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.import-all-success {
+  margin: 8px 0;
+  color: #67c23a;
 }
 </style>

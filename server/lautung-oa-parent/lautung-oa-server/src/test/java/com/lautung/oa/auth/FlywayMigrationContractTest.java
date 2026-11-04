@@ -13,6 +13,7 @@ import db.migration.V125__SysUserResetPasswordMenu;
 import db.migration.V127__SysConfigSchemaAndMenu;
 import db.migration.V131__SysLoginLogEvent;
 import db.migration.V132__SysUserExportMenu;
+import db.migration.V133__SysUserImportMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -82,7 +83,7 @@ class FlywayMigrationContractTest {
             "sys_job_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
-            "system:user:resetPwd", "system:user:export",
+            "system:user:resetPwd", "system:user:export", "system:user:import",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
             "system:role:assignUser",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
@@ -407,6 +408,20 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v133SeedsTheUserImportButtonForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '133' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.name = '导入' AND b.type = 2 AND COALESCE(b.path, '') = '' "
+                + "AND COALESCE(b.component, '') = '' AND b.perms = 'system:user:import' "
+                + "AND p.path = '/system/sysUser' AND p.type = 1"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.perms = 'system:user:import'"));
+    }
+
+    @Test
     void v130SeedsTheSysDictPageButtonsAndFourDictionaryGroups() {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
                 + "WHERE version = '130' AND success = TRUE"));
@@ -493,8 +508,9 @@ class FlywayMigrationContractTest {
             new V127__SysConfigSchemaAndMenu().migrate(context);
             // 登录日志 event 列（#253）重放时不得重复加列。
             new V131__SysLoginLogEvent().migrate(context);
-            // 用户导出按钮（#259）同样可重复执行。
+            // 用户导出与导入按钮（#259）同样可重复执行。
             new V132__SysUserExportMenu().migrate(context);
+            new V133__SysUserImportMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

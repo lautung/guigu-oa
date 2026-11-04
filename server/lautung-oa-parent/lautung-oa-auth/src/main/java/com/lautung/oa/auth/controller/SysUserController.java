@@ -31,6 +31,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -118,6 +119,31 @@ public class SysUserController {
         response.setHeader("Content-Disposition",
                 "attachment; filename=\"" + filename + "\"");
         sysUserExcelService.export(sysUserQueryVo, scope, response.getOutputStream());
+    }
+
+    /**
+     * 导入模板下载（#259）：只读空模板，跟用户页同一个页面授予；真正写库的 import
+     * 另要独立按钮点 {@code system:user:import}。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")
+    @Operation(summary = "下载用户导入模板")
+    @GetMapping("importTemplate")
+    public void importTemplate(HttpServletResponse response) throws IOException {
+        response.setContentType(SysUserExcelService.XLSX_CONTENT_TYPE);
+        response.setHeader("Content-Disposition", "attachment; filename=\"user-import-template.xlsx\"");
+        sysUserExcelService.writeTemplate(response.getOutputStream());
+    }
+
+    /**
+     * 逐行导入（#259）：失败行不写、成功与失败行号/原因汇总返回，不做全量回滚；
+     * 已有用户名一律按「用户名已存在」拒绝，不覆盖。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:import')")
+    @Operation(summary = "导入用户")
+    @OperLog(title = "用户·导入", businessType = BusinessType.CREATE)
+    @PostMapping("import")
+    public Result importUsers(@RequestParam(value = "file", required = false) MultipartFile file) {
+        return Result.ok(sysUserExcelService.importUsers(file));
     }
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")

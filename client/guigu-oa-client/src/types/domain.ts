@@ -299,6 +299,27 @@ export interface PostOption {
   name: string
 }
 
+/** 用户导入的部分成功汇总（#259）：失败行不写，行号从 Excel 表头算第 1 行。 */
+export interface UserImportRowFailure {
+  rowNumber: number
+  username?: string
+  reason?: string
+}
+
+export interface UserImportResult {
+  total?: number
+  successCount?: number
+  failureCount?: number
+  failures?: UserImportRowFailure[]
+}
+
+export interface UserImportResultView {
+  total: number
+  successCount: number
+  failureCount: number
+  failures: Array<{ rowNumber: number; username: string; reason: string }>
+}
+
 /** 操作日志（ADR 0054）：审计行是历史事实，读侧只映射，不 join。 */
 export interface OperLogRecord {
   id?: EntityId | ''

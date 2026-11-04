@@ -102,7 +102,7 @@ class BackofficeRouteAuthorizationContractTest {
     static {
         expect(SysUserController.class, "/system/sysUser", null,
                 "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
-                "depts", "posts");
+                "depts", "posts", "importTemplate");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateStatus");
         expect(SysUserController.class, "/system/sysUser", "system:user:add", "save");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateById");
@@ -111,6 +111,8 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysUserController.class, "/system/sysUser", "system:user:resetPwd", "resetPassword");
         // 导出是只读的数据动作（#259）：GET 但一次带走大量行，额外要求独立按钮点。
         expect(SysUserController.class, "/system/sysUser", "system:user:export", "export");
+        // 导入写用户行（#259）：POST 走独立按钮点；空模板下载只判页面。
+        expect(SysUserController.class, "/system/sysUser", "system:user:import", "importUsers");
         expect(SysMenuController.class, "/system/sysRole", null, "toAssign");
         expect(SysMenuController.class, "/system/sysRole", "system:role:assignAuth", "doAssign");
         expect(SysMenuController.class, "/system/sysMenu", null, "findNodes");

@@ -16,10 +16,12 @@ vi.mock('element-plus', async (importOriginal) => {
 })
 
 const sysUserApi = vi.hoisted(() => ({
+  downloadImportTemplate: vi.fn(),
   exportUsers: vi.fn(),
   findDeptTree: vi.fn(),
   findPostOptions: vi.fn(),
   getById: vi.fn(),
+  importUsers: vi.fn(),
   removeById: vi.fn(),
   resetPassword: vi.fn(),
   saveOrUpdate: vi.fn(),
@@ -162,6 +164,15 @@ beforeEach(() => {
   sysUserApi.saveOrUpdate.mockResolvedValue(ok(null))
   sysUserApi.updateStatus.mockResolvedValue(ok(null))
   sysUserApi.exportUsers.mockResolvedValue(new Blob(['xlsx']))
+  sysUserApi.downloadImportTemplate.mockResolvedValue(new Blob(['xlsx']))
+  sysUserApi.importUsers.mockResolvedValue(
+    ok({
+      total: 3,
+      successCount: 2,
+      failureCount: 1,
+      failures: [{ rowNumber: 4, username: 'bob', reason: '用户名已存在' }],
+    }),
+  )
   sysMenuApi.getByIdForAssign.mockResolvedValue(ok(menuTree))
   sysMenuApi.doAssign.mockResolvedValue(ok(null))
   http = installHttp(responder)
@@ -296,6 +307,80 @@ describe('SysUser list page', () => {
     const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
     await flushPromises()
     expect(deniedWrapper.find('.page-actions').text()).not.toContain('导出')
+  })
+
+  it('imports a xlsx file and renders the partial-success summary with failure rows', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:import'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:import')
+    URL.revokeObjectURL = vi.fn()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      wrapper.vm.openImport()
+      expect(wrapper.vm.importDialogVisible).toBe(true)
+
+      await wrapper.vm.handleDownloadTemplate()
+      expect(sysUserApi.downloadImportTemplate).toHaveBeenCalledTimes(1)
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(click).toHaveBeenCalledTimes(1)
+
+      // 本地预检与服务端同文案：csv、超 2MB 都在发请求前拒绝。
+      wrapper.vm.handleImportFileChange({
+        target: { files: [new File(['x'], 'users.csv')], value: 'users.csv' },
+      })
+      expect(wrapper.vm.importError).toBe('仅支持 xlsx 文件')
+      expect(wrapper.vm.importFile).toBeNull()
+
+      wrapper.vm.handleImportFileChange({
+        target: {
+          files: [new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'big.xlsx')],
+          value: 'big.xlsx',
+        },
+      })
+      expect(wrapper.vm.importError).toBe('导入文件超过 2 MB 限制')
+      expect(wrapper.vm.importFile).toBeNull()
+      expect(sysUserApi.importUsers).not.toHaveBeenCalled()
+
+      const file = new File(['PK'], 'users.xlsx')
+      wrapper.vm.handleImportFileChange({ target: { files: [file], value: 'users.xlsx' } })
+      expect(wrapper.vm.importFile).toBe(file)
+      expect(wrapper.vm.importError).toBe('')
+
+      const readsBefore = http.calls.length
+      await wrapper.vm.submitImport()
+      await flushPromises()
+
+      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file)
+      expect(wrapper.vm.importResult).toEqual(
+        expect.objectContaining({ total: 3, successCount: 2, failureCount: 1 }),
+      )
+      expect(wrapper.text()).toContain('成功 2 条，失败 1 条')
+      expect(wrapper.text()).toContain('bob')
+      expect(wrapper.text()).toContain('用户名已存在')
+      // 有成功行时刷新列表，让新用户出现在当前页。
+      expect(http.calls.length).toBeGreaterThan(readsBefore)
+    } finally {
+      click.mockRestore()
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+
+  it('shows the 导入 header action only with the import button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:import'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    expect(wrapper.find('.page-actions').text()).toContain('导入')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+    expect(deniedWrapper.find('.page-actions').text()).not.toContain('导入')
   })
 
   it('blocks the create with local required messages before the request', async () => {
