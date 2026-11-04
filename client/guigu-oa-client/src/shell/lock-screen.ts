@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { translate as t } from '@/i18n'
 import { openRequestScope } from '@/request/request-scope'
-import { failureMessage } from '@/request/request-failure'
+import { BusinessRequestFailure, failureMessage } from '@/request/request-failure'
 import { useUserStore } from '@/store/modules/user'
 
 /**
@@ -25,8 +25,7 @@ function readLocked(): boolean {
 }
 
 function isWrongPassword(error: unknown): boolean {
-  const detail = (error as { detail?: { businessCode?: number } } | null)?.detail
-  return detail?.businessCode === 201
+  return error instanceof BusinessRequestFailure && error.businessCode === 201
 }
 
 export const useLockScreenStore = defineStore('lock-screen', {
