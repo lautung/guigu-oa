@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyMessageOf } from '../support/form-rules'
 import {
   DATA_SCOPE_OPTIONS,
+  assignRoleUsersRequest,
   assignRolesRequest,
   dataScopeLabel,
   deptOptionsRequest,
@@ -12,6 +13,7 @@ import {
   presentForm,
   presentListPage,
   removeRequest,
+  roleUsersRequest,
   toAssignRolesRequest,
   writeRequest,
 } from '@/config/sys-role'
@@ -112,6 +114,27 @@ describe('config/sys-role', () => {
         method: 'post',
         url: '/admin/system/sysRole/doAssign',
         data: { userId: 2, roleIdList: [3] },
+      })
+    })
+
+    it('reads 角色 members with GET /admin/system/sysRole/{id}/users and the member filter', () => {
+      expect(roleUsersRequest(7, { page: 2, limit: 10, keyword: 'ali', assigned: true })).toEqual({
+        method: 'get',
+        url: '/admin/system/sysRole/7/users',
+        params: { page: 2, limit: 10, keyword: 'ali', assigned: true },
+      })
+      expect(roleUsersRequest(7, { page: 1, limit: 10 })).toEqual({
+        method: 'get',
+        url: '/admin/system/sysRole/7/users',
+        params: { page: 1, limit: 10, keyword: undefined, assigned: undefined },
+      })
+    })
+
+    it('replaces 角色 members with POST /admin/system/sysRole/doAssignUsers', () => {
+      expect(assignRoleUsersRequest(7, [11, 12])).toEqual({
+        method: 'post',
+        url: '/admin/system/sysRole/doAssignUsers',
+        data: { roleId: 7, userIds: [11, 12] },
       })
     })
 

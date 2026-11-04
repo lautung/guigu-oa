@@ -28,10 +28,19 @@
       <el-table-column prop="roleName" label="角色名称" />
       <el-table-column prop="roleCode" label="角色编码" />
       <el-table-column prop="createTime" label="创建时间" />
-      <el-table-column label="操作" width="220" align="center">
+      <el-table-column label="操作" width="300" align="center">
         <template #default="scope">
           <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
           <el-button link @click="openAssign(scope.row.id, scope.row.roleName)">菜单授权</el-button>
+          <span class="assign-action">
+            <el-button
+              v-hasPermi="permissions.assignUser"
+              link
+              @click="openAssignUsers(scope.row.id, scope.row.roleName)"
+              >分配用户</el-button
+            >
+            <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
+          </span>
           <el-button link @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -88,17 +97,22 @@
         </div>
       </template>
     </el-dialog>
+
+    <RoleUsersDrawer ref="assignRoleDrawer" v-model="assignRoleVisible" :role="assignRole" />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onBeforeUnmount } from 'vue'
+import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 
 import { findDeptOptions, getById, removeById, saveOrUpdate } from '@/api/sysRole'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import { useRoleUsers } from '@/config/role-users-browser'
 import {
   DATA_SCOPE_OPTIONS,
+  SYS_ROLE_PERMISSIONS,
   emptyForm,
   formRules,
   listRequest,
@@ -112,10 +126,16 @@ import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { DeptOption, EntityId, RoleListItem, RoleRecord } from '@/types/domain'
 import type { FormInstance } from 'element-plus'
+import RoleUsersDrawer from './RoleUsersDrawer.vue'
+
+interface RoleUsersDrawerHandle {
+  requestLeave(): Promise<boolean>
+  environmentChanged(): void
+}
 
 export default defineComponent({
   name: 'SysRoleList',
-  components: { ListLoadError, ListPagination },
+  components: { ListLoadError, ListPagination, RoleUsersDrawer },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -126,12 +146,44 @@ export default defineComponent({
       present: presentListRecord,
       ...listPageEffects(),
     })
-    onBeforeUnmount(() => list.release())
+    const roleUsers = useRoleUsers()
+    const pendingIds = computed(() => new Set(roleUsers.pendingRoleIds.value))
+    const assignRoleDrawer = ref<RoleUsersDrawerHandle>()
+    const assignRoleVisible = ref(false)
+    const assignRole = ref<{ id: EntityId; roleName?: string } | null>(null)
+
+    function isPending(id: EntityId): boolean {
+      return pendingIds.value.has(String(id))
+    }
+
+    function environmentChanged(): void {
+      assignRoleDrawer.value?.environmentChanged()
+    }
+
+    watch(
+      () => assignRoleVisible.value,
+      (visible, wasVisible) => {
+        // 写后刷新：抽屉关闭（成功或结束待确认）后重新读角色列表。
+        if (!visible && wasVisible) list.refresh()
+      },
+    )
+    watch(() => userStore.token, environmentChanged)
+    onMounted(() => window.addEventListener('focus', environmentChanged))
+    onBeforeRouteLeave(async () => (await assignRoleDrawer.value?.requestLeave()) ?? true)
+    onBeforeUnmount(() => {
+      window.removeEventListener('focus', environmentChanged)
+      list.release()
+    })
     return {
       list,
       view: list.view,
       rows: list.rows,
       emptyText: list.emptyText,
+      permissions: SYS_ROLE_PERMISSIONS,
+      assignRoleDrawer,
+      assignRoleVisible,
+      assignRole,
+      isPending,
     }
   },
   data() {
@@ -190,6 +242,10 @@ export default defineComponent({
     openAssign(id: EntityId, roleName?: string) {
       this.$router.push(assignAuthPath(id, roleName))
     },
+    openAssignUsers(id: EntityId, roleName?: string) {
+      this.assignRole = { id, roleName }
+      this.assignRoleVisible = true
+    },
     validateForm(): Promise<boolean> {
       const form = this.$refs.formRef as FormInstance | undefined
       if (!form) return Promise.resolve(false)
@@ -241,5 +297,11 @@ export default defineComponent({
 
 .filter-form {
   margin-bottom: 12px;
+}
+
+.assign-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 </style>

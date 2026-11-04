@@ -148,6 +148,15 @@ export interface RoleRecord {
   createTime?: string
 }
 
+/** 角色成员/候选行（#256）：角色页双列表只用这几个字段。 */
+export interface RoleUserRecord {
+  id?: EntityId
+  username?: string
+  name?: string
+  phone?: string
+  assigned?: boolean
+}
+
 export interface RoleListItem extends RoleRecord {
   id: EntityId
 }

@@ -7,6 +7,7 @@ const actions = [
   ['process-approval', [201, 205, 208, 209, 403]],
   ['save-template', [201, 205, 208, 209, 403]],
   ['assign-roles', [205, 208, 209, 403]],
+  ['assign-role-users', [201, 205, 208, 209, 403]],
 ]
 
 function failure(detail) {

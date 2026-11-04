@@ -4,6 +4,8 @@ import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysDeptOptionVo;
 import com.lautung.oa.vo.system.SysRoleDetailVo;
+import com.lautung.oa.vo.system.SysRoleUserVo;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.util.List;
@@ -37,4 +39,16 @@ public interface SysRoleService extends IService<SysRole> {
 
     /** 角色数据范围的自定部门选项：启用且未删除，按 parent/sort/id 排序。 */
     List<SysDeptOptionVo> findDeptOptions();
+
+    /**
+     * 角色侧成员分页（#256）。{@code assigned} 为 true 只看成员、false 只看非成员、null 不过滤；
+     * 角色是全局配置，不套数据范围。关键字匹配用户名/姓名/手机号。
+     */
+    IPage<SysRoleUserVo> findRoleUsers(Long roleId, String keyword, Boolean assigned, Long page, Long limit);
+
+    /**
+     * 角色侧整体替换成员集合（#256）：与用户侧「分配角色」共用 {@code sys_user_role} 写路径，
+     * 空列表清空；非法用户先校验后删除，受影响用户（移出与加入）的权限缓存都在提交后失效。
+     */
+    void assignUsers(Long roleId, List<Long> userIds);
 }

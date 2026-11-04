@@ -6,6 +6,7 @@ import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysRole;
+import com.lautung.oa.vo.system.AssignRoleUsersVo;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysDeptOptionVo;
 import com.lautung.oa.vo.system.SysRoleDetailVo;
@@ -54,6 +55,31 @@ public class SysRoleController {
     @PostMapping("/doAssign")
     public Result doAssign(@Valid @RequestBody AssginRoleVo assginRoleVo) {
         sysRoleService.doAssign(assginRoleVo);
+        return Result.ok();
+    }
+
+    /**
+     * 角色侧成员分页（#256）：与用户侧写同一张 {@code sys_user_role}，读取不套数据范围。
+     * {@code assigned} 为 true 只返回成员、false 只返回非成员，缺省不过滤。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole')")
+    @Operation(summary = "分页查询角色成员")
+    @GetMapping("{id}/users")
+    public Result roleUsers(@PathVariable Long id,
+                            @RequestParam(required = false) String keyword,
+                            @RequestParam(required = false) Boolean assigned,
+                            @RequestParam(defaultValue = "1") Long page,
+                            @RequestParam(defaultValue = "10") Long limit) {
+        return Result.ok(sysRoleService.findRoleUsers(id, keyword, assigned, page, limit));
+    }
+
+    /** 角色侧整体替换成员集合（#256）：空列表清空，写动作挂「角色·分配用户」。 */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysRole','system:role:assignUser')")
+    @Operation(summary = "为角色分配用户")
+    @OperLog(title = "角色·分配用户", businessType = BusinessType.ASSIGN)
+    @PostMapping("/doAssignUsers")
+    public Result doAssignUsers(@Valid @RequestBody AssignRoleUsersVo assignRoleUsersVo) {
+        sysRoleService.assignUsers(assignRoleUsersVo.getRoleId(), assignRoleUsersVo.getUserIds());
         return Result.ok();
     }
 

@@ -111,10 +111,12 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysRoleController.class, "/system/sysUser", null, "toAssign");
         expect(SysRoleController.class, "/system/sysUser", "system:user:assignRole", "doAssign");
         expect(SysRoleController.class, "/system/sysRole", null,
-                "findAll", "pageQueryRole", "get", "depts");
+                "findAll", "pageQueryRole", "get", "depts", "roleUsers");
         expect(SysRoleController.class, "/system/sysRole", "system:role:add", "save");
         expect(SysRoleController.class, "/system/sysRole", "system:role:edit", "update");
         expect(SysRoleController.class, "/system/sysRole", "system:role:remove", "remove", "batchRemove");
+        // 角色侧分配用户（#256）：读成员走页面授予，写成员要独立按钮点。
+        expect(SysRoleController.class, "/system/sysRole", "system:role:assignUser", "doAssignUsers");
         // 部门管理（#247）：树读只走页面授予；新增/修改/删除各要自己的按钮点。
         expect(SysDeptController.class, "/system/sysDept", null, "findTree");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:add", "save");

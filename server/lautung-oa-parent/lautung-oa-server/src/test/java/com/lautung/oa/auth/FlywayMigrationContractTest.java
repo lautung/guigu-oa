@@ -80,6 +80,7 @@ class FlywayMigrationContractTest {
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:user:resetPwd",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
+            "system:role:assignUser",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
             "system:dept:add", "system:dept:edit", "system:dept:remove",
             "system:post:add", "system:post:edit", "system:post:remove",
