@@ -36,6 +36,7 @@
 | `src/views/config/sysPost/index.vue` | 页面 `/system/sysPost` | 岗位管理（#248）：名称筛选、列表（编码/名称/排序/状态标签/创建时间）与新建/编辑弹窗；读后状态、分页与写后刷新走 `createListPage`，删除走二次确认；用户页的岗位多选留给 #249 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
 | `src/config/sys-dept.ts` | `DEPT_PERMISSIONS` / `presentDeptTree` / `presentDeptNode` / `findTreeRequest` / `writeRequest` / `removeRequest` / `formRules` / `parentOptions` | 部门树投影与请求（#247）：服务端下发的嵌套 children 与含自身 `ancestors` 只映射；父级下拉排除被编辑节点整棵子树（镜像服务端环拒绝）；写载荷只带 parentId/名称/负责人/排序/状态，`ancestors` 由服务端重算 |
+| `src/config/sys-user.ts` | `SYS_USER_PERMISSIONS` / `presentListRecord` / `formRules` / `writeRequest` / `resetPasswordRequest` / `resetPasswordRules` | 用户页投影与请求构造：列表/详情/增删改/状态；重置密码是独立按钮点 `system:user:resetPwd`（#250），请求体只收 `newPassword`，弹窗必填、min 6 与两次一致逐字镜像服务端 DTO |
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
 | `src/config/login-log.ts` | `LOGIN_STATUS_OPTIONS` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` | 登录日志四值（成功/失败/锁定/解锁）标签与查询投影；列表请求、批量删除、清空与按 username 编码的解锁请求 |
 | `src/config/monitor-online.ts` | `MONITOR_ONLINE_PERMISSIONS` / `presentQuery` / `emptyQuery` / `presentListRecord` / `listRequest` / `forceLogoutRequest` | 在线用户页的查询投影（用户名包含、登录时间范围映射成 `beginTime`/`endTime`，ADR 0060）与请求构造：`page/limit` 路径参数、按 sessionId 编码的强退请求、`monitor:online:forceLogout` 按钮点；行的 `current` 标记由服务端按请求者会话算好下发，客户端只渲染 |
@@ -76,6 +77,8 @@
 日志管理两个页面 `src/views/config/operLog/index.vue`、`src/views/config/loginLog/index.vue` 只做筛选、表格、详情/确认框接线：读状态、分页与写后刷新走 `createListPage`，按钮点走 `v-hasPermi`；详情只在操作日志页，按 `presentDetail` 的文本展示，不使用 `v-html`。
 
 部门管理页 `src/views/config/sysDept/index.vue`（#247）：树表格（`row-key`/`tree-props.children`，默认展开）展示名称/负责人/排序/状态/创建时间，行内「新增下级」与页头「新建」共用同一弹窗（上级部门、名称、负责人、排序、状态）；读走 `createListPage` 的 `fetchAll`（整表读），写后刷新与删除确认复用同一 module；名称必填走 `formRules()`，父级下拉由 `parentOptions` 排除自身子树；写失败的 201 文案（父级不存在/成环/删除保护两分支）由页面回显，205 仍由请求层统一提示。投影与请求收在 `src/config/sys-dept.ts`，HTTP 薄包装在 `src/api/sysDept.ts`。
+
+用户管理页 `src/views/config/sysUser/index.vue`：列表/筛选/新建与编辑/状态开关/分配角色沿用既有接线；重置密码是操作列独立按钮（`v-hasPermi` 走 `system:user:resetPwd`），弹窗只收新密码与确认（必填、min 6、两次一致），成功提示并刷新列表，不塞进编辑表单（#250，ADR 0029 的会话作废由服务端推进）。
 
 在线用户页 `src/views/monitor/online/index.vue`（#239）：页头带总数，用户名包含与登录时间范围筛选、`current` 行标「当前会话」并禁用强退，其余行二次确认（用户名/登录时间/IP）后强退并刷新；读状态、分页与写后刷新走 `createListPage`，强退按钮走 `v-hasPermi`，208 终态由请求层与 recognition 清凭证回登录页，页面不另设错误行。服务监控页 `src/views/monitor/server/index.vue` 与数据监控页 `src/views/monitor/data/index.vue`（#240）：非列表快照页，走工作台同款的 `createSnapshotRead`（一次页面打开一个请求作用域 + 手动刷新，sequence 丢迟到响应），刷新失败保留旧卡片只叠加错误行。缓存监控页 `src/views/monitor/cache/index.vue`（#241）同款快照面板：Redis 信息/内存/客户端与命中率/各 db 键数四卡，五段独立降级。缓存列表页 `src/views/monitor/cacheList/index.vue`（#241）：SCAN 游标窗口页（不走 `createListPage` 的 page/size），前缀下拉四白名单默认 `perm:`，「加载更多」按游标追加、前缀切换重置游标并丢迟到窗口，TTL -1 显示「无过期」，行内删除只对 `perm:` 行出现（`v-hasPermi` 走 `monitor:cache:clean`，二次确认后整段重读当前窗口），顶部「清理权限缓存」同按钮点同确认并报删除数量。定时任务页 `src/views/monitor/job/index.vue`（#242）：启动登记的任务行表格（名称＋异常 tag／bean／cron／启用 switch／并发／最近状态 tag／最近执行时间／操作），`available=false` 行加「异常」并禁用编辑、执行一次与再次启用；编辑弹窗（cron 等宽输入＋常用提示、启用、并发、备注）保存后刷新，cron 非法按服务端 201 文案回显在弹窗内；「执行一次」二次确认后异步触发、提示「已触发」且不立刻刷新；「执行记录」抽屉最近 20 条（触发方式／状态／开始时间／耗时／信息，失败信息换行、展开行全文），抽屉读同样走 `createSnapshotRead`；不提供新增与删除（ADR 0060）。`src/config/monitor-job.ts` 是投影模块（`monitor:job:edit`/`:run` 按钮点、四个请求构造、行与执行记录投影、编辑表单映射与 cron 提示）。`src/api/monitor.ts` 是薄包装（`findPage` / `forceLogout` / `getServerMetrics` / `getDataMetrics` / `getCacheInfo` / `listCacheKeys` / `deleteCacheKey` / `clearPermissionCache` / `listJobs` / `updateJob` / `runJob` / `listJobLogs`，读侧经各自 config 模块的请求构造），监控后续页面随各自票在同一文件追加。
 
@@ -132,7 +135,7 @@
 |---|---|---|
 | `src/config/dict.ts` + `src/components/DictTag.vue` + `useDict` | 类型/数据请求、标签渲染、刷新 | 页面按值渲染标签，不把枚举中文写死在页面里；缓存刷新按钮在字典管理页 |
 | `src/config/params.ts` | 键值列表/表单、内置项只读 | 参数管理；内置项不可删、不可改 key，只可改 value |
-| `src/config/sys-user.ts`（扩展） | 部门树过滤、岗位多选、重置密码 | 用户页三件加料；部门树只读、维护在部门页 |
+| `src/config/sys-user.ts`（扩展） | 部门树过滤、岗位多选 | 用户页剩余加料；部门树只读、维护在部门页 |
 | `src/config/role-users.ts` | 双列表选择、关键字搜索、待确认 | 角色侧成员维护，写同一 `sys_user_role`，复用 ADR 0006 的分配待确认语义 |
 | `src/profile/*` | `createProfile(adapter)` → `load` / `save` / `changePassword` / `uploadAvatar` | 个人中心：取代「基本信息」；改密成功后按 ADR 0029 跳登录 |
 | `src/auth/register.ts` | `createRegister(adapter)` → `loadSwitch` / `submit` | 注册表单；开关关闭时给关闭态；成功跳登录并预填用户名，不自动登录 |

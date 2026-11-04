@@ -1,5 +1,27 @@
 import type { ApiRequestConfig, EntityId, UserForm, UserListItem, UserRecord } from '@/types/domain'
-import { requiredRule, type RequiredRule } from './form-rules'
+import { lengthRule, requiredRule, type LengthRule, type RequiredRule } from './form-rules'
+
+/** 用户页的独立动作按钮点（ADR 0052/0056）：重置密码不复用编辑点。 */
+export const SYS_USER_PERMISSIONS = {
+  resetPassword: 'system:user:resetPwd',
+} as const
+
+export const RESET_PASSWORD_MIN_LENGTH = 6
+
+export const RESET_PASSWORD_MAX_LENGTH = 100
+
+export const RESET_PASSWORD_LENGTH_MESSAGE = '密码长度必须在 6 到 100 位之间'
+
+export interface ResetPasswordForm {
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface MatchRule {
+  validator(rule: unknown, value: unknown, callback: (error?: Error) => void): void
+}
+
+export type ResetPasswordRule = RequiredRule | LengthRule | MatchRule
 
 export function presentListRecord(record: UserRecord = {}): UserListItem {
   return {
@@ -55,6 +77,50 @@ export function updateStatusRequest(id: EntityId, status: number): ApiRequestCon
   return {
     method: 'put',
     url: `${SYS_USER_API}/updateStatus/${id}/${status}`,
+  }
+}
+
+/** 管理员重置他人的密码（#250）：请求体只收新密码，不需要旧密码。 */
+export function resetPasswordRequest(id: EntityId, newPassword: string): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${SYS_USER_API}/${id}/resetPassword`,
+    data: { newPassword },
+  }
+}
+
+export function emptyResetPasswordForm(): ResetPasswordForm {
+  return {
+    newPassword: '',
+    confirmPassword: '',
+  }
+}
+
+/** 必填、长度与两次一致都镜像服务端 SysUserResetPasswordRequest（ADR 0038）。 */
+export function resetPasswordRules(
+  readForm: () => ResetPasswordForm,
+): Record<'newPassword' | 'confirmPassword', ResetPasswordRule[]> {
+  return {
+    newPassword: [
+      requiredRule('密码不能为空'),
+      lengthRule(
+        RESET_PASSWORD_MIN_LENGTH,
+        RESET_PASSWORD_MAX_LENGTH,
+        RESET_PASSWORD_LENGTH_MESSAGE,
+      ),
+    ],
+    confirmPassword: [
+      requiredRule('确认密码不能为空'),
+      {
+        validator(_rule, value, callback) {
+          if (value !== readForm().newPassword) {
+            callback(new Error('两次输入的密码不一致'))
+            return
+          }
+          callback()
+        },
+      },
+    ],
   }
 }
 

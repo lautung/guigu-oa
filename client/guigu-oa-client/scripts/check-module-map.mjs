@@ -49,22 +49,29 @@ if (missingFromMap.length) {
 // 带省略号或通配的示意路径跳过（`lautung-oa-security/.../security/`、`…/V*.sql`）。
 const serverRoot = join(root, 'server/lautung-oa-parent')
 const serverText = readFileSync(join(root, 'docs/agents/server-modules.md'), 'utf8')
-// 计划模块（字典/参数等，ADR 0062）预记在地图里但目录尚未创建，存在性只对已落地行生效。
-const implementedServerText = serverText
-  .split('\n')
-  .filter((line) => !line.includes('计划'))
-  .join('\n')
-const serverPaths = [
-  ...new Set(
-    [...implementedServerText.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)].map(
-      (match) => match[1],
-    ),
-  ),
-].filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
-
-const missingServerPaths = serverPaths.filter(
-  (path) => !existsSync(path.startsWith('server/') ? join(root, path) : join(serverRoot, path)),
+const serverPathEntries = serverText.split('\n').flatMap((line) =>
+  [...line.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)]
+    .map((match) => match[1])
+    .filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
+    .map((path) => ({ path, planned: line.includes('计划') })),
 )
+const serverPaths = [...new Set(serverPathEntries.map((entry) => entry.path))]
+
+const missingServerPaths = [
+  ...new Set(
+    serverPathEntries
+      .filter(({ path, planned }) => {
+        if (existsSync(path.startsWith('server/') ? join(root, path) : join(serverRoot, path))) {
+          return false
+        }
+        // 计划行引用的模块目录尚未创建：它属于预记，不算“地图指向不存在的文件”。
+        // 同一行里的现有模块路径仍照常校验。
+        const moduleDir = path.split('/')[0]
+        return !(planned && !path.startsWith('server/') && !existsSync(join(serverRoot, moduleDir)))
+      })
+      .map((entry) => entry.path),
+  ),
+]
 
 const serverModules = readdirSync(serverRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && entry.name.startsWith('lautung-oa-'))

@@ -9,6 +9,7 @@ import db.migration.V118__MonitorPages;
 import db.migration.V122__ToolApiDocMenu;
 import db.migration.V123__SysDeptMenu;
 import db.migration.V124__SysPostMenu;
+import db.migration.V125__SysUserResetPasswordMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -75,6 +76,7 @@ class FlywayMigrationContractTest {
             "sys_job_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
+            "system:user:resetPwd",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
             "system:dept:add", "system:dept:edit", "system:dept:remove",
@@ -366,6 +368,20 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v125SeedsTheResetPasswordButtonForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '125' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.name = '重置密码' AND b.type = 2 AND COALESCE(b.path, '') = '' "
+                + "AND COALESCE(b.component, '') = '' AND b.perms = 'system:user:resetPwd' "
+                + "AND b.sort_value = 5 AND p.path = '/system/sysUser' AND p.type = 1"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.perms = 'system:user:resetPwd'"));
+    }
+
+    @Test
     void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
         int menus = count("SELECT COUNT(*) FROM sys_menu");
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
@@ -392,6 +408,8 @@ class FlywayMigrationContractTest {
             new V123__SysDeptMenu().migrate(context);
             // 岗位管理页面/按钮（#248）也必须幂等。
             new V124__SysPostMenu().migrate(context);
+            // 用户重置密码按钮（#250）同样可重复执行。
+            new V125__SysUserResetPasswordMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

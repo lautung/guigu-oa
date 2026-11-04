@@ -12,6 +12,7 @@ import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysUserQueryVo;
+import com.lautung.oa.vo.system.SysUserResetPasswordRequest;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
 import com.lautung.oa.vo.system.SysUserUpdateRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -169,6 +170,22 @@ public class SysUserController {
         user.setPassword(null);
         // postIds 未传保留、空列表清空；同步与用户行更新同一事务（#248）。
         service.updateUser(user, request.getPostIds());
+        return Result.ok();
+    }
+
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:resetPwd')")
+    @Operation(summary = "重置密码")
+    @OperLog(title = "用户·重置密码", businessType = BusinessType.UPDATE)
+    @PostMapping("{id}/resetPassword")
+    public Result resetPassword(@PathVariable Long id,
+                                @Valid @RequestBody SysUserResetPasswordRequest request) {
+        // 与 updateById 的缺失语义一致：目标行不存在时静默成功，不编码、不写库。
+        if (service.getById(id) == null) {
+            return Result.ok();
+        }
+        // 复用改密语句：新哈希与 token_version + 1 在同一条 UPDATE 里落库，
+        // 目标用户此前签发的全部会话立即失效（ADR 0029），操作者自己的令牌不受影响。
+        service.changePassword(id, passwordEncoder.encode(request.getNewPassword()));
         return Result.ok();
     }
 

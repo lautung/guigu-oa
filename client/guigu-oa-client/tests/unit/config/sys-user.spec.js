@@ -2,15 +2,27 @@ import { describe, expect, it } from 'vitest'
 import { emptyMessageOf } from '../support/form-rules'
 import {
   emptyForm,
+  emptyResetPasswordForm,
   formRules,
   getRequest,
   listRequest,
   presentForm,
   presentListPage,
   removeRequest,
+  resetPasswordRequest,
+  resetPasswordRules,
+  SYS_USER_PERMISSIONS,
   updateStatusRequest,
   writeRequest,
 } from '@/config/sys-user'
+
+function messageOf(rule, value) {
+  let error
+  rule.validator({}, value, (result) => {
+    error = result
+  })
+  return error && error.message
+}
 
 describe('config/sys-user', () => {
   describe('presentListPage', () => {
@@ -128,6 +140,45 @@ describe('config/sys-user', () => {
         method: 'put',
         url: '/admin/system/sysUser/updateStatus/2/0',
       })
+    })
+
+    it('resets a 用户 password with POST /admin/system/sysUser/{id}/resetPassword', () => {
+      expect(resetPasswordRequest(2, '654321')).toEqual({
+        method: 'post',
+        url: '/admin/system/sysUser/2/resetPassword',
+        data: { newPassword: '654321' },
+      })
+    })
+  })
+
+  describe('重置密码', () => {
+    it('names the standalone button point and starts from an empty form', () => {
+      expect(SYS_USER_PERMISSIONS.resetPassword).toBe('system:user:resetPwd')
+      expect(emptyResetPasswordForm()).toEqual({ newPassword: '', confirmPassword: '' })
+    })
+
+    it('mirrors the server min 6 / max 100 password policy', () => {
+      const form = emptyResetPasswordForm()
+      const rules = resetPasswordRules(() => form)
+
+      expect(messageOf(rules.newPassword[0], '')).toBe('密码不能为空')
+      expect(messageOf(rules.newPassword[1], '12345')).toBe('密码长度必须在 6 到 100 位之间')
+      expect(messageOf(rules.newPassword[1], '1'.repeat(101))).toBe(
+        '密码长度必须在 6 到 100 位之间',
+      )
+      expect(messageOf(rules.newPassword[1], '123456')).toBeUndefined()
+    })
+
+    it('requires the confirmation to match the new password', () => {
+      const form = emptyResetPasswordForm()
+      const rules = resetPasswordRules(() => form)
+
+      expect(messageOf(rules.confirmPassword[0], '')).toBe('确认密码不能为空')
+
+      form.newPassword = '123456'
+      expect(messageOf(rules.confirmPassword[1], '123456')).toBeUndefined()
+      expect(messageOf(rules.confirmPassword[1], '654321')).toBe('两次输入的密码不一致')
+      expect(messageOf(rules.confirmPassword[1], '123456')).toBeUndefined()
     })
   })
 

@@ -7,6 +7,7 @@ import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.SysUserQueryVo;
+import com.lautung.oa.vo.system.SysUserResetPasswordRequest;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
 import com.lautung.oa.vo.system.SysUserUpdateRequest;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -277,6 +278,35 @@ class SysUserControllerTest {
         verify(service).updateUser(written.capture(), isNull());
         assertNull(written.getValue().getPassword());
         assertNull(written.getValue().getTokenVersion());
+        verify(passwordEncoder, never()).encode(any());
+        verify(service, never()).changePassword(any(), any());
+    }
+
+    @Test
+    void resetsThePasswordWithoutRequiringTheOldOne() {
+        SysUser existing = new SysUser();
+        existing.setId(3L);
+        existing.setPassword("stored-hash");
+        when(service.getById(3L)).thenReturn(existing);
+        when(passwordEncoder.encode("fresh-secret")).thenReturn("hashed-fresh");
+        SysUserResetPasswordRequest reset = new SysUserResetPasswordRequest();
+        reset.setNewPassword("fresh-secret");
+
+        assertEquals(200, controller.resetPassword(3L, reset).getCode());
+
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(service).changePassword(3L, "hashed-fresh");
+        verify(service, never()).updateById(any());
+    }
+
+    @Test
+    void doesNotWriteAPasswordWhenTheResetTargetIsMissing() {
+        when(service.getById(3L)).thenReturn(null);
+        SysUserResetPasswordRequest reset = new SysUserResetPasswordRequest();
+        reset.setNewPassword("fresh-secret");
+
+        assertEquals(200, controller.resetPassword(3L, reset).getCode());
+
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
     }

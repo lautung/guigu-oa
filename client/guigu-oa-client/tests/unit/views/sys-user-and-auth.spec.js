@@ -18,6 +18,7 @@ vi.mock('element-plus', async (importOriginal) => {
 const sysUserApi = vi.hoisted(() => ({
   getById: vi.fn(),
   removeById: vi.fn(),
+  resetPassword: vi.fn(),
   saveOrUpdate: vi.fn(),
   updateStatus: vi.fn(),
 }))
@@ -38,6 +39,7 @@ import ElementPlus from 'element-plus'
 import AssignAuth from '@/views/config/sysRole/assignAuth.vue'
 import SysUser from '@/views/config/sysUser/index.vue'
 import AssignRolesDialog from '@/views/config/sysUser/AssignRolesDialog.vue'
+import { hasPermi } from '@/permission'
 import { PATHS } from '@/router/paths'
 import {
   createTestRouter,
@@ -111,6 +113,7 @@ function realOptions(pinia, router) {
   return {
     global: {
       plugins: [pinia, router, ElementPlus],
+      directives: { hasPermi },
       stubs: { 'form-create': true, 'fc-designer': true },
     },
   }
@@ -131,6 +134,7 @@ beforeEach(() => {
   confirmMock.mockReset().mockResolvedValue('confirm')
   sysUserApi.getById.mockResolvedValue(ok(userRecord))
   sysUserApi.removeById.mockResolvedValue(ok(null))
+  sysUserApi.resetPassword.mockResolvedValue(ok(null))
   sysUserApi.saveOrUpdate.mockResolvedValue(ok(null))
   sysUserApi.updateStatus.mockResolvedValue(ok(null))
   sysMenuApi.getByIdForAssign.mockResolvedValue(ok(menuTree))
@@ -199,6 +203,84 @@ describe('SysUser list page', () => {
       '密码不能为空',
       '姓名不能为空',
     ])
+  })
+
+  it('shows the 重置密码 row action only with the resetPwd button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:resetPwd'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+
+    expect(
+      wrapper
+        .findAll('.el-table__row')[0]
+        .findAll('button')
+        .map((node) => node.text()),
+    ).toContain('重置密码')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+
+    expect(
+      deniedWrapper
+        .findAll('.el-table__row')[0]
+        .findAll('button')
+        .map((node) => node.text()),
+    ).not.toContain('重置密码')
+  })
+
+  it('validates the reset dialog, submits the new password, closes and refreshes', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:resetPwd'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+    const listReads = () =>
+      http.calls.filter((call) => /\/sysUser\/\d+\/\d+$/.test(call.url)).length
+    const readsBefore = listReads()
+
+    wrapper.vm.openResetPassword(3, 'bob')
+    await flushPromises()
+    expect(wrapper.vm.resetDialogVisible).toBe(true)
+    expect(wrapper.vm.resetTarget).toEqual({ id: 3, username: 'bob' })
+    const resetModel = () =>
+      wrapper
+        .findAllComponents({ name: 'ElForm' })
+        .map((form) => form.props('model'))
+        .find((model) => model && 'newPassword' in model)
+
+    resetModel().newPassword = '12345'
+    resetModel().confirmPassword = '12345'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysUserApi.resetPassword).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toContain(
+      '密码长度必须在 6 到 100 位之间',
+    )
+
+    resetModel().newPassword = '123456'
+    resetModel().confirmPassword = '654321'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysUserApi.resetPassword).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toContain(
+      '两次输入的密码不一致',
+    )
+
+    resetModel().confirmPassword = '123456'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await flushPromises()
+
+    expect(sysUserApi.resetPassword).toHaveBeenCalledWith(3, '123456')
+    expect(wrapper.vm.resetDialogVisible).toBe(false)
+    expect(listReads()).toBeGreaterThan(readsBefore)
+    expect(messageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', message: '重置密码成功' }),
+    )
   })
 
   it('opens, reopens, and closes the assign-roles dialog', async () => {

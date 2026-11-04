@@ -91,11 +91,13 @@ class BackofficeRouteAuthorizationContractTest {
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
-                "updateStatus", "index", "get", "save", "updateById", "remove");
+                "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateStatus");
         expect(SysUserController.class, "/system/sysUser", "system:user:add", "save");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateById");
         expect(SysUserController.class, "/system/sysUser", "system:user:remove", "remove");
+        // 重置密码是独立按钮点（#250）：不复用 system:user:edit。
+        expect(SysUserController.class, "/system/sysUser", "system:user:resetPwd", "resetPassword");
         expect(SysMenuController.class, "/system/sysRole", null, "toAssign");
         expect(SysMenuController.class, "/system/sysRole", "system:role:assignAuth", "doAssign");
         expect(SysMenuController.class, "/system/sysMenu", null, "findNodes");
@@ -330,7 +332,8 @@ class BackofficeRouteAuthorizationContractTest {
                 .andExpect(jsonPath("$.data.roles", hasItem("super_admin")))
                 .andExpect(jsonPath("$.data.permissions", hasItems(
                         "system:user:add", "system:user:edit", "system:user:remove",
-                        "system:user:assignRole", "system:role:add", "system:role:edit",
+                        "system:user:assignRole", "system:user:resetPwd",
+                        "system:role:add", "system:role:edit",
                         "system:role:remove", "system:role:assignAuth",
                         "system:menu:add", "system:menu:edit", "system:menu:remove",
                         "system:dept:add", "system:dept:edit", "system:dept:remove",

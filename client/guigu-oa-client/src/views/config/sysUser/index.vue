@@ -37,7 +37,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="创建时间" />
-      <el-table-column label="操作" width="250" align="center">
+      <el-table-column label="操作" width="330" align="center">
         <template #default="scope">
           <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
           <span class="assign-action">
@@ -46,6 +46,12 @@
             >
             <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
           </span>
+          <el-button
+            v-hasPermi="permissions.resetPassword"
+            link
+            @click="openResetPassword(scope.row.id, scope.row.username)"
+            >重置密码</el-button
+          >
           <el-button link @click="remove(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -82,6 +88,46 @@
       </template>
     </el-dialog>
 
+    <el-dialog
+      v-model="resetDialogVisible"
+      :title="resetDialogTitle"
+      width="480px"
+      destroy-on-close
+    >
+      <el-form
+        ref="resetFormRef"
+        :model="resetForm"
+        :rules="resetRules"
+        label-width="90px"
+        autocomplete="off"
+      >
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input
+            v-model="resetForm.newPassword"
+            type="password"
+            autocomplete="new-password"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input
+            v-model="resetForm.confirmPassword"
+            type="password"
+            autocomplete="new-password"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div>
+          <el-button @click="resetDialogVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="resetting" @click="saveResetPassword"
+            >确定</el-button
+          >
+        </div>
+      </template>
+    </el-dialog>
+
     <AssignRolesDialog ref="assignRolesDialog" v-model="assignRolesVisible" :user="assignUser" />
   </div>
 </template>
@@ -90,16 +136,19 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
-import { getById, removeById, saveOrUpdate, updateStatus } from '@/api/sysUser'
+import { getById, removeById, resetPassword, saveOrUpdate, updateStatus } from '@/api/sysUser'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useAssignRoles } from '@/config/assign-roles-browser'
 import {
   emptyForm,
+  emptyResetPasswordForm,
   formRules,
   listRequest,
   presentForm,
   presentListRecord,
+  resetPasswordRules,
+  SYS_USER_PERMISSIONS,
 } from '@/config/sys-user'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
@@ -168,6 +217,7 @@ export default defineComponent({
       assignUser,
       isPending,
       openAssignRoles,
+      permissions: SYS_USER_PERMISSIONS,
       list,
       view: list.view,
       rows: list.rows,
@@ -175,17 +225,28 @@ export default defineComponent({
     }
   },
   data() {
+    // 表单对象身份保持稳定：resetRules 的闭包与 el-form 的 model 必须指向同一个对象。
+    const resetForm = emptyResetPasswordForm()
     return {
       keyword: '',
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
       formRules: formRules(),
+      resetDialogVisible: false,
+      resetting: false,
+      resetTarget: null as { id: EntityId; username?: string } | null,
+      resetForm,
+      resetRules: resetPasswordRules(() => resetForm),
     }
   },
   computed: {
     dialogTitle() {
       return this.form.id ? '编辑用户' : '新建用户'
+    },
+    resetDialogTitle() {
+      const username = this.resetTarget?.username
+      return username ? `重置密码 — ${username}` : '重置密码'
     },
   },
   methods: {
@@ -216,6 +277,35 @@ export default defineComponent({
         .validate()
         .then(() => true)
         .catch(() => false)
+    },
+    openResetPassword(id: EntityId, username?: string) {
+      this.resetTarget = { id, username }
+      // 保持表单对象身份稳定：el-form 在首次打开时已持有它，整体替换会让校验读到旧字段。
+      Object.assign(this.resetForm, emptyResetPasswordForm())
+      this.resetDialogVisible = true
+    },
+    validateResetForm(): Promise<boolean> {
+      const form = this.$refs.resetFormRef as FormInstance | undefined
+      if (!form) return Promise.resolve(false)
+      return form
+        .validate()
+        .then(() => true)
+        .catch(() => false)
+    },
+    async saveResetPassword() {
+      const target = this.resetTarget
+      if (!target) return
+      if (!(await this.validateResetForm())) return
+      this.resetting = true
+      try {
+        const reset = this.list.runWrite(
+          () => resetPassword(target.id, this.resetForm.newPassword),
+          '重置密码成功',
+        )
+        if (await reset) this.resetDialogVisible = false
+      } finally {
+        this.resetting = false
+      }
     },
     async save() {
       if (!(await this.validateForm())) return
