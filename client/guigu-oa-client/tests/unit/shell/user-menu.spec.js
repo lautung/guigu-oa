@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import UserMenu from '@/shell/UserMenu.vue'
+import { LOCK_SCREEN_STORAGE_KEY, useLockScreenStore } from '@/shell/lock-screen'
 import { useShellStore } from '@/shell/shell-state'
 import { SHELL_DENSITY_KEY, SHELL_THEME_KEY } from '@/shell/shell-preferences'
 import { fakeRecognition, installHttp, mountOptions, ok, setupSession } from '../support/harness'
@@ -24,20 +25,24 @@ describe('UserMenu', () => {
     http?.restore()
     http = undefined
     localStorage.clear()
+    sessionStorage.clear()
     document.documentElement.classList.remove('dark')
   })
 
-  it('shows the user, opens 个人中心 and has no fake lock-screen entry', async () => {
+  it('shows the user, opens 个人中心 and locks the screen from the menu', async () => {
     const { pinia } = setupSession({ name: 'Alice' })
     const router = menuRouter()
     const wrapper = mount(UserMenu, mountOptions(pinia, router))
 
     expect(wrapper.find('.username').text()).toBe('Alice')
-    expect(wrapper.text()).not.toContain('锁屏')
 
     await wrapper.find('.user-menu-profile').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/work/profile')
+
+    await wrapper.find('.lock-btn').trigger('click')
+    expect(useLockScreenStore(pinia).isLocked()).toBe(true)
+    expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBe('1')
   })
 
   it('writes theme and density to the shell store and localStorage', async () => {

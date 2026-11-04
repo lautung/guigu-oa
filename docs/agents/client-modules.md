@@ -23,9 +23,10 @@
 | `src/shell/fullscreen.ts` | `fullscreenSupported(doc)` / `toggleFullscreen(doc)` | 标准 Fullscreen API 的判定与切换；`requestFullscreen` 或 `exitFullscreen` 缺失即不支持，入口隐藏 |
 | `src/shell/shell-state.ts` | `useShellStore` → `syncRoute` / `closeTab` / `closeCurrentTab` / `closeOtherTabs` / `closeAllTabs` / `setTheme` / `setDensity` / `toggleCollapsed` / drawer actions | 外壳状态：tabs、activeModule、collapsed、drawer、theme、density；标签不持久化，主题与密度写 localStorage |
 | `src/shell/shell-preferences.ts` | `readShellPreferences` / `writeShellTheme` / `writeShellDensity` / `applyShellTheme` | 亮/暗与三档密度的取值校验与持久化；`html.dark` 只在这里切换 |
-| `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」 |
+| `src/shell/lock-screen.ts` + `LockScreen.vue` | `useLockScreenStore` → `lock()` / `unlock(password)` / `isLocked()`；状态 `locked` / `failures` / `error` | 手动锁屏的状态机（#255）：`sessionStorage` 存锁状态（刷新保持、关标签页解除）；`unlock` 打 `POST /admin/system/index/verifyPassword`，错误口令是业务 201 且只计本地次数，连续 5 次失败复用 user store 的 `logout` 强制退出并清锁；`LockScreen.vue` 是全屏不透明遮罩，非模糊 |
+| `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」；锁屏时整壳 `inert` 且不渲染 `router-view`（业务内容不渲染，不是遮住） |
 | `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `ModulePlaceholder.vue` | 外壳 chrome 组件 | 一级药丸导航（无落点的模块置灰）、深色树（底部折叠为 62px 图标栏、窄屏抽屉）、卡片标签与关闭下拉、可点面包屑行、模块空态页（`/monitor` 占位复用它作直接访问兜底）；顶栏工具区依次为全屏、菜单搜索、公告铃铛、用户菜单 |
-| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/profile`（第 6 波起；取代 `/work/profile`「基本信息」）、锁屏入口（第 6 波计划：写会话锁状态）、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`） |
+| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/profile`（第 6 波起；取代 `/work/profile`「基本信息」）、锁屏入口（#255：调 `useLockScreenStore().lock()`，入口文案「锁屏」）、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`） |
 | `src/shell/MenuSearch.vue` | 菜单搜索弹层（顶栏） | 输入即过滤，↑/↓ 移动、回车打开当前项、点击打开结果；展示标题与面包屑，空查询给提示、无结果给空态；索引来自 `menu-search.ts`，只含已授权页面 |
 | `src/shell/FullscreenButton.vue` | 全屏按钮（顶栏） | 浏览器支持标准 Fullscreen API 时显示；按 `fullscreenchange` 同步「全屏/退出全屏」，不支持时整颗按钮隐藏 |
 | `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
@@ -139,7 +140,6 @@
 | `src/config/role-users.ts` | 双列表选择、关键字搜索、待确认 | 角色侧成员维护，写同一 `sys_user_role`，复用 ADR 0006 的分配待确认语义 |
 | `src/profile/*` | `createProfile(adapter)` → `load` / `save` / `changePassword` / `uploadAvatar` | 个人中心：取代「基本信息」；改密成功后按 ADR 0029 跳登录 |
 | `src/auth/register.ts` | `createRegister(adapter)` → `loadSwitch` / `submit` | 注册表单；开关关闭时给关闭态；成功跳登录并预填用户名，不自动登录 |
-| `src/shell/lock-screen.ts` + `LockScreen.vue` | `lock()` / `unlock(password)` / `isLocked()` | `sessionStorage` 锁状态：刷新保持、关标签页解除；连续 5 次失败退出登录 |
 | `src/i18n/` | `createI18n` / `setLocale` / `readLocale` | `vue-i18n` + Element Plus locale 同步；默认 `zh-CN`；本波只抽外壳/登录/通用组件/新页面 |
 | `src/config/monitor-data.ts`（扩展） | SQL 统计、连接池历史 | 数据监控页补统计段；不引 Druid |
 | `src/config/user-export.ts` | 导出请求构造（下载） | 先导出；导入后置，单列部分成功语义 |

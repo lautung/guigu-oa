@@ -5,6 +5,7 @@ import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
@@ -14,11 +15,14 @@ import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.security.session.SessionVerifier;
 import com.lautung.oa.vo.system.BackofficeMenuVo;
 import com.lautung.oa.vo.system.RefreshTokenVo;
+import com.lautung.oa.vo.system.VerifyPasswordVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.ObjectMapper;
@@ -59,6 +63,9 @@ public class IndexController {
     @Autowired
     private OnlineSessionRegistry onlineSessionRegistry;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping("info")
@@ -90,6 +97,19 @@ public class IndexController {
         // ADR 0058 的小扩展（ADR 0060）：客户端据此标出本机会话；不改既有三段。
         map.put("sessionId", LoginUserInfoHelper.getSessionId());
         return Result.ok(map);
+    }
+
+    /**
+     * 锁屏解锁（#255）：已认证会话只校验当前用户的密码。错误口令是业务失败（200 + 201），
+     * 不是登录失败——不计入 LoginAttemptLimiter、不写审计、不签发令牌、不改会话。
+     */
+    @PostMapping("verifyPassword")
+    public Result verifyPassword(@Valid @RequestBody VerifyPasswordVo verifyPasswordVo) {
+        SysUser sysUser = sysUserService.getById(LoginUserInfoHelper.getUserId());
+        if (sysUser == null || !passwordEncoder.matches(verifyPasswordVo.getPassword(), sysUser.getPassword())) {
+            throw new BusinessException(201, "密码错误");
+        }
+        return Result.ok();
     }
 
     /**

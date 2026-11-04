@@ -53,6 +53,9 @@ const ICONS: Record<string, IconSpec> = {
   User: {
     paths: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
   },
+  Lock: {
+    paths: ['M6 11h12v9H6z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
+  },
   Bell: {
     paths: ['M18 16v-5a6 6 0 1 0-12 0v5l-1.6 2h15.2L18 16z', 'M10 21a2 2 0 0 0 4 0'],
   },

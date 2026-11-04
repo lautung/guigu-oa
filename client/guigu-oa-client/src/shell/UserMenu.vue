@@ -46,6 +46,11 @@
         </div>
       </div>
 
+      <button type="button" class="lock-btn" role="menuitem" @click="handleLock">
+        <el-icon><component :is="shellIcon('Lock')" /></el-icon>
+        <span>锁屏</span>
+      </button>
+
       <button type="button" class="logout-btn" role="menuitem" @click="handleLogout">
         退出登录
       </button>
@@ -58,6 +63,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { PATHS } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
+import { useLockScreenStore } from './lock-screen'
 import { useShellStore } from './shell-state'
 import type { ShellDensity, ShellTheme } from './shell-preferences'
 import { shellIcon } from './shell-icons'
@@ -78,12 +84,18 @@ const DENSITY_OPTIONS: readonly { value: ShellDensity; label: string }[] = [
 const router = useRouter()
 const userStore = useUserStore()
 const shell = useShellStore()
+const lockScreen = useLockScreenStore()
 const open = ref(false)
 const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
 
 function openProfile(): void {
   open.value = false
   void router.push(PATHS.WORK_PROFILE)
+}
+
+function handleLock(): void {
+  open.value = false
+  lockScreen.lock()
 }
 
 async function handleLogout(): Promise<void> {
@@ -139,6 +151,7 @@ async function handleLogout(): Promise<void> {
 }
 
 .user-menu-profile,
+.lock-btn,
 .logout-btn {
   width: 100%;
   display: flex;
@@ -156,11 +169,17 @@ async function handleLogout(): Promise<void> {
 
 .user-menu-profile:hover,
 .user-menu-profile:focus-visible,
+.lock-btn:hover,
+.lock-btn:focus-visible,
 .logout-btn:hover,
 .logout-btn:focus-visible {
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);
   outline: none;
+}
+
+.lock-btn {
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .logout-btn {
