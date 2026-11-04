@@ -134,3 +134,181 @@ describe('数据监控读请求形状', () => {
     expect(dataMetricsRequest()).toEqual({ method: 'get', url: '/admin/monitor/data' })
   })
 })
+
+const statistics = [
+  {
+    statementId: 'com.lautung.oa.mapper.SysUserMapper.selectPage',
+    count: 3,
+    avgElapsedMs: 200.4,
+    maxElapsedMs: 300,
+    lastTimestamp: 1730000000000,
+  },
+  {
+    statementId: null,
+    count: 1,
+    avgElapsedMs: null,
+    maxElapsedMs: null,
+    lastTimestamp: null,
+  },
+]
+
+const poolPoints = [
+  {
+    timestamp: 1730000000000,
+    activeConnections: 1,
+    idleConnections: 2,
+    totalConnections: 3,
+    threadsAwaiting: 0,
+  },
+  {
+    timestamp: 1730000030000,
+    activeConnections: 2,
+    idleConnections: 1,
+    totalConnections: 3,
+    threadsAwaiting: 4,
+  },
+]
+
+function snapshotWith({ sqlStatistics, poolHistory } = {}) {
+  return {
+    ...enabledSnapshot,
+    ...(sqlStatistics === undefined ? {} : { sqlStatistics }),
+    ...(poolHistory === undefined ? {} : { poolHistory }),
+  }
+}
+
+describe('SQL 统计段投影', () => {
+  it('projects count, average, max and latest time per statement', () => {
+    const view = presentMonitorData(
+      snapshotWith({
+        sqlStatistics: {
+          enabled: true,
+          note: '只覆盖慢 SQL，不是全量 SQL',
+          statements: statistics,
+        },
+      }),
+    )
+
+    expect(view.sqlStatistics.available).toBe(true)
+    expect(view.sqlStatistics.enabled).toBe(true)
+    expect(view.sqlStatistics.note).toBe('只覆盖慢 SQL，不是全量 SQL')
+    expect(view.sqlStatistics.rows).toHaveLength(2)
+
+    const [first, second] = view.sqlStatistics.rows
+    expect(first.statementId).toBe('com.lautung.oa.mapper.SysUserMapper.selectPage')
+    expect(first.countText).toBe('3')
+    expect(first.avgText).toBe('200.4 ms')
+    expect(first.maxText).toBe('300 ms')
+    expect(first.lastTime).toBe(formatEpochMs(1730000000000))
+
+    // 缺失的语句 id、平均、最大与时间都降级为「—」。
+    expect(second.statementId).toBe('—')
+    expect(second.countText).toBe('1')
+    expect(second.avgText).toBe('—')
+    expect(second.maxText).toBe('—')
+    expect(second.lastTime).toBe('—')
+  })
+
+  it('keeps the enabled state with zero rows for an empty ring', () => {
+    const view = presentMonitorData(
+      snapshotWith({
+        sqlStatistics: { enabled: true, note: '只覆盖慢 SQL，不是全量 SQL', statements: [] },
+      }),
+    )
+
+    expect(view.sqlStatistics.available).toBe(true)
+    expect(view.sqlStatistics.enabled).toBe(true)
+    expect(view.sqlStatistics.rows).toEqual([])
+  })
+
+  it('marks the section disabled when collection is off', () => {
+    const view = presentMonitorData(
+      snapshotWith({
+        sqlStatistics: { enabled: false, note: '只覆盖慢 SQL，不是全量 SQL', statements: [] },
+      }),
+    )
+
+    expect(view.sqlStatistics.available).toBe(true)
+    expect(view.sqlStatistics.enabled).toBe(false)
+    expect(view.sqlStatistics.rows).toEqual([])
+  })
+
+  it('marks the section unavailable when the snapshot has no statistics field', () => {
+    const view = presentMonitorData(enabledSnapshot)
+
+    expect(view.sqlStatistics.available).toBe(false)
+    expect(view.sqlStatistics.enabled).toBe(false)
+    expect(view.sqlStatistics.rows).toEqual([])
+  })
+})
+
+describe('连接池历史段投影', () => {
+  it('projects points oldest first and builds the four polylines', () => {
+    const view = presentMonitorData(
+      snapshotWith({ poolHistory: { capacity: 120, intervalMs: 30000, points: poolPoints } }),
+    )
+
+    expect(view.poolHistory.available).toBe(true)
+    expect(view.poolHistory.intervalLabel).toBe('每 30 秒采样，最多 120 点')
+    expect(view.poolHistory.points).toHaveLength(2)
+
+    const [first, second] = view.poolHistory.points
+    expect(first.time).toBe(formatEpochMs(1730000000000))
+    expect(first.activeText).toBe('1')
+    expect(first.threadsAwaitingText).toBe('0')
+    expect(second.totalText).toBe('3')
+
+    expect(view.poolHistory.latest?.timestamp).toBe(1730000030000)
+    expect(view.poolHistory.latest?.activeText).toBe('2')
+
+    // 600x120、内边距 8，两点贴左右边；纵轴取四序列最大值（4）。
+    expect(view.poolHistory.chart.width).toBe(600)
+    expect(view.poolHistory.chart.height).toBe(120)
+    expect(view.poolHistory.chart.maxValue).toBe(4)
+    expect(view.poolHistory.chart.total).toBe('8,34 592,34')
+    expect(view.poolHistory.chart.active).toBe('8,86 592,60')
+    expect(view.poolHistory.chart.idle).toBe('8,60 592,86')
+    expect(view.poolHistory.chart.waiting).toBe('8,112 592,8')
+  })
+
+  it('keeps an empty section available before the first sample', () => {
+    const view = presentMonitorData(
+      snapshotWith({ poolHistory: { capacity: 120, intervalMs: 30000, points: [] } }),
+    )
+
+    expect(view.poolHistory.available).toBe(true)
+    expect(view.poolHistory.points).toEqual([])
+    expect(view.poolHistory.latest).toBeNull()
+    expect(view.poolHistory.chart.total).toBe('')
+    expect(view.poolHistory.chart.maxValue).toBe(1)
+  })
+
+  it('marks the section unavailable when the snapshot has no history field', () => {
+    const view = presentMonitorData(enabledSnapshot)
+
+    expect(view.poolHistory.available).toBe(false)
+    expect(view.poolHistory.points).toEqual([])
+    expect(view.poolHistory.chart.total).toBe('')
+  })
+
+  it('places a single point at the horizontal centre', () => {
+    const view = presentMonitorData(
+      snapshotWith({
+        poolHistory: {
+          capacity: 120,
+          intervalMs: 30000,
+          points: [poolPoints[0]],
+        },
+      }),
+    )
+
+    expect(view.poolHistory.chart.total).toBe('300,8')
+    expect(view.poolHistory.chart.maxValue).toBe(3)
+  })
+
+  it('omits the interval label when the server sends no interval', () => {
+    const view = presentMonitorData(snapshotWith({ poolHistory: { capacity: 120, points: [] } }))
+
+    expect(view.poolHistory.intervalLabel).toBe('')
+  })
+})

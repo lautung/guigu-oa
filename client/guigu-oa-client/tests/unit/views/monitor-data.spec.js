@@ -33,6 +33,46 @@ const snapshot = {
     totalAcquired: 1234,
     totalTimeouts: 3,
   },
+  sqlStatistics: {
+    enabled: true,
+    note: '只覆盖慢 SQL，不是全量 SQL',
+    statements: [
+      {
+        statementId: 'SysUserMapper.selectPage',
+        count: 3,
+        avgElapsedMs: 200.4,
+        maxElapsedMs: 300,
+        lastTimestamp: 1730000000000,
+      },
+      {
+        statementId: 'OaProcessMapper.selectPending',
+        count: 1,
+        avgElapsedMs: 120,
+        maxElapsedMs: 120,
+        lastTimestamp: 1729990000000,
+      },
+    ],
+  },
+  poolHistory: {
+    capacity: 120,
+    intervalMs: 30000,
+    points: [
+      {
+        timestamp: 1730000000000,
+        activeConnections: 1,
+        idleConnections: 6,
+        totalConnections: 8,
+        threadsAwaiting: 0,
+      },
+      {
+        timestamp: 1730000030000,
+        activeConnections: 2,
+        idleConnections: 6,
+        totalConnections: 8,
+        threadsAwaiting: 1,
+      },
+    ],
+  },
   slowSql: {
     enabled: true,
     thresholdMs: 1000,
@@ -76,7 +116,11 @@ function cardOf(wrapper, title) {
 }
 
 function rowsOf(wrapper) {
-  return wrapper.findAll('.el-table__row')
+  return wrapper.find('.slow-sql-card').findAll('.el-table__row')
+}
+
+function statsRowsOf(wrapper) {
+  return wrapper.find('.sql-statistics-card').findAll('.el-table__row')
 }
 
 beforeEach(() => {
@@ -177,5 +221,99 @@ describe('数据监控页', () => {
 
     expect(http.calls.filter((call) => call.url === '/admin/monitor/data')).toHaveLength(2)
     expect(rowsOf(wrapper)).toHaveLength(2)
+  })
+})
+
+describe('数据监控页的 SQL 统计段', () => {
+  it('renders the coverage note and one row per statement with count, average, max and time', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.sql-statistics-card')
+    expect(card.text()).toContain('只覆盖慢 SQL，不是全量 SQL')
+
+    const rows = statsRowsOf(wrapper)
+    expect(rows).toHaveLength(2)
+    expect(rows[0].text()).toContain('SysUserMapper.selectPage')
+    expect(rows[0].text()).toContain('3')
+    expect(rows[0].text()).toContain('200.4 ms')
+    expect(rows[0].text()).toContain('300 ms')
+    expect(rows[1].text()).toContain('OaProcessMapper.selectPending')
+  })
+
+  it('keeps the table with an explicit empty line when the ring has no statements', async () => {
+    responderOverride = () =>
+      ok({
+        ...snapshot,
+        sqlStatistics: { enabled: true, note: '只覆盖慢 SQL，不是全量 SQL', statements: [] },
+      })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.sql-statistics-card')
+    expect(statsRowsOf(wrapper)).toHaveLength(0)
+    expect(card.find('.el-table__empty-text').text()).toContain('窗口内暂无慢 SQL')
+  })
+
+  it('renders 采集未开启 when the collector is off', async () => {
+    responderOverride = () =>
+      ok({
+        ...snapshot,
+        sqlStatistics: { enabled: false, note: '只覆盖慢 SQL，不是全量 SQL', statements: [] },
+      })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.sql-statistics-card')
+    expect(card.find('.el-empty').exists()).toBe(true)
+    expect(card.text()).toContain('采集未开启')
+    expect(statsRowsOf(wrapper)).toHaveLength(0)
+  })
+
+  it('renders 不可用 when the statistics section is missing', async () => {
+    responderOverride = () => ok({ ...snapshot, sqlStatistics: null })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.sql-statistics-card')
+    expect(card.find('.metric-unavailable').text()).toBe('不可用')
+    expect(statsRowsOf(wrapper)).toHaveLength(0)
+  })
+})
+
+describe('数据监控页的连接池历史段', () => {
+  it('renders the interval label, four polylines and the latest sample', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.pool-history-card')
+    expect(card.text()).toContain('每 30 秒采样，最多 120 点')
+    expect(card.findAll('svg.pool-history-chart polyline')).toHaveLength(4)
+    expect(card.find('.pool-history-latest').text()).toContain('活跃 2')
+    expect(card.find('.pool-history-latest').text()).toContain('空闲 6')
+    expect(card.find('.pool-history-latest').text()).toContain('总数 8')
+    expect(card.find('.pool-history-latest').text()).toContain('等待 1')
+  })
+
+  it('renders 暂无采样 before the first point', async () => {
+    responderOverride = () =>
+      ok({ ...snapshot, poolHistory: { capacity: 120, intervalMs: 30000, points: [] } })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.pool-history-card')
+    expect(card.find('.el-empty').exists()).toBe(true)
+    expect(card.text()).toContain('暂无采样')
+    expect(card.find('svg.pool-history-chart').exists()).toBe(false)
+  })
+
+  it('renders 不可用 when the history section is missing', async () => {
+    responderOverride = () => ok({ ...snapshot, poolHistory: null })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const card = wrapper.find('.pool-history-card')
+    expect(card.find('.metric-unavailable').text()).toBe('不可用')
+    expect(card.find('svg.pool-history-chart').exists()).toBe(false)
   })
 })

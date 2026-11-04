@@ -89,7 +89,16 @@ class MonitorServerDataContractTest {
                 .andExpect(jsonPath("$.data.slowSql.enabled").value(false))
                 .andExpect(jsonPath("$.data.slowSql.thresholdMs").value(500))
                 .andExpect(jsonPath("$.data.slowSql.entries").isArray())
-                .andExpect(jsonPath("$.data.slowSql.entries.length()").value(0));
+                .andExpect(jsonPath("$.data.slowSql.entries.length()").value(0))
+                // 统计段跟随采集开关：关闭态只有口径说明，没有行（#258）。
+                .andExpect(jsonPath("$.data.sqlStatistics.enabled").value(false))
+                .andExpect(jsonPath("$.data.sqlStatistics.note").value("只覆盖慢 SQL，不是全量 SQL"))
+                .andExpect(jsonPath("$.data.sqlStatistics.statements").isArray())
+                .andExpect(jsonPath("$.data.sqlStatistics.statements.length()").value(0))
+                // 连接池历史不依赖慢 SQL 开关，段形状始终在（#258）。
+                .andExpect(jsonPath("$.data.poolHistory.capacity").value(120))
+                .andExpect(jsonPath("$.data.poolHistory.intervalMs").value(30000))
+                .andExpect(jsonPath("$.data.poolHistory.points").isArray());
     }
 
     @Test

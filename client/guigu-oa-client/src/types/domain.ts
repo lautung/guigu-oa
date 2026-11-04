@@ -463,12 +463,40 @@ export interface SlowSqlEntry {
   sql?: string | null
 }
 
+export interface SqlStatementStat {
+  statementId?: string | null
+  count?: number | null
+  avgElapsedMs?: number | null
+  maxElapsedMs?: number | null
+  lastTimestamp?: number | null
+}
+
+export interface PoolHistoryPoint {
+  timestamp?: number | null
+  activeConnections?: number | null
+  idleConnections?: number | null
+  totalConnections?: number | null
+  threadsAwaiting?: number | null
+}
+
 export interface MonitorDataSnapshot {
   hikari?: HikariMetrics | null
   slowSql?: {
     enabled?: boolean | null
     thresholdMs?: number | null
     entries?: SlowSqlEntry[] | null
+  } | null
+  /** 按 statementId 聚合的内存环统计（#258）：只覆盖慢 SQL，不是全量 SQL。 */
+  sqlStatistics?: {
+    enabled?: boolean | null
+    note?: string | null
+    statements?: SqlStatementStat[] | null
+  } | null
+  /** 连接池历史（#258）：进程内采样，时间升序，最多 120 点。 */
+  poolHistory?: {
+    capacity?: number | null
+    intervalMs?: number | null
+    points?: PoolHistoryPoint[] | null
   } | null
 }
 
