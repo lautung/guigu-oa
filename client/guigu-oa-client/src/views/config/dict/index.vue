@@ -108,7 +108,12 @@
           </el-button>
         </header>
 
-        <el-form v-if="selectedType" :inline="true" class="filter-form" @submit.prevent="searchData">
+        <el-form
+          v-if="selectedType"
+          :inline="true"
+          class="filter-form"
+          @submit.prevent="searchData"
+        >
           <el-form-item label="标签">
             <el-input v-model="dataQuery.dictLabel" placeholder="字典标签" clearable />
           </el-form-item>
@@ -151,11 +156,7 @@
           <el-table-column prop="remark" label="备注" min-width="120" />
           <el-table-column label="操作" width="120" align="center">
             <template #default="scope">
-              <el-button
-                v-hasPermi="permissions.edit"
-                link
-                @click="openEditData(scope.row.id)"
-              >
+              <el-button v-hasPermi="permissions.edit" link @click="openEditData(scope.row.id)">
                 编辑
               </el-button>
               <el-button
@@ -251,7 +252,13 @@
 <script lang="ts">
 import { defineComponent, onBeforeUnmount } from 'vue'
 
-import { refreshCache, removeData, removeType, saveOrUpdateData, saveOrUpdateType } from '@/api/sysDict'
+import {
+  refreshCache,
+  removeData,
+  removeType,
+  saveOrUpdateData,
+  saveOrUpdateType,
+} from '@/api/sysDict'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import {
@@ -301,13 +308,21 @@ export default defineComponent({
     if (!recognition) throw new Error('认出 module 尚未接入')
     const effects = listPageEffects()
 
-    const typeList = createListPage<DictTypeRecord, DictTypeListItem, Record<string, string | number>>({
+    const typeList = createListPage<
+      DictTypeRecord,
+      DictTypeListItem,
+      Record<string, string | number>
+    >({
       openScope: () => openRequestScope(recognition),
       toRequest: ({ page, size, query }) => typeListRequest(page, size, query),
       present: presentTypeRecord,
       ...effects,
     })
-    const dataList = createListPage<DictDataRecord, DictDataListItem, Record<string, string | number>>({
+    const dataList = createListPage<
+      DictDataRecord,
+      DictDataListItem,
+      Record<string, string | number>
+    >({
       openScope: () => openRequestScope(recognition),
       toRequest: ({ page, size, query }) => dataListRequest(page, size, query),
       present: presentDataRecord,
@@ -455,24 +470,20 @@ export default defineComponent({
       }
     },
     removeType(id: EntityId) {
-      return this.typeList.confirmRemove(
-        '此操作将永久删除该字典类型, 是否继续?',
-        () => removeType(id),
-        '删除成功',
-      ).then((removed) => {
-        if (removed) clearDictCache()
-        return removed
-      })
+      return this.typeList
+        .confirmRemove('此操作将永久删除该字典类型, 是否继续?', () => removeType(id), '删除成功')
+        .then((removed) => {
+          if (removed) clearDictCache()
+          return removed
+        })
     },
     removeData(id: EntityId) {
-      return this.dataList.confirmRemove(
-        '此操作将永久删除该字典数据, 是否继续?',
-        () => removeData(id),
-        '删除成功',
-      ).then((removed) => {
-        if (removed) clearDictCache()
-        return removed
-      })
+      return this.dataList
+        .confirmRemove('此操作将永久删除该字典数据, 是否继续?', () => removeData(id), '删除成功')
+        .then((removed) => {
+          if (removed) clearDictCache()
+          return removed
+        })
     },
     refreshCache() {
       return this.typeList

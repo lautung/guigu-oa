@@ -57,10 +57,7 @@ describe('外壳 locale 切换', () => {
     ])
     expect(wrapper.find('.shell-breadcrumb').text()).toContain('Home')
     expect(wrapper.find('.shell-breadcrumb').text()).toContain('Work')
-    expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toEqual([
-      'Workbench',
-      '待处理',
-    ])
+    expect(wrapper.findAll('.shell-tab').map((tab) => tab.text())).toEqual(['Workbench', '待处理'])
     expect(wrapper.find('.user-menu-profile').text()).toBe('Profile')
     expect(wrapper.find('.lock-btn').text()).toBe('Lock screen')
     expect(wrapper.find('.logout-btn').text()).toBe('Sign out')

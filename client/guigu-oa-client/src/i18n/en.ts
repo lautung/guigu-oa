@@ -131,7 +131,8 @@ const en = {
     oldPassword: 'Old password',
     newPassword: 'New password',
     confirmPassword: 'Confirm password',
-    changePasswordHint: 'You will need to sign in again on all devices after changing your password.',
+    changePasswordHint:
+      'You will need to sign in again on all devices after changing your password.',
     nameRequired: 'Name is required',
     nameTooLong: 'Name is too long',
     phoneTooLong: 'Phone number is too long',

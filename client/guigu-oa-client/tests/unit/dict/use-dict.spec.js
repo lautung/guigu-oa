@@ -32,9 +32,7 @@ afterEach(() => {
 
 describe('useDict 批量取数与缓存', () => {
   it('coalesces the same microtask into one batch request', async () => {
-    sessionWith((config) =>
-      config.url === '/admin/system/dict/data/batch' ? ok(DICTS) : ok(null),
-    )
+    sessionWith((config) => (config.url === '/admin/system/dict/data/batch' ? ok(DICTS) : ok(null)))
 
     const [alpha, beta] = await Promise.all([loadDict('alpha'), loadDict('beta')])
 

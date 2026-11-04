@@ -55,7 +55,9 @@ describe('通用组件英文文案', () => {
     setLocale('en')
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/system', component: { template: '<div />' }, meta: { title: '系统管理' } }],
+      routes: [
+        { path: '/system', component: { template: '<div />' }, meta: { title: '系统管理' } },
+      ],
     })
     await router.push('/system')
     await router.isReady()
@@ -121,9 +123,11 @@ describe('个人中心英文文案', () => {
       'Unsupported avatar type',
     )
     expect(
-      validateAvatarFile(new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'a.png', {
-        type: 'image/png',
-      })),
+      validateAvatarFile(
+        new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'a.png', {
+          type: 'image/png',
+        }),
+      ),
     ).toBe('Avatar exceeds the 2 MB limit')
   })
 
