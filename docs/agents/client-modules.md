@@ -25,7 +25,7 @@
 | `src/shell/shell-preferences.ts` | `readShellPreferences` / `writeShellTheme` / `writeShellDensity` / `applyShellTheme` | 亮/暗与三档密度的取值校验与持久化；`html.dark` 只在这里切换 |
 | `src/shell/AppShell.vue` | 根布局 | 认证路由的唯一 `router-view`：顶栏 + 220/62px 侧栏 + 38px 标签条 + 面包屑 + 16px 内容区；<900px 隐藏标签条、侧栏改 240px 抽屉、配置页顶栏提示「建议桌面」 |
 | `src/shell/AppTopBar.vue` / `AppSidebar.vue` / `ShellTabs.vue` / `ShellBreadcrumb.vue` / `ModulePlaceholder.vue` | 外壳 chrome 组件 | 一级药丸导航（无落点的模块置灰）、深色树（底部折叠为 62px 图标栏、窄屏抽屉）、卡片标签与关闭下拉、可点面包屑行、模块空态页（`/monitor` 占位复用它作直接访问兜底）；顶栏工具区依次为全屏、菜单搜索、公告铃铛、用户菜单 |
-| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/work/profile`、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`）；不做锁屏入口 |
+| `src/shell/UserMenu.vue` | 用户菜单（顶栏） | 个人中心进 `/profile`（第 6 波起；取代 `/work/profile`「基本信息」）、锁屏入口（第 6 波计划：写会话锁状态）、退出登录复用 user store 的 `logout`；亮/暗与紧凑/默认/宽松密度直接写 `useShellStore`（`html.dark` + `ElConfigProvider`） |
 | `src/shell/MenuSearch.vue` | 菜单搜索弹层（顶栏） | 输入即过滤，↑/↓ 移动、回车打开当前项、点击打开结果；展示标题与面包屑，空查询给提示、无结果给空态；索引来自 `menu-search.ts`，只含已授权页面 |
 | `src/shell/FullscreenButton.vue` | 全屏按钮（顶栏） | 浏览器支持标准 Fullscreen API 时显示；按 `fullscreenchange` 同步「全屏/退出全屏」，不支持时整颗按钮隐藏 |
 | `src/shell/NoticeBell.vue` | 公告铃铛 | 从旧 TopBar 抽出的唯一铃铛实例：未读角标（99+）与最近 5 条，点击进详情、查看全部进 `/notice` |
@@ -118,3 +118,23 @@
 - 测试分两层：module 测试是主，规则打在 interface 上；view 挂载测试只覆盖模板状态分支与命令式接线，状态由 seam mock 驱动，不靠 view 测试重新断言 module 内部规则。
 - 共享挂载工具在 `tests/unit/support/harness.js`（假 recognition、pinia 会话、axios adapter、Element Plus stub）；全局 setup 在 `tests/unit/setup.js`（auto-unmount、nprogress stub）。新测试直接复用，不要各写一份。
 - 每个模块的决策理由看对应 ADR（0011–0022），不要从页面反推 interface。
+
+## 基座补齐（第 4–9 波，计划）
+
+以下 module 尚未落地，形状按 ADR 0062 与蓝图 §11 预记；实现票落地时把这一节改成现有事实。
+
+| 计划 module | interface / seam | 职责 |
+|---|---|---|
+| `src/config/sys-dept.ts` / `sys-post.ts` | 树投影 / 表单校验 / 请求构造 | 部门树（祖级路径、删除保护文案回显）与岗位 CRUD；用户页只读部门树复用同一投影 |
+| `src/config/dict.ts` + `src/components/DictTag.vue` + `useDict` | 类型/数据请求、标签渲染、刷新 | 页面按值渲染标签，不把枚举中文写死在页面里；缓存刷新按钮在字典管理页 |
+| `src/config/params.ts` | 键值列表/表单、内置项只读 | 参数管理；内置项不可删、不可改 key，只可改 value |
+| `src/config/sys-user.ts`（扩展） | 部门树过滤、岗位多选、重置密码 | 用户页三件加料；部门树只读、维护在部门页 |
+| `src/config/role-users.ts` | 双列表选择、关键字搜索、待确认 | 角色侧成员维护，写同一 `sys_user_role`，复用 ADR 0006 的分配待确认语义 |
+| `src/profile/*` | `createProfile(adapter)` → `load` / `save` / `changePassword` / `uploadAvatar` | 个人中心：取代「基本信息」；改密成功后按 ADR 0029 跳登录 |
+| `src/auth/register.ts` | `createRegister(adapter)` → `loadSwitch` / `submit` | 注册表单；开关关闭时给关闭态；成功跳登录并预填用户名，不自动登录 |
+| `src/shell/lock-screen.ts` + `LockScreen.vue` | `lock()` / `unlock(password)` / `isLocked()` | `sessionStorage` 锁状态：刷新保持、关标签页解除；连续 5 次失败退出登录 |
+| `src/i18n/` | `createI18n` / `setLocale` / `readLocale` | `vue-i18n` + Element Plus locale 同步；默认 `zh-CN`；本波只抽外壳/登录/通用组件/新页面 |
+| `src/config/monitor-data.ts`（扩展） | SQL 统计、连接池历史 | 数据监控页补统计段；不引 Druid |
+| `src/config/user-export.ts` | 导出请求构造（下载） | 先导出；导入后置，单列部分成功语义 |
+
+路由计划：`/system/sysDept`、`/system/sysPost`、`/system/dict`、`/system/config` 属 `config` 组；`/profile` 登录即有、不进后台菜单；`/register` 匿名、不套外壳。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。
