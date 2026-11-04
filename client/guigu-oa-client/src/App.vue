@@ -3,13 +3,17 @@
     <section v-if="!userStore.recognized && userStore.recovery.status !== 'idle'" class="recovery">
       <h1>云尚办公</h1>
       <p role="status">
-        {{ userStore.recovery.status === 'loading' ? '正在获取用户信息…' : '暂时无法获取用户信息' }}
+        {{
+          userStore.recovery.status === 'loading'
+            ? t('app.recoveryLoading')
+            : t('app.recoveryUnavailable')
+        }}
       </p>
       <el-button
         type="primary"
         :loading="userStore.recovery.status === 'loading'"
         @click="userStore.recognition?.resume()"
-        >重试</el-button
+        >{{ t('app.retry') }}</el-button
       >
     </section>
     <router-view v-else />
@@ -18,12 +22,13 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { translate as t } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 
 export default defineComponent({
   name: 'App',
   setup() {
-    return { userStore: useUserStore() }
+    return { t, userStore: useUserStore() }
   },
 })
 </script>

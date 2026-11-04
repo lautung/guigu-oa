@@ -1,3 +1,4 @@
+import { translate as t } from '@/i18n'
 import type {
   ApiRequestConfig,
   ProfilePasswordPayload,
@@ -45,25 +46,26 @@ export function presentProfile(record: Partial<ProfileRecord> = {}): ProfileView
 }
 
 export function validateProfile(payload: ProfileWritePayload): string {
-  if (!payload.name.trim()) return '姓名不能为空'
-  if (payload.name.length > 20) return '姓名过长'
-  if (payload.phone.length > 20) return '手机号过长'
+  if (!payload.name.trim()) return t('profile.nameRequired')
+  if (payload.name.length > 20) return t('profile.nameTooLong')
+  if (payload.phone.length > 20) return t('profile.phoneTooLong')
   return ''
 }
 
 export function validatePassword(payload: ProfilePasswordPayload, confirmPassword: string): string {
-  if (!payload.oldPassword) return '旧密码不能为空'
-  if (!payload.newPassword) return '新密码不能为空'
+  if (!payload.oldPassword) return t('profile.oldPasswordRequired')
+  if (!payload.newPassword) return t('profile.newPasswordRequired')
   if (payload.newPassword.length < 6 || payload.newPassword.length > 100) {
-    return '密码长度必须在 6 到 100 位之间'
+    return t('profile.passwordLength')
   }
-  if (payload.newPassword !== confirmPassword) return '两次输入的密码不一致'
+  if (payload.newPassword !== confirmPassword) return t('profile.passwordMismatch')
   return ''
 }
 
 /** 本地预检与服务端同文案；真正的判定仍在服务端（类型/魔数/2MB）。 */
 export function validateAvatarFile(file: File): string {
-  if (!(PROFILE_AVATAR_TYPES as readonly string[]).includes(file.type)) return '头像类型不支持'
-  if (file.size > PROFILE_AVATAR_MAX_BYTES) return '头像超过 2 MB 限制'
+  if (!(PROFILE_AVATAR_TYPES as readonly string[]).includes(file.type))
+    return t('profile.avatarType')
+  if (file.size > PROFILE_AVATAR_MAX_BYTES) return t('profile.avatarSize')
   return ''
 }

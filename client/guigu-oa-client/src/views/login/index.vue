@@ -14,7 +14,7 @@
       <el-form-item prop="username">
         <el-input
           v-model="loginForm.username"
-          placeholder="用户名"
+          :placeholder="t('login.username')"
           tabindex="1"
           @keyup.enter="handleLogin"
         />
@@ -24,7 +24,7 @@
         <el-input
           v-model="loginForm.password"
           type="password"
-          placeholder="密码"
+          :placeholder="t('login.password')"
           tabindex="2"
           show-password
           @keyup.enter="handleLogin"
@@ -32,11 +32,11 @@
       </el-form-item>
 
       <el-button :loading="loading" type="primary" class="login-btn" @click="handleLogin">
-        登录
+        {{ t('login.submit') }}
       </el-button>
 
       <div v-if="registerEnabled" class="register-entry">
-        <router-link :to="PATHS.REGISTER">没有账号？去注册</router-link>
+        <router-link :to="PATHS.REGISTER">{{ t('login.register') }}</router-link>
       </div>
     </el-form>
   </div>
@@ -47,6 +47,7 @@ defineOptions({ name: 'LoginPage' })
 
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { translate as t } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 import { buildLoginRedirectPath } from '@/navigation'
 import { loadRegisterSwitch } from '@/api/register'
@@ -70,8 +71,8 @@ const loginForm = ref({
 })
 
 const loginRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur', min: 6 }],
+  username: [{ required: true, message: t('login.usernameRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordRequired'), trigger: 'blur', min: 6 }],
 }
 
 watch(
@@ -106,7 +107,7 @@ async function handleLogin() {
       router.push({ path: buildLoginRedirectPath(redirect.value) })
     } catch (error) {
       if (!(error instanceof RecognitionFailure && error.kind === 'superseded')) {
-        ElMessage.error(error instanceof Error ? error.message : '登录失败')
+        ElMessage.error(error instanceof Error ? error.message : t('login.failed'))
       }
     } finally {
       loading.value = false

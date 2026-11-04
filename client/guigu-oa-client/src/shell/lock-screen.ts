@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { translate as t } from '@/i18n'
 import { openRequestScope } from '@/request/request-scope'
 import { failureMessage } from '@/request/request-failure'
 import { useUserStore } from '@/store/modules/user'
@@ -57,7 +58,7 @@ export const useLockScreenStore = defineStore('lock-screen', {
         })
       } catch (error) {
         if (!isWrongPassword(error)) {
-          this.error = failureMessage(error) || '解锁失败，请重试'
+          this.error = failureMessage(error) || t('shell.lockScreen.unlockFailed')
           return false
         }
         this.failures += 1
@@ -72,7 +73,7 @@ export const useLockScreenStore = defineStore('lock-screen', {
           }
           return false
         }
-        this.error = failureMessage(error) || '密码错误'
+        this.error = failureMessage(error) || t('shell.lockScreen.wrongPassword')
         return false
       }
       this.locked = false

@@ -14,11 +14,11 @@
         <el-icon v-if="isFixedTab(tab.path)" class="tab-pin">
           <component :is="shellIcon('HomeFilled')" />
         </el-icon>
-        <span class="tab-title" :title="tab.title">{{ tab.title }}</span>
+        <span class="tab-title" :title="displayTitle(tab)">{{ displayTitle(tab) }}</span>
         <el-icon
           v-if="!isFixedTab(tab.path)"
           class="tab-close"
-          title="关闭"
+          :title="t('shell.tabs.close')"
           @click.stop="$emit('close', tab.path)"
         >
           <component :is="shellIcon('Close')" />
@@ -27,14 +27,19 @@
     </div>
 
     <el-dropdown trigger="click" @command="onCommand">
-      <button type="button" class="tab-more" title="标签操作" aria-label="标签操作">
+      <button
+        type="button"
+        class="tab-more"
+        :title="t('shell.tabs.actions')"
+        :aria-label="t('shell.tabs.actions')"
+      >
         <el-icon><component :is="shellIcon('ArrowDown')" /></el-icon>
       </button>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="current">关闭当前</el-dropdown-item>
-          <el-dropdown-item command="others">关闭其他</el-dropdown-item>
-          <el-dropdown-item command="all">关闭全部</el-dropdown-item>
+          <el-dropdown-item command="current">{{ t('shell.tabs.closeCurrent') }}</el-dropdown-item>
+          <el-dropdown-item command="others">{{ t('shell.tabs.closeOthers') }}</el-dropdown-item>
+          <el-dropdown-item command="all">{{ t('shell.tabs.closeAll') }}</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -42,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+import { translate as t } from '@/i18n'
 import { isFixedTab, type ShellTab } from './shell-tabs'
 import { shellIcon } from './shell-icons'
 
@@ -58,6 +64,11 @@ const emit = defineEmits<{
 
 function onCommand(command: string): void {
   emit('command', command)
+}
+
+/** 工作台标签是外壳固定项，标题跟随 locale；业务页标签保留路由标题。 */
+function displayTitle(tab: ShellTab): string {
+  return isFixedTab(tab.path) ? t('shell.modules.workbench') : tab.title
 }
 
 defineExpose({ onCommand })

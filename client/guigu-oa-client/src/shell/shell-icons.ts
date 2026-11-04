@@ -86,6 +86,14 @@ const ICONS: Record<string, IconSpec> = {
   Search: {
     paths: ['M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-5.2-5.2'],
   },
+  Language: {
+    paths: [
+      'M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z',
+      'M3 12h18',
+      'M12 3a14 14 0 0 1 0 18',
+      'M12 3a14 14 0 0 0 0 18',
+    ],
+  },
   FullScreen: {
     paths: ['M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'],
   },

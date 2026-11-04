@@ -7,7 +7,12 @@
     @show="focusInput"
   >
     <template #reference>
-      <button type="button" class="menu-search-trigger" title="搜索菜单" aria-label="搜索菜单">
+      <button
+        type="button"
+        class="menu-search-trigger"
+        :title="t('shell.menuSearch.trigger')"
+        :aria-label="t('shell.menuSearch.trigger')"
+      >
         <el-icon><component :is="shellIcon('Search')" /></el-icon>
       </button>
     </template>
@@ -18,8 +23,8 @@
         v-model="query"
         type="text"
         class="menu-search-input"
-        placeholder="搜索页面、菜单或面包屑"
-        aria-label="搜索页面、菜单或面包屑"
+        :placeholder="t('shell.menuSearch.placeholder')"
+        :aria-label="t('shell.menuSearch.placeholder')"
         @keydown.down.prevent="move(1)"
         @keydown.up.prevent="move(-1)"
         @keydown.enter.prevent="openActive"
@@ -42,8 +47,10 @@
           </button>
         </li>
       </ul>
-      <p v-else-if="query.trim()" class="menu-search-empty">没有匹配的页面</p>
-      <p v-else class="menu-search-hint">输入页面标题或面包屑</p>
+      <p v-else-if="query.trim()" class="menu-search-empty">
+        {{ t('shell.menuSearch.noMatch') }}
+      </p>
+      <p v-else class="menu-search-hint">{{ t('shell.menuSearch.hint') }}</p>
     </div>
   </el-popover>
 </template>
@@ -51,6 +58,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { translate as t } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 import { buildMenuSearch, searchMenus, type MenuSearchEntry } from './menu-search'
 import { shellIcon } from './shell-icons'

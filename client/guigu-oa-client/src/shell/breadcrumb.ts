@@ -1,15 +1,12 @@
-import { WORK_BUILTIN_ITEMS } from '@/navigation/constants'
+import { translate as t } from '@/i18n'
 import { PATHS, returnPathOfRoute } from '@/router/paths'
 import type { BackofficeMenuEntry } from '@/types/domain'
-import { activeModuleKey, moduleTitleOf } from './shell-nav'
+import { activeModuleKey, moduleTitleOf, workPageTitle } from './shell-nav'
 
-const HOME = '首页'
-const NOTICE_TITLE = '全部公告'
-
-const BUILTIN_TITLES: Record<string, string> = {
-  [PATHS.WORKBENCH]: '工作台',
-  [PATHS.NOTICE]: NOTICE_TITLE,
-  ...Object.fromEntries(WORK_BUILTIN_ITEMS.map((item) => [item.path, item.title])),
+function builtinTitle(path: string): string | undefined {
+  if (path === PATHS.WORKBENCH) return t('shell.items.workbench')
+  if (path === PATHS.NOTICE) return t('shell.items.notice')
+  return workPageTitle(path, '') || undefined
 }
 
 export interface BreadcrumbNode {
@@ -38,9 +35,10 @@ function menuChain(menus: readonly BackofficeMenuEntry[], target: string): Backo
 }
 
 function homeNode(current: string): BreadcrumbNode {
+  const home = t('shell.breadcrumb.home')
   return current === normalizePath(PATHS.WORKBENCH)
-    ? { title: HOME }
-    : { title: HOME, path: PATHS.WORKBENCH }
+    ? { title: home }
+    : { title: home, path: PATHS.WORKBENCH }
 }
 
 /** 中间层级指向真实页面；当前页只显示文字，不做自链接。 */
@@ -75,14 +73,14 @@ export function buildBreadcrumb({ path, title, menus = [] }: BreadcrumbInput): B
       return [
         homeNode(current),
         { title: moduleTitle },
-        pageNode(NOTICE_TITLE, PATHS.NOTICE, current),
+        pageNode(t('shell.items.notice'), PATHS.NOTICE, current),
       ]
     }
     return [homeNode(current), { title: moduleTitle }]
   }
 
   if (moduleKey === 'work') {
-    const pageTitle = BUILTIN_TITLES[target] || currentTitle || target
+    const pageTitle = builtinTitle(target) || currentTitle || target
     return [homeNode(current), { title: moduleTitle }, pageNode(pageTitle, target, current)]
   }
 

@@ -1,4 +1,5 @@
 import { reactive, readonly } from 'vue'
+import { translate as t } from '@/i18n'
 import type { RequestScope } from '@/request/request-scope'
 import { failureMessage } from '@/request/request-failure'
 import type { ApiRequestConfig, PageResult } from '@/types/domain'
@@ -118,7 +119,7 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
         view.error = previous.error
         return
       }
-      view.error = failureMessage(error) || '加载失败'
+      view.error = failureMessage(error) || t('common.loadFailed')
       view.status = 'failed'
     }
   }

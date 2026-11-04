@@ -56,8 +56,8 @@
       v-if="!narrow"
       type="button"
       class="collapse-btn"
-      :title="collapsed ? '展开菜单' : '收起菜单'"
-      :aria-label="collapsed ? '展开菜单' : '收起菜单'"
+      :title="collapsed ? t('shell.expandMenu') : t('shell.collapseMenu')"
+      :aria-label="collapsed ? t('shell.expandMenu') : t('shell.collapseMenu')"
       @click="$emit('toggle-collapse')"
     >
       <el-icon><component :is="shellIcon(collapsed ? 'Expand' : 'Fold')" /></el-icon>
@@ -66,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { translate as t } from '@/i18n'
 import { isShellLeafActive, type ShellModule, type ShellNavGroup } from './shell-nav'
 import { shellIcon } from './shell-icons'
 

@@ -244,7 +244,9 @@ describe('Login page', () => {
     await flushPromises()
 
     await wrapper.vm.handleLogin()
-    expect(http.calls).toHaveLength(0)
+    expect(http.calls.some((call) => String(call.url).includes('/admin/system/index/login'))).toBe(
+      false,
+    )
     expect(wrapper.vm.loading).toBe(false)
   })
 

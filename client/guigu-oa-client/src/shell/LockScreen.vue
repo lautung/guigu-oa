@@ -1,13 +1,17 @@
 <template>
-  <div class="lock-screen" role="dialog" aria-modal="true" aria-label="锁屏">
+  <div class="lock-screen" role="dialog" aria-modal="true" :aria-label="t('shell.lockScreen.aria')">
     <form class="lock-panel" @submit.prevent="submit">
       <div class="lock-brand">
         <span class="lock-brand-logo">云</span>
-        <span class="lock-brand-text">云尚办公</span>
+        <span class="lock-brand-text">{{ t('shell.brand') }}</span>
       </div>
-      <h2 class="lock-title">已锁屏</h2>
+      <h2 class="lock-title">{{ t('shell.lockScreen.locked') }}</h2>
       <p class="lock-hint">
-        {{ userStore.name ? `请输入 ${userStore.name} 的密码继续` : '请输入密码继续' }}
+        {{
+          userStore.name
+            ? t('shell.lockScreen.hintNamed', { name: userStore.name })
+            : t('shell.lockScreen.hint')
+        }}
       </p>
       <input
         ref="passwordInput"
@@ -15,17 +19,20 @@
         class="lock-password"
         type="password"
         autocomplete="current-password"
-        placeholder="请输入密码"
+        :placeholder="t('shell.lockScreen.passwordPlaceholder')"
         :disabled="submitting"
       />
       <p v-if="lockScreen.error" class="lock-error" role="alert">{{ lockScreen.error }}</p>
-      <button class="lock-submit" type="submit" :disabled="submitting || !password">解锁</button>
+      <button class="lock-submit" type="submit" :disabled="submitting || !password">
+        {{ t('shell.lockScreen.unlock') }}
+      </button>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
+import { translate as t } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 import { useLockScreenStore } from './lock-screen'
 

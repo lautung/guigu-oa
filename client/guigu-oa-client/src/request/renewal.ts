@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { translate as t } from '@/i18n'
 import type { Recognition, RequestContext } from '@/recognition'
 import {
   BusinessRequestFailure,
@@ -58,7 +59,7 @@ export function createRenewal(recognition: Recognition, resend: RenewalResend) {
         recognition.assertCurrent(context)
         if (!response || response.code !== 200) throw businessFailure(response || {}, 'refresh')
         if (!response.data?.token || !response.data.refreshToken)
-          throw new RequestFailure('retryable', '暂时无法验证用户，请重试', {
+          throw new RequestFailure('retryable', t('request.refreshUnavailable'), {
             source: 'unexpected',
             operation: 'refresh',
           })

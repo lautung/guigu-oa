@@ -1,4 +1,5 @@
 import { computed, type ComputedRef } from 'vue'
+import { translate as t } from '@/i18n'
 import {
   createListRead,
   type ListReadCommand,
@@ -66,7 +67,7 @@ export function createListPage<
       ? opening.view.records.map(options.present)
       : (opening.view.records as unknown as TItem[]),
   )
-  const emptyText = computed(() => (opening.view.status === 'ready' ? '暂无数据' : ''))
+  const emptyText = computed(() => (opening.view.status === 'ready' ? t('common.empty') : ''))
   function search(query?: TQuery): void {
     void opening.read({ page: 1, query })
   }

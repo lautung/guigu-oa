@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 
+import { translate as t } from '@/i18n'
 import { failureMessage } from '@/request/request-failure'
 import type {
   ProfileAvatarResult,
@@ -108,7 +109,7 @@ export function createProfile(adapter: ProfileAdapter) {
       await hydrateAvatar(view.avatarPath)
       state.loaded = true
     } catch (error) {
-      state.formError = failureMessage(error) || '资料加载失败'
+      state.formError = failureMessage(error) || t('profile.loadFailed')
     } finally {
       state.loading = false
     }
@@ -125,10 +126,10 @@ export function createProfile(adapter: ProfileAdapter) {
     state.formError = ''
     try {
       await adapter.save(payload)
-      adapter.notify('资料已保存', 'success')
+      adapter.notify(t('profile.profileSaved'), 'success')
       return true
     } catch (error) {
-      state.formError = failureMessage(error) || '保存失败'
+      state.formError = failureMessage(error) || t('profile.saveFailed')
       return false
     } finally {
       state.saving = false
@@ -147,10 +148,10 @@ export function createProfile(adapter: ProfileAdapter) {
       const result = await adapter.uploadAvatar(file)
       state.avatarPath = result.url || ''
       await hydrateAvatar(state.avatarPath)
-      adapter.notify('头像已更新', 'success')
+      adapter.notify(t('profile.avatarUpdated'), 'success')
       return true
     } catch (error) {
-      state.avatarError = failureMessage(error) || '头像上传失败'
+      state.avatarError = failureMessage(error) || t('profile.avatarFailed')
       return false
     } finally {
       state.uploading = false
@@ -174,11 +175,11 @@ export function createProfile(adapter: ProfileAdapter) {
       state.oldPassword = ''
       state.newPassword = ''
       state.confirmPassword = ''
-      adapter.notify('密码已修改，请重新登录', 'success')
+      adapter.notify(t('profile.passwordChanged'), 'success')
       await adapter.signOut()
       return true
     } catch (error) {
-      state.passwordError = failureMessage(error) || '修改密码失败'
+      state.passwordError = failureMessage(error) || t('profile.passwordFailed')
       return false
     } finally {
       state.changingPassword = false

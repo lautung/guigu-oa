@@ -7,6 +7,7 @@ import formCreate from '@form-create/element-ui'
 import autoImport from '@form-create/element-ui/auto-import'
 import FcDesigner from '@form-create/designer'
 import App from './App.vue'
+import { i18n } from './i18n'
 import { setupStore } from './store'
 import router from './router'
 import { setupNavigation } from './router/guard'
@@ -20,6 +21,7 @@ const app = createApp(App)
 const pinia = setupStore(app)
 const recognition = setupRecognition(pinia, router)
 setupNavigation(router, pinia, recognition)
+app.use(i18n)
 app.use(router)
 app.directive('hasPermi', hasPermi)
 app.use(ElementPlus, { size: 'small' })

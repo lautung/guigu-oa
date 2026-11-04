@@ -1,7 +1,7 @@
 <template>
   <section class="module-placeholder">
     <el-empty :description="description">
-      <p class="module-placeholder-hint">该模块的页面将在后续版本提供。</p>
+      <p class="module-placeholder-hint">{{ t('shell.empty.placeholderHint') }}</p>
     </el-empty>
   </section>
 </template>
@@ -9,10 +9,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { translate as t } from '@/i18n'
 
 const route = useRoute()
 const title = computed(() => (typeof route.meta.title === 'string' ? route.meta.title : ''))
-const description = computed(() => (title.value ? `${title.value}暂无可用页面` : '暂无可用页面'))
+const description = computed(() =>
+  title.value ? t('shell.empty.moduleNoPages', { title: title.value }) : t('shell.empty.noPages'),
+)
 </script>
 
 <style lang="scss" scoped>

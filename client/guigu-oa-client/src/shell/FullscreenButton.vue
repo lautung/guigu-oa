@@ -3,8 +3,8 @@
     v-if="supported"
     type="button"
     class="fullscreen-btn"
-    :title="active ? '退出全屏' : '全屏'"
-    :aria-label="active ? '退出全屏' : '全屏'"
+    :title="active ? t('shell.fullscreen.exit') : t('shell.fullscreen.enter')"
+    :aria-label="active ? t('shell.fullscreen.exit') : t('shell.fullscreen.enter')"
     @click="toggle"
   >
     <el-icon><component :is="shellIcon(active ? 'ExitFullScreen' : 'FullScreen')" /></el-icon>
@@ -13,6 +13,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
+import { translate as t } from '@/i18n'
 import { fullscreenSupported, toggleFullscreen, type FullscreenDocument } from './fullscreen'
 import { shellIcon } from './shell-icons'
 

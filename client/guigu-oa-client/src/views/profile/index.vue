@@ -1,11 +1,15 @@
 <template>
   <div v-loading="profile.state.loading" class="profile-page">
-    <h2 class="page-title">个人中心</h2>
+    <h2 class="page-title">{{ t('profile.title') }}</h2>
 
     <div class="profile-grid">
-      <el-card class="profile-card avatar-card" header="头像">
+      <el-card class="profile-card avatar-card" :header="t('profile.avatar')">
         <div class="avatar-row">
-          <img class="avatar-preview" :src="profile.state.avatarUrl || DEFAULT_AVATAR" alt="头像" />
+          <img
+            class="avatar-preview"
+            :src="profile.state.avatarUrl || DEFAULT_AVATAR"
+            :alt="t('profile.avatar')"
+          />
           <div class="avatar-actions">
             <label class="avatar-upload" :class="{ disabled: profile.state.uploading }">
               <input
@@ -14,9 +18,11 @@
                 :disabled="profile.state.uploading"
                 @change="onAvatarSelected"
               />
-              <span>{{ profile.state.uploading ? '上传中…' : '选择图片' }}</span>
+              <span>{{
+                profile.state.uploading ? t('profile.uploading') : t('profile.chooseImage')
+              }}</span>
             </label>
-            <p class="hint">支持 jpg / png / webp，不超过 2 MB</p>
+            <p class="hint">{{ t('profile.avatarHint') }}</p>
             <p v-if="profile.state.avatarError" class="error-row">
               {{ profile.state.avatarError }}
             </p>
@@ -24,36 +30,36 @@
         </div>
       </el-card>
 
-      <el-card class="profile-card" header="基本资料">
+      <el-card class="profile-card" :header="t('profile.basicInfo')">
         <el-form label-width="72px" @submit.prevent="save">
-          <el-form-item label="用户名">
+          <el-form-item :label="t('profile.username')">
             <el-input :model-value="profile.state.username" disabled />
           </el-form-item>
-          <el-form-item label="姓名">
+          <el-form-item :label="t('profile.name')">
             <el-input v-model="profile.state.name" maxlength="20" />
           </el-form-item>
-          <el-form-item label="手机">
+          <el-form-item :label="t('profile.phone')">
             <el-input v-model="profile.state.phone" maxlength="20" />
           </el-form-item>
           <p v-if="profile.state.formError" class="error-row">{{ profile.state.formError }}</p>
           <el-button type="primary" :loading="profile.state.saving" @click="save">
-            保存资料
+            {{ t('profile.save') }}
           </el-button>
         </el-form>
       </el-card>
 
-      <el-card class="profile-card" header="修改密码">
+      <el-card class="profile-card" :header="t('profile.changePassword')">
         <el-form label-width="72px" @submit.prevent="submitPassword">
-          <el-form-item label="旧密码">
+          <el-form-item :label="t('profile.oldPassword')">
             <el-input v-model="profile.state.oldPassword" type="password" show-password />
           </el-form-item>
-          <el-form-item label="新密码">
+          <el-form-item :label="t('profile.newPassword')">
             <el-input v-model="profile.state.newPassword" type="password" show-password />
           </el-form-item>
-          <el-form-item label="确认密码">
+          <el-form-item :label="t('profile.confirmPassword')">
             <el-input v-model="profile.state.confirmPassword" type="password" show-password />
           </el-form-item>
-          <p class="hint">改密成功后所有设备都需要重新登录。</p>
+          <p class="hint">{{ t('profile.changePasswordHint') }}</p>
           <p v-if="profile.state.passwordError" class="error-row">
             {{ profile.state.passwordError }}
           </p>
@@ -62,7 +68,7 @@
             :loading="profile.state.changingPassword"
             @click="submitPassword"
           >
-            修改密码
+            {{ t('profile.changePassword') }}
           </el-button>
         </el-form>
       </el-card>
@@ -75,6 +81,7 @@ defineOptions({ name: 'ProfilePage' })
 
 import { onBeforeUnmount, onMounted } from 'vue'
 
+import { translate as t } from '@/i18n'
 import { createProfilePage } from '@/profile/profile-browser'
 
 const DEFAULT_AVATAR = '/avatar.svg'

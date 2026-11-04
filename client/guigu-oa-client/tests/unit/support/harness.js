@@ -81,8 +81,9 @@ export const elementStubs = {
     template: '<span class="el-breadcrumb-item-stub"><slot /></span>',
   },
   'el-config-provider': {
-    props: ['size'],
-    template: '<div class="el-config-provider-stub" :data-size="size"><slot /></div>',
+    props: ['size', 'locale'],
+    template:
+      '<div class="el-config-provider-stub" :data-size="size" :data-locale="locale && locale.name"><slot /></div>',
   },
   'el-dropdown': {
     template:

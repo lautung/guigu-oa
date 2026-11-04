@@ -2,13 +2,20 @@
   <el-popover v-model:visible="noticeVisible" placement="bottom-end" :width="320" trigger="click">
     <template #reference>
       <el-badge class="notice-badge" :value="badgeText" :hidden="unreadCount === 0">
-        <button type="button" class="notice-bell" aria-label="公告" title="公告">
+        <button
+          type="button"
+          class="notice-bell"
+          :aria-label="t('shell.notice.aria')"
+          :title="t('shell.notice.aria')"
+        >
           <component :is="shellIcon('Bell')" class="notice-bell-icon" />
         </button>
       </el-badge>
     </template>
     <div class="notice-panel">
-      <p v-if="unreadCount === 0 || recent.length === 0" class="notice-empty">暂无未读公告</p>
+      <p v-if="unreadCount === 0 || recent.length === 0" class="notice-empty">
+        {{ t('shell.notice.empty') }}
+      </p>
       <ul v-else class="notice-list">
         <li v-for="item in recent" :key="item.id">
           <button type="button" class="notice-item" @click="openNotice(item.id)">
@@ -21,7 +28,9 @@
         </li>
       </ul>
       <div class="notice-footer">
-        <button type="button" class="notice-all" @click="openAll">查看全部</button>
+        <button type="button" class="notice-all" @click="openAll">
+          {{ t('shell.notice.viewAll') }}
+        </button>
       </div>
     </div>
   </el-popover>
@@ -32,6 +41,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DictTag from '@/components/DictTag.vue'
 import { DICT_TYPES } from '@/config/dict'
+import { translate as t } from '@/i18n'
 import { PATHS, noticeDetailPath } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import { useNoticeUnread } from '@/notice/unread-browser'
