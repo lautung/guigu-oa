@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
@@ -63,6 +64,7 @@ async function setup(page: Page): Promise<State> {
   await page.context().route('**/dev-api/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname.replace(/^\/dev-api/, '')
+    if (await fulfillCommonRequest(route, path)) return
     if (path === '/admin/system/index/info') {
       return json(route, {
         name: 'Alice',

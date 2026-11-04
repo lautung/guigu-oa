@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
 
@@ -62,6 +63,7 @@ async function mockApi(page: Page, state: State): Promise<void> {
   await page.route('**/dev-api/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname.replace(/^\/dev-api/, '')
+    if (await fulfillCommonRequest(route, path)) return
     const method = request.method()
 
     if (path === '/admin/system/index/login' && method === 'POST') {

@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { isKnownBrowserNoise } from './helpers/known-noise'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
 import { openShellLink, expectWorkbench, openPendingFromWorkbench } from './helpers/shell'
@@ -42,6 +43,7 @@ async function setup(page: Page): Promise<State> {
   let nextAttachmentId = 42
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
+    if (await fulfillCommonRequest(route, path)) return
     if (path.endsWith('/login'))
       return json(route, { token: 'test-access', refreshToken: 'test-refresh' })
     if (path.endsWith('/info')) return json(route, { name: 'Alice', menus: [] })

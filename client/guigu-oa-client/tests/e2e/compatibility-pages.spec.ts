@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { e2eCookieURL } from './helpers/base-url'
@@ -138,6 +139,7 @@ async function seedSession(page: Page) {
 async function mockApi(page: Page) {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
+    if (await fulfillCommonRequest(route, path)) return
     if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus })
     if (path === '/admin/process/findStartable')
       return json(route, [

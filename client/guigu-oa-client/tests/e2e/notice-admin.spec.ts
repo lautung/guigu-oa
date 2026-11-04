@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { e2eCookieURL } from './helpers/base-url'
 import { isKnownBrowserNoise } from './helpers/known-noise'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
@@ -101,6 +102,8 @@ async function setup(
     const url = new URL(request.url())
     const path = url.pathname.replace(/^\/dev-api/, '')
     const method = request.method()
+
+    if (await fulfillCommonRequest(route, path)) return
 
     if (path.endsWith('/info')) {
       return json(route, {
