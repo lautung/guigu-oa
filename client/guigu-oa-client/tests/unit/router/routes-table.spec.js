@@ -129,6 +129,7 @@ describe('route table', () => {
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,
         PATHS.SYSTEM_SYS_DEPT,
+        PATHS.SYSTEM_SYS_POST,
         PATHS.SYSTEM_LOG_OPER,
         PATHS.SYSTEM_LOG_LOGIN,
         PATHS.SYSTEM_ASSIGN_AUTH,

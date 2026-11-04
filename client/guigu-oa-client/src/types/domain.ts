@@ -192,6 +192,29 @@ export interface DeptForm {
   status: number
 }
 
+/** 岗位（#248）：职务标签，不产生授权、不参与审批分配、不套数据范围。 */
+export interface PostRecord {
+  id?: EntityId | ''
+  postCode?: string
+  name?: string
+  sortValue?: number
+  status?: number
+  createTime?: string
+}
+
+export interface PostListItem extends PostRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface PostForm {
+  id: EntityId | ''
+  postCode: string
+  name: string
+  sortValue: number
+  status: number
+}
+
 /** 父级下拉项：depth 只用于缩进展示（0＝顶级部门）。 */
 export interface DeptParentOption {
   id: EntityId

@@ -32,6 +32,8 @@
 | `src/shell/shell-icons.ts` | `shellIcon(name)` | 菜单 icon 字符串 → 内联 SVG 的白名单（不引图标包），未知回退 Document |
 | `src/config/permission.ts` | `configPermission(menus)` → `entryOf` / `coversPage` / `grantedMenus` | `/info` 的 `menus`（`BackofficeMenuEntry`）投影；组归属来自 `router/routes.ts`；隐藏页只随可见父页面生效，且自身必须在 `menus` 里；`coversPage` 回答页面是否被授予，导航守卫是唯一授予判定 owner（ADR 0051） |
 | `src/config/sys-role.ts` | `DATA_SCOPE_OPTIONS` / `dataScopeLabel` / `deptOptionsRequest` / `formRules(dataScope)` / `writeRequest` | 角色表单与数据范围：五档标签、`dataScope=2` 时自定部门必填（镜像服务端）、写载荷固定带 `dataScope`/`deptIds`、详情回读映射 |
+| `src/config/sys-post.ts` | `POST_STATUS_OPTIONS` / `postStatusLabel` / `presentListPage` / `listRequest` / `removeRequest` / `writeRequest` / `formRules()` | 岗位 CRUD 投影（#248）：列表与表单映射、状态两档标签、写载荷固定带 `sortValue`/`status`、必填文案镜像 `SysPostSaveRequest`；岗位只是职务标签，不产生授权、不参与审批分配、不套数据范围；薄包装在 `src/api/sysPost.ts` |
+| `src/views/config/sysPost/index.vue` | 页面 `/system/sysPost` | 岗位管理（#248）：名称筛选、列表（编码/名称/排序/状态标签/创建时间）与新建/编辑弹窗；读后状态、分页与写后刷新走 `createListPage`，删除走二次确认；用户页的岗位多选留给 #249 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
 | `src/config/sys-dept.ts` | `DEPT_PERMISSIONS` / `presentDeptTree` / `presentDeptNode` / `findTreeRequest` / `writeRequest` / `removeRequest` / `formRules` / `parentOptions` | 部门树投影与请求（#247）：服务端下发的嵌套 children 与含自身 `ancestors` 只映射；父级下拉排除被编辑节点整棵子树（镜像服务端环拒绝）；写载荷只带 parentId/名称/负责人/排序/状态，`ancestors` 由服务端重算 |
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
@@ -56,8 +58,8 @@
 | `src/views/config/notice/edit.vue` | 页面 | 公告编辑：标题/类型/Quill 2 正文、编辑/预览两个 tab（预览经 `NoticeContent` 水合图片）、按状态显示保存草稿/发布/撤回/删除；路由离开与返回走 dirty 确认 |
 | `src/views/notice/index.vue` | 页面 | 全部公告：全部/未读两个 tab、`publish_time DESC, id DESC` 分页、类型/标题/发布人/发布时间/读态；读状态与分页复用 `createListPage` |
 | `src/views/notice/detail.vue` | 页面 | 公告详情：类型/标题/发布人/发布时间/正文；加载成功后每次访问只写一次已读回执；撤回/删除/不存在按不存在视图处理 |
-| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；工作台是 `/workbench`（登录落点），工具目录是 `/tool`、接口文档页是 `/tool/api-doc`、监控占位兜底是 `/monitor`、监控页面是 `/monitor/online`、`/monitor/server`、`/monitor/data`、`/monitor/cache`、`/monitor/cacheList`、`/monitor/job`，审批页面在 `/system/processSet`、`/system/processMgr` 下，部门管理是 `/system/sysDept`，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
-| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属：`/login` 在外，所有认证路由挂在唯一的 `/` AppShell 下（子路由保留绝对路径语义与既有 name/meta），`/monitor` 是无授予时的直接访问兜底占位、`/tool` 是跳转到 `/tool/api-doc` 的目录，`/monitor/online`、`/monitor/server`、`/monitor/data`、`/monitor/cache`、`/monitor/cacheList`、`/monitor/job` 与 `/tool/api-doc` 属于 `config` 组（授予判定与配置页同一条 `coversPage` 路径，#239/#240/#241/#242/#246）；`/` 重定向与守卫回落都是工作台，`/work` 自身仍回待处理；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
+| `src/router/paths.ts` | `PATHS` / `ROUTES` / `workDetailPath` / `noticeDetailPath` / `noticeEditPath` / `returnPathOfRoute` / `workListKindOf` | 路径与返回路径的唯一 owner；路由表从这里派生子路径；工作台是 `/workbench`（登录落点），工具目录是 `/tool`、接口文档页是 `/tool/api-doc`、监控占位兜底是 `/monitor`、监控页面是 `/monitor/online`、`/monitor/server`、`/monitor/data`、`/monitor/cache`、`/monitor/cacheList`、`/monitor/job`，审批页面在 `/system/processSet`、`/system/processMgr` 下，部门管理与岗位管理是 `/system/sysDept`、`/system/sysPost`，日志页面在 `/system/log/operLog`、`/system/log/loginLog`，公告读面是内置 `/notice` 与 `/notice/:id`，发布管理是 `/system/notice` 与隐藏编辑 `/system/notice/edit/:id?` |
+| `src/router/routes.ts` | `constantRoutes` / `ROUTE_GROUP_ENTRIES` | 路由表与组归属：`/login` 在外，所有认证路由挂在唯一的 `/` AppShell 下（子路由保留绝对路径语义与既有 name/meta），`/monitor` 是无授予时的直接访问兜底占位、`/tool` 是跳转到 `/tool/api-doc` 的目录，`/monitor/online`、`/monitor/server`、`/monitor/data`、`/monitor/cache`、`/monitor/cacheList`、`/monitor/job`、`/tool/api-doc`、`/system/sysDept` 与 `/system/sysPost` 属于 `config` 组（授予判定与配置页同一条 `coversPage` 路径，#239/#240/#241/#242/#246/#247/#248）；`/` 重定向与守卫回落都是工作台，`/work` 自身仍回待处理；公告读路由没有 `menuGroup`，发布管理页与编辑子路由属于 `config` 组（编辑子路由靠已授 `/system/notice` 前缀通过 #224 守卫） |
 | `src/router/guard.ts` | `setupNavigation(router, pinia, recognition)` | 路由生命周期接线：NProgress、标题、`recognition.recognize`、`beforeEach`；认证决策在 `src/navigation` |
 | `src/config/assign-roles.ts` | `createAssignRoles(adapter)` → `open(target)` → lease（`requestLeave` / `environmentChanged` / `released` / `dispose`） | 分配角色的 phase machine、待确认记录与离开判定：触发只剩身份替换（`entryId` 变化）与本次打开已释放；浏览器接线在 `assign-roles-browser.ts` |
 | `src/config/form-rules.ts` | `requiredRule(message)` → `{ required, validator }` | 配置表单必填语义的唯一 owner：字符串 trim 判空（镜像 `@NotBlank`）、数值缺省判空（镜像 `@NotNull`）；文案由各 config module 的 `formRules()` 提供并镜像服务端 DTO（ADR 0038） |
@@ -128,7 +130,6 @@
 
 | 计划 module | interface / seam | 职责 |
 |---|---|---|
-| `src/config/sys-post.ts` | 树投影 / 表单校验 / 请求构造 | 岗位 CRUD；用户页岗位多选复用同一投影（部门树投影已在 `src/config/sys-dept.ts`，#247） |
 | `src/config/dict.ts` + `src/components/DictTag.vue` + `useDict` | 类型/数据请求、标签渲染、刷新 | 页面按值渲染标签，不把枚举中文写死在页面里；缓存刷新按钮在字典管理页 |
 | `src/config/params.ts` | 键值列表/表单、内置项只读 | 参数管理；内置项不可删、不可改 key，只可改 value |
 | `src/config/sys-user.ts`（扩展） | 部门树过滤、岗位多选、重置密码 | 用户页三件加料；部门树只读、维护在部门页 |
@@ -140,4 +141,4 @@
 | `src/config/monitor-data.ts`（扩展） | SQL 统计、连接池历史 | 数据监控页补统计段；不引 Druid |
 | `src/config/user-export.ts` | 导出请求构造（下载） | 先导出；导入后置，单列部分成功语义 |
 
-路由计划：`/system/sysPost`、`/system/dict`、`/system/config` 属 `config` 组（`/system/sysDept` 已由 #247 落地）；`/profile` 登录即有、不进后台菜单；`/register` 匿名、不套外壳。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。
+路由计划：`/system/dict`、`/system/config` 属 `config` 组（`/system/sysDept` 与 `/system/sysPost` 已分别由 #247/#248 落地）；`/profile` 登录即有、不进后台菜单；`/register` 匿名、不套外壳。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。

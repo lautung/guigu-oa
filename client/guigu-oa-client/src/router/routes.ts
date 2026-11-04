@@ -129,6 +129,12 @@ const configChildren: AppRoute[] = [
     meta: { title: '部门管理', menuGroup: 'config' },
   },
   {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_POST),
+    name: 'SysPost',
+    component: () => import('@/views/config/sysPost/index.vue'),
+    meta: { title: '岗位管理', menuGroup: 'config' },
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
     name: 'SysOperLog',
     component: () => import('@/views/config/operLog/index.vue'),

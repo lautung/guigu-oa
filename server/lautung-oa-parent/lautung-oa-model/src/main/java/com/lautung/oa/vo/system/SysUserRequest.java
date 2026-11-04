@@ -5,10 +5,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * SysUser 写请求的公共核心：持有 Save/Update 两半注解完全一致的字段与落库填充（ADR 0047）。
  * 必填性注解是 ADR 0034 seam 的两半语义（save 必填 / update 空=不覆盖），留在各壳；
  * password 两半语义分歧（必填建号 vs 空即不改密），同样不上收。
+ * postIds 两半语义分歧（save 缺省=不挂岗位 / update 未传=保留、空列表=清空），由 service 判定。
  */
 @Data
 public abstract class SysUserRequest {
@@ -19,6 +22,9 @@ public abstract class SysUserRequest {
 
     @Schema(description = "状态（1：正常 0：停用）")
     private Integer status;
+
+    @Schema(description = "岗位id列表（save 缺省=不挂；update 未传=保留、空列表=清空）")
+    private List<Long> postIds;
 
     /** 填充公共字段；壳的 toEntity 设完自己的字段后调用。 */
     protected void fill(SysUser user) {

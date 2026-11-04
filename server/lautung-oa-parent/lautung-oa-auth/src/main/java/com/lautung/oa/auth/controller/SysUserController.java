@@ -140,7 +140,8 @@ public class SysUserController {
         // 密码必填由 DTO 保证；提交的明文一律编码后落库，不再有把空串写进密码列的分支（ADR 0034）。
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        service.save(user);
+        // 岗位与用户同一事务（#248）：非法岗位集合不留下半个用户。
+        service.saveUser(user, request.getPostIds());
         return Result.ok();
     }
 
@@ -166,7 +167,8 @@ public class SysUserController {
         // old hash read before a concurrent change. update_time is filled by the common-field
         // handler (ADR 0031), which also keeps the row update non-empty.
         user.setPassword(null);
-        service.updateById(user);
+        // postIds 未传保留、空列表清空；同步与用户行更新同一事务（#248）。
+        service.updateUser(user, request.getPostIds());
         return Result.ok();
     }
 

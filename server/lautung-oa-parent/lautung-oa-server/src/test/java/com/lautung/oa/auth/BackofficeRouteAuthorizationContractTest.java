@@ -5,6 +5,7 @@ import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
 import com.lautung.oa.auth.controller.SysDeptController;
 import com.lautung.oa.auth.controller.SysMenuController;
+import com.lautung.oa.auth.controller.SysPostController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
@@ -75,6 +76,7 @@ class BackofficeRouteAuthorizationContractTest {
             SysMenuController.class,
             SysRoleController.class,
             SysDeptController.class,
+            SysPostController.class,
             OaProcessTypeController.class,
             OaProcessTemplateController.class,
             OaProcessController.class,
@@ -112,6 +114,11 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysDeptController.class, "/system/sysDept", "system:dept:add", "save");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:edit", "update");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:remove", "remove");
+        // 岗位管理（#248）：读走页面授予，三个写动作各要按钮点。
+        expect(SysPostController.class, "/system/sysPost", null, "pageQueryPost");
+        expect(SysPostController.class, "/system/sysPost", "system:post:add", "save");
+        expect(SysPostController.class, "/system/sysPost", "system:post:edit", "update");
+        expect(SysPostController.class, "/system/sysPost", "system:post:remove", "remove");
         expect(OaProcessTypeController.class, "/system/processSet/processType", null,
                 "findAll", "index", "get");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
@@ -327,6 +334,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "system:role:remove", "system:role:assignAuth",
                         "system:menu:add", "system:menu:edit", "system:menu:remove",
                         "system:dept:add", "system:dept:edit", "system:dept:remove",
+                        "system:post:add", "system:post:edit", "system:post:remove",
                         "process:type:add", "process:type:edit", "process:type:remove",
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
@@ -339,6 +347,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system/sysUser",
                         "/system/sysRole",
                         "/system/sysDept",
+                        "/system/sysPost",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",

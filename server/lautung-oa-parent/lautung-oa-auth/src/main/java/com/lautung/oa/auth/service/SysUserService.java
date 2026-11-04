@@ -3,6 +3,7 @@ package com.lautung.oa.auth.service;
 import com.lautung.oa.model.system.SysUser;
 import com.baomidou.mybatisplus.spring.service.IService;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,4 +26,16 @@ public interface SysUserService extends IService<SysUser> {
     SysUser getUserByUserName(String username);
 
     Map<String, Object> getCurrentUser();
+
+    /**
+     * 建号并挂岗位（同一事务，ADR 0034）：postIds 缺省/空列表表示不挂；
+     * 任一岗位不存在或已停用都拒绝整个请求，不留下半个用户（#248）。
+     */
+    void saveUser(SysUser user, List<Long> postIds);
+
+    /**
+     * 更新用户并同步岗位（同一事务）：postIds 未传（null）保留既有关联，
+     * 空列表清空，非空列表整体替换；岗位非法时拒绝整个请求（#248）。
+     */
+    void updateUser(SysUser user, List<Long> postIds);
 }

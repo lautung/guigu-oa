@@ -24,6 +24,7 @@ import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -165,7 +168,7 @@ class SysUserControllerTest {
         controller.save(request);
 
         ArgumentCaptor<SysUser> saved = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).save(saved.capture());
+        verify(service).saveUser(saved.capture(), isNull());
         assertEquals("hashed", saved.getValue().getPassword());
         assertEquals("new-user", saved.getValue().getUsername());
         assertEquals("新用户", saved.getValue().getName());
@@ -187,7 +190,7 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateById(written.capture());
+        verify(service).updateUser(written.capture(), isNull());
         assertNull(written.getValue().getPassword());
         // 公共字段由 CommonFieldsMetaObjectHandler 填（ADR 0031），控制器不再自己写 update_time。
         assertNull(written.getValue().getUpdateTime());
@@ -208,6 +211,31 @@ class SysUserControllerTest {
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
         verify(service, never()).updateById(any());
+        verify(service, never()).updateUser(any(), any());
+    }
+
+    @Test
+    void passesPostIdsToTheTransactionalUserWrite() {
+        SysUser existing = new SysUser();
+        existing.setId(3L);
+        existing.setPassword("stored");
+        when(service.getById(3L)).thenReturn(existing);
+        List<Long> postIds = List.of(7L, 8L);
+
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
+        update.setId(3L);
+        update.setPostIds(postIds);
+        controller.updateById(update);
+        verify(service).updateUser(any(SysUser.class), eq(postIds));
+
+        SysUserSaveRequest save = new SysUserSaveRequest();
+        save.setUsername("new-user");
+        save.setPassword("111111");
+        save.setName("新用户");
+        save.setPostIds(postIds);
+        when(passwordEncoder.encode("111111")).thenReturn("hashed");
+        controller.save(save);
+        verify(service).saveUser(any(SysUser.class), eq(postIds));
     }
 
     @Test
@@ -228,7 +256,7 @@ class SysUserControllerTest {
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
         InOrder order = inOrder(service);
         order.verify(service).changePassword(3L, "hashed-new");
-        order.verify(service).updateById(written.capture());
+        order.verify(service).updateUser(written.capture(), isNull());
         assertNull(written.getValue().getPassword());
     }
 
@@ -246,7 +274,7 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateById(written.capture());
+        verify(service).updateUser(written.capture(), isNull());
         assertNull(written.getValue().getPassword());
         assertNull(written.getValue().getTokenVersion());
         verify(passwordEncoder, never()).encode(any());

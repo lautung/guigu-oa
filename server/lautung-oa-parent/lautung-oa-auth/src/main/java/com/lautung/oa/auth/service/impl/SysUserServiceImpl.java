@@ -3,17 +3,21 @@ package com.lautung.oa.auth.service.impl;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.auth.mapper.SysUserMapper;
+import com.lautung.oa.auth.service.SysPostService;
+import com.lautung.oa.auth.service.SysUserPostService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,6 +30,12 @@ import java.util.Map;
  */
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
+
+    @Autowired
+    private SysPostService sysPostService;
+
+    @Autowired
+    private SysUserPostService sysUserPostService;
 
     //更新状态
     @Override
@@ -112,5 +122,37 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         map.put("name", sysUser.getName());
         map.put("phone", sysUser.getPhone());
         return map;
+    }
+
+    /**
+     * 建号与挂岗位同一事务（#248）：岗位先校验，非法集合不留下半个用户；
+     * postIds 缺省与空列表同义，都表示不挂岗位（ADR 0034 的 save 语义）。
+     */
+    @Transactional
+    @Override
+    public void saveUser(SysUser user, List<Long> postIds) {
+        List<Long> normalized = sysPostService.validateAssignablePostIds(postIds == null ? List.of() : postIds);
+        if (!save(user)) {
+            throw new BusinessException(201, "用户保存失败");
+        }
+        if (!normalized.isEmpty()) {
+            sysUserPostService.replaceUserPosts(user.getId(), normalized);
+        }
+    }
+
+    /**
+     * 更新与岗位同步同一事务（#248）：postIds 未传保留、空列表清空、非空替换；
+     * 岗位先校验，非法集合不改用户行也不改关联行。
+     */
+    @Transactional
+    @Override
+    public void updateUser(SysUser user, List<Long> postIds) {
+        List<Long> normalized = postIds == null ? null : sysPostService.validateAssignablePostIds(postIds);
+        if (!updateById(user)) {
+            throw new BusinessException(201, "用户不存在");
+        }
+        if (normalized != null) {
+            sysUserPostService.replaceUserPosts(user.getId(), normalized);
+        }
     }
 }

@@ -8,6 +8,7 @@ import db.migration.V117__MonitorOnlineMenu;
 import db.migration.V118__MonitorPages;
 import db.migration.V122__ToolApiDocMenu;
 import db.migration.V123__SysDeptMenu;
+import db.migration.V124__SysPostMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -77,6 +78,7 @@ class FlywayMigrationContractTest {
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
             "system:dept:add", "system:dept:edit", "system:dept:remove",
+            "system:post:add", "system:post:edit", "system:post:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
@@ -297,6 +299,7 @@ class FlywayMigrationContractTest {
                         "/system/sysUser",
                         "/system/sysRole",
                         "/system/sysDept",
+                        "/system/sysPost",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
@@ -343,6 +346,26 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v124SeedsTheSysPostPageAndButtonsForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '124' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/sysPost' AND c.type = 1 "
+                + "AND c.component = 'system/sysPost/index' AND COALESCE(c.perms, '') = '' "
+                + "AND p.path = '/system' AND p.type = 0 AND c.is_deleted = 0"));
+        // 三个按钮都挂在岗位页面下，path/component 为空、perms 唯一。
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND p.path = '/system/sysPost' AND b.is_deleted = 0 "
+                + "AND b.perms IN ('system:post:add','system:post:edit','system:post:remove') "
+                + "AND COALESCE(b.path, '') = '' AND COALESCE(b.component, '') = ''"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/sysPost' "
+                + "OR m.perms IN ('system:post:add','system:post:edit','system:post:remove'))"));
+    }
+
+    @Test
     void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
         int menus = count("SELECT COUNT(*) FROM sys_menu");
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
@@ -367,6 +390,8 @@ class FlywayMigrationContractTest {
             new V122__ToolApiDocMenu().migrate(context);
             // 部门管理页面与按钮点（#247）同样可重复执行。
             new V123__SysDeptMenu().migrate(context);
+            // 岗位管理页面/按钮（#248）也必须幂等。
+            new V124__SysPostMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));
