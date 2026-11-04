@@ -135,6 +135,13 @@ const configChildren: AppRoute[] = [
     meta: { title: '岗位管理', menuGroup: 'config' },
   },
   {
+    // 参数设置（#252）：键值 CRUD；内置项只读 key/元数据，写后刷新与手动刷新缓存。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_CONFIG),
+    name: 'SysConfig',
+    component: () => import('@/views/config/config/index.vue'),
+    meta: { title: '参数设置', menuGroup: 'config' },
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
     name: 'SysOperLog',
     component: () => import('@/views/config/operLog/index.vue'),

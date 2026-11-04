@@ -37,9 +37,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class CacheMonitorService {
 
-    /** 缓存列表的浏览白名单（ADR 0060）：四个前缀，空值或白名单外一律 201。 */
+    /** 缓存列表的浏览白名单（ADR 0060/0062）：五个前缀，空值或白名单外一律 201。 */
     static final Set<String> LIST_PREFIXES = Set.of(
-            "perm:", "login:session:", "login:attempt:", "token:revoked:");
+            "perm:", "login:session:", "login:attempt:", "token:revoked:", "config:");
 
     /** 单键删除的清理白名单：只允许权限缓存家族（perm:*），ADR 0060。 */
     static final String DELETE_PREFIX = "perm:";

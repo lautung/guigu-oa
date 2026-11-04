@@ -220,6 +220,35 @@ export interface PostForm {
   status: number
 }
 
+/** 参数（#252）：运行时可改的键值；builtin=1 由迁移种入，只可改 value。 */
+export interface ParamRecord {
+  id?: EntityId | ''
+  configKey?: string
+  configValue?: string
+  configName?: string
+  valueType?: string
+  builtin?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface ParamListItem extends ParamRecord {
+  id: EntityId
+  builtin: number
+  builtinLabel: string
+  valueTypeLabel: string
+}
+
+export interface ParamForm {
+  id: EntityId | ''
+  configKey: string
+  configValue: string
+  configName: string
+  valueType: string
+  builtin: number
+  remark: string
+}
+
 /** 父级下拉项：depth 只用于缩进展示（0＝顶级部门）。 */
 export interface DeptParentOption {
   id: EntityId

@@ -10,6 +10,7 @@ import db.migration.V122__ToolApiDocMenu;
 import db.migration.V123__SysDeptMenu;
 import db.migration.V124__SysPostMenu;
 import db.migration.V125__SysUserResetPasswordMenu;
+import db.migration.V127__SysConfigSchemaAndMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +63,7 @@ class FlywayMigrationContractTest {
             "sys_post",
             "sys_user_post",
             "sys_role_dept",
+            "sys_config",
             "oa_process_type",
             "oa_process_template",
             "oa_process",
@@ -81,6 +83,7 @@ class FlywayMigrationContractTest {
             "system:menu:add", "system:menu:edit", "system:menu:remove",
             "system:dept:add", "system:dept:edit", "system:dept:remove",
             "system:post:add", "system:post:edit", "system:post:remove",
+            "system:config:add", "system:config:edit", "system:config:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
@@ -302,6 +305,7 @@ class FlywayMigrationContractTest {
                         "/system/sysRole",
                         "/system/sysDept",
                         "/system/sysPost",
+                        "/system/config",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
@@ -382,6 +386,26 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v127SeedsTheSysConfigPageButtonsAndRegisterSwitch() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '127' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/config' AND c.type = 1 "
+                + "AND c.component = 'system/config/index' AND p.path = '/system' AND p.type = 0"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/config' "
+                + "AND b.perms IN ('system:config:add','system:config:edit','system:config:remove')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/config' "
+                + "OR m.perms IN ('system:config:add','system:config:edit','system:config:remove'))"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_config "
+                + "WHERE config_key = 'sys.account.registerUser' AND config_value = 'false' "
+                + "AND value_type = 'boolean' AND builtin = 1 AND is_deleted = 0"));
+    }
+
+    @Test
     void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
         int menus = count("SELECT COUNT(*) FROM sys_menu");
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
@@ -410,6 +434,8 @@ class FlywayMigrationContractTest {
             new V124__SysPostMenu().migrate(context);
             // 用户重置密码按钮（#250）同样可重复执行。
             new V125__SysUserResetPasswordMenu().migrate(context);
+            // 参数设置表/菜单/注册开关（#252）也必须幂等。
+            new V127__SysConfigSchemaAndMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));
