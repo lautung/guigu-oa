@@ -6,7 +6,7 @@ import type { EntityId } from '@/types/domain'
  * 分配机的会话生命周期唯一 owner（ADR 0006）：phase、lease、待确认记录、
  * 读取序号与迟到归属、保存结果分类、离开/结束/身份替换判定都在这里。
  * 两个分配面（用户侧分配角色、角色侧分配用户）只提供目标、读取、提交、
- * 投影与文案适配；本文件不 import 任何域类型。
+ * 投影与文案适配；本文件不 import 任何域业务类型（仅共享原语 EntityId）。
  */
 
 export type AssignmentPhase =
@@ -123,6 +123,7 @@ export interface AssignmentMachineAdapter<
   restoreScanFailedMessage: string
 }
 
+// 以下四条在两域旧实现逐字相同，属 ADR 0006 合同语义，由机器拥有；域差异文案走适配器注入。
 const UNCONFIRMED_LEAVE_MESSAGE =
   '本次分配结果仍待确认。关闭后仍须核实，原保存仍可能生效，确认关闭？'
 const END_ASSIGNMENT_MESSAGE =
