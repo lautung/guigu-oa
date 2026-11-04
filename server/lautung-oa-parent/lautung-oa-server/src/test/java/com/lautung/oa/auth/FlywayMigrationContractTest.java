@@ -11,6 +11,8 @@ import db.migration.V123__SysDeptMenu;
 import db.migration.V124__SysPostMenu;
 import db.migration.V125__SysUserResetPasswordMenu;
 import db.migration.V127__SysConfigSchemaAndMenu;
+import db.migration.V129__SysRoleAssignUserMenu;
+import db.migration.V130__SysDictSchemaAndMenu;
 import db.migration.V131__SysLoginLogEvent;
 import db.migration.V132__SysUserExportMenu;
 import db.migration.V133__SysUserImportMenu;
@@ -506,6 +508,9 @@ class FlywayMigrationContractTest {
             new V125__SysUserResetPasswordMenu().migrate(context);
             // 参数设置表/菜单/注册开关（#252）也必须幂等。
             new V127__SysConfigSchemaAndMenu().migrate(context);
+            // 角色分配用户页面（#256）与字典管理（#251）的建表/菜单/授予种子（V129/V130）也必须幂等。
+            new V129__SysRoleAssignUserMenu().migrate(context);
+            new V130__SysDictSchemaAndMenu().migrate(context);
             // 登录日志 event 列（#253）重放时不得重复加列。
             new V131__SysLoginLogEvent().migrate(context);
             // 用户导出与导入按钮（#259）同样可重复执行。

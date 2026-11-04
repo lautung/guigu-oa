@@ -142,7 +142,7 @@ class SysDictServiceImplTest {
 
         assertTrue(service.findEnabledData("t251_missing").isEmpty());
 
-        verifyNoInteractions(values);
+        verify(values, never()).set(anyString(), anyString(), any(Duration.class));
         verify(dataMapper, never()).selectList(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
@@ -153,6 +153,108 @@ class SysDictServiceImplTest {
 
         verifyNoInteractions(typeMapper);
         verifyNoInteractions(values);
+    }
+
+    @Test
+    void findEnabledDataServesCacheWithoutExistenceQuery() {
+        when(values.get("dict:t251_type")).thenReturn("[]");
+
+        assertTrue(service.findEnabledData(" t251_type ").isEmpty());
+
+        verify(typeMapper, never()).selectCount(any());
+        verify(dataMapper, never()).selectList(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    @Test
+    void findEnabledDataBatchRejectsMoreThanFiftyTypesBeforeAnyRead() {
+        List<String> types = java.util.stream.IntStream.rangeClosed(1, 51)
+                .mapToObj(index -> "t251_" + index)
+                .toList();
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.findEnabledData(types));
+
+        assertEquals(201, error.getCode());
+        assertEquals("字典类型一次最多查询 50 个", error.getMsg());
+        verifyNoInteractions(values);
+        verify(typeMapper, never()).selectCount(any());
+    }
+
+    @Test
+    void findEnabledDataBatchAcceptsFiftyTypesAndTrimsDuplicates() {
+        when(values.get(anyString())).thenReturn("[]");
+        List<String> fifty = java.util.stream.IntStream.rangeClosed(1, 50)
+                .mapToObj(index -> "t251_" + index)
+                .toList();
+
+        assertEquals(50, service.findEnabledData(fifty).size());
+
+        var deduplicated = service.findEnabledData(List.of(" t251_type ", "t251_type", "", " "));
+        assertEquals(java.util.Set.of("t251_type"), deduplicated.keySet());
+        verify(values, org.mockito.Mockito.times(1)).get("dict:t251_type");
+        verify(typeMapper, never()).selectCount(any());
+    }
+
+    @Test
+    void saveTypeRejectsMalformedOrOverlongDictType() {
+        for (String dictType : List.of("中文类型", "bad:type", "a".repeat(101))) {
+            SysDictType type = type(null, dictType);
+            BusinessException error = assertThrows(BusinessException.class,
+                    () -> service.saveType(type));
+
+            assertEquals(201, error.getCode());
+            assertEquals("字典类型只能包含字母、数字、下划线、点和短横线，且不能超过100个字符",
+                    error.getMsg());
+        }
+        verify(typeMapper, never()).insert(any(SysDictType.class));
+    }
+
+    @Test
+    void updateTypeRejectsMalformedDictTypeBeforeWriting() {
+        when(typeMapper.selectById(7L)).thenReturn(type(7L, "t251_old"));
+        SysDictType update = new SysDictType();
+        update.setId(7L);
+        update.setDictType("bad:type");
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.updateType(update));
+
+        assertEquals(201, error.getCode());
+        assertEquals("字典类型只能包含字母、数字、下划线、点和短横线，且不能超过100个字符",
+                error.getMsg());
+        verify(typeMapper, never()).updateById(any(SysDictType.class));
+    }
+
+    @Test
+    void saveDataRejectsMalformedOrUnknownDictType() {
+        SysDictData malformed = data(null, "bad:type", "1");
+        BusinessException shape = assertThrows(BusinessException.class,
+                () -> service.saveData(malformed));
+        assertEquals(201, shape.getCode());
+        assertEquals("字典类型只能包含字母、数字、下划线、点和短横线，且不能超过100个字符",
+                shape.getMsg());
+
+        when(typeMapper.selectCount(any())).thenReturn(0L);
+        SysDictData unknown = data(null, "t251_missing", "1");
+        BusinessException missing = assertThrows(BusinessException.class,
+                () -> service.saveData(unknown));
+        assertEquals(201, missing.getCode());
+        assertEquals("字典类型不存在", missing.getMsg());
+        verify(dataMapper, never()).insert(any(SysDictData.class));
+    }
+
+    @Test
+    void updateDataRejectsUnknownTargetDictType() {
+        when(dataMapper.selectById(9L)).thenReturn(data(9L, "t251_old", "1"));
+        when(typeMapper.selectCount(any())).thenReturn(0L);
+        SysDictData update = data(9L, "t251_missing", "1");
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.updateData(update));
+
+        assertEquals(201, error.getCode());
+        assertEquals("字典类型不存在", error.getMsg());
+        verify(dataMapper, never()).updateById(any(SysDictData.class));
     }
 
     private static SysDictType type(Long id, String dictType) {

@@ -60,6 +60,12 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
 
     private static final Pattern DICT_TYPE_PATTERN = Pattern.compile("[A-Za-z0-9_.-]+");
 
+    /** 批量标签读一次最多解析的类型数：挡住一次请求放大成上千次存在性查询。 */
+    private static final int DICT_TYPE_BATCH_LIMIT = 50;
+
+    private static final String DICT_TYPE_SHAPE_MESSAGE =
+            "字典类型只能包含字母、数字、下划线、点和短横线，且不能超过100个字符";
+
     private final DictDataMapper dictDataMapper;
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -75,7 +81,7 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
     @Override
     public void saveType(SysDictType type) {
         String dictName = requireText(type.getDictName(), "字典名称不能为空");
-        String dictType = requireText(type.getDictType(), "字典类型不能为空");
+        String dictType = requireDictType(type.getDictType());
         type.setDictName(dictName);
         type.setDictType(dictType);
         type.setStatus(normalizeStatus(type.getStatus()));
@@ -99,7 +105,7 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
             throw typeNotFound();
         }
         String dictName = normalizeText(type.getDictName());
-        String dictType = normalizeText(type.getDictType());
+        String dictType = normalizeDictType(type.getDictType());
         String effectiveName = dictName != null ? dictName : existing.getDictName();
         String effectiveType = dictType != null ? dictType : existing.getDictType();
         assertTypeNameAvailable(effectiveName, existing.getId());
@@ -158,9 +164,10 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
 
     @Override
     public void saveData(SysDictData data) {
-        String dictType = requireText(data.getDictType(), "字典类型不能为空");
+        String dictType = requireDictType(data.getDictType());
         String dictLabel = requireText(data.getDictLabel(), "字典标签不能为空");
         String dictValue = requireText(data.getDictValue(), "字典值不能为空");
+        assertDictTypeExists(dictType);
         data.setDictType(dictType);
         data.setDictLabel(dictLabel);
         data.setDictValue(dictValue);
@@ -187,9 +194,10 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
         }
         String dictLabel = normalizeText(data.getDictLabel());
         String dictValue = normalizeText(data.getDictValue());
-        String dictType = normalizeText(data.getDictType());
+        String dictType = normalizeDictType(data.getDictType());
         String effectiveType = dictType != null ? dictType : existing.getDictType();
         String effectiveValue = dictValue != null ? dictValue : existing.getDictValue();
+        assertDictTypeExists(effectiveType);
         assertDictValueAvailable(effectiveType, effectiveValue, existing.getId());
 
         data.setDictType(dictType);
@@ -234,19 +242,11 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
 
     @Override
     public List<DictDataVo> findEnabledData(String dictType) {
-        if (!StringUtils.hasText(dictType)) {
+        String normalizedType = dictType == null ? null : dictType.trim();
+        if (!isValidDictType(normalizedType)) {
             return List.of();
         }
-        String normalizedType = dictType.trim();
-        if (normalizedType.length() > DICT_TYPE_MAX_LENGTH
-                || !DICT_TYPE_PATTERN.matcher(normalizedType).matches()) {
-            return List.of();
-        }
-        if (baseMapper.selectCount(new LambdaQueryWrapper<SysDictType>()
-                .eq(SysDictType::getDictType, normalizedType)) == 0) {
-            // 未知类型不落键：读面的 PathVariable 不能成为任意 dict:* 键的来源。
-            return List.of();
-        }
+        // 命中缓存直接返回，不再查存在性：每次批量读都先 selectCount 会被放大成 N 次 DB。
         String cacheKey = DictCacheKey.of(normalizedType);
         String cached = redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
@@ -258,6 +258,11 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
                 redisTemplate.delete(cacheKey);
             }
         }
+        if (baseMapper.selectCount(new LambdaQueryWrapper<SysDictType>()
+                .eq(SysDictType::getDictType, normalizedType)) == 0) {
+            // 未知类型不落键：读面的 PathVariable 不能成为任意 dict:* 键的来源。
+            return List.of();
+        }
         List<DictDataVo> loaded = queryEnabledData(normalizedType);
         redisTemplate.opsForValue().set(
                 cacheKey, objectMapper.writeValueAsString(loaded), CACHE_TTL);
@@ -267,13 +272,19 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
     @Override
     public Map<String, List<DictDataVo>> findEnabledData(Collection<String> dictTypes) {
         Map<String, List<DictDataVo>> result = new LinkedHashMap<>();
-        if (dictTypes == null) {
+        if (dictTypes == null || dictTypes.isEmpty()) {
             return result;
         }
-        for (String dictType : dictTypes) {
-            if (StringUtils.hasText(dictType)) {
-                result.put(dictType.trim(), findEnabledData(dictType.trim()));
-            }
+        List<String> requested = dictTypes.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (requested.size() > DICT_TYPE_BATCH_LIMIT) {
+            throw new BusinessException(201, "字典类型一次最多查询 " + DICT_TYPE_BATCH_LIMIT + " 个");
+        }
+        for (String dictType : requested) {
+            result.put(dictType, findEnabledData(dictType));
         }
         return result;
     }
@@ -308,6 +319,14 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
     private long dataCount(String dictType) {
         return dictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
                 .eq(SysDictData::getDictType, dictType));
+    }
+
+    /** 数据行只能挂到已存在类型：否则读侧按类型查询永远取不到。 */
+    private void assertDictTypeExists(String dictType) {
+        if (baseMapper.selectCount(new LambdaQueryWrapper<SysDictType>()
+                .eq(SysDictType::getDictType, dictType)) == 0) {
+            throw typeNotFound();
+        }
     }
 
     private void assertTypeNameAvailable(String dictName, Long excludeId) {
@@ -366,6 +385,31 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
             throw new BusinessException(201, message);
         }
         return value.trim();
+    }
+
+    /** 写侧必填类型：空白报「不能为空」，形状/长度与读侧同一校验器。 */
+    private static String requireDictType(String value) {
+        String normalized = requireText(value, "字典类型不能为空");
+        if (!isValidDictType(normalized)) {
+            throw new BusinessException(201, DICT_TYPE_SHAPE_MESSAGE);
+        }
+        return normalized;
+    }
+
+    /** 写侧可选类型（update）：空白视为未提供，非空必须过形状校验。 */
+    private static String normalizeDictType(String value) {
+        String normalized = normalizeText(value);
+        if (normalized != null && !isValidDictType(normalized)) {
+            throw new BusinessException(201, DICT_TYPE_SHAPE_MESSAGE);
+        }
+        return normalized;
+    }
+
+    /** 读侧与写侧共用：长度对齐列宽，形状对齐缓存键，避免写进去读不出来的类型。 */
+    private static boolean isValidDictType(String value) {
+        return StringUtils.hasText(value)
+                && value.length() <= DICT_TYPE_MAX_LENGTH
+                && DICT_TYPE_PATTERN.matcher(value).matches();
     }
 
     private static String normalizeText(String value) {
