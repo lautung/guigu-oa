@@ -6,6 +6,7 @@ import db.migration.V115__AuditLoginLogMenu;
 import db.migration.V116__NoticeSchemaAndMenu;
 import db.migration.V117__MonitorOnlineMenu;
 import db.migration.V118__MonitorPages;
+import db.migration.V122__ToolApiDocMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -309,11 +310,33 @@ class FlywayMigrationContractTest {
                         "/monitor/server",
                         "/monitor/data",
                         "/monitor/cache",
-                        "/monitor/cacheList")))
+                        "/monitor/cacheList",
+                        "/tool",
+                        "/tool/api-doc")))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processSet"))))
                 .andExpect(jsonPath("$.data.menus[*].path", not(hasItem("/processMgr"))))
                 .andExpect(jsonPath("$.data.configMenus").doesNotExist())
                 .andExpect(jsonPath("$.data.buttons").doesNotExist());
+    }
+
+    @Test
+    void v122SeedsTheSystemToolDirectoryAndApiDocPageForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '122' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu "
+                + "WHERE path = '/tool' AND parent_id = 0 AND type = 0 AND component = 'Layout' "
+                + "AND icon = 'el-icon-s-tools' AND sort_value = 5 AND is_deleted = 0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/tool/api-doc' AND c.type = 1 "
+                + "AND c.component = 'tool/api-doc/index' AND COALESCE(c.perms, '') = '' "
+                + "AND p.path = '/tool' AND p.type = 0"));
+        // 只读页不设按钮点（ADR 0061）：系统工具本期只有接口文档这一张页面。
+        assertEquals(0, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND p.path = '/tool/api-doc'"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.path = '/tool/api-doc'"));
     }
 
     @Test
@@ -337,6 +360,8 @@ class FlywayMigrationContractTest {
             new V117__MonitorOnlineMenu().migrate(context);
             // 监控页面种子（#236）也必须幂等可重放。
             new V118__MonitorPages().migrate(context);
+            // 系统工具目录与接口文档页（#246）同样可重复执行。
+            new V122__ToolApiDocMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

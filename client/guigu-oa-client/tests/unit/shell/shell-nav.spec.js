@@ -49,6 +49,18 @@ const UNROUTED_MONITOR_MENUS = [
   { path: '/monitor/future', parentPath: '/monitor', title: '未来页面', type: 1, sort: 7 },
 ]
 
+/** 真实种子形状（V122，ADR 0061）：/tool 目录 + 接口文档唯一页面。 */
+const TOOL_MENUS = [
+  { path: '/tool', title: '系统工具', type: 0, sort: 5 },
+  { path: '/tool/api-doc', parentPath: '/tool', title: '接口文档', type: 1, sort: 1 },
+]
+
+/** 合成的「服务端已授予、客户端还没落路由」页面：守卫死链语义用。 */
+const UNROUTED_TOOL_MENUS = [
+  ...TOOL_MENUS,
+  { path: '/tool/future', parentPath: '/tool', title: '未来工具', type: 1, sort: 2 },
+]
+
 /** 真实菜单形态缺失目录行时的授予形状：页面直接挂在 /system 下。 */
 const FLAT_SYSTEM_MENUS = [
   { path: '/system/log/operLog', title: '操作日志', type: 1, sort: 2 },
@@ -82,14 +94,15 @@ describe('shell 一级导航', () => {
     expect(system.groups).toEqual([])
     expect(system.firstPath).toBe('')
     expect(system.emptyHint).toBe('暂无可用页面')
-    expect(modules.find((module) => module.key === 'tool').firstPath).toBe('/tool')
+    const tool = modules.find((module) => module.key === 'tool')
+    expect(tool.firstPath).toBe('')
+    expect(tool.items).toEqual([])
+    expect(tool.emptyHint).toBe('暂无可用页面')
   })
 
-  it('does not flag 系统监控 as a placeholder module any more', () => {
-    expect(SHELL_MODULE_DEFINITIONS.find((module) => module.key === 'monitor').placeholder).toBe(
-      undefined,
-    )
-    expect(SHELL_MODULE_DEFINITIONS.find((module) => module.key === 'tool').placeholder).toBe(true)
+  it('no longer keeps any module as a placeholder (#246)', () => {
+    expect(SHELL_MODULE_DEFINITIONS).toHaveLength(5)
+    expect(SHELL_MODULE_DEFINITIONS.some((module) => 'placeholder' in module)).toBe(false)
   })
 
   it('always exposes 工作台 entries and the six 办事 built-ins', () => {
@@ -276,5 +289,40 @@ describe('系统监控模块翻真（#239/#240）', () => {
     expect(monitor.items).toEqual([])
     expect(monitor.firstPath).toBe('')
     expect(monitor.emptyHint).toBe('暂无可用页面')
+  })
+})
+
+describe('系统工具模块翻真（#246）', () => {
+  it('lists the granted 接口文档 page flat and uses it as the first path', () => {
+    const tool = buildShellNav(TOOL_MENUS).find((module) => module.key === 'tool')
+
+    expect(tool.groups).toEqual([])
+    expect(tool.items.map((item) => item.path)).toEqual(['/tool/api-doc'])
+    expect(tool.items[0].title).toBe('接口文档')
+    expect(tool.firstPath).toBe('/tool/api-doc')
+    expect(tool.emptyHint).toBe('')
+  })
+
+  it('renders no dead links for granted tool pages without a client route', () => {
+    const tool = buildShellNav(UNROUTED_TOOL_MENUS).find((module) => module.key === 'tool')
+
+    expect(tool.items.map((item) => item.path)).not.toContain('/tool/future')
+    expect(tool.items.map((item) => item.title)).not.toContain('未来工具')
+  })
+
+  it('keeps only the /tool subtree even when other modules are granted', () => {
+    const tool = buildShellNav([...SYSTEM_MENUS, ...MONITOR_MENUS, ...TOOL_MENUS]).find(
+      (module) => module.key === 'tool',
+    )
+
+    expect(tool.items.map((item) => item.path)).toEqual(['/tool/api-doc'])
+  })
+
+  it('falls back to 暂无可用页面 without any routed tool grant', () => {
+    const tool = buildShellNav(SYSTEM_MENUS).find((module) => module.key === 'tool')
+
+    expect(tool.items).toEqual([])
+    expect(tool.firstPath).toBe('')
+    expect(tool.emptyHint).toBe('暂无可用页面')
   })
 })

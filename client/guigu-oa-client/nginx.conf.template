@@ -32,6 +32,28 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # 接口文档（#246，ADR 0061）：Swagger UI 内部用绝对路径取 spec，
+    # 所以 /v3 与 /swagger-ui 必须单独同源转发，不能靠 /dev-api 的重写。
+    # demo/prod 关闭 springdoc 时这两段只把 404 透传回来（页面显示未启用态）；
+    # 若未来在这些 profile 重开文档，必须同步把端点移出匿名白名单。
+    location /v3/ {
+        proxy_pass http://lautung-oa-server:8800;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /swagger-ui {
+        proxy_pass http://lautung-oa-server:8800;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

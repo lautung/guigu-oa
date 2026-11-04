@@ -217,8 +217,8 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '工作台' },
       },
       {
-        // 监控与工具暂无页面（ADR 0059）：保留一级入口，落在空态占位页。
         // /monitor 占位保留作直接访问兜底（#239）；监控页面是它的平级子路由。
+        // 系统工具已翻真（#246），下面 `/tool` 是跳到接口文档页的目录路由。
         path: PATHS.MONITOR,
         name: 'Monitor',
         component: () => import('@/shell/ModulePlaceholder.vue'),
@@ -268,10 +268,18 @@ export const constantRoutes: AppRoute[] = [
         meta: { title: '定时任务', menuGroup: 'config' },
       },
       {
+        // 系统工具（#246，ADR 0061）：本期唯一页面是接口文档。目录只做落点跳转，
+        // 页面本身属于 config 组，授予判定与配置页同一条 coversPage 路径。
         path: PATHS.TOOL,
-        name: 'Tool',
-        component: () => import('@/shell/ModulePlaceholder.vue'),
-        meta: { title: '系统工具' },
+        redirect: PATHS.TOOL_API_DOC,
+        children: [
+          {
+            path: childPath(PATHS.TOOL, PATHS.TOOL_API_DOC),
+            name: 'ToolApiDoc',
+            component: () => import('@/views/tool/api-doc/index.vue'),
+            meta: { title: '接口文档', menuGroup: 'config' },
+          },
+        ],
       },
       {
         path: PATHS.WORK,

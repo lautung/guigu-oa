@@ -30,16 +30,24 @@ describe('route table', () => {
     ])
   })
 
-  it('registers 系统监控 and 系统工具 as empty placeholder pages', () => {
+  it('keeps /monitor as the direct-access placeholder and /tool as a directory redirect', () => {
     const monitor = shell.children.find((route) => route.path === PATHS.MONITOR)
     const tool = shell.children.find((route) => route.path === PATHS.TOOL)
 
     expect(monitor.name).toBe('Monitor')
     expect(monitor.meta).toEqual({ title: '系统监控' })
-    expect(tool.name).toBe('Tool')
-    expect(tool.meta).toEqual({ title: '系统工具' })
     expect(monitor.meta.menuGroup).toBeUndefined()
-    expect(tool.meta.menuGroup).toBeUndefined()
+    expect(tool.redirect).toBe(PATHS.TOOL_API_DOC)
+    expect(tool.meta).toBeUndefined()
+  })
+
+  it('registers 接口文档 as the only 系统工具 page (#246)', () => {
+    const tool = shell.children.find((route) => route.path === PATHS.TOOL)
+    const apiDoc = tool.children.find((route) => route.path === 'api-doc')
+
+    expect(tool.children).toHaveLength(1)
+    expect(apiDoc.name).toBe('ToolApiDoc')
+    expect(apiDoc.meta).toEqual({ title: '接口文档', menuGroup: 'config' })
   })
 
   it('registers 在线用户 as the first grant-checked monitor page', () => {
@@ -116,6 +124,7 @@ describe('route table', () => {
         PATHS.MONITOR_CACHE,
         PATHS.MONITOR_CACHE_LIST,
         PATHS.MONITOR_JOB,
+        PATHS.TOOL_API_DOC,
         PATHS.SYSTEM_SYS_USER,
         PATHS.SYSTEM_SYS_ROLE,
         PATHS.SYSTEM_SYS_MENU,

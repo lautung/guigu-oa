@@ -35,8 +35,6 @@ export interface ShellModuleDefinition {
   title: string
   icon: string
   prefix: string
-  /** 暂无页面的模块：保留一级入口与空态，不渲染死链。 */
-  placeholder?: boolean
 }
 
 /** 五个一级模块定义（ADR 0059）：顶部固定五项，不随权限增减。 */
@@ -45,11 +43,10 @@ export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = [
   { key: 'work', title: '办事', icon: 'Tickets', prefix: PATHS.WORK },
   { key: 'system', title: '系统管理', icon: 'Setting', prefix: PATHS.SYSTEM },
   { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: PATHS.MONITOR },
-  { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL, placeholder: true },
+  { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL },
 ] as const
 
-const SYSTEM_EMPTY_HINT = '暂无可用页面'
-const PLACEHOLDER_EMPTY_HINT = '页面将在后续版本提供'
+const EMPTY_HINT = '暂无可用页面'
 
 const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_START]: 'EditPen',
@@ -152,64 +149,54 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
     items,
     groups,
     firstPath,
-    emptyHint: firstPath ? '' : SYSTEM_EMPTY_HINT,
-  }
-}
-
-function placeholderModule(definition: ShellModuleDefinition): ShellModule {
-  return {
-    key: definition.key,
-    title: definition.title,
-    icon: definition.icon,
-    items: [],
-    groups: [],
-    firstPath: definition.prefix,
-    emptyHint: PLACEHOLDER_EMPTY_HINT,
+    emptyHint: firstPath ? '' : EMPTY_HINT,
   }
 }
 
 /**
- * 客户端已落路由的监控页面（#239）：路由表里带 menuGroup 的 /monitor 子页。
- * 服务端菜单先行（V117+ 全部监控页面都已授予），客户端页面随各自票落地；
+ * 客户端已落路由的目录子页（#239/#246）：路由表里带 menuGroup 的 `<prefix>/*`。
+ * 服务端菜单先行（监控 V117+ 全部页面都已授予），客户端页面随各自票落地；
  * 还没有客户端路由的授予页不渲染成死链。
  */
-function routedMonitorPages(): Set<string> {
+function routedPagesUnder(prefix: string): Set<string> {
   return new Set(
     ROUTE_GROUP_ENTRIES.filter(
-      (entry) => entry.group === 'config' && entry.path.startsWith(`${PATHS.MONITOR}/`),
+      (entry) => entry.group === 'config' && entry.path.startsWith(`${prefix}/`),
     ).map((entry) => entry.path),
   )
 }
 
-/** 系统监控（ADR 0060）：平铺二级项，firstPath 取第一个已授予且有客户端路由的页面。 */
-function monitorModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
-  const routed = routedMonitorPages()
+/** 平铺二级项的目录模块（系统监控 ADR 0060、系统工具 ADR 0061）：firstPath 取第一个已授予且有客户端路由的页面。 */
+function flatDirectoryModule(
+  definition: ShellModuleDefinition,
+  menus: readonly BackofficeMenuEntry[],
+): ShellModule {
+  const routed = routedPagesUnder(definition.prefix)
   const permission = configPermission([...menus])
   const items = permission.grantedMenus
     .flatMap((root) => leavesOf(root))
-    .filter((leaf) => leaf.path.startsWith(`${PATHS.MONITOR}/`))
+    .filter((leaf) => leaf.path.startsWith(`${definition.prefix}/`))
     .filter((leaf) => routed.has(leaf.path))
 
   const firstPath = items[0]?.path || ''
   return {
-    key: 'monitor',
-    title: '系统监控',
-    icon: 'Monitor',
+    key: definition.key,
+    title: definition.title,
+    icon: definition.icon,
     items,
     groups: [],
     firstPath,
-    emptyHint: firstPath ? '' : SYSTEM_EMPTY_HINT,
+    emptyHint: firstPath ? '' : EMPTY_HINT,
   }
 }
 
-/** 五个一级模块固定返回；系统管理与系统监控只由已授予页面填充，工具保留空态入口。 */
+/** 五个一级模块固定返回；系统管理、系统监控与系统工具只由已授予且已落路由的页面填充。 */
 export function buildShellNav(menus: BackofficeMenuEntry[] = []): ShellModule[] {
   return SHELL_MODULE_DEFINITIONS.map((definition) => {
     if (definition.key === 'workbench') return workbenchModule()
     if (definition.key === 'work') return workModule()
     if (definition.key === 'system') return systemModule(menus)
-    if (definition.key === 'monitor') return monitorModule(menus)
-    return placeholderModule(definition)
+    return flatDirectoryModule(definition, menus)
   })
 }
 

@@ -63,9 +63,10 @@ describe('路径 module', () => {
     expect(returnPathOfRoute(noticeDetailPath(19))).toBe(PATHS.NOTICE)
   })
 
-  it('监控与工具的空态页返回自身', () => {
+  it('监控占位、工具目录与接口文档页都返回自身', () => {
     expect(returnPathOfRoute(PATHS.MONITOR)).toBe(PATHS.MONITOR)
     expect(returnPathOfRoute(PATHS.TOOL)).toBe(PATHS.TOOL)
+    expect(returnPathOfRoute(PATHS.TOOL_API_DOC)).toBe(PATHS.TOOL_API_DOC)
   })
 
   it('公告发布管理页的列表与编辑路径落在配置组', () => {
@@ -91,6 +92,7 @@ describe('路径 module', () => {
       PATHS.WORKBENCH,
       PATHS.MONITOR,
       PATHS.TOOL,
+      PATHS.TOOL_API_DOC,
       PATHS.WORK_START,
       PATHS.WORK_PENDING,
       PATHS.WORK_PROCESSED,

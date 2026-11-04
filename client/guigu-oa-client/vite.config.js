@@ -13,6 +13,16 @@ export default defineConfig({
     port: 9530,
     open: !process.env.CI,
     proxy: {
+      // 接口文档页（#246，ADR 0061）：Swagger UI 内部按绝对路径取 spec，
+      // 所以 /v3 与 /swagger-ui 不能走 /dev-api 的重写。
+      '/v3': {
+        target: 'http://localhost:8800',
+        changeOrigin: true,
+      },
+      '/swagger-ui': {
+        target: 'http://localhost:8800',
+        changeOrigin: true,
+      },
       '/dev-api': {
         target: 'http://localhost:8800',
         changeOrigin: true,

@@ -25,11 +25,17 @@ async function seedSession(page: Page): Promise<void> {
   ])
 }
 
-async function mockApi(page: Page): Promise<void> {
+async function mockApi(page: Page, info: { menus?: unknown[] } = {}): Promise<void> {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
     if (path === '/admin/system/index/info') {
-      return json(route, { name: 'Alice', roles: ['super_admin'], permissions: [], menus })
+      return json(route, {
+        name: 'Alice',
+        roles: ['super_admin'],
+        permissions: [],
+        menus,
+        ...info,
+      })
     }
     if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
@@ -154,19 +160,36 @@ test('窄屏隐藏标签条，侧栏改抽屉，配置页提示建议桌面', as
   await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
 })
 
-test('系统监控无授予时置灰，系统工具仍是空态占位（#239）', async ({ page }) => {
+test('系统监控与系统工具无授予时都置灰（#239/#246）', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
   await openShell(page)
 
-  // monitor 翻真后与系统管理同款语义：无授予的一级置灰，不再落到占位页。
-  const monitor = topModule(page, '系统监控')
-  await expect(monitor).toHaveClass(/disabled/)
-  await expect(monitor).toBeDisabled()
+  // 与系统管理同款语义：无授予的一级置灰，不落到占位页。
+  for (const title of ['系统监控', '系统工具']) {
+    const module = topModule(page, title)
+    await expect(module).toHaveClass(/disabled/)
+    await expect(module).toBeDisabled()
+  }
+  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '待处理'])
+})
 
-  await topModule(page, '系统工具').click()
-  await expect(page).toHaveURL(/\/tool$/)
-  await expect(page.locator('.module-placeholder')).toContainText('系统工具暂无可用页面')
-  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '待处理', '系统工具'])
+test('授予接口文档后系统工具落在 /tool/api-doc（#246）', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
+  const toolMenus = [
+    { path: '/tool', title: '系统工具', type: 0, sort: 5 },
+    { path: '/tool/api-doc', parentPath: '/tool', title: '接口文档', type: 1, sort: 1 },
+  ]
+  await seedSession(page)
+  await mockApi(page, { menus: toolMenus })
+  // 演示环境形状：springdoc 关闭，探测拿到 404 → 未启用态，不出现死链按钮。
+  await page.route('**/v3/api-docs', (route) => route.fulfill({ status: 404, body: '' }))
+
+  await page.goto('/tool')
+  await expect(page).toHaveURL(/\/tool\/api-doc$/)
+  await expect(page.getByRole('heading', { name: '接口文档', exact: true })).toBeVisible()
+  await expect(page.getByText('当前环境未启用接口文档，仅开发环境提供')).toBeVisible()
+  await expect(page.getByRole('button', { name: '打开 Swagger UI' })).toHaveCount(0)
+  await expect(page.locator('.shell-tab')).toHaveText(['工作台', '接口文档'])
 })
 
 test('授予在线用户后系统监控落在 /monitor/online（#239）', async ({ page }) => {
