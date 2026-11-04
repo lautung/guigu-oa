@@ -2,6 +2,10 @@
 
 Per-repo configuration for [Matt Pocock skills 1.3](https://github.com/mattpocock/skills/releases/tag/v1.3.1).
 
+### 侦察
+
+侦察先派 Explore agent：一次一个事实域（DDL、客户端载荷、service 行为分开问），报告只要结论 + `file:line`；要改的文件自己读。
+
 ### Pull requests
 
 创建或更新 PR（包括草稿 PR）前，必须读取并使用 Matt Pocock 的 `pr` skill（在当前可用 skills 中定位 `pr/SKILL.md`），按其模板编写 PR 正文。
@@ -27,8 +31,6 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Before explo
 ### Module map
 
 `docs/agents/client-modules.md` indexes the client modules and server approval ports with their interfaces; read it before grepping for a seam. `docs/agents/server-modules.md` maps the server modules (where `Result`/异常处理/安全过滤链/权限失效 live) and the request-rejection order of the security chain.
-
-侦察成本：一次派一个事实域（DDL、客户端载荷、service 行为分开问），报告只要结论 + `file:line`；要改的文件自己读。
 
 ## 项目环境与运行
 

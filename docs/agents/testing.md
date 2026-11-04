@@ -66,6 +66,7 @@
 - `BaseMapper` 有重载，mock 时要类型化 matcher：`selectList(isNull())`、`insert(any(Entity.class))`、`update(isNull(), any())`；裸 `any()` 会编译歧义或匹配不到。
 - MyBatis `Interceptor` 的签名覆盖以走真实 `Plugin` 装配的合同测试为准：单测直调 `intercept()` 绕过 `@Signature` 匹配，签名漏注册时照样全绿（#151 曾因此漏掉 `update` 签名，靠评审才抓住）。
 - 新增或改断言先证明它会红：临时去掉被保护的行为（删掉 SQL 的 `<include>`、把文案改回旧值、拆掉签名注册），确认新断言变红并指名到语句/路径，再恢复。仍绿说明断言没落在被保护的那条路径上——绿的摆设比没有更贵（#198 的护栏与契约测试都是这么验的，护栏另加了「解析到 0 条语句即红」的防呆）。
+- 值的解析器先钉边界测试：`LocalDateTime.parse` 默认 SMART resolver 会把 `2026-02-30` 改成 `02-28`；要「只认一种形状」必须 `uuuu` + `ResolverStyle.STRICT`（#245 `SessionTime` 是现成例子）。
 - 文件上传用 `@TempDir` + `MockMultipartFile`；S3 相关 mock `S3Client` / `S3Presigner` 返回 `Presigned*Request` 的 mock，`url()` 直接 stub。
 - 真实 Spring 合同测试沿用现有 `@SpringBootTest` + H2 + 内存 Redis，不需要本地 MySQL/Redis；它们全在装配模块 `lautung-oa-server`。单测随域模块走：多数是纯 Mockito；少数需要装配资源的两例（`OpenApiExposureConfigTest` 读 profile YAML、`ProcessEngineCutoverTest` 起真 Flowable + BPMN 夹具）仍留在域模块，资源由 pom 的 `testResources` 从 `lautung-oa-server` 复制。
 - test profile（`lautung-oa-server/src/test/resources/application-test.yml`）统一关闭环境绑定的 health contributor（redis/mail/diskspace；datasource 走进程内 H2 不关）：合同测试无外部环境，`/actuator` 暴露面合同只钉暴露面与匿名白名单、不看聚合健康真相，而 Boot 的 `RedisHealthIndicator` 等直连自动配置的 factory——本地有 Redis 掩盖了 CI 裸 runner 无 Redis 导致 `/actuator/health` 503（此前 `ObservabilityContractTest` 曾被迫在类上单点 `@TestPropertySource` 关同一个配置，`ActuatorExposureContractTest` 漏配即 CI 两连红）。新的环境绑定 contributor 要关就进该文件统一管理，不要再类上单点。
