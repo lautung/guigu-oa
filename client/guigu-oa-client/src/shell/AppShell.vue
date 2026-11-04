@@ -1,5 +1,5 @@
 <template>
-  <el-config-provider :size="shell.density" :locale="elementLocale">
+  <el-config-provider :size="shell.density">
     <div
       class="app-shell"
       :class="{ 'is-narrow': narrow }"
@@ -49,7 +49,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { currentLocale, elementLocaleFor } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 import AppTopBar from './AppTopBar.vue'
 import AppSidebar from './AppSidebar.vue'
@@ -76,7 +75,6 @@ const lockScreen = useLockScreenStore()
 
 const viewportWidth = ref(typeof window === 'undefined' ? NARROW_BREAKPOINT : window.innerWidth)
 const narrow = computed(() => viewportWidth.value < NARROW_BREAKPOINT)
-const elementLocale = computed(() => elementLocaleFor(currentLocale()))
 
 const navModules = computed(() => buildShellNav(userStore.menus || []))
 const activeModuleView = computed(

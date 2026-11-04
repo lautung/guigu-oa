@@ -1,34 +1,43 @@
 <template>
-  <div id="app">
-    <section v-if="!userStore.recognized && userStore.recovery.status !== 'idle'" class="recovery">
-      <h1>云尚办公</h1>
-      <p role="status">
-        {{
-          userStore.recovery.status === 'loading'
-            ? t('app.recoveryLoading')
-            : t('app.recoveryUnavailable')
-        }}
-      </p>
-      <el-button
-        type="primary"
-        :loading="userStore.recovery.status === 'loading'"
-        @click="userStore.recognition?.resume()"
-        >{{ t('app.retry') }}</el-button
+  <el-config-provider :locale="elementLocale">
+    <div id="app">
+      <section
+        v-if="!userStore.recognized && userStore.recovery.status !== 'idle'"
+        class="recovery"
       >
-    </section>
-    <router-view v-else />
-  </div>
+        <h1>云尚办公</h1>
+        <p role="status">
+          {{
+            userStore.recovery.status === 'loading'
+              ? t('app.recoveryLoading')
+              : t('app.recoveryUnavailable')
+          }}
+        </p>
+        <el-button
+          type="primary"
+          :loading="userStore.recovery.status === 'loading'"
+          @click="userStore.recognition?.resume()"
+          >{{ t('app.retry') }}</el-button
+        >
+      </section>
+      <router-view v-else />
+    </div>
+  </el-config-provider>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import { translate as t } from '@/i18n'
+import { computed, defineComponent } from 'vue'
+import { currentLocale, elementLocaleFor, translate as t } from '@/i18n'
 import { useUserStore } from '@/store/modules/user'
 
 export default defineComponent({
   name: 'App',
   setup() {
-    return { t, userStore: useUserStore() }
+    return {
+      t,
+      userStore: useUserStore(),
+      elementLocale: computed(() => elementLocaleFor(currentLocale())),
+    }
   },
 })
 </script>

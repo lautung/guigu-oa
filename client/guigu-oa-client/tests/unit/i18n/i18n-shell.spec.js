@@ -66,7 +66,6 @@ describe('外壳 locale 切换', () => {
     expect(wrapper.find('.menu-search-input').attributes('placeholder')).toBe(
       'Search pages, menus or breadcrumbs',
     )
-    expect(wrapper.find('.el-config-provider-stub').attributes('data-locale')).toBe('en')
   })
 
   it('switches a mounted shell without remounting', async () => {
@@ -82,7 +81,6 @@ describe('外壳 locale 切换', () => {
       '系统监控',
       '系统工具',
     ])
-    expect(wrapper.find('.el-config-provider-stub').attributes('data-locale')).toBe('zh-cn')
 
     setLocale('en')
     await flushPromises()
@@ -95,7 +93,6 @@ describe('外壳 locale 切换', () => {
       'Tools',
     ])
     expect(wrapper.find('.shell-breadcrumb').text()).toContain('Home')
-    expect(wrapper.find('.el-config-provider-stub').attributes('data-locale')).toBe('en')
   })
 
   it('persists the top-bar language choice', async () => {

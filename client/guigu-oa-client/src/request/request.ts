@@ -42,10 +42,43 @@ interface RequestTransport {
  * （ADR 0048）裁决重放；其余按业务码拒绝。只有没有信封体的传输错误才走
  * transportFailure。
  *
- * 二进制读（`responseType: 'blob'`）是唯一例外：图片响应体不是信封，成功时直通
- * Blob；错误响应仍是 4xx/5xx，落回传输失败分支（图片失败不弹全局提示，由调用方
- * 保持原 `src`）。续期状态机与 JSON 入口共用同一个 transport。
+ * 二进制读（`responseType: 'blob'`）：成功时直通 Blob；但 gate 拒绝是 HTTP 200 + JSON
+ * 信封（导出/模板下载的 205），所以 Content-Type 为 JSON 时按信封分类，只有真正的
+ * 二进制才直通。错误响应仍是 4xx/5xx，落回传输失败分支（图片失败不弹全局提示，
+ * 由调用方保持原 `src`）。续期状态机与 JSON 入口共用同一个 transport。
  */
+const JSON_CONTENT_TYPE = /(?:application|text)\/json/i
+
+/** blob 响应的 Content-Type（或 Blob 自身类型）为 JSON 时，body 其实是业务信封。 */
+function isJsonPayload(response: AxiosResponse, data: unknown): data is Blob {
+  if (!(data instanceof Blob)) return false
+  const headerType = String(response.headers?.['content-type'] || '')
+  return JSON_CONTENT_TYPE.test(headerType) || JSON_CONTENT_TYPE.test(data.type)
+}
+
+/** 只认带数字 code 的 JSON 信封；解析失败/普通 JSON 仍按二进制直通。 */
+async function readEnvelope(data: Blob): Promise<ApiResponse<unknown> | undefined> {
+  try {
+    const text = await readBlobText(data)
+    if (!text.trim()) return undefined
+    const parsed = JSON.parse(text) as ApiResponse<unknown>
+    return parsed && typeof parsed.code === 'number' ? parsed : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** 现代浏览器有 Blob.text；jsdom/旧环境退回 FileReader。 */
+function readBlobText(data: Blob): Promise<string> {
+  if (typeof data.text === 'function') return data.text()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsText(data)
+  })
+}
+
 function createTransport(recognition: Recognition): RequestTransport {
   const service = axios.create({ baseURL, timeout: 15000 })
   const resend = (config: RenewableRequestConfig) =>
@@ -64,6 +97,10 @@ function createTransport(recognition: Recognition): RequestTransport {
     const context = config._recognition || recognition.capture(isInfo(config.url))
     if (config.responseType === 'blob') {
       recognition.assertCurrent(context)
+      if (isJsonPayload(response, response.data)) {
+        const envelope = await readEnvelope(response.data)
+        if (envelope) return processEnvelope(config, context, envelope) as unknown as AxiosResponse
+      }
       return response.data as unknown as AxiosResponse
     }
     return processEnvelope(config, context, response.data)

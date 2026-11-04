@@ -20,10 +20,14 @@
         type="password"
         autocomplete="current-password"
         :placeholder="t('shell.lockScreen.passwordPlaceholder')"
-        :disabled="submitting"
+        :disabled="submitting || lockScreen.loggingOut"
       />
       <p v-if="lockScreen.error" class="lock-error" role="alert">{{ lockScreen.error }}</p>
-      <button class="lock-submit" type="submit" :disabled="submitting || !password">
+      <button
+        class="lock-submit"
+        type="submit"
+        :disabled="submitting || lockScreen.loggingOut || !password"
+      >
         {{ t('shell.lockScreen.unlock') }}
       </button>
     </form>
@@ -48,7 +52,7 @@ onMounted(async () => {
 })
 
 async function submit(): Promise<void> {
-  if (submitting.value) return
+  if (submitting.value || lockScreen.loggingOut) return
   if (!password.value) return
   submitting.value = true
   try {

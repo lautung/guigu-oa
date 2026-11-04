@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  LOCK_SCREEN_FAILURES_STORAGE_KEY,
   LOCK_SCREEN_STORAGE_KEY,
   MAX_UNLOCK_FAILURES,
   useLockScreenStore,
@@ -78,6 +79,20 @@ describe('锁屏状态', () => {
 
     expect(lockScreen.error).toBe('密码错误')
     expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBe('1')
+    expect(sessionStorage.getItem(LOCK_SCREEN_FAILURES_STORAGE_KEY)).toBe('4')
+  })
+
+  it('restores the failure count after a reload', async () => {
+    http = installHttp(wrongPassword)
+    const first = freshSession()
+    first.lockScreen.lock()
+    for (let attempt = 1; attempt < MAX_UNLOCK_FAILURES; attempt += 1) {
+      await first.lockScreen.unlock(`wrong-${attempt}`)
+    }
+
+    const reloaded = freshSession()
+    expect(reloaded.lockScreen.isLocked()).toBe(true)
+    expect(reloaded.lockScreen.failures).toBe(MAX_UNLOCK_FAILURES - 1)
   })
 
   it('exits the login after five consecutive wrong passwords', async () => {
@@ -93,8 +108,63 @@ describe('锁屏状态', () => {
     expect(lockScreen.isLocked()).toBe(false)
     expect(lockScreen.failures).toBe(0)
     expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBeNull()
+    expect(sessionStorage.getItem(LOCK_SCREEN_FAILURES_STORAGE_KEY)).toBeNull()
     expect(recognition.exit).toHaveBeenCalledTimes(1)
     expect(http.calls.some((call) => call.url.includes('/logout'))).toBe(true)
+  })
+
+  it('keeps the lock and its marker when logout fails after five failures', async () => {
+    http = installHttp((config) => (config.url.includes('/logout') ? ok(null) : wrongPassword()))
+    const session = freshSession()
+    const logout = vi
+      .spyOn(session.user, 'logout')
+      .mockRejectedValueOnce(new Error('logout failed'))
+    session.lockScreen.lock()
+
+    for (let attempt = 1; attempt <= MAX_UNLOCK_FAILURES; attempt += 1) {
+      await session.lockScreen.unlock(`wrong-${attempt}`)
+    }
+
+    expect(logout).toHaveBeenCalledTimes(1)
+    expect(session.lockScreen.loggingOut).toBe(false)
+    expect(session.lockScreen.isLocked()).toBe(true)
+    expect(session.lockScreen.error).toBeTruthy()
+    expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBe('1')
+    expect(sessionStorage.getItem(LOCK_SCREEN_FAILURES_STORAGE_KEY)).toBe(
+      String(MAX_UNLOCK_FAILURES),
+    )
+  })
+
+  it('keeps the marker until logout settles and ignores concurrent submits', async () => {
+    http = installHttp((config) => (config.url.includes('/logout') ? ok(null) : wrongPassword()))
+    const session = freshSession()
+    let resolveLogout
+    vi.spyOn(session.user, 'logout').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLogout = resolve
+        }),
+    )
+    session.lockScreen.lock()
+
+    for (let attempt = 1; attempt < MAX_UNLOCK_FAILURES; attempt += 1) {
+      await session.lockScreen.unlock(`wrong-${attempt}`)
+    }
+    const exit = session.lockScreen.unlock('wrong-final')
+    await vi.waitFor(() => expect(session.lockScreen.loggingOut).toBe(true))
+
+    expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBe('1')
+    await expect(session.lockScreen.unlock('wrong-concurrent')).resolves.toBe(false)
+    expect(
+      http.calls.filter((call) => call.url === '/admin/system/index/verifyPassword'),
+    ).toHaveLength(MAX_UNLOCK_FAILURES)
+
+    resolveLogout()
+    await exit
+
+    expect(session.lockScreen.isLocked()).toBe(false)
+    expect(sessionStorage.getItem(LOCK_SCREEN_STORAGE_KEY)).toBeNull()
+    expect(sessionStorage.getItem(LOCK_SCREEN_FAILURES_STORAGE_KEY)).toBeNull()
   })
 
   it('does not count a transport failure as a wrong password', async () => {
