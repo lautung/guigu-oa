@@ -88,7 +88,7 @@ class SysDictContractTest {
     @Test
     void v130SeedsSchemaMenuAndFourDictionaryGroupsIdempotently() throws Exception {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
-                + "WHERE version = '126' AND success = TRUE"));
+                + "WHERE version = '130' AND success = TRUE"));
 
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = '/system/dict' AND c.type = 1 "
