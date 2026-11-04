@@ -23,6 +23,7 @@ const sysPostApi = vi.hoisted(() => ({
 vi.mock('@/api/sysPost', () => sysPostApi)
 
 import ElementPlus from 'element-plus'
+import { hasPermi } from '@/permission'
 import SysPost from '@/views/config/sysPost/index.vue'
 import { ensureDomApis, installHttp, ok, paged, setupSession } from '../support/harness'
 
@@ -55,6 +56,7 @@ function realOptions(pinia) {
   return {
     global: {
       plugins: [pinia, ElementPlus],
+      directives: { hasPermi },
     },
   }
 }
@@ -169,5 +171,27 @@ describe('SysPost list page', () => {
     confirmMock.mockRejectedValueOnce('cancel')
     await wrapper.vm.remove(4)
     expect(sysPostApi.removeById).not.toHaveBeenCalled()
+  })
+
+  it('projects add/edit/remove buttons through the post permission points', async () => {
+    const granted = setupSession({
+      permissions: ['system:post:add', 'system:post:edit', 'system:post:remove'],
+    })
+    const withPermissions = mount(SysPost, realOptions(granted.pinia))
+    await flushPromises()
+    const labels = withPermissions.findAll('button').map((button) => button.text())
+    expect(labels).toEqual(expect.arrayContaining(['新建', '编辑', '删除']))
+    withPermissions.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const withoutPermissions = mount(SysPost, realOptions(denied.pinia))
+    await flushPromises()
+    expect(
+      withoutPermissions
+        .findAll('button')
+        .map((button) => button.text())
+        .filter(Boolean),
+    ).toEqual(['搜索', '重置'])
+    withoutPermissions.unmount()
   })
 })

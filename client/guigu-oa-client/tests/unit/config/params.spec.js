@@ -155,6 +155,23 @@ describe('config/params', () => {
         url: '/admin/system/config/refresh',
       })
     })
+
+    it('trims key, name, and remark before writing', () => {
+      expect(
+        writeRequest({
+          configKey: ' t252_custom ',
+          configName: ' 自定义参数 ',
+          configValue: ' keep ',
+          remark: ' 说明 ',
+        }).data,
+      ).toEqual({
+        configKey: 't252_custom',
+        configName: '自定义参数',
+        configValue: ' keep ',
+        valueType: 'string',
+        remark: '说明',
+      })
+    })
   })
 
   describe('presentForm', () => {

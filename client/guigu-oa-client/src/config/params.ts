@@ -88,6 +88,11 @@ function textOf(value: string | null | undefined): string {
   return value == null ? '' : value
 }
 
+/** 键/名称/备注与 `requiredRule` 的 trim 判空一致：落库前去掉首尾空白。 */
+function trimmedTextOf(value: string | null | undefined): string {
+  return textOf(value).trim()
+}
+
 /**
  * 写载荷：内置项只提交 id 与 value，键/名称/类型都由服务端保护；
  * 自定义项固定带名称、值、类型与备注，值类型缺省 string。
@@ -107,11 +112,11 @@ export function writeRequest(form: ParamForm | ParamRecord): ApiRequestConfig {
       url: `${SYS_CONFIG_API}/update`,
       data: {
         id: form.id,
-        configKey: textOf(form.configKey),
-        configName: textOf(form.configName),
+        configKey: trimmedTextOf(form.configKey),
+        configName: trimmedTextOf(form.configName),
         configValue,
         valueType: form.valueType || DEFAULT_VALUE_TYPE,
-        remark: textOf(form.remark),
+        remark: trimmedTextOf(form.remark),
       },
     }
   }
@@ -119,11 +124,11 @@ export function writeRequest(form: ParamForm | ParamRecord): ApiRequestConfig {
     method: 'post',
     url: `${SYS_CONFIG_API}/save`,
     data: {
-      configKey: textOf(form.configKey),
-      configName: textOf(form.configName),
+      configKey: trimmedTextOf(form.configKey),
+      configName: trimmedTextOf(form.configName),
       configValue,
       valueType: form.valueType || DEFAULT_VALUE_TYPE,
-      remark: textOf(form.remark),
+      remark: trimmedTextOf(form.remark),
     },
   }
 }

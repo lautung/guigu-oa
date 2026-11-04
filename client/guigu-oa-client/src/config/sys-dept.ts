@@ -7,6 +7,7 @@ import type {
   EntityId,
 } from '@/types/domain'
 import { requiredRule, type RequiredRule } from './form-rules'
+import { ENABLED_STATUS_OPTIONS } from './status'
 
 /** 部门页的按钮点（ADR 0056）：读只判页面授予，不设 system:dept:query。 */
 export const DEPT_PERMISSIONS = {
@@ -15,10 +16,7 @@ export const DEPT_PERMISSIONS = {
   remove: 'system:dept:remove',
 } as const
 
-export const DEPT_STATUS_OPTIONS = [
-  { value: 1, label: '正常' },
-  { value: 0, label: '停用' },
-] as const
+export const DEPT_STATUS_OPTIONS = ENABLED_STATUS_OPTIONS
 
 export const ROOT_DEPT_ID = 0
 export const DEFAULT_DEPT_STATUS = 1
@@ -64,8 +62,8 @@ export function writeRequest(form: DeptForm): ApiRequestConfig {
     status: number
   } = {
     parentId: form.parentId == null ? ROOT_DEPT_ID : form.parentId,
-    name: form.name,
-    leader: form.leader,
+    name: form.name == null ? '' : form.name.trim(),
+    leader: form.leader == null ? '' : form.leader.trim(),
     sortValue: form.sortValue,
     status: form.status,
   }

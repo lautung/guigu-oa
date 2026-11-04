@@ -105,7 +105,6 @@ import {
 } from '@/config/sys-dept'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
-import { PermissionRequestFailure, failureMessage } from '@/request/request-failure'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
 import type { DeptForm, DeptParentOption, DeptRecord, DeptTreeNode, EntityId } from '@/types/domain'
@@ -116,7 +115,8 @@ const effects = listPageEffects()
 /**
  * 系统管理 > 部门管理（#247）：树表格、新增/编辑弹窗与删除确认。
  * 读是整表读（`fetchAll`）——服务端直接给根节点数组；写后刷新、失败策略与
- * 删除确认仍走 `createListPage`。删除保护的两个 201 文案由本页回显。
+ * 删除确认仍走 `createListPage`。写失败由请求层统一提示一次（含删除保护 201），
+ * 本页不再二次回显。
  */
 export default defineComponent({
   name: 'SysDeptList',
@@ -176,12 +176,6 @@ export default defineComponent({
       this.form = presentForm(row as DeptRecord)
       this.dialogVisible = true
     },
-    /** 普通业务失败在作用域里是静默的；写动作自己回显服务端文案（如删除保护）。 */
-    reportFailure(error: unknown, fallback: string) {
-      if (!(error instanceof PermissionRequestFailure)) {
-        effects.notify(failureMessage(error) || fallback, 'error')
-      }
-    },
     validateForm(): Promise<boolean> {
       const form = this.$refs.formRef as FormInstance | undefined
       if (!form) return Promise.resolve(false)
@@ -194,15 +188,8 @@ export default defineComponent({
       if (!(await this.validateForm())) return
       this.saving = true
       try {
-        const saved = await this.list.runWrite(async () => {
-          try {
-            return await saveOrUpdate(this.form as DeptForm)
-          } catch (error) {
-            this.reportFailure(error, '保存失败')
-            throw error
-          }
-        }, '操作成功')
-        if (saved) this.dialogVisible = false
+        if (await this.list.runWrite(() => saveOrUpdate(this.form as DeptForm), '操作成功'))
+          this.dialogVisible = false
       } finally {
         this.saving = false
       }
@@ -210,14 +197,7 @@ export default defineComponent({
     remove(id: EntityId) {
       return this.list.confirmRemove(
         '此操作将永久删除该部门, 是否继续?',
-        async () => {
-          try {
-            return await removeById(id)
-          } catch (error) {
-            this.reportFailure(error, '删除失败')
-            throw error
-          }
-        },
+        () => removeById(id),
         '删除成功',
       )
     },

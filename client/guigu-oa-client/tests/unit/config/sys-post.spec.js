@@ -98,6 +98,15 @@ describe('config/sys-post', () => {
         url: '/admin/system/sysPost/remove/4',
       })
     })
+
+    it('trims code and name before writing', () => {
+      expect(writeRequest({ postCode: '  t248_clerk ', name: '  文员  ' }).data).toEqual({
+        postCode: 't248_clerk',
+        name: '文员',
+        sortValue: 0,
+        status: 1,
+      })
+    })
   })
 
   describe('presentForm', () => {

@@ -15,18 +15,17 @@ vi.mock('element-plus', async (importOriginal) => {
   }
 })
 
-const sysDeptApi = vi.hoisted(() => ({
-  findTree: vi.fn(),
-  removeById: vi.fn(),
-  saveOrUpdate: vi.fn(),
-}))
-
-vi.mock('@/api/sysDept', () => sysDeptApi)
-
 import ElementPlus from 'element-plus'
 import { hasPermi } from '@/permission'
 import SysDept from '@/views/config/sysDept/index.vue'
-import { createTestRouter, ensureDomApis, installHttp, ok, setupSession } from '../support/harness'
+import {
+  createTestRouter,
+  ensureDomApis,
+  fakeRecognition,
+  installHttp,
+  ok,
+  setupSession,
+} from '../support/harness'
 
 ensureDomApis()
 
@@ -55,8 +54,19 @@ const TREE = [
   },
 ]
 
+let notifications
+let writeResponder
+
 function mountPage() {
+  notifications = []
+  const recognition = fakeRecognition({
+    reject: (_context, error, notifyNormal) => {
+      if (notifyNormal) notifications.push(error.message)
+      throw error
+    },
+  })
   const { pinia } = setupSession({
+    recognition,
     permissions: ['system:dept:add', 'system:dept:edit', 'system:dept:remove'],
   })
   const router = createTestRouter([{ path: '/', component: { template: '<div />' } }])
@@ -65,19 +75,20 @@ function mountPage() {
   })
 }
 
+function responder(config) {
+  if ((config.url || '').endsWith('/admin/system/sysDept/findTree')) return ok(TREE)
+  const override = writeResponder?.(config)
+  return override || ok(null)
+}
+
 let wrapper
 let http
 beforeEach(() => {
   vi.clearAllMocks()
   messageMock.mockReset()
   confirmMock.mockReset().mockResolvedValue('confirm')
-  sysDeptApi.findTree.mockResolvedValue(ok(TREE))
-  sysDeptApi.saveOrUpdate.mockResolvedValue(ok(null))
-  sysDeptApi.removeById.mockResolvedValue(ok(null))
-  http = installHttp((config) => {
-    if ((config.url || '').endsWith('/admin/system/sysDept/findTree')) return ok(TREE)
-    return ok(null)
-  })
+  writeResponder = undefined
+  http = installHttp(responder)
 })
 
 afterEach(() => {
@@ -89,6 +100,12 @@ afterEach(() => {
 function treeReads() {
   return http.calls.filter((config) =>
     (config.url || '').endsWith('/admin/system/sysDept/findTree'),
+  )
+}
+
+function writes(method) {
+  return http.calls.filter(
+    (config) => config.method === method && (config.url || '').startsWith('/admin/system/sysDept/'),
   )
 }
 
@@ -135,7 +152,7 @@ describe('SysDept tree page', () => {
     wrapper.vm.openCreate()
     await flushPromises()
     await wrapper.vm.save()
-    expect(sysDeptApi.saveOrUpdate).not.toHaveBeenCalled()
+    expect(writes('post')).toHaveLength(0)
 
     await new Promise((resolve) => setTimeout(resolve, 160))
     await flushPromises()
@@ -154,7 +171,7 @@ describe('SysDept tree page', () => {
     await wrapper.vm.save()
     await flushPromises()
 
-    expect(sysDeptApi.saveOrUpdate).toHaveBeenCalledWith(
+    expect(JSON.parse(writes('put')[0].data)).toEqual(
       expect.objectContaining({ id: 2, parentId: 1, name: '研发部', sortValue: 2, status: 0 }),
     )
     expect(wrapper.vm.dialogVisible).toBe(false)
@@ -162,20 +179,39 @@ describe('SysDept tree page', () => {
     expect(messageMock).toHaveBeenCalledWith(expect.objectContaining({ message: '操作成功' }))
   })
 
-  it('confirms deletion, refreshes after it, and surfaces the delete-protection message', async () => {
+  it('confirms deletion, refreshes after it, and surfaces the delete-protection message once', async () => {
     wrapper = mountPage()
     await flushPromises()
 
     await wrapper.vm.remove(2)
     expect(confirmMock).toHaveBeenCalled()
-    expect(sysDeptApi.removeById).toHaveBeenCalledWith(2)
+    expect(writes('delete')).toHaveLength(1)
     expect(treeReads()).toHaveLength(2)
 
-    sysDeptApi.removeById.mockRejectedValueOnce(new Error('该部门存在用户，不允许删除'))
+    writeResponder = (config) =>
+      (config.url || '').includes('/remove/2')
+        ? { code: 201, message: '该部门存在用户，不允许删除' }
+        : undefined
     await wrapper.vm.remove(2)
-    expect(messageMock).toHaveBeenCalledWith(
-      expect.objectContaining({ message: '该部门存在用户，不允许删除', type: 'error' }),
-    )
+    expect(notifications).toEqual(['该部门存在用户，不允许删除'])
+    expect(messageMock.error).not.toHaveBeenCalled()
     expect(treeReads()).toHaveLength(2)
+  })
+
+  it('surfaces a failed save once and keeps the dialog open', async () => {
+    wrapper = mountPage()
+    await flushPromises()
+
+    writeResponder = (config) =>
+      config.method === 'put' ? { code: 201, message: '部门名称已存在' } : undefined
+    wrapper.vm.openEdit(wrapper.vm.rows[0].children[0])
+    await flushPromises()
+    await wrapper.vm.save()
+    await flushPromises()
+
+    expect(notifications).toEqual(['部门名称已存在'])
+    expect(messageMock.error).not.toHaveBeenCalled()
+    expect(wrapper.vm.dialogVisible).toBe(true)
+    expect(treeReads()).toHaveLength(1)
   })
 })

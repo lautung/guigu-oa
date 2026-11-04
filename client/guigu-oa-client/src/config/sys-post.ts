@@ -1,11 +1,16 @@
 import type { ApiRequestConfig, EntityId, PostForm, PostListItem, PostRecord } from '@/types/domain'
 import { requiredRule, type RequiredRule } from './form-rules'
+import { ENABLED_STATUS_OPTIONS } from './status'
 
-/** 岗位状态两档（#248），顺序即下拉顺序。 */
-export const POST_STATUS_OPTIONS = [
-  { value: 1, label: '正常' },
-  { value: 0, label: '停用' },
-] as const
+/** 岗位页的按钮点（ADR 0056）：读只判页面授予，不设 system:post:query。 */
+export const POST_PERMISSIONS = {
+  add: 'system:post:add',
+  edit: 'system:post:edit',
+  remove: 'system:post:remove',
+} as const
+
+/** 岗位状态两档（#248），与部门/字典共用同一份。 */
+export const POST_STATUS_OPTIONS = ENABLED_STATUS_OPTIONS
 
 export function postStatusLabel(status: number | null | undefined): string {
   return POST_STATUS_OPTIONS.find((option) => option.value === status)?.label || ''
@@ -62,8 +67,8 @@ export function writeRequest(form: PostForm | PostRecord): ApiRequestConfig {
     sortValue: number
     status: number
   } = {
-    postCode: form.postCode,
-    name: form.name,
+    postCode: form.postCode == null ? '' : form.postCode.trim(),
+    name: form.name == null ? '' : form.name.trim(),
     sortValue: form.sortValue == null ? 0 : form.sortValue,
     status: form.status == null ? 1 : form.status,
   }

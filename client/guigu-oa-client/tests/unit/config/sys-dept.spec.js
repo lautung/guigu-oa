@@ -115,6 +115,13 @@ describe('config/sys-dept', () => {
       })
     })
 
+    it('trims name and leader before writing', () => {
+      expect(
+        writeRequest({ parentId: 1, name: '  研发部 ', leader: ' 李四 ', sortValue: 2, status: 1 })
+          .data,
+      ).toEqual({ parentId: 1, name: '研发部', leader: '李四', sortValue: 2, status: 1 })
+    })
+
     it('exposes the page button points (no :query)', () => {
       expect(DEPT_PERMISSIONS).toEqual({
         add: 'system:dept:add',
