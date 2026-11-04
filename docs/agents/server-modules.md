@@ -3,7 +3,7 @@
 `server/lautung-oa-parent/` 是多模块 Maven 工程（扁平 `lautung-oa-*` 模块，groupId `com.lautung`）。找服务端的东西先看这张表，再决定要不要 grep。
 客户端模块与审批端口见 `client-modules.md`；领域术语见根目录 `GLOSSARY.md`。
 
-模块依赖边（无环）：`common ← framework`；`common, model ← security`；`common ← storage`；`common, framework, security, model ← audit`；`common, framework, security, model ← auth`；`common, framework, security, model, storage ← notice`；`common, framework, security, model, auth, storage ← process`；`common, framework, security, model ← monitor`；`common, framework, security, model ← dict`；`common, framework, security, model ← config`；`common, framework, security, model, config ← auth`（注册开关由 auth 读 config 端口，#253 已落地）；全部 ← `server`。业务代码包声明为 `com.lautung.oa.*`；Flyway Java 迁移固定在 `db.migration`（不在 `com.lautung.oa` 树下，也不在 ArchUnit 分析集内）。
+模块依赖边（无环）：`common ← framework`；`common, model ← security`；`common ← storage`；`common, framework, security, model ← audit`；`common, framework, security, model, storage ← auth`；`common, framework, security, model, storage ← notice`；`common, framework, security, model, auth, storage ← process`；`common, framework, security, model ← monitor`；`common, framework, security, model ← dict`；`common, framework, security, model ← config`；`common, framework, security, model, config ← auth`（注册开关由 auth 读 config 端口，#253 已落地）；全部 ← `server`。业务代码包声明为 `com.lautung.oa.*`；Flyway Java 迁移固定在 `db.migration`（不在 `com.lautung.oa` 树下，也不在 ArchUnit 分析集内）。
 
 端口/域的值对象与读模型放 `lautung-oa-model`（先例 `DataScope`、`OnlineSession`/`SessionTime`）；页面 VO 的映射留在消费域，跨域端口不 import 别的域的 VO（本域产出的协议响应如 `LoginVo` 除外）。
 

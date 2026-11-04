@@ -30,9 +30,10 @@ public class Slf4jLoginAudit implements LoginAudit {
         if (event == null || event.type() == null) {
             return;
         }
-        String message = "login audit event={} username={} source={} msg={}";
+        String message = "login audit event={} kind={} username={} source={} msg={}";
         Object[] fields = new Object[]{
-                eventName(event.type()), field(event.username()), field(event.sourceAddress()), field(event.msg())};
+                eventName(event.type()), event.kind().value(), field(event.username()),
+                field(event.sourceAddress()), field(event.msg())};
         if (event.type() == LoginEventType.LOCKED) {
             log.warn(message, fields);
             return;

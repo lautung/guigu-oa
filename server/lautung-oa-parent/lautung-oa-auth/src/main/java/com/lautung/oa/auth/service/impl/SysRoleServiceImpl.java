@@ -209,7 +209,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
-            // 关键字口径与用户页一致：用户名 / 姓名 / 手机号任一命中。
+            // 角色成员自己的关键字口径：用户名 / 姓名 / 手机号任一命中；用户页只 like username，不复用该口径。
             wrapper.and(nested -> nested.like(SysUser::getUsername, trimmed)
                     .or().like(SysUser::getName, trimmed)
                     .or().like(SysUser::getPhone, trimmed));

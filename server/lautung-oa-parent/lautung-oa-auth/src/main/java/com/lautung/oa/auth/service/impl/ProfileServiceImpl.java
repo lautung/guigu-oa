@@ -73,6 +73,8 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Override
     public ProfileAvatarVo uploadAvatar(Long userId, MultipartFile file) {
+        // 先确认用户存在：否则对象覆盖后 updateHeadUrl 才失败，会留下新对象 + 201「用户不存在」。
+        requireUser(userId);
         if (file == null || file.isEmpty()) {
             throw new BusinessException(201, "头像不能为空");
         }

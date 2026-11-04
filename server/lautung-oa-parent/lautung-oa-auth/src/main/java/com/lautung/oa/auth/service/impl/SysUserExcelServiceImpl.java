@@ -224,6 +224,9 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
                 success++;
             } catch (BusinessException exception) {
                 result.addFailure(rowNumber, username, exception.getMsg());
+            } catch (RuntimeException exception) {
+                // 单行的事务/DB 异常只记该行失败，不中断后续行；业务文案仍优先保留。
+                result.addFailure(rowNumber, username, "该行处理失败");
             }
         }
         if (total == 0) {

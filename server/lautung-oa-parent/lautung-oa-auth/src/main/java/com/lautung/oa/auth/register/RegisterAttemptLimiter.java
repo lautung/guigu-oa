@@ -33,8 +33,13 @@ public class RegisterAttemptLimiter {
     public boolean tryAcquire(String sourceAddress) {
         String key = KEY_PREFIX + normalize(sourceAddress);
         Long attempts = redisTemplate.opsForValue().increment(key);
-        if (attempts != null && attempts == 1L) {
-            redisTemplate.expire(key, WINDOW.toMillis(), TimeUnit.MILLISECONDS);
+        if (attempts != null) {
+            // 首次计数建窗口；键已存在但 TTL=-1（进程中断/历史脏键）时补一次，
+            // 否则这个 IP 的计数会永久保留。
+            Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+            if (attempts == 1L || (ttl != null && ttl == -1L)) {
+                redisTemplate.expire(key, WINDOW.toMillis(), TimeUnit.MILLISECONDS);
+            }
         }
         return attempts == null || attempts <= MAX_ATTEMPTS;
     }
