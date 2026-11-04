@@ -140,7 +140,20 @@ async function mockApi(page: Page) {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
     if (await fulfillCommonRequest(route, path)) return
-    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus })
+    if (path === '/admin/system/index/info')
+      return json(route, {
+        name: 'Alice',
+        permissions: [
+          'system:user:add',
+          'system:user:edit',
+          'system:user:remove',
+          'system:user:assignRole',
+          'system:user:export',
+          'system:user:import',
+          'system:user:resetPwd',
+        ],
+        menus,
+      })
     if (path === '/admin/process/findStartable')
       return json(route, [
         {
