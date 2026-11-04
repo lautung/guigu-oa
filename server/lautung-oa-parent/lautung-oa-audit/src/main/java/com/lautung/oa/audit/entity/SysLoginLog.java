@@ -53,6 +53,10 @@ public class SysLoginLog implements Serializable {
     @TableField("msg")
     private String msg;
 
+    /** {@code login} / {@code register}（#253，ADR 0062）。 */
+    @TableField("event")
+    private String event;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private Date createTime;
 }

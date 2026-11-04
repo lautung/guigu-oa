@@ -5,6 +5,8 @@ import type { EntityId, ProcessInstanceRecord } from '@/types/domain'
  */
 export const PATHS = {
   LOGIN: '/login',
+  /** 匿名注册（#253）：不套外壳，与登录页同一张入口。 */
+  REGISTER: '/register',
   WORKBENCH: '/workbench',
   MONITOR: '/monitor',
   MONITOR_ONLINE: '/monitor/online',
@@ -55,6 +57,7 @@ export const PATHS = {
 /** 办事列表的静态路径，保留既有 ROUTES 形状供导航使用。 */
 export const ROUTES = {
   LOGIN: PATHS.LOGIN,
+  REGISTER: PATHS.REGISTER,
   START: PATHS.WORK_START,
   PENDING: PATHS.WORK_PENDING,
   PROCESSED: PATHS.WORK_PROCESSED,

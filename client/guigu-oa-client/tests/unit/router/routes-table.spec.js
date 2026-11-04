@@ -8,9 +8,12 @@ import { getDefaultPostLoginRoute } from '@/navigation/constants'
 describe('route table', () => {
   const shell = constantRoutes.find((route) => route.path === '/')
 
-  it('keeps /login outside the single authenticated shell', () => {
+  it('keeps /login and /register outside the single authenticated shell', () => {
     expect(constantRoutes.filter((route) => route.path === PATHS.LOGIN)).toHaveLength(1)
+    expect(constantRoutes.filter((route) => route.path === PATHS.REGISTER)).toHaveLength(1)
+    expect(constantRoutes.find((route) => route.path === PATHS.REGISTER).hidden).toBe(true)
     expect(shell.children.some((route) => route.path === PATHS.LOGIN)).toBe(false)
+    expect(shell.children.some((route) => route.path === PATHS.REGISTER)).toBe(false)
     expect(shell.redirect).toBe(getDefaultPostLoginRoute())
     expect(shell.children.map((route) => route.path)).toEqual([
       PATHS.WORKBENCH,

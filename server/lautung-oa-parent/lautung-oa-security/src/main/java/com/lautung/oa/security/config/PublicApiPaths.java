@@ -4,10 +4,15 @@ public final class PublicApiPaths {
 
     private static final String ACTUATOR_HEALTH_PATH = "/actuator/health";
     private static final String ACTUATOR_HEALTH_PREFIX = ACTUATOR_HEALTH_PATH + "/";
+    private static final String LOGIN_PATH = "/admin/system/index/login";
+    private static final String REGISTER_PATH = "/admin/system/index/register";
+    private static final String REGISTER_SWITCH_PATH = REGISTER_PATH + "/switch";
 
     public static final String[] REQUEST_MATCHERS = {
             "/admin/system/index/logout",
             "/admin/system/index/refresh",
+            REGISTER_PATH,
+            REGISTER_SWITCH_PATH,
             "/v3/api-docs",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -26,10 +31,12 @@ public final class PublicApiPaths {
         if (uri == null || uri.isEmpty() || climbsDirectories(uri)) {
             return false;
         }
-        if ("/admin/system/index/login".equals(uri)) {
+        if (LOGIN_PATH.equals(uri)) {
             return true;
         }
-        return "/admin/system/index/refresh".equals(uri)
+        return REGISTER_PATH.equals(uri)
+                || REGISTER_SWITCH_PATH.equals(uri)
+                || "/admin/system/index/refresh".equals(uri)
                 || "/admin/system/index/logout".equals(uri)
                 || "/v3/api-docs".equals(uri)
                 || uri.startsWith("/v3/api-docs/")

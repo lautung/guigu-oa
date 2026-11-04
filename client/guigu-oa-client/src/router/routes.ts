@@ -226,6 +226,12 @@ export const constantRoutes: AppRoute[] = [
     hidden: true,
   },
   {
+    // 匿名注册（#253）：与登录页一样在外壳之外，开关关闭时页面本身给关闭态。
+    path: PATHS.REGISTER,
+    component: () => import('@/views/register/index.vue'),
+    hidden: true,
+  },
+  {
     // 一个外壳、一个 router-view（ADR 0059）：认证路由全部挂在这里，/login 在外。
     path: '/',
     component: AppShell,

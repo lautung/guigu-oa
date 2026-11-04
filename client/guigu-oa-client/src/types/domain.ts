@@ -362,6 +362,8 @@ export interface LoginLogRecord {
   browser?: string
   os?: string
   status?: number
+  /** 事件类型：login / register（#253）。 */
+  event?: string
   msg?: string
   createTime?: string
 }
@@ -369,6 +371,7 @@ export interface LoginLogRecord {
 export interface LoginLogListItem extends LoginLogRecord {
   id: EntityId
   statusTagType: AuditTagType
+  eventLabel: string
 }
 
 /** 在线用户（ADR 0060）：一行 = 一次登录；current 由服务端按请求者自己的会话标出。 */
@@ -660,6 +663,20 @@ export interface StartProcessRequest {
 export interface LoginCredentials {
   username: string
   password: string
+}
+
+/** 匿名注册（#253）：手机可选；confirm 由服务端与 password 比对后丢弃。 */
+export interface RegisterPayload {
+  username: string
+  password: string
+  confirm: string
+  name: string
+  phone?: string
+}
+
+/** 注册开关探测的匿名响应。 */
+export interface RegisterSwitchRecord {
+  enabled?: boolean
 }
 
 export interface LoginTokens {

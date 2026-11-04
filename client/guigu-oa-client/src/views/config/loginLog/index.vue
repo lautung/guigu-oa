@@ -21,6 +21,16 @@
           />
         </el-select>
       </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="query.event" placeholder="请选类型" clearable>
+          <el-option
+            v-for="item in eventOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="登录时间">
         <el-date-picker
           v-model="query.createTimes"
@@ -70,6 +80,7 @@
           :index="list.rowIndex"
         />
         <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column prop="eventLabel" label="类型" width="80" align="center" />
         <el-table-column prop="ip" label="IP" min-width="130" />
         <el-table-column prop="browser" label="浏览器" width="110" />
         <el-table-column prop="os" label="操作系统" width="110" />
@@ -117,6 +128,7 @@ import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { DICT_TYPES } from '@/config/dict'
 import {
+  LOGIN_EVENT_OPTIONS,
   LOGIN_LOG_PERMISSIONS,
   emptyQuery,
   listRequest,
@@ -155,6 +167,7 @@ export default defineComponent({
           label: option.dictLabel,
         })),
       ),
+      eventOptions: LOGIN_EVENT_OPTIONS,
       view: list.view,
       rows: list.rows,
       emptyText: list.emptyText,

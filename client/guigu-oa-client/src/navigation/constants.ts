@@ -2,7 +2,7 @@ import { PATHS, ROUTES } from '@/router/paths'
 
 export { ROUTES }
 
-export const AUTH_WHITELIST = [ROUTES.LOGIN] as const
+export const AUTH_WHITELIST = [ROUTES.LOGIN, ROUTES.REGISTER] as const
 
 export const WORK_BUILTIN_ITEMS = [
   { path: ROUTES.START, title: '发起审批' },

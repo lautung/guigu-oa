@@ -34,6 +34,10 @@
       <el-button :loading="loading" type="primary" class="login-btn" @click="handleLogin">
         登录
       </el-button>
+
+      <div v-if="registerEnabled" class="register-entry">
+        <router-link :to="PATHS.REGISTER">没有账号？去注册</router-link>
+      </div>
     </el-form>
   </div>
 </template>
@@ -41,10 +45,12 @@
 <script setup lang="ts">
 defineOptions({ name: 'LoginPage' })
 
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { buildLoginRedirectPath } from '@/navigation'
+import { loadRegisterSwitch } from '@/api/register'
+import { PATHS } from '@/router/paths'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { RecognitionFailure } from '@/recognition'
 
@@ -55,6 +61,8 @@ const userStore = useUserStore()
 const loginFormRef = ref<FormInstance | null>(null)
 const loading = ref(false)
 const redirect = ref<string | undefined>(undefined)
+/** 注册开关只在登录页初始化时探测一次；失败按关闭处理，入口不闪。 */
+const registerEnabled = ref(false)
 
 const loginForm = ref({
   username: '',
@@ -71,9 +79,22 @@ watch(
   (query) => {
     const target = query?.redirect
     redirect.value = typeof target === 'string' ? target : undefined
+    // 注册成功后跳回登录页并预填用户名（#253），不自动登录。
+    const username = query?.username
+    if (typeof username === 'string' && username) {
+      loginForm.value.username = username
+    }
   },
   { immediate: true },
 )
+
+onMounted(async () => {
+  try {
+    registerEnabled.value = await loadRegisterSwitch()
+  } catch {
+    registerEnabled.value = false
+  }
+})
 
 async function handleLogin() {
   if (!loginFormRef.value) return
@@ -125,5 +146,15 @@ async function handleLogin() {
 
 .login-btn {
   width: 100%;
+}
+
+.register-entry {
+  margin-top: 16px;
+  text-align: center;
+
+  a {
+    color: #409eff;
+    text-decoration: none;
+  }
 }
 </style>

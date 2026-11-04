@@ -38,6 +38,12 @@
             <artifactId>lautung-oa-storage</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 注册开关走 config 的只读端口，auth 不直连 sys_config（#253，ADR 0062） -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-config</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -11,6 +11,7 @@ import db.migration.V123__SysDeptMenu;
 import db.migration.V124__SysPostMenu;
 import db.migration.V125__SysUserResetPasswordMenu;
 import db.migration.V127__SysConfigSchemaAndMenu;
+import db.migration.V131__SysLoginLogEvent;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -393,7 +394,7 @@ class FlywayMigrationContractTest {
     @Test
     void v130SeedsTheSysDictPageButtonsAndFourDictionaryGroups() {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
-                + "WHERE version = '126' AND success = TRUE"));
+                + "WHERE version = '130' AND success = TRUE"));
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
                 + "WHERE c.path = '/system/dict' AND c.type = 1 "
                 + "AND c.component = 'system/dict/index' AND p.path = '/system' AND p.type = 0"));
@@ -434,6 +435,17 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v131AddsTheLoginLogEventColumnDefaultingExistingRowsToLogin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '131' AND success = TRUE"));
+        // 迁移后不带 event 的插入落到 login：既有行与既有写入路径都不需要改。
+        jdbcTemplate.update("INSERT INTO sys_login_log (username, status) VALUES ('event-default', 1)");
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_login_log "
+                + "WHERE username = 'event-default' AND event = 'login'"));
+        jdbcTemplate.update("DELETE FROM sys_login_log WHERE username = 'event-default'");
+    }
+
+    @Test
     void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
         int menus = count("SELECT COUNT(*) FROM sys_menu");
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
@@ -464,6 +476,8 @@ class FlywayMigrationContractTest {
             new V125__SysUserResetPasswordMenu().migrate(context);
             // 参数设置表/菜单/注册开关（#252）也必须幂等。
             new V127__SysConfigSchemaAndMenu().migrate(context);
+            // 登录日志 event 列（#253）重放时不得重复加列。
+            new V131__SysLoginLogEvent().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

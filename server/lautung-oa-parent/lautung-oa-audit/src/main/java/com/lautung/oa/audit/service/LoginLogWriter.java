@@ -47,6 +47,7 @@ public class LoginLogWriter {
         row.setBrowser(UserAgentParser.browser(event.userAgent()));
         row.setOs(UserAgentParser.os(event.userAgent()));
         row.setStatus(event.type().status());
+        row.setEvent(event.kind().value());
         row.setMsg(clip(event.msg(), MSG_WIDTH));
         snapshotUser(row);
         // 兜底只防 handler 未装配/未生效，时间取应用时钟（ADR 0031）。

@@ -1,25 +1,36 @@
 package com.lautung.oa.auth.controller;
 
 import com.lautung.oa.auth.grant.BackofficeGrant;
+import com.lautung.oa.auth.register.RegisterAttemptLimiter;
 import com.lautung.oa.auth.service.ProfileService;
 import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.common.result.Result;
+import com.lautung.oa.common.validation.ValidationMessages;
+import com.lautung.oa.config.service.ConfigReader;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
+import com.lautung.oa.security.login.ClientAddress;
+import com.lautung.oa.security.login.LoginAudit;
+import com.lautung.oa.security.login.LoginEvent;
+import com.lautung.oa.security.login.LoginEventKind;
+import com.lautung.oa.security.login.LoginEventType;
 import com.lautung.oa.security.response.AuthenticationRejections;
 import com.lautung.oa.security.revocation.TokenRevocation;
 import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.security.session.SessionVerifier;
 import com.lautung.oa.vo.system.BackofficeMenuVo;
 import com.lautung.oa.vo.system.RefreshTokenVo;
+import com.lautung.oa.vo.system.RegisterVo;
 import com.lautung.oa.vo.system.VerifyPasswordVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,6 +39,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +51,13 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/admin/system/index")
 public class IndexController {
+
+    /** 注册开关的参数键（V127 种子为 false）；真正取值走 config 的只读端口（ADR 0062）。 */
+    static final String REGISTER_SWITCH_KEY = "sys.account.registerUser";
+    static final String REGISTER_CLOSED_MESSAGE = "注册未开放";
+    static final String REGISTER_TOO_FREQUENT_MESSAGE = "注册尝试过于频繁，请稍后再试";
+    static final String REGISTER_PASSWORD_MISMATCH_MESSAGE = "两次输入的密码不一致";
+    static final String REGISTER_SUCCESS_MESSAGE = "注册成功";
 
     @Autowired
     private SysUserService sysUserService;
@@ -67,7 +86,108 @@ public class IndexController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private ConfigReader configReader;
+
+    @Autowired
+    private LoginAudit loginAudit;
+
+    @Autowired
+    private Validator validator;
+
+    @Autowired
+    private RegisterAttemptLimiter registerAttemptLimiter;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * 注册开关的匿名探测（#253）：登录页据此决定是否显示注册入口，注册页据此决定整页状态。
+     * 只回一个布尔，不泄漏参数表。
+     */
+    @GetMapping("register/switch")
+    public Result registerSwitch() {
+        return Result.ok(Map.of("enabled", configReader.getBoolean(REGISTER_SWITCH_KEY, false)));
+    }
+
+    /**
+     * 匿名注册（#253，ADR 0062）：开关关闭 → 201「注册未开放」；按 IP 5 次/分钟（独立键前缀，
+     * 不进登录失败限流）；字段校验、确认密码与用户名唯一都落在此处。新用户 status 正常、
+     * 零后台角色、无部门；成功/失败各写一条 {@code event=register} 的登录日志，不自动登录。
+     *
+     * <p>校验放在 controller 而不是 {@code @Valid}，是为了让每次失败都能在写审计行之后再
+     * 以命名 201 拒绝（校验先于业务规则，ADR 0033/0034）。被限流挡下的尝试只留应用日志，
+     * 不落库（ADR 0054 的写放大边界）。
+     */
+    @PostMapping("register")
+    public Result register(HttpServletRequest request,
+                           @RequestBody(required = false) RegisterVo registerVo) {
+        RegisterVo form = registerVo == null ? new RegisterVo() : registerVo;
+        String sourceAddress = ClientAddress.of(request);
+        String userAgent = request.getHeader("User-Agent");
+        String username = form.getUsername() == null ? null : form.getUsername().trim();
+
+        // 限流先于开关：关闭态也会写审计行，没有计数就会被刷成写放大面（ADR 0054）。
+        if (!registerAttemptLimiter.tryAcquire(sourceAddress)) {
+            loginAudit.recordLogOnly(new LoginEvent(
+                    LoginEventType.FAILURE, username, sourceAddress, userAgent,
+                    REGISTER_TOO_FREQUENT_MESSAGE, LoginEventKind.REGISTER));
+            throw new BusinessException(201, REGISTER_TOO_FREQUENT_MESSAGE);
+        }
+        if (!configReader.getBoolean(REGISTER_SWITCH_KEY, false)) {
+            throw registerFailure(username, sourceAddress, userAgent, REGISTER_CLOSED_MESSAGE);
+        }
+
+        String fieldMessage = fieldMessage(form);
+        if (fieldMessage != null) {
+            throw registerFailure(username, sourceAddress, userAgent, fieldMessage);
+        }
+        if (!form.getPassword().equals(form.getConfirm())) {
+            throw registerFailure(username, sourceAddress, userAgent, REGISTER_PASSWORD_MISMATCH_MESSAGE);
+        }
+
+        SysUser user = new SysUser();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(form.getPassword()));
+        user.setName(form.getName().trim());
+        user.setPhone(StringUtils.hasText(form.getPhone()) ? form.getPhone().trim() : null);
+        user.setStatus(1);
+        // 零角色、无部门是默认值：注册路径不碰 sys_user_role / dept_id，后台权限必须管理员授予。
+        boolean saved;
+        try {
+            saved = sysUserService.save(user);
+        } catch (BusinessException conflict) {
+            // ADR 0042 的命名拒绝（查重命中或唯一索引翻译）原样成为 201 文案。
+            throw registerFailure(username, sourceAddress, userAgent, conflict.getMsg());
+        }
+        if (!saved) {
+            throw registerFailure(username, sourceAddress, userAgent, "注册失败");
+        }
+
+        loginAudit.record(new LoginEvent(
+                LoginEventType.SUCCESS, username, sourceAddress, userAgent,
+                REGISTER_SUCCESS_MESSAGE, LoginEventKind.REGISTER));
+        return Result.ok();
+    }
+
+    /** 先写 {@code event=register} 的失败行，再返回一个命名 201 给调用点抛出。 */
+    private BusinessException registerFailure(
+            String username, String sourceAddress, String userAgent, String message) {
+        loginAudit.record(new LoginEvent(
+                LoginEventType.FAILURE, username, sourceAddress, userAgent,
+                message, LoginEventKind.REGISTER));
+        return new BusinessException(201, message);
+    }
+
+    private String fieldMessage(RegisterVo form) {
+        Set<ConstraintViolation<RegisterVo>> violations = validator.validate(form);
+        if (violations.isEmpty()) {
+            return null;
+        }
+        return ValidationMessages.join(violations.stream()
+                .sorted(Comparator.comparing(violation -> violation.getPropertyPath().toString()))
+                .map(ConstraintViolation::getMessage)
+                .toList());
+    }
 
     @GetMapping("info")
     public Result info() {

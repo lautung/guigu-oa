@@ -52,6 +52,9 @@ public class SysLoginLogService {
             if (query.getStatus() != null) {
                 wrapper.eq(SysLoginLog::getStatus, query.getStatus());
             }
+            if (StringUtils.hasText(query.getEvent())) {
+                wrapper.eq(SysLoginLog::getEvent, query.getEvent().trim());
+            }
             if (StringUtils.hasText(query.getCreateTimeBegin())) {
                 wrapper.ge(SysLoginLog::getCreateTime, query.getCreateTimeBegin());
             }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  LOGIN_EVENT_OPTIONS,
   LOGIN_LOG_PERMISSIONS,
   cleanRequest,
   listRequest,
+  loginEventLabel,
   loginStatusTagType,
   presentListPage,
   presentListRecord,
@@ -20,6 +22,16 @@ describe('config/login-log', () => {
       expect(loginStatusTagType(3)).toBe('info')
     })
 
+    it('maps the event dimension to 登录/注册 labels', () => {
+      expect(LOGIN_EVENT_OPTIONS).toEqual([
+        { value: 'login', label: '登录' },
+        { value: 'register', label: '注册' },
+      ])
+      expect(loginEventLabel('login')).toBe('登录')
+      expect(loginEventLabel('register')).toBe('注册')
+      expect(loginEventLabel(undefined)).toBe('')
+    })
+
     it('names the button permissions used by the page', () => {
       expect(LOGIN_LOG_PERMISSIONS).toEqual({
         remove: 'system:loginLog:remove',
@@ -32,8 +44,11 @@ describe('config/login-log', () => {
   describe('presentQuery', () => {
     it('omits empty fields but keeps status 0', () => {
       expect(presentQuery()).toEqual({})
-      expect(presentQuery({ username: '', ip: '', status: '', createTimes: [] })).toEqual({})
+      expect(
+        presentQuery({ username: '', ip: '', status: '', event: '', createTimes: [] }),
+      ).toEqual({})
       expect(presentQuery({ status: 0 })).toEqual({ status: 0 })
+      expect(presentQuery({ event: 'register' })).toEqual({ event: 'register' })
     })
 
     it('maps the create-time range to begin/end parameters', () => {
@@ -42,12 +57,14 @@ describe('config/login-log', () => {
           username: 'alice',
           ip: '127.0.0.1',
           status: 2,
+          event: 'login',
           createTimes: ['2026-01-01 00:00:00', '2026-01-31 23:59:59'],
         }),
       ).toEqual({
         username: 'alice',
         ip: '127.0.0.1',
         status: 2,
+        event: 'login',
         createTimeBegin: '2026-01-01 00:00:00',
         createTimeEnd: '2026-01-31 23:59:59',
       })
@@ -102,6 +119,7 @@ describe('config/login-log', () => {
           status: 2,
           msg: '账号锁定',
           createTime: '2026-01-01 10:00:00',
+          event: 'register',
         }),
       ).toEqual({
         id: 2,
@@ -111,6 +129,8 @@ describe('config/login-log', () => {
         os: 'macOS',
         status: 2,
         statusTagType: 'warning',
+        event: 'register',
+        eventLabel: '注册',
         msg: '账号锁定',
         createTime: '2026-01-01 10:00:00',
       })
