@@ -4,7 +4,9 @@ import com.lautung.oa.common.jwt.JwtHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,6 +46,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Import(LoginAuthContractTest.InMemoryRedisConfig.class)
 class SysUserExportContractTest {
+
+    private static TimeZone defaultTimeZone;
+
+    /**
+     * 导出把 {@link java.util.Date} 按应用 ObjectMapper 的 +08:00 输出；夹具的
+     * {@link Timestamp} 又按 JVM 默认时区落库。CI runner 默认 UTC 时两侧错位 8 小时
+     * （2026-03-04 05:06 会导出成 13:06）。把 JVM 默认时区钉到数据库时区，本地与 CI
+     * 才是同一个口径。
+     */
+    @BeforeAll
+    static void pinJvmZoneToTheDatabaseZone() {
+        defaultTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"));
+    }
+
+    @AfterAll
+    static void restoreJvmZone() {
+        TimeZone.setDefault(defaultTimeZone);
+    }
 
     private static final String EXPORT_PATH = "/admin/system/sysUser/export";
 
