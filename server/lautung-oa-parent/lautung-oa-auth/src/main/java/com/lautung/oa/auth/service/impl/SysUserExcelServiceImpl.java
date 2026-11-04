@@ -271,10 +271,8 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
         user.setPassword(passwordEncoder.encode(DEFAULT_IMPORT_PASSWORD));
         List<Long> postIds = resolvePostIds(postNames, postsByName);
 
-        // 唯一性放在最后：部门/岗位等静态错误先报，真正写库前再查一次（ADR 0042）。
-        if (sysUserService.getUserByUserName(username) != null) {
-            throw new BusinessException(201, "用户名已存在");
-        }
+        // 用户名唯一性不在这里查：saveUser → save 已按 ADR 0042 查重（唯一索引兜底），
+        // 重复行同样得到 201「用户名已存在」，少一次逐行查询。
         return new ParsedRow(user, postIds);
     }
 

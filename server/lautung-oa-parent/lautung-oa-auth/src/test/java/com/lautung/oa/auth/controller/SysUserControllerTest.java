@@ -91,8 +91,7 @@ class SysUserControllerTest {
 
         SysUserQueryVo filtered = new SysUserQueryVo();
         filtered.setKeyword("张三");
-        filtered.setCreateTimeBegin("2026-01-01");
-        filtered.setCreateTimeEnd("2026-01-31");
+        filtered.setStatus(1);
         Result result = controller.index(1L, 10L, filtered);
 
         assertEquals(200, result.getCode());
