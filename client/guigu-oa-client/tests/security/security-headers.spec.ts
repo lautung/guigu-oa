@@ -66,7 +66,7 @@ test('CSP 生效时主要页面无安全策略违规', async ({ page, request },
   await expect(page.getByRole('dialog', { name: '查看审批模板' })).toBeVisible()
   await page
     .getByRole('dialog', { name: '查看审批模板' })
-    .getByRole('button', { name: '关闭' })
+    .getByRole('button', { name: '关闭', exact: true })
     .click()
 
   const editable = page.locator('.el-table__row').filter({ hasText: '未发布病假' })

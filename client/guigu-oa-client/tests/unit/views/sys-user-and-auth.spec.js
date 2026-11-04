@@ -16,8 +16,14 @@ vi.mock('element-plus', async (importOriginal) => {
 })
 
 const sysUserApi = vi.hoisted(() => ({
+  downloadImportTemplate: vi.fn(),
+  exportUsers: vi.fn(),
+  findDeptTree: vi.fn(),
+  findPostOptions: vi.fn(),
   getById: vi.fn(),
+  importUsers: vi.fn(),
   removeById: vi.fn(),
+  resetPassword: vi.fn(),
   saveOrUpdate: vi.fn(),
   updateStatus: vi.fn(),
 }))
@@ -38,6 +44,7 @@ import ElementPlus from 'element-plus'
 import AssignAuth from '@/views/config/sysRole/assignAuth.vue'
 import SysUser from '@/views/config/sysUser/index.vue'
 import AssignRolesDialog from '@/views/config/sysUser/AssignRolesDialog.vue'
+import { hasPermi } from '@/permission'
 import { PATHS } from '@/router/paths'
 import {
   createTestRouter,
@@ -57,8 +64,25 @@ const userRecord = {
   name: '鲍勃',
   phone: '13800000000',
   status: 1,
+  deptId: 11,
+  postIds: [301],
   createTime: '2026-01-01 10:00:00',
 }
+
+const deptTree = [
+  {
+    id: 10,
+    parentId: 0,
+    name: '研发部',
+    status: 1,
+    children: [{ id: 11, parentId: 10, name: '前端组', status: 1, children: [] }],
+  },
+]
+
+const postOptions = [
+  { id: 301, name: '经理', status: 1 },
+  { id: 302, name: '专员', status: 1 },
+]
 
 const roleAssignment = {
   allRolesList: [
@@ -99,6 +123,8 @@ const menuTree = [
 
 function responder(config) {
   const url = config.url || ''
+  if (/\/sysUser\/depts$/.test(url)) return ok(deptTree)
+  if (/\/sysUser\/posts$/.test(url)) return ok(postOptions)
   if (/\/sysUser\/\d+\/\d+$/.test(url)) return paged([userRecord])
   if (/\/sysRole\/toAssign\/\d+$/.test(url)) return ok(roleAssignment)
   if (/\/sysRole\/doAssign$/.test(url)) return ok(null)
@@ -111,6 +137,7 @@ function realOptions(pinia, router) {
   return {
     global: {
       plugins: [pinia, router, ElementPlus],
+      directives: { hasPermi },
       stubs: { 'form-create': true, 'fc-designer': true },
     },
   }
@@ -129,10 +156,23 @@ beforeEach(() => {
   vi.clearAllMocks()
   messageMock.mockReset()
   confirmMock.mockReset().mockResolvedValue('confirm')
+  sysUserApi.findDeptTree.mockResolvedValue(ok(deptTree))
+  sysUserApi.findPostOptions.mockResolvedValue(ok(postOptions))
   sysUserApi.getById.mockResolvedValue(ok(userRecord))
   sysUserApi.removeById.mockResolvedValue(ok(null))
+  sysUserApi.resetPassword.mockResolvedValue(ok(null))
   sysUserApi.saveOrUpdate.mockResolvedValue(ok(null))
   sysUserApi.updateStatus.mockResolvedValue(ok(null))
+  sysUserApi.exportUsers.mockResolvedValue(new Blob(['xlsx']))
+  sysUserApi.downloadImportTemplate.mockResolvedValue(new Blob(['xlsx']))
+  sysUserApi.importUsers.mockResolvedValue(
+    ok({
+      total: 3,
+      successCount: 2,
+      failureCount: 1,
+      failures: [{ rowNumber: 4, username: 'bob', reason: '用户名已存在' }],
+    }),
+  )
   sysMenuApi.getByIdForAssign.mockResolvedValue(ok(menuTree))
   sysMenuApi.doAssign.mockResolvedValue(ok(null))
   http = installHttp(responder)
@@ -141,6 +181,32 @@ beforeEach(() => {
 afterEach(() => http.restore())
 
 describe('SysUser list page', () => {
+  it('renders page and row actions only when their permission codes are granted', async () => {
+    const denied = mount(SysUser, realOptions(setupSession().pinia, testRouter()))
+    await flushPromises()
+    const deniedLabels = denied.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '分配角色', '删除']) {
+      expect(deniedLabels).not.toContain(label)
+    }
+    denied.unmount()
+
+    const granted = setupSession({
+      permissions: [
+        'system:user:add',
+        'system:user:edit',
+        'system:user:remove',
+        'system:user:assignRole',
+      ],
+    })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    const labels = wrapper.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '分配角色', '删除']) {
+      expect(labels).toContain(label)
+    }
+    wrapper.unmount()
+  })
+
   it('loads rows and runs the list actions', async () => {
     const { pinia } = setupSession()
     const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
@@ -165,11 +231,15 @@ describe('SysUser list page', () => {
 
     await wrapper.vm.openEdit(3)
     expect(wrapper.vm.form.username).toBe('bob')
+    expect(wrapper.vm.form.deptId).toBe(11)
+    expect(wrapper.vm.form.postIds).toEqual([301])
     expect(wrapper.vm.dialogTitle).toBe('编辑用户')
 
     wrapper.vm.form = { ...wrapper.vm.form, name: '鲍勃2' }
     await wrapper.vm.save()
-    expect(sysUserApi.saveOrUpdate).toHaveBeenCalledWith(expect.objectContaining({ name: '鲍勃2' }))
+    expect(sysUserApi.saveOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '鲍勃2', deptId: 11, postIds: [301] }),
+    )
     expect(wrapper.vm.dialogVisible).toBe(false)
 
     await wrapper.vm.toggleStatus(3, true)
@@ -179,6 +249,165 @@ describe('SysUser list page', () => {
 
     await wrapper.vm.remove(3)
     expect(sysUserApi.removeById).toHaveBeenCalledWith(3)
+  })
+
+  it('filters by the left dept tree, resets to page one, and clears on a second click', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    // 左树带「全部」根节点；岗位选项来自用户页自己的只读端点。
+    expect(wrapper.vm.deptTree[0]).toMatchObject({ id: 0, name: '全部' })
+    expect(wrapper.vm.deptTree[0].children[0]).toMatchObject({ id: 10, name: '研发部' })
+    expect(wrapper.vm.postOptions).toEqual([
+      { id: 301, name: '经理' },
+      { id: 302, name: '专员' },
+    ])
+
+    wrapper.vm.list.handlePageChange(2)
+    await flushPromises()
+    expect(wrapper.vm.view.page).toBe(2)
+
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    expect(http.calls.at(-1).url).toMatch(/\/sysUser\/1\/10$/)
+    expect(http.calls.at(-1).params).toEqual({ deptId: 10 })
+
+    // 再点同一部门：清除过滤并回到全部。
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    expect(http.calls.at(-1).params).toEqual({})
+    expect(wrapper.vm.currentDeptId).toBe(0)
+
+    // 重置按钮同时清部门与关键字。
+    wrapper.vm.keyword = 'bob'
+    wrapper.vm.handleDeptClick({ id: 10 })
+    await flushPromises()
+    wrapper.vm.reset()
+    await flushPromises()
+    expect(wrapper.vm.keyword).toBe('')
+    expect(wrapper.vm.currentDeptId).toBe(0)
+    expect(http.calls.at(-1).params).toEqual({})
+  })
+
+  it('exports with the current keyword, dept and status and downloads the blob', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:export'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:export')
+    URL.revokeObjectURL = vi.fn()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      wrapper.vm.keyword = 'bob'
+      wrapper.vm.statusFilter = 0
+      wrapper.vm.handleDeptClick({ id: 10 })
+      await flushPromises()
+
+      await wrapper.vm.handleExport()
+
+      expect(sysUserApi.exportUsers).toHaveBeenCalledWith({
+        keyword: 'bob',
+        deptId: 10,
+        status: 0,
+      })
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(click).toHaveBeenCalledTimes(1)
+    } finally {
+      click.mockRestore()
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+
+  it('shows the 导出 header action only with the export button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:export'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    expect(wrapper.find('.page-actions').text()).toContain('导出')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+    expect(deniedWrapper.find('.page-actions').text()).not.toContain('导出')
+  })
+
+  it('imports a xlsx file and renders the partial-success summary with failure rows', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:import'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:import')
+    URL.revokeObjectURL = vi.fn()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      wrapper.vm.openImport()
+      expect(wrapper.vm.importDialogVisible).toBe(true)
+
+      await wrapper.vm.handleDownloadTemplate()
+      // 失败提示只在弹窗内一次：模板下载显式静默请求层（#260 二轮）。
+      expect(sysUserApi.downloadImportTemplate).toHaveBeenCalledWith({ notifyNormalErrors: false })
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(click).toHaveBeenCalledTimes(1)
+
+      // 本地预检与服务端同文案：csv、超 2MB 都在发请求前拒绝。
+      wrapper.vm.handleImportFileChange({
+        target: { files: [new File(['x'], 'users.csv')], value: 'users.csv' },
+      })
+      expect(wrapper.vm.importError).toBe('仅支持 xlsx 文件')
+      expect(wrapper.vm.importFile).toBeNull()
+
+      wrapper.vm.handleImportFileChange({
+        target: {
+          files: [new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'big.xlsx')],
+          value: 'big.xlsx',
+        },
+      })
+      expect(wrapper.vm.importError).toBe('导入文件超过 2 MB 限制')
+      expect(wrapper.vm.importFile).toBeNull()
+      expect(sysUserApi.importUsers).not.toHaveBeenCalled()
+
+      const file = new File(['PK'], 'users.xlsx')
+      wrapper.vm.handleImportFileChange({ target: { files: [file], value: 'users.xlsx' } })
+      expect(wrapper.vm.importFile).toBe(file)
+      expect(wrapper.vm.importError).toBe('')
+
+      const readsBefore = http.calls.length
+      await wrapper.vm.submitImport()
+      await flushPromises()
+
+      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file, { notifyNormalErrors: false })
+      expect(wrapper.vm.importResult).toEqual(
+        expect.objectContaining({ total: 3, successCount: 2, failureCount: 1 }),
+      )
+      expect(wrapper.text()).toContain('成功 2 条，失败 1 条')
+      expect(wrapper.text()).toContain('bob')
+      expect(wrapper.text()).toContain('用户名已存在')
+      // 有成功行时刷新列表，让新用户出现在当前页。
+      expect(http.calls.length).toBeGreaterThan(readsBefore)
+    } finally {
+      click.mockRestore()
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+
+  it('shows the 导入 header action only with the import button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:import'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    expect(wrapper.find('.page-actions').text()).toContain('导入')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+    expect(deniedWrapper.find('.page-actions').text()).not.toContain('导入')
   })
 
   it('blocks the create with local required messages before the request', async () => {
@@ -199,6 +428,84 @@ describe('SysUser list page', () => {
       '密码不能为空',
       '姓名不能为空',
     ])
+  })
+
+  it('shows the 重置密码 row action only with the resetPwd button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:resetPwd'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+
+    expect(
+      wrapper
+        .findAll('.el-table__row')[0]
+        .findAll('button')
+        .map((node) => node.text()),
+    ).toContain('重置密码')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+
+    expect(
+      deniedWrapper
+        .findAll('.el-table__row')[0]
+        .findAll('button')
+        .map((node) => node.text()),
+    ).not.toContain('重置密码')
+  })
+
+  it('validates the reset dialog, submits the new password, closes and refreshes', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:resetPwd'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+    const listReads = () =>
+      http.calls.filter((call) => /\/sysUser\/\d+\/\d+$/.test(call.url)).length
+    const readsBefore = listReads()
+
+    wrapper.vm.openResetPassword(3, 'bob')
+    await flushPromises()
+    expect(wrapper.vm.resetDialogVisible).toBe(true)
+    expect(wrapper.vm.resetTarget).toEqual({ id: 3, username: 'bob' })
+    const resetModel = () =>
+      wrapper
+        .findAllComponents({ name: 'ElForm' })
+        .map((form) => form.props('model'))
+        .find((model) => model && 'newPassword' in model)
+
+    resetModel().newPassword = '12345'
+    resetModel().confirmPassword = '12345'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysUserApi.resetPassword).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toContain(
+      '密码长度必须在 6 到 100 位之间',
+    )
+
+    resetModel().newPassword = '123456'
+    resetModel().confirmPassword = '654321'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(sysUserApi.resetPassword).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.el-form-item__error').map((node) => node.text())).toContain(
+      '两次输入的密码不一致',
+    )
+
+    resetModel().confirmPassword = '123456'
+    await flushPromises()
+    await wrapper.vm.saveResetPassword()
+    await flushPromises()
+
+    expect(sysUserApi.resetPassword).toHaveBeenCalledWith(3, '123456')
+    expect(wrapper.vm.resetDialogVisible).toBe(false)
+    expect(listReads()).toBeGreaterThan(readsBefore)
+    expect(messageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', message: '重置密码成功' }),
+    )
   })
 
   it('opens, reopens, and closes the assign-roles dialog', async () => {

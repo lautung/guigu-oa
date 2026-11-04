@@ -3,10 +3,15 @@ package com.lautung.oa.auth;
 import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
+import com.lautung.oa.auth.controller.SysDeptController;
 import com.lautung.oa.auth.controller.SysMenuController;
+import com.lautung.oa.auth.controller.ProfileController;
+import com.lautung.oa.auth.controller.SysPostController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.config.controller.SysConfigController;
+import com.lautung.oa.dict.controller.SysDictController;
 import com.lautung.oa.monitor.controller.CacheMonitorController;
 import com.lautung.oa.monitor.controller.DataMonitorController;
 import com.lautung.oa.monitor.controller.MonitorJobController;
@@ -69,10 +74,19 @@ class BackofficeRouteAuthorizationContractTest {
     private static final Pattern GATE = Pattern.compile(
             "@backofficeGate\\.isAllowed\\('([^']+)'(?:,'([^']+)')?\\)");
     private static final Map<String, String> EXPECTED_GATES = new LinkedHashMap<>();
+    /**
+     * 只读但会一次带走大量行的数据动作：仍是 GET、仍不写服务端状态，但额外要求按钮点。
+     * 普通 GET 仍只判页面（ADR 0052/0056），这里每加一个都必须有票面理由。
+     */
+    private static final Set<String> GET_DATA_ACTION_BUTTONS = Set.of("SysUserController#export");
     private static final Set<Class<?>> BACKOFFICE_CONTROLLERS = Set.of(
             SysUserController.class,
             SysMenuController.class,
             SysRoleController.class,
+            SysDeptController.class,
+            SysPostController.class,
+            SysConfigController.class,
+            SysDictController.class,
             OaProcessTypeController.class,
             OaProcessTemplateController.class,
             OaProcessController.class,
@@ -87,11 +101,18 @@ class BackofficeRouteAuthorizationContractTest {
 
     static {
         expect(SysUserController.class, "/system/sysUser", null,
-                "updateStatus", "index", "get", "save", "updateById", "remove");
+                "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
+                "depts", "posts", "importTemplate");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateStatus");
         expect(SysUserController.class, "/system/sysUser", "system:user:add", "save");
         expect(SysUserController.class, "/system/sysUser", "system:user:edit", "updateById");
         expect(SysUserController.class, "/system/sysUser", "system:user:remove", "remove");
+        // 重置密码是独立按钮点（#250）：不复用 system:user:edit。
+        expect(SysUserController.class, "/system/sysUser", "system:user:resetPwd", "resetPassword");
+        // 导出是只读的数据动作（#259）：GET 但一次带走大量行，额外要求独立按钮点。
+        expect(SysUserController.class, "/system/sysUser", "system:user:export", "export");
+        // 导入写用户行（#259）：POST 走独立按钮点；空模板下载只判页面。
+        expect(SysUserController.class, "/system/sysUser", "system:user:import", "importUsers");
         expect(SysMenuController.class, "/system/sysRole", null, "toAssign");
         expect(SysMenuController.class, "/system/sysRole", "system:role:assignAuth", "doAssign");
         expect(SysMenuController.class, "/system/sysMenu", null, "findNodes");
@@ -101,10 +122,35 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysRoleController.class, "/system/sysUser", null, "toAssign");
         expect(SysRoleController.class, "/system/sysUser", "system:user:assignRole", "doAssign");
         expect(SysRoleController.class, "/system/sysRole", null,
-                "findAll", "pageQueryRole", "get", "depts");
+                "findAll", "pageQueryRole", "get", "depts", "roleUsers");
         expect(SysRoleController.class, "/system/sysRole", "system:role:add", "save");
         expect(SysRoleController.class, "/system/sysRole", "system:role:edit", "update");
         expect(SysRoleController.class, "/system/sysRole", "system:role:remove", "remove", "batchRemove");
+        // 角色侧分配用户（#256）：读成员走页面授予，写成员要独立按钮点。
+        expect(SysRoleController.class, "/system/sysRole", "system:role:assignUser", "doAssignUsers");
+        // 部门管理（#247）：树读只走页面授予；新增/修改/删除各要自己的按钮点。
+        expect(SysDeptController.class, "/system/sysDept", null, "findTree");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:add", "save");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:edit", "update");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:remove", "remove");
+        // 岗位管理（#248）：读走页面授予，三个写动作各要按钮点。
+        expect(SysPostController.class, "/system/sysPost", null, "pageQueryPost");
+        expect(SysPostController.class, "/system/sysPost", "system:post:add", "save");
+        expect(SysPostController.class, "/system/sysPost", "system:post:edit", "update");
+        expect(SysPostController.class, "/system/sysPost", "system:post:remove", "remove");
+        // 参数设置（#252）：读走页面授予，三个 CRUD 各要按钮点；手动刷新复用 edit。
+        expect(SysConfigController.class, "/system/config", null, "pageQueryConfig");
+        expect(SysConfigController.class, "/system/config", "system:config:add", "save");
+        expect(SysConfigController.class, "/system/config", "system:config:edit", "update", "refresh");
+        expect(SysConfigController.class, "/system/config", "system:config:remove", "remove");
+        // 字典管理（#251，ADR 0062）：左类型/右数据两级读走页面授予；
+        // 三个 CRUD 共用 add/edit/remove 按钮点，手动刷新复用 edit。标签读是登录即有的读面。
+        expect(SysDictController.class, "/system/dict", null, "pageQueryType", "pageQueryData");
+        expect(SysDictController.class, "/system/dict", "system:dict:add", "saveType", "saveData");
+        expect(SysDictController.class, "/system/dict", "system:dict:edit",
+                "updateType", "updateData", "refresh");
+        expect(SysDictController.class, "/system/dict", "system:dict:remove",
+                "removeType", "removeData");
         expect(OaProcessTypeController.class, "/system/processSet/processType", null,
                 "findAll", "index", "get");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
@@ -198,7 +244,9 @@ class BackofficeRouteAuthorizationContractTest {
     void everyControllerInTheBackofficePackagesIsInTheGateContract() {
         for (HandlerMethod handler : handlerMapping.getHandlerMethods().values()) {
             Class<?> bean = handler.getBeanType();
-            if (bean.equals(IndexController.class) || bean.equals(ProcessController.class)) {
+            // 个人中心登录即有，不是后台页（#254）：没有页面授予/按钮点，因而不进 gate 合同。
+            if (bean.equals(IndexController.class) || bean.equals(ProcessController.class)
+                    || bean.equals(ProfileController.class)) {
                 continue;
             }
             boolean backofficeController = bean.getPackageName().equals("com.lautung.oa.auth.controller")
@@ -224,6 +272,9 @@ class BackofficeRouteAuthorizationContractTest {
             if (isWrite(entry.getKey())) {
                 assertFalse(gate.permissions().isEmpty(),
                         "backoffice write route must declare a button point: " + key);
+            } else if (GET_DATA_ACTION_BUTTONS.contains(key)) {
+                assertFalse(gate.permissions().isEmpty(),
+                        "GET data action must declare its button point: " + key);
             } else {
                 assertTrue(gate.permissions().isEmpty(),
                         "backoffice read route must pass only the page: " + key);
@@ -291,6 +342,7 @@ class BackofficeRouteAuthorizationContractTest {
         assertCode("/admin/system/sysUser/1/10", 1L, "admin", 200);
         assertCode("/admin/system/sysRole/1/10", 1L, "admin", 200);
         assertCode("/admin/system/sysMenu/findNodes", 1L, "admin", 200);
+        assertCode("/admin/system/sysDept/findTree", 1L, "admin", 200);
         assertCode("/admin/process/processType/1/10", 1L, "admin", 200);
         assertCode("/admin/process/processTemplate/1/10", 1L, "admin", 200);
         assertCode("/admin/process/processTemplate/get/" + templateId, 1L, "admin", 200);
@@ -299,6 +351,7 @@ class BackofficeRouteAuthorizationContractTest {
         assertCode("/admin/system/sysUser/1/10", 2L, "user", 205);
         assertCode("/admin/system/sysRole/1/10", 2L, "user", 205);
         assertCode("/admin/system/sysMenu/findNodes", 2L, "user", 205);
+        assertCode("/admin/system/sysDept/findTree", 2L, "user", 205);
         assertCode("/admin/process/processType/1/10", 2L, "user", 205);
         assertCode("/admin/process/processTemplate/1/10", 2L, "user", 205);
         assertCode("/admin/process/processTemplate/get/" + templateId, 2L, "user", 205);
@@ -314,9 +367,14 @@ class BackofficeRouteAuthorizationContractTest {
                 .andExpect(jsonPath("$.data.roles", hasItem("super_admin")))
                 .andExpect(jsonPath("$.data.permissions", hasItems(
                         "system:user:add", "system:user:edit", "system:user:remove",
-                        "system:user:assignRole", "system:role:add", "system:role:edit",
+                        "system:user:assignRole", "system:user:resetPwd",
+                        "system:role:add", "system:role:edit",
                         "system:role:remove", "system:role:assignAuth",
                         "system:menu:add", "system:menu:edit", "system:menu:remove",
+                        "system:dept:add", "system:dept:edit", "system:dept:remove",
+                        "system:post:add", "system:post:edit", "system:post:remove",
+                        "system:config:add", "system:config:edit", "system:config:remove",
+                        "system:dict:add", "system:dict:edit", "system:dict:remove",
                         "process:type:add", "process:type:edit", "process:type:remove",
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
@@ -328,6 +386,10 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system",
                         "/system/sysUser",
                         "/system/sysRole",
+                        "/system/sysDept",
+                        "/system/sysPost",
+                        "/system/config",
+                        "/system/dict",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",

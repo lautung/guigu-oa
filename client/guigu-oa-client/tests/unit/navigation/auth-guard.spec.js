@@ -31,6 +31,12 @@ describe('认证守卫', () => {
     })
   })
 
+  it('allows the anonymous register page without a token', () => {
+    expect(resolveAuthGuard({ path: ROUTES.REGISTER, hasToken: false })).toEqual({
+      action: 'allow',
+    })
+  })
+
   it('redirects authenticated users away from login to 工作台', () => {
     expect(resolveAuthGuard({ path: ROUTES.LOGIN, hasToken: true })).toEqual({
       action: 'redirect',
@@ -38,8 +44,15 @@ describe('认证守卫', () => {
     })
   })
 
-  it('only whitelists the login page', () => {
-    expect(AUTH_WHITELIST).toEqual([ROUTES.LOGIN])
+  it('redirects authenticated users away from register to 工作台', () => {
+    expect(resolveAuthGuard({ path: ROUTES.REGISTER, hasToken: true })).toEqual({
+      action: 'redirect',
+      to: PATHS.WORKBENCH,
+    })
+  })
+
+  it('whitelists login and register only', () => {
+    expect(AUTH_WHITELIST).toEqual([ROUTES.LOGIN, ROUTES.REGISTER])
   })
 })
 

@@ -6,17 +6,23 @@ import com.lautung.oa.auth.mapper.SysRoleMapper;
 import com.lautung.oa.auth.service.SysRoleMenuService;
 import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserRoleService;
+import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.auth.service.PermissionCacheInvalidator;
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysRole;
 import com.lautung.oa.model.system.SysRoleDept;
 import com.lautung.oa.model.system.SysRoleMenu;
+import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.model.system.SysUserRole;
 import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysDeptOptionVo;
 import com.lautung.oa.vo.system.SysRoleDetailVo;
+import com.lautung.oa.vo.system.SysRoleUserVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +47,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     @Autowired
     private SysRoleMenuService sysRoleMenuService;
@@ -175,23 +184,107 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             }
         }
 
-        //把用户之前分配角色数据删除，用户角色关系表里面，根据userid删除
-        LambdaQueryWrapper<SysUserRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysUserRole::getUserId,assginRoleVo.getUserId());
-        sysUserRoleService.remove(wrapper);
-
-        //重新进行分配
-        List<Long> roleIdList = requestedRoleIds == null ? List.of() : requestedRoleIds;
-        for(Long roleId:roleIdList) {
-            if(StringUtils.isEmpty(roleId)) {
-                continue;
-            }
-            SysUserRole sysUserRole = new SysUserRole();
-            sysUserRole.setUserId(assginRoleVo.getUserId());
-            sysUserRole.setRoleId(roleId);
-            sysUserRoleService.save(sysUserRole);
-        }
+        // 整体替换走 sys_user_role 的唯一写入口；重复 id 去重，空列表是合法的清空。
+        List<Long> roleIdList = requestedRoleIds == null
+                ? List.of()
+                : requestedRoleIds.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toCollection(LinkedHashSet::new))
+                        .stream()
+                        .toList();
+        sysUserRoleService.replaceUserRoles(assginRoleVo.getUserId(), roleIdList);
         permissionCacheInvalidator.invalidateUserAfterCommit(assginRoleVo.getUserId());
+    }
+
+    @Override
+    public IPage<SysRoleUserVo> findRoleUsers(Long roleId, String keyword, Boolean assigned,
+                                              Long page, Long limit) {
+        if (roleId == null || getById(roleId) == null) {
+            throw new BusinessException(201, "角色不存在");
+        }
+        Page<SysUser> pageParam = PageWindow.of(page, limit);
+        // 成员集合先读出来：@TableLogic 由实体查询带出 is_deleted = 0，service 不再拼存活谓词。
+        Set<Long> memberIds = memberIdsOf(roleId);
+
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            String trimmed = keyword.trim();
+            // 角色成员自己的关键字口径：用户名 / 姓名 / 手机号任一命中；用户页只 like username，不复用该口径。
+            wrapper.and(nested -> nested.like(SysUser::getUsername, trimmed)
+                    .or().like(SysUser::getName, trimmed)
+                    .or().like(SysUser::getPhone, trimmed));
+        }
+        // 角色是全局配置：成员列表不套数据范围（ADR 0056 的例外由本端点自己声明）。
+        if (Boolean.TRUE.equals(assigned)) {
+            if (memberIds.isEmpty()) {
+                wrapper.apply("1 = 0");
+            } else {
+                wrapper.in(SysUser::getId, memberIds);
+            }
+        } else if (Boolean.FALSE.equals(assigned) && !memberIds.isEmpty()) {
+            wrapper.notIn(SysUser::getId, memberIds);
+        }
+        // 稳定排序（ADR 0045）：分页翻页不因同值行漂移。
+        wrapper.orderByAsc(SysUser::getId);
+
+        IPage<SysUser> users = sysUserService.page(pageParam, wrapper);
+        Page<SysRoleUserVo> result = new Page<>(users.getCurrent(), users.getSize(), users.getTotal());
+        result.setRecords(users.getRecords().stream()
+                .map(user -> toRoleUserVo(user,
+                        assigned != null ? assigned : memberIds.contains(user.getId())))
+                .toList());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void assignUsers(Long roleId, List<Long> userIds) {
+        if (roleId == null || getById(roleId) == null) {
+            throw new BusinessException(201, "角色不存在");
+        }
+        // 校验必须在删除既有成员之前：任何非法 id 都拒绝整个分配，不改动角色成员（#144 同一纪律）。
+        List<Long> requested = userIds == null
+                ? List.of()
+                : userIds.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toCollection(LinkedHashSet::new))
+                        .stream()
+                        .toList();
+        if (!requested.isEmpty()) {
+            List<Long> existing = sysUserService.listByIds(requested).stream()
+                    .map(SysUser::getId)
+                    .toList();
+            if (existing.size() != requested.size()) {
+                throw new BusinessException(201, "只能分配已存在的用户");
+            }
+        }
+
+        // 移出与加入的成员权限都可能变化，两边都在关系行变化前/后收集，提交后统一失效。
+        Set<Long> affected = new LinkedHashSet<>(permissionCacheInvalidator.membersOfRole(roleId));
+        sysUserRoleService.replaceRoleUsers(roleId, requested);
+        affected.addAll(requested);
+        permissionCacheInvalidator.invalidateUsersAfterCommit(affected);
+    }
+
+    private Set<Long> memberIdsOf(Long roleId) {
+        return sysUserRoleService.list(new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getRoleId, roleId))
+                .stream()
+                .map(SysUserRole::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private SysRoleUserVo toRoleUserVo(SysUser user, boolean assigned) {
+        SysRoleUserVo vo = new SysRoleUserVo();
+        vo.setId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setName(user.getName());
+        vo.setPhone(user.getPhone());
+        vo.setDeptId(user.getDeptId());
+        vo.setStatus(user.getStatus());
+        vo.setAssigned(assigned);
+        return vo;
     }
 
     @Override

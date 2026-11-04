@@ -6,6 +6,8 @@ import com.lautung.oa.model.base.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 组织部门（ADR 0056）：{@code ancestors} 存含自身的包裹逗号路径，如部门 5 在 3 下为
  * {@code ,0,3,5,}，根为 {@code ,0,1,}。数据范围「本部门及以下」按该路径解析（ADR 0057）。
@@ -40,4 +42,8 @@ public class SysDept extends BaseEntity {
     @Schema(description = "状态(0:停用,1:正常)")
     @TableField("status")
     private Integer status;
+
+    /** 树列表的下级节点（#247）；只在读侧装配，不落库。 */
+    @TableField(exist = false)
+    private List<SysDept> children;
 }

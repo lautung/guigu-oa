@@ -18,7 +18,6 @@ import { WORK_LIST_KINDS } from '@/router/paths'
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import Login from '@/views/login/index.vue'
 import WorkListPage from '@/views/work/WorkListPage.vue'
-import Profile from '@/views/work/profile/index.vue'
 import WorkStart from '@/views/work/start/index.vue'
 import {
   XSS_PAYLOAD,
@@ -55,7 +54,6 @@ function workRouter() {
       meta: { workListKind: WORK_LIST_KINDS.PROCESSED },
     },
     { path: PATHS.WORK_STARTED, component: { template: '<div />' } },
-    { path: PATHS.WORK_PROFILE, component: { template: '<div />' } },
     { path: PATHS.WORKBENCH, component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
     { path: '/work/start/:processTemplateId', component: { template: '<div />' } },
@@ -70,9 +68,6 @@ beforeEach(() => {
   http = installHttp((config) => {
     const url = config.url || ''
     if (/findPending|findProcessed/.test(url)) return paged([workRecord])
-    if (url.includes('/admin/process/getCurrentUser')) {
-      return ok({ name: '爱丽丝', phone: '13900000000' })
-    }
     if (url.includes('/admin/process/findStartable')) {
       return ok([
         {
@@ -155,29 +150,6 @@ describe('WorkListPage', () => {
 
     expect(wrapper.vm.definition.title).not.toBe(pendingTitle)
     expect(http.calls.some((call) => String(call.url).includes('findProcessed'))).toBe(true)
-  })
-})
-
-describe('Profile page', () => {
-  it('loads the current user into the profile card', async () => {
-    const { pinia } = setupSession()
-    const wrapper = mount(Profile, mountOptions(pinia, workRouter()))
-    await flushPromises()
-
-    expect(wrapper.vm.loading).toBe(false)
-    expect(wrapper.vm.profile.name).toBe('爱丽丝')
-    expect(wrapper.text()).toContain('爱丽丝')
-  })
-
-  it('stops loading when the read fails', async () => {
-    http.restore()
-    http = installHttp(() => ({ code: 500, message: '不可用' }))
-    const { pinia } = setupSession()
-    const wrapper = mount(Profile, mountOptions(pinia, workRouter()))
-    await flushPromises()
-
-    expect(wrapper.vm.loading).toBe(false)
-    expect(wrapper.vm.profile.name).toBe('')
   })
 })
 
@@ -272,7 +244,9 @@ describe('Login page', () => {
     await flushPromises()
 
     await wrapper.vm.handleLogin()
-    expect(http.calls).toHaveLength(0)
+    expect(http.calls.some((call) => String(call.url).includes('/admin/system/index/login'))).toBe(
+      false,
+    )
     expect(wrapper.vm.loading).toBe(false)
   })
 

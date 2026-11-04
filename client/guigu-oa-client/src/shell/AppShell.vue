@@ -1,6 +1,10 @@
 <template>
   <el-config-provider :size="shell.density">
-    <div class="app-shell" :class="{ 'is-narrow': narrow }">
+    <div
+      class="app-shell"
+      :class="{ 'is-narrow': narrow }"
+      :inert="lockScreen.locked ? 'true' : undefined"
+    >
       <app-top-bar
         :modules="navModules"
         :active-module="shell.activeModule"
@@ -32,12 +36,13 @@
             @command="handleTabCommand"
           />
           <shell-breadcrumb :items="breadcrumb" />
-          <main class="shell-content">
+          <main v-if="!lockScreen.locked" class="shell-content">
             <router-view />
           </main>
         </div>
       </div>
     </div>
+    <LockScreen v-if="lockScreen.locked" />
   </el-config-provider>
 </template>
 
@@ -47,9 +52,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import AppTopBar from './AppTopBar.vue'
 import AppSidebar from './AppSidebar.vue'
+import LockScreen from './LockScreen.vue'
 import ShellTabs from './ShellTabs.vue'
 import ShellBreadcrumb from './ShellBreadcrumb.vue'
 import { buildBreadcrumb } from './breadcrumb'
+import { useLockScreenStore } from './lock-screen'
 import {
   activeModuleKey,
   buildShellNav,
@@ -64,6 +71,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const shell = useShellStore()
+const lockScreen = useLockScreenStore()
 
 const viewportWidth = ref(typeof window === 'undefined' ? NARROW_BREAKPOINT : window.innerWidth)
 const narrow = computed(() => viewportWidth.value < NARROW_BREAKPOINT)

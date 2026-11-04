@@ -1,7 +1,12 @@
 <template>
   <el-popover v-model:visible="open" placement="bottom-end" :width="240" trigger="click">
     <template #reference>
-      <button type="button" class="user-trigger" aria-label="用户菜单" aria-haspopup="menu">
+      <button
+        type="button"
+        class="user-trigger"
+        :aria-label="t('shell.userMenu.aria')"
+        aria-haspopup="menu"
+      >
         <img :src="avatarSrc" class="avatar" alt="" />
         <span v-if="userStore.name" class="username">{{ userStore.name }}</span>
         <el-icon class="user-trigger-arrow"><component :is="shellIcon('ArrowDown')" /></el-icon>
@@ -11,79 +16,108 @@
     <div class="user-menu-panel" role="menu">
       <button type="button" class="user-menu-profile" role="menuitem" @click="openProfile">
         <el-icon><component :is="shellIcon('User')" /></el-icon>
-        <span>个人中心</span>
+        <span>{{ t('shell.userMenu.profile') }}</span>
       </button>
 
       <div class="appearance">
-        <span class="appearance-label">主题</span>
+        <span class="appearance-label">{{ t('shell.userMenu.theme') }}</span>
         <div class="appearance-options">
           <button
             v-for="option in THEME_OPTIONS"
-            :key="option.value"
+            :key="option"
             type="button"
             class="appearance-option"
-            :class="{ active: shell.theme === option.value }"
-            :data-theme="option.value"
-            @click="shell.setTheme(option.value)"
+            :class="{ active: shell.theme === option }"
+            :data-theme="option"
+            @click="shell.setTheme(option)"
           >
-            {{ option.label }}
+            {{ t(`shell.userMenu.themes.${option}`) }}
           </button>
         </div>
 
-        <span class="appearance-label">密度</span>
+        <span class="appearance-label">{{ t('shell.userMenu.density') }}</span>
         <div class="appearance-options">
           <button
             v-for="option in DENSITY_OPTIONS"
-            :key="option.value"
+            :key="option"
             type="button"
             class="appearance-option"
-            :class="{ active: shell.density === option.value }"
-            :data-density="option.value"
-            @click="shell.setDensity(option.value)"
+            :class="{ active: shell.density === option }"
+            :data-density="option"
+            @click="shell.setDensity(option)"
           >
-            {{ option.label }}
+            {{ t(`shell.userMenu.densities.${option}`) }}
           </button>
         </div>
       </div>
 
+      <button type="button" class="lock-btn" role="menuitem" @click="handleLock">
+        <el-icon><component :is="shellIcon('Lock')" /></el-icon>
+        <span>{{ t('shell.userMenu.lock') }}</span>
+      </button>
+
       <button type="button" class="logout-btn" role="menuitem" @click="handleLogout">
-        退出登录
+        {{ t('shell.userMenu.logout') }}
       </button>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { translate as t } from '@/i18n'
+import { requestBinary } from '@/request/request'
 import { PATHS } from '@/router/paths'
+import { avatarRequest } from '@/profile/config'
+import { createAvatarLoader } from '@/profile/avatar'
 import { useUserStore } from '@/store/modules/user'
+import { useLockScreenStore } from './lock-screen'
 import { useShellStore } from './shell-state'
 import type { ShellDensity, ShellTheme } from './shell-preferences'
 import { shellIcon } from './shell-icons'
 
 const DEFAULT_AVATAR = '/avatar.svg'
 
-const THEME_OPTIONS: readonly { value: ShellTheme; label: string }[] = [
-  { value: 'light', label: '亮色' },
-  { value: 'dark', label: '暗色' },
-]
+const THEME_OPTIONS: readonly ShellTheme[] = ['light', 'dark']
 
-const DENSITY_OPTIONS: readonly { value: ShellDensity; label: string }[] = [
-  { value: 'small', label: '紧凑' },
-  { value: 'default', label: '默认' },
-  { value: 'large', label: '宽松' },
-]
+const DENSITY_OPTIONS: readonly ShellDensity[] = ['small', 'default', 'large']
 
 const router = useRouter()
 const userStore = useUserStore()
 const shell = useShellStore()
+const lockScreen = useLockScreenStore()
 const open = ref(false)
-const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
+const avatarSrc = ref(DEFAULT_AVATAR)
+// /info.avatar 是已认证同源端点，`<img>` 拿不到 token 头：带认证取回 blob 再显示（#254）。
+const avatars = createAvatarLoader({
+  load: (path) => requestBinary(avatarRequest(path), { notifyNormalErrors: false }),
+  createObjectUrl: (blob) => URL.createObjectURL(blob),
+  revokeObjectUrl: (url) => URL.revokeObjectURL(url),
+})
+
+watch(
+  () => userStore.avatar,
+  async (path) => {
+    try {
+      avatarSrc.value = (path ? await avatars.read(path) : '') || DEFAULT_AVATAR
+    } catch {
+      avatarSrc.value = DEFAULT_AVATAR
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => avatars.dispose())
 
 function openProfile(): void {
   open.value = false
-  void router.push(PATHS.WORK_PROFILE)
+  void router.push(PATHS.PROFILE)
+}
+
+function handleLock(): void {
+  open.value = false
+  lockScreen.lock()
 }
 
 async function handleLogout(): Promise<void> {
@@ -139,6 +173,7 @@ async function handleLogout(): Promise<void> {
 }
 
 .user-menu-profile,
+.lock-btn,
 .logout-btn {
   width: 100%;
   display: flex;
@@ -156,11 +191,17 @@ async function handleLogout(): Promise<void> {
 
 .user-menu-profile:hover,
 .user-menu-profile:focus-visible,
+.lock-btn:hover,
+.lock-btn:focus-visible,
 .logout-btn:hover,
 .logout-btn:focus-visible {
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);
   outline: none;
+}
+
+.lock-btn {
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .logout-btn {

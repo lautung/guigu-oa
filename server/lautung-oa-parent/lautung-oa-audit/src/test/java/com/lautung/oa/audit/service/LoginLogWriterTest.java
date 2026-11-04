@@ -5,6 +5,7 @@ import com.lautung.oa.audit.mapper.LoginUserSnapshot;
 import com.lautung.oa.audit.mapper.LoginUserSnapshotMapper;
 import com.lautung.oa.audit.mapper.SysLoginLogMapper;
 import com.lautung.oa.security.login.LoginEvent;
+import com.lautung.oa.security.login.LoginEventKind;
 import com.lautung.oa.security.login.LoginEventType;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,8 +43,23 @@ class LoginLogWriterTest {
         assertEquals("Chrome", row.getBrowser());
         assertEquals("Windows", row.getOs());
         assertEquals(0, row.getStatus(), "success maps to status 0");
+        assertEquals("login", row.getEvent(), "a five-field event defaults to the login dimension");
         assertNull(row.getMsg());
         assertNotNull(row.getCreateTime(), "create_time must be present even without the handler");
+    }
+
+    @Test
+    void aRegisterEventKeepsItsOwnEventDimension() {
+        when(snapshotMapper.findLoginUserSnapshot("alice")).thenReturn(snapshot(7L, 77L));
+
+        writer.write(new LoginEvent(
+                LoginEventType.SUCCESS, "alice", "203.0.113.7", CHROME_WINDOWS, "注册成功",
+                LoginEventKind.REGISTER));
+
+        SysLoginLog row = insertedRow();
+        assertEquals("register", row.getEvent());
+        assertEquals(0, row.getStatus());
+        assertEquals("注册成功", row.getMsg());
     }
 
     @Test

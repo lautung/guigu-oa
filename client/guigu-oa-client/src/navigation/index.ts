@@ -22,7 +22,7 @@ export function resolveAuthGuard({
   const targetPath = fullPath || path
 
   if (hasToken) {
-    if (path === ROUTES.LOGIN) {
+    if (path === ROUTES.LOGIN || path === ROUTES.REGISTER) {
       return { action: 'redirect', to: getDefaultPostLoginRoute() }
     }
     const permission = configPermission(menus)

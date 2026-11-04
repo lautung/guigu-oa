@@ -11,6 +11,10 @@ export interface RequiredRule {
   validator(rule: unknown, value: unknown, callback: RuleCallback): void
 }
 
+export interface LengthRule {
+  validator(rule: unknown, value: unknown, callback: RuleCallback): void
+}
+
 export function requiredRule(message: string): RequiredRule {
   return {
     required: true,
@@ -31,6 +35,24 @@ export function requiredListRule(message: string): RequiredRule {
     type: 'array',
     validator(_rule, value, callback) {
       if (!Array.isArray(value) || value.length === 0) {
+        callback(new Error(message))
+        return
+      }
+      callback()
+    },
+  }
+}
+
+/** 长度区间:空值交给同类目的 requiredRule,这里不重复报错(镜像服务端 @Size)。 */
+export function lengthRule(min: number, max: number, message: string): LengthRule {
+  return {
+    validator(_rule, value, callback) {
+      if (value == null || value === '') {
+        callback()
+        return
+      }
+      const length = String(value).length
+      if (length < min || length > max) {
         callback(new Error(message))
         return
       }

@@ -45,7 +45,7 @@ describe('路由组归属与配置页', () => {
     const byPath = Object.fromEntries(ROUTE_GROUP_ENTRIES.map((entry) => [entry.path, entry.group]))
 
     expect(byPath['/work/pending']).toBe('work')
-    expect(byPath['/work/profile']).toBe('work')
+    expect(byPath['/profile']).toBeUndefined()
     expect(byPath['/system/sysUser']).toBe('config')
     expect(byPath['/system/processMgr/process']).toBe('config')
   })

@@ -1,4 +1,5 @@
 import { computed, type ComputedRef } from 'vue'
+import { translate as t } from '@/i18n'
 import {
   createListRead,
   type ListReadCommand,
@@ -21,6 +22,8 @@ export interface ListPageOptions<
   openScope: () => RequestScope
   toRequest: (command: ListReadCommand<TQuery>) => ApiRequestConfig
   present?: (record: TRecord) => TItem
+  /** 整表读（树列表）：见 createListRead 的同名选项（#247）。 */
+  fetchAll?: boolean
   size?: number
   query?: TQuery
 }
@@ -55,6 +58,7 @@ export function createListPage<
   const opening = createListRead<TRecord, TQuery>({
     openScope: options.openScope,
     toRequest: options.toRequest,
+    fetchAll: options.fetchAll,
     size: options.size,
     query: options.query,
   })
@@ -63,7 +67,7 @@ export function createListPage<
       ? opening.view.records.map(options.present)
       : (opening.view.records as unknown as TItem[]),
   )
-  const emptyText = computed(() => (opening.view.status === 'ready' ? '暂无数据' : ''))
+  const emptyText = computed(() => (opening.view.status === 'ready' ? t('common.empty') : ''))
   function search(query?: TQuery): void {
     void opening.read({ page: 1, query })
   }

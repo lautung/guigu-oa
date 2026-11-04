@@ -124,6 +124,44 @@ export function assignRolesRequest(
   }
 }
 
+/** 角色页的按钮点（ADR 0052/0056，V110 种子）：分配用户不复用菜单授权点。 */
+export const SYS_ROLE_PERMISSIONS = {
+  add: 'system:role:add',
+  edit: 'system:role:edit',
+  remove: 'system:role:remove',
+  assignAuth: 'system:role:assignAuth',
+  assignUser: 'system:role:assignUser',
+} as const
+
+/** 角色侧成员读（#256）：assigned 缺省不过滤，true 只返回成员，false 只返回非成员。 */
+export function roleUsersRequest(
+  roleId: EntityId,
+  query: { page: number; limit: number; keyword?: string; assigned?: boolean },
+): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${SYS_ROLE_API}/${roleId}/users`,
+    params: {
+      page: query.page,
+      limit: query.limit,
+      keyword: query.keyword || undefined,
+      assigned: query.assigned,
+    },
+  }
+}
+
+/** 角色侧成员写（#256）：userIds 整体替换该角色的成员集合，空数组清空。 */
+export function assignRoleUsersRequest(
+  roleId: EntityId,
+  userIds: readonly EntityId[],
+): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${SYS_ROLE_API}/doAssignUsers`,
+    data: { roleId, userIds },
+  }
+}
+
 export function emptyForm(): RoleForm {
   return {
     id: '',

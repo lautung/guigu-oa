@@ -7,12 +7,15 @@ import type {
   PageResult,
 } from '@/types/domain'
 
-/** 登录状态标签镜像服务端 LoginEventType 的四值（0 成功 / 1 失败 / 2 锁定 / 3 解锁）。 */
-export const LOGIN_STATUS_OPTIONS = [
-  { value: 0, label: '成功' },
-  { value: 1, label: '失败' },
-  { value: 2, label: '锁定' },
-  { value: 3, label: '解锁' },
+/**
+ * 登录状态四值（0 成功 / 1 失败 / 2 锁定 / 3 解锁）的标签由字典
+ * `sys_login_status` 供值（#251，ADR 0062）；本文件只保留视觉 tag type。
+ */
+
+/** 事件类型（#253）：登录尝试与自助注册共用一张表，靠这一列区分。 */
+export const LOGIN_EVENT_OPTIONS = [
+  { value: 'login', label: '登录' },
+  { value: 'register', label: '注册' },
 ] as const
 
 export const LOGIN_LOG_PERMISSIONS = {
@@ -25,11 +28,12 @@ export interface LoginLogQuery {
   username?: string
   ip?: string
   status?: number | ''
+  event?: string
   createTimes?: string[]
 }
 
-export function loginStatusLabel(value: number | null | undefined): string {
-  return LOGIN_STATUS_OPTIONS.find((option) => option.value === value)?.label || ''
+export function loginEventLabel(value: string | null | undefined): string {
+  return LOGIN_EVENT_OPTIONS.find((option) => option.value === value)?.label || ''
 }
 
 export function loginStatusTagType(value: number | null | undefined): AuditTagType {
@@ -46,6 +50,7 @@ export function presentQuery(query: LoginLogQuery = {}): Record<string, string |
   if (query.username) params.username = query.username
   if (query.ip) params.ip = query.ip
   if (query.status !== '' && query.status != null) params.status = query.status
+  if (query.event) params.event = query.event
   const createTimes = query.createTimes || []
   if (createTimes.length === 2 && createTimes[0] && createTimes[1]) {
     params.createTimeBegin = createTimes[0]
@@ -59,6 +64,7 @@ export function emptyQuery(): LoginLogQuery {
     username: '',
     ip: '',
     status: '',
+    event: '',
     createTimes: [],
   }
 }
@@ -71,8 +77,9 @@ export function presentListRecord(record: LoginLogRecord = {}): LoginLogListItem
     browser: record.browser,
     os: record.os,
     status: record.status,
-    statusLabel: loginStatusLabel(record.status),
     statusTagType: loginStatusTagType(record.status),
+    event: record.event,
+    eventLabel: loginEventLabel(record.event),
     msg: record.msg,
     createTime: record.createTime,
   }

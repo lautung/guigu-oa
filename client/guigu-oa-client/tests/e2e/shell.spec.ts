@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { e2eCookieURL } from './helpers/base-url'
 import { fulfillNoticeUnread } from './helpers/notice-mocks'
 
@@ -28,6 +29,7 @@ async function seedSession(page: Page): Promise<void> {
 async function mockApi(page: Page, info: { menus?: unknown[] } = {}): Promise<void> {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
+    if (await fulfillCommonRequest(route, path)) return
     if (path === '/admin/system/index/info') {
       return json(route, {
         name: 'Alice',
@@ -40,6 +42,8 @@ async function mockApi(page: Page, info: { menus?: unknown[] } = {}): Promise<vo
     if (/^\/admin\/process\/find(?:Pending|Processed|Started|CarbonCopied)\//.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
     }
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path)) {
       return json(route, { records: [], total: 0, pages: 0 })
     }

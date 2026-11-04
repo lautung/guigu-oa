@@ -4,9 +4,9 @@
     class="list-load-error"
     type="error"
     :closable="false"
-    :title="error || '加载失败'"
+    :title="error || t('common.loadFailed')"
   >
-    <el-button link @click="$emit('retry')">重试</el-button>
+    <el-button link @click="$emit('retry')">{{ t('common.retry') }}</el-button>
   </el-alert>
 </template>
 
@@ -14,6 +14,7 @@
 import { defineComponent } from 'vue'
 import type { PropType } from 'vue'
 
+import { translate as t } from '@/i18n'
 import type { ListReadStatus } from '@/list/list-read'
 
 export default defineComponent({
@@ -29,6 +30,9 @@ export default defineComponent({
     },
   },
   emits: ['retry'],
+  setup() {
+    return { t }
+  },
 })
 </script>
 

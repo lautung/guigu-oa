@@ -158,8 +158,9 @@ class CacheMonitorContractTest {
                     .andExpect(jsonPath("$.message").value("不支持的前缀"));
         }
 
-        // 白名单四个前缀放行（即便还没有任何匹配键）。
-        for (String allowed : new String[]{"perm:", "login:session:", "login:attempt:", "token:revoked:"}) {
+        // 白名单六个前缀放行（即便还没有任何匹配键）。
+        for (String allowed : new String[]{
+                "perm:", "login:session:", "login:attempt:", "token:revoked:", "config:", "dict:"}) {
             mockMvc.perform(get("/admin/monitor/cache/keys").param("prefix", allowed)
                             .header("token", token))
                     .andExpect(status().isOk())

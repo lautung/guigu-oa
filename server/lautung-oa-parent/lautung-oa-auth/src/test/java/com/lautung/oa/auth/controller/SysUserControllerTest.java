@@ -7,6 +7,7 @@ import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.lautung.oa.vo.system.SysUserQueryVo;
+import com.lautung.oa.vo.system.SysUserResetPasswordRequest;
 import com.lautung.oa.vo.system.SysUserSaveRequest;
 import com.lautung.oa.vo.system.SysUserUpdateRequest;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -20,10 +21,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.inOrder;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,6 +44,10 @@ class SysUserControllerTest {
     private final SysUserService service = mock(SysUserService.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final DataScopeResolver dataScopeResolver = mock(DataScopeResolver.class);
+    private final com.lautung.oa.auth.service.SysDeptService sysDeptService =
+            mock(com.lautung.oa.auth.service.SysDeptService.class);
+    private final com.lautung.oa.auth.service.SysPostService sysPostService =
+            mock(com.lautung.oa.auth.service.SysPostService.class);
     private final SysUserController controller = new SysUserController();
 
     @BeforeAll
@@ -55,6 +61,8 @@ class SysUserControllerTest {
         ReflectionTestUtils.setField(controller, "service", service);
         ReflectionTestUtils.setField(controller, "passwordEncoder", passwordEncoder);
         ReflectionTestUtils.setField(controller, "dataScopeResolver", dataScopeResolver);
+        ReflectionTestUtils.setField(controller, "sysDeptService", sysDeptService);
+        ReflectionTestUtils.setField(controller, "sysPostService", sysPostService);
         when(dataScopeResolver.resolve(any())).thenReturn(DataScope.unrestricted());
     }
 
@@ -81,8 +89,7 @@ class SysUserControllerTest {
 
         SysUserQueryVo filtered = new SysUserQueryVo();
         filtered.setKeyword("张三");
-        filtered.setCreateTimeBegin("2026-01-01");
-        filtered.setCreateTimeEnd("2026-01-31");
+        filtered.setStatus(1);
         Result result = controller.index(1L, 10L, filtered);
 
         assertEquals(200, result.getCode());
@@ -146,12 +153,13 @@ class SysUserControllerTest {
     }
 
     @Test
-    void readsASingleUser() {
-        SysUser user = new SysUser();
-        user.setId(3L);
-        when(service.getById(3L)).thenReturn(user);
+    void readsASingleUserWithTheirPosts() {
+        com.lautung.oa.vo.system.SysUserDetailVo detail = new com.lautung.oa.vo.system.SysUserDetailVo();
+        detail.setId(3L);
+        detail.setPostIds(List.of(7L, 8L));
+        when(service.findDetail(3L)).thenReturn(detail);
 
-        assertEquals(user, controller.get(3L).getData());
+        assertEquals(detail, controller.get(3L).getData());
     }
 
     @Test
@@ -165,7 +173,7 @@ class SysUserControllerTest {
         controller.save(request);
 
         ArgumentCaptor<SysUser> saved = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).save(saved.capture());
+        verify(service).saveUser(saved.capture(), isNull());
         assertEquals("hashed", saved.getValue().getPassword());
         assertEquals("new-user", saved.getValue().getUsername());
         assertEquals("新用户", saved.getValue().getName());
@@ -187,7 +195,7 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateById(written.capture());
+        verify(service).updateUser(written.capture(), isNull(), isNull());
         assertNull(written.getValue().getPassword());
         // 公共字段由 CommonFieldsMetaObjectHandler 填（ADR 0031），控制器不再自己写 update_time。
         assertNull(written.getValue().getUpdateTime());
@@ -208,10 +216,35 @@ class SysUserControllerTest {
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
         verify(service, never()).updateById(any());
+        verify(service, never()).updateUser(any(), any(), any());
     }
 
     @Test
-    void changesThePasswordAndItsVersionTogether() {
+    void passesPostIdsToTheTransactionalUserWrite() {
+        SysUser existing = new SysUser();
+        existing.setId(3L);
+        existing.setPassword("stored");
+        when(service.getById(3L)).thenReturn(existing);
+        List<Long> postIds = List.of(7L, 8L);
+
+        SysUserUpdateRequest update = new SysUserUpdateRequest();
+        update.setId(3L);
+        update.setPostIds(postIds);
+        controller.updateById(update);
+        verify(service).updateUser(any(SysUser.class), eq(postIds), isNull());
+
+        SysUserSaveRequest save = new SysUserSaveRequest();
+        save.setUsername("new-user");
+        save.setPassword("111111");
+        save.setName("新用户");
+        save.setPostIds(postIds);
+        when(passwordEncoder.encode("111111")).thenReturn("hashed");
+        controller.save(save);
+        verify(service).saveUser(any(SysUser.class), eq(postIds));
+    }
+
+    @Test
+    void handsTheEncodedPasswordToTheTransactionalUserWrite() {
         SysUser existing = new SysUser();
         existing.setId(3L);
         existing.setPassword("stored");
@@ -226,9 +259,9 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        InOrder order = inOrder(service);
-        order.verify(service).changePassword(3L, "hashed-new");
-        order.verify(service).updateById(written.capture());
+        // 改密与用户行/岗位同步同一事务：控制器不再单独提交 changePassword（#260 二轮）。
+        verify(service, never()).changePassword(any(), any());
+        verify(service).updateUser(written.capture(), isNull(), eq("hashed-new"));
         assertNull(written.getValue().getPassword());
     }
 
@@ -246,9 +279,38 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateById(written.capture());
+        verify(service).updateUser(written.capture(), isNull(), isNull());
         assertNull(written.getValue().getPassword());
         assertNull(written.getValue().getTokenVersion());
+        verify(passwordEncoder, never()).encode(any());
+        verify(service, never()).changePassword(any(), any());
+    }
+
+    @Test
+    void resetsThePasswordWithoutRequiringTheOldOne() {
+        SysUser existing = new SysUser();
+        existing.setId(3L);
+        existing.setPassword("stored-hash");
+        when(service.getById(3L)).thenReturn(existing);
+        when(passwordEncoder.encode("fresh-secret")).thenReturn("hashed-fresh");
+        SysUserResetPasswordRequest reset = new SysUserResetPasswordRequest();
+        reset.setNewPassword("fresh-secret");
+
+        assertEquals(200, controller.resetPassword(3L, reset).getCode());
+
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(service).changePassword(3L, "hashed-fresh");
+        verify(service, never()).updateById(any());
+    }
+
+    @Test
+    void doesNotWriteAPasswordWhenTheResetTargetIsMissing() {
+        when(service.getById(3L)).thenReturn(null);
+        SysUserResetPasswordRequest reset = new SysUserResetPasswordRequest();
+        reset.setNewPassword("fresh-secret");
+
+        assertEquals(200, controller.resetPassword(3L, reset).getCode());
+
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
     }

@@ -148,6 +148,15 @@ export interface RoleRecord {
   createTime?: string
 }
 
+/** 角色成员/候选行（#256）：角色页双列表只用这几个字段。 */
+export interface RoleUserRecord {
+  id?: EntityId
+  username?: string
+  name?: string
+  phone?: string
+  assigned?: boolean
+}
+
 export interface RoleListItem extends RoleRecord {
   id: EntityId
 }
@@ -166,6 +175,96 @@ export interface DeptOption {
   parentId?: EntityId
 }
 
+/** 部门维护行（#247）：ancestors 是服务端算好的含自身包裹逗号路径，客户端只展示。 */
+export interface DeptRecord {
+  id?: EntityId | ''
+  parentId?: EntityId
+  ancestors?: string
+  name?: string
+  leader?: string
+  sortValue?: number
+  status?: number
+  createTime?: string
+  children?: DeptRecord[]
+}
+
+export interface DeptTreeNode extends DeptRecord {
+  children: DeptTreeNode[]
+}
+
+/** 用户页的只读部门节点（#249）：左树 prepend「全部」（id=0），表单树按 status 置 disabled。 */
+export interface DeptSelectNode extends DeptTreeNode {
+  disabled?: boolean
+}
+
+export interface DeptForm {
+  id: EntityId | ''
+  parentId: EntityId
+  name: string
+  leader: string
+  sortValue: number
+  status: number
+}
+
+/** 岗位（#248）：职务标签，不产生授权、不参与审批分配、不套数据范围。 */
+export interface PostRecord {
+  id?: EntityId | ''
+  postCode?: string
+  name?: string
+  sortValue?: number
+  status?: number
+  createTime?: string
+}
+
+export interface PostListItem extends PostRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface PostForm {
+  id: EntityId | ''
+  postCode: string
+  name: string
+  sortValue: number
+  status: number
+}
+
+/** 参数（#252）：运行时可改的键值；builtin=1 由迁移种入，只可改 value。 */
+export interface ParamRecord {
+  id?: EntityId | ''
+  configKey?: string
+  configValue?: string
+  configName?: string
+  valueType?: string
+  builtin?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface ParamListItem extends ParamRecord {
+  id: EntityId
+  builtin: number
+  builtinLabel: string
+  valueTypeLabel: string
+}
+
+export interface ParamForm {
+  id: EntityId | ''
+  configKey: string
+  configValue: string
+  configName: string
+  valueType: string
+  builtin: number
+  remark: string
+}
+
+/** 父级下拉项：depth 只用于缩进展示（0＝顶级部门）。 */
+export interface DeptParentOption {
+  id: EntityId
+  name: string
+  depth: number
+}
+
 export interface UserRecord {
   id?: EntityId | ''
   username?: string
@@ -173,6 +272,8 @@ export interface UserRecord {
   name?: string
   phone?: string
   status?: number
+  deptId?: EntityId
+  postIds?: EntityId[]
   createTime?: string
 }
 
@@ -188,6 +289,35 @@ export interface UserForm {
   name: string
   phone: string
   status: number
+  deptId: EntityId | ''
+  postIds: EntityId[]
+}
+
+/** 用户表单的岗位选项（#249）：只读、只含启用岗位。 */
+export interface PostOption {
+  id: EntityId
+  name: string
+}
+
+/** 用户导入的部分成功汇总（#259）：失败行不写，行号从 Excel 表头算第 1 行。 */
+export interface UserImportRowFailure {
+  rowNumber: number
+  username?: string
+  reason?: string
+}
+
+export interface UserImportResult {
+  total?: number
+  successCount?: number
+  failureCount?: number
+  failures?: UserImportRowFailure[]
+}
+
+export interface UserImportResultView {
+  total: number
+  successCount: number
+  failureCount: number
+  failures: Array<{ rowNumber: number; username: string; reason: string }>
 }
 
 /** 操作日志（ADR 0054）：审计行是历史事实，读侧只映射，不 join。 */
@@ -253,14 +383,16 @@ export interface LoginLogRecord {
   browser?: string
   os?: string
   status?: number
+  /** 事件类型：login / register（#253）。 */
+  event?: string
   msg?: string
   createTime?: string
 }
 
 export interface LoginLogListItem extends LoginLogRecord {
   id: EntityId
-  statusLabel: string
   statusTagType: AuditTagType
+  eventLabel: string
 }
 
 /** 在线用户（ADR 0060）：一行 = 一次登录；current 由服务端按请求者自己的会话标出。 */
@@ -352,12 +484,40 @@ export interface SlowSqlEntry {
   sql?: string | null
 }
 
+export interface SqlStatementStat {
+  statementId?: string | null
+  count?: number | null
+  avgElapsedMs?: number | null
+  maxElapsedMs?: number | null
+  lastTimestamp?: number | null
+}
+
+export interface PoolHistoryPoint {
+  timestamp?: number | null
+  activeConnections?: number | null
+  idleConnections?: number | null
+  totalConnections?: number | null
+  threadsAwaiting?: number | null
+}
+
 export interface MonitorDataSnapshot {
   hikari?: HikariMetrics | null
   slowSql?: {
     enabled?: boolean | null
     thresholdMs?: number | null
     entries?: SlowSqlEntry[] | null
+  } | null
+  /** 按 statementId 聚合的内存环统计（#258）：只覆盖慢 SQL，不是全量 SQL。 */
+  sqlStatistics?: {
+    enabled?: boolean | null
+    note?: string | null
+    statements?: SqlStatementStat[] | null
+  } | null
+  /** 连接池历史（#258）：进程内采样，时间升序，最多 120 点。 */
+  poolHistory?: {
+    capacity?: number | null
+    intervalMs?: number | null
+    points?: PoolHistoryPoint[] | null
   } | null
 }
 
@@ -554,6 +714,20 @@ export interface LoginCredentials {
   password: string
 }
 
+/** 匿名注册（#253）：手机可选；confirm 由服务端与 password 比对后丢弃。 */
+export interface RegisterPayload {
+  username: string
+  password: string
+  confirm: string
+  name: string
+  phone?: string
+}
+
+/** 注册开关探测的匿名响应。 */
+export interface RegisterSwitchRecord {
+  enabled?: boolean
+}
+
 export interface LoginTokens {
   token: string
   refreshToken?: string
@@ -583,9 +757,34 @@ export interface FormDesignerState {
   option: FormDesignerOption
 }
 
-export interface Profile {
+/** 个人中心（#254）：服务端资料形状；avatar 是已认证同源二进制端点路径或空串。 */
+export interface ProfileRecord {
+  username?: string
+  name?: string
+  phone?: string
+  avatar?: string
+}
+
+/** 个人中心表单投影：用户名只读，头像路径与 blob URL 分开存。 */
+export interface ProfileView {
+  username: string
   name: string
   phone: string
+  avatarPath: string
+}
+
+export interface ProfileWritePayload {
+  name: string
+  phone: string
+}
+
+export interface ProfilePasswordPayload {
+  oldPassword: string
+  newPassword: string
+}
+
+export interface ProfileAvatarResult {
+  url?: string
 }
 
 /** 公告（ADR 0055）：type 1 通知 / 2 公告；status 0 草稿 / 1 已发布 / 2 已撤回。 */
@@ -601,7 +800,6 @@ export interface NoticeFeedRecord {
 export interface NoticeFeedItem extends NoticeFeedRecord {
   id: EntityId
   title: string
-  typeLabel: string
   typeTagType: AuditTagType
   publisherName: string
   publishTime: string
@@ -620,7 +818,6 @@ export interface NoticeDetailView {
   id: EntityId
   title: string
   type?: number
-  typeLabel: string
   typeTagType: AuditTagType
   publisherId: EntityId | ''
   publisherName: string
@@ -646,8 +843,6 @@ export interface NoticeAdminRecord {
 export interface NoticeAdminListItem extends NoticeAdminRecord {
   id: EntityId
   title: string
-  typeLabel: string
-  statusLabel: string
   statusTagType: AuditTagType
 }
 
@@ -660,4 +855,59 @@ export interface NoticeWritePayload {
 export interface NoticeImageResult {
   id: EntityId
   url: string
+}
+
+/** 字典（#251，ADR 0062）：运行时可编辑的枚举；业务只存值，标签按 `dictType` 渲染。 */
+export interface DictOption {
+  dictLabel: string
+  dictValue: string
+  sortValue?: number
+}
+
+export interface DictTypeRecord {
+  id?: EntityId | ''
+  dictName?: string
+  dictType?: string
+  status?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface DictTypeListItem extends DictTypeRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface DictTypeForm {
+  id: EntityId | ''
+  dictName: string
+  dictType: string
+  status: number
+  remark: string
+}
+
+export interface DictDataRecord {
+  id?: EntityId | ''
+  dictType?: string
+  dictLabel?: string
+  dictValue?: string
+  sortValue?: number
+  status?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface DictDataListItem extends DictDataRecord {
+  id: EntityId
+  statusLabel: string
+}
+
+export interface DictDataForm {
+  id: EntityId | ''
+  dictType: string
+  dictLabel: string
+  dictValue: string
+  sortValue: number
+  status: number
+  remark: string
 }

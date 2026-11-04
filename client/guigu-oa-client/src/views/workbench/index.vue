@@ -98,7 +98,8 @@
                   <span class="notice-body">
                     <span class="notice-title">{{ notice.title }}</span>
                     <small class="notice-meta"
-                      >{{ notice.typeLabel }} · {{ notice.publishTime }}</small
+                      ><DictTag :dict-type="DICT_TYPES.noticeType" :value="notice.type" /> ·
+                      {{ notice.publishTime }}</small
                     >
                   </span>
                 </button>
@@ -134,7 +135,9 @@
 import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
+import { DICT_TYPES } from '@/config/dict'
 import { createNoticeUnreadSource } from '@/notice/unread'
 import { openRequestScope } from '@/request/request-scope'
 import { createSnapshotRead } from '@/request/snapshot-read'

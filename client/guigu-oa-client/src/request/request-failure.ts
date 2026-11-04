@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { translate as t } from '@/i18n'
 import { RecognitionFailure, type Recognition, type RequestContext } from '@/recognition'
 import type { ApiResponse } from '@/types/domain'
 
@@ -46,7 +47,7 @@ export class BusinessRequestFailure extends RequestFailure {
 
 /** 页面/按钮点拒绝（ADR 0052）：即使作用域关闭普通错误提示，也要把服务端文案提示一次。 */
 export class PermissionRequestFailure extends BusinessRequestFailure {
-  constructor(message = '没有操作权限') {
+  constructor(message = t('request.forbidden')) {
     super('forbidden', message, 205)
   }
 }
@@ -63,7 +64,7 @@ export function businessFailure(
   operation: 'request' | 'refresh' = 'request',
 ): RequestFailure {
   if (response.code === 205) {
-    return new PermissionRequestFailure(response.message || '没有操作权限')
+    return new PermissionRequestFailure(response.message || t('request.forbidden'))
   }
   const kind =
     response.code === 208
@@ -75,7 +76,7 @@ export function businessFailure(
           : 'retryable'
   return new BusinessRequestFailure(
     kind,
-    response.message || '请求失败',
+    response.message || t('request.failed'),
     [201, 208, 209, 403].includes(response.code || 0) ? response.code : undefined,
     {
       source: typeof response.code === 'number' ? 'business' : 'unexpected',
@@ -93,17 +94,21 @@ export function transportFailure(
   const status = axios.isAxiosError(error) ? error.response?.status : undefined
   const timeout =
     axios.isAxiosError(error) && ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code || '')
-  return new RequestFailure('retryable', error instanceof Error ? error.message : '请求失败', {
-    source: status
-      ? 'http'
-      : timeout
-        ? 'timeout'
-        : axios.isAxiosError(error)
-          ? 'network'
-          : 'unexpected',
-    operation,
-    httpStatus: status,
-  })
+  return new RequestFailure(
+    'retryable',
+    error instanceof Error ? error.message : t('request.failed'),
+    {
+      source: status
+        ? 'http'
+        : timeout
+          ? 'timeout'
+          : axios.isAxiosError(error)
+            ? 'network'
+            : 'unexpected',
+      operation,
+      httpStatus: status,
+    },
+  )
 }
 
 /**

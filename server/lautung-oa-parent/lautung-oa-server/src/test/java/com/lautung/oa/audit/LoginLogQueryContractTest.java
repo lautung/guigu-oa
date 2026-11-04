@@ -178,12 +178,27 @@ class LoginLogQueryContractTest {
     }
 
     @Test
+    void theEventFilterSeparatesRegisterRowsFromLoginRows() throws Exception {
+        jdbcTemplate.update("UPDATE sys_login_log SET event = 'register' WHERE id = 605");
+
+        mockMvc.perform(list(1L, 1, 10).param("event", "register"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(605))
+                .andExpect(jsonPath("$.data.records[0].event").value("register"));
+
+        mockMvc.perform(list(1L, 1, 10).param("event", "login"))
+                .andExpect(jsonPath("$.data.total").value(4))
+                .andExpect(jsonPath("$.data.records[*].id", not(hasItems(605))));
+    }
+
+    @Test
     void aRowCarriesTheWholeRecordAndAnUnknownUserKeepsTheSnapshotEmpty() throws Exception {
         mockMvc.perform(list(1L, 1, 10).param("status", "3"))
                 .andExpect(jsonPath("$.data.records[0].username").value("login-alpha"))
                 .andExpect(jsonPath("$.data.records[0].userId").doesNotExist())
                 .andExpect(jsonPath("$.data.records[0].deptId").doesNotExist())
                 .andExpect(jsonPath("$.data.records[0].ip").value("203.0.113.10"))
+                .andExpect(jsonPath("$.data.records[0].event").value("login"))
                 .andExpect(jsonPath("$.data.records[0].msg").value("手动解锁"));
     }
 

@@ -7,6 +7,15 @@ import db.migration.V116__NoticeSchemaAndMenu;
 import db.migration.V117__MonitorOnlineMenu;
 import db.migration.V118__MonitorPages;
 import db.migration.V122__ToolApiDocMenu;
+import db.migration.V123__SysDeptMenu;
+import db.migration.V124__SysPostMenu;
+import db.migration.V125__SysUserResetPasswordMenu;
+import db.migration.V127__SysConfigSchemaAndMenu;
+import db.migration.V129__SysRoleAssignUserMenu;
+import db.migration.V130__SysDictSchemaAndMenu;
+import db.migration.V131__SysLoginLogEvent;
+import db.migration.V132__SysUserExportMenu;
+import db.migration.V133__SysUserImportMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -59,6 +68,9 @@ class FlywayMigrationContractTest {
             "sys_post",
             "sys_user_post",
             "sys_role_dept",
+            "sys_config",
+            "sys_dict_type",
+            "sys_dict_data",
             "oa_process_type",
             "oa_process_template",
             "oa_process",
@@ -73,8 +85,14 @@ class FlywayMigrationContractTest {
             "sys_job_log");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
+            "system:user:resetPwd", "system:user:export", "system:user:import",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
+            "system:role:assignUser",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
+            "system:dept:add", "system:dept:edit", "system:dept:remove",
+            "system:post:add", "system:post:edit", "system:post:remove",
+            "system:config:add", "system:config:edit", "system:config:remove",
+            "system:dict:add", "system:dict:edit", "system:dict:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
@@ -294,6 +312,10 @@ class FlywayMigrationContractTest {
                         "/system",
                         "/system/sysUser",
                         "/system/sysRole",
+                        "/system/sysDept",
+                        "/system/sysPost",
+                        "/system/config",
+                        "/system/dict",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
@@ -340,6 +362,122 @@ class FlywayMigrationContractTest {
     }
 
     @Test
+    void v124SeedsTheSysPostPageAndButtonsForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '124' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/sysPost' AND c.type = 1 "
+                + "AND c.component = 'system/sysPost/index' AND COALESCE(c.perms, '') = '' "
+                + "AND p.path = '/system' AND p.type = 0 AND c.is_deleted = 0"));
+        // 三个按钮都挂在岗位页面下，path/component 为空、perms 唯一。
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND p.path = '/system/sysPost' AND b.is_deleted = 0 "
+                + "AND b.perms IN ('system:post:add','system:post:edit','system:post:remove') "
+                + "AND COALESCE(b.path, '') = '' AND COALESCE(b.component, '') = ''"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/sysPost' "
+                + "OR m.perms IN ('system:post:add','system:post:edit','system:post:remove'))"));
+    }
+
+    @Test
+    void v125SeedsTheResetPasswordButtonForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '125' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.name = '重置密码' AND b.type = 2 AND COALESCE(b.path, '') = '' "
+                + "AND COALESCE(b.component, '') = '' AND b.perms = 'system:user:resetPwd' "
+                + "AND b.sort_value = 5 AND p.path = '/system/sysUser' AND p.type = 1"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.perms = 'system:user:resetPwd'"));
+    }
+
+    @Test
+    void v132SeedsTheUserExportButtonForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '132' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.name = '导出' AND b.type = 2 AND COALESCE(b.path, '') = '' "
+                + "AND COALESCE(b.component, '') = '' AND b.perms = 'system:user:export' "
+                + "AND p.path = '/system/sysUser' AND p.type = 1"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.perms = 'system:user:export'"));
+    }
+
+    @Test
+    void v133SeedsTheUserImportButtonForSuperAdmin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '133' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.name = '导入' AND b.type = 2 AND COALESCE(b.path, '') = '' "
+                + "AND COALESCE(b.component, '') = '' AND b.perms = 'system:user:import' "
+                + "AND p.path = '/system/sysUser' AND p.type = 1"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND m.perms = 'system:user:import'"));
+    }
+
+    @Test
+    void v130SeedsTheSysDictPageButtonsAndFourDictionaryGroups() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '130' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/dict' AND c.type = 1 "
+                + "AND c.component = 'system/dict/index' AND p.path = '/system' AND p.type = 0"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/dict' "
+                + "AND b.perms IN ('system:dict:add','system:dict:edit','system:dict:remove')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/dict' "
+                + "OR m.perms IN ('system:dict:add','system:dict:edit','system:dict:remove'))"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_dict_type WHERE dict_type IN "
+                + "('sys_notice_type','sys_notice_status','sys_job_status','sys_login_status') "
+                + "AND status = 1 AND is_deleted = 0"));
+        assertEquals(12, count("SELECT COUNT(*) FROM sys_dict_data WHERE dict_type IN "
+                + "('sys_notice_type','sys_notice_status','sys_job_status','sys_login_status') "
+                + "AND status = 1 AND is_deleted = 0"));
+    }
+
+    @Test
+    void v127SeedsTheSysConfigPageButtonsAndRegisterSwitch() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '127' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu p ON p.id = c.parent_id "
+                + "WHERE c.path = '/system/config' AND c.type = 1 "
+                + "AND c.component = 'system/config/index' AND p.path = '/system' AND p.type = 0"));
+        assertEquals(3, count("SELECT COUNT(*) FROM sys_menu b JOIN sys_menu p ON p.id = b.parent_id "
+                + "WHERE b.type = 2 AND b.is_deleted = 0 AND p.path = '/system/config' "
+                + "AND b.perms IN ('system:config:add','system:config:edit','system:config:remove')"));
+        assertEquals(4, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id = rm.role_id "
+                + "JOIN sys_menu m ON m.id = rm.menu_id "
+                + "WHERE r.role_code = 'super_admin' AND rm.is_deleted = 0 "
+                + "AND (m.path = '/system/config' "
+                + "OR m.perms IN ('system:config:add','system:config:edit','system:config:remove'))"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_config "
+                + "WHERE config_key = 'sys.account.registerUser' AND config_value = 'false' "
+                + "AND value_type = 'boolean' AND builtin = 1 AND is_deleted = 0"));
+    }
+
+    @Test
+    void v131AddsTheLoginLogEventColumnDefaultingExistingRowsToLogin() {
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
+                + "WHERE version = '131' AND success = TRUE"));
+        // 迁移后不带 event 的插入落到 login：既有行与既有写入路径都不需要改。
+        jdbcTemplate.update("INSERT INTO sys_login_log (username, status) VALUES ('event-default', 1)");
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_login_log "
+                + "WHERE username = 'event-default' AND event = 'login'"));
+        jdbcTemplate.update("DELETE FROM sys_login_log WHERE username = 'event-default'");
+    }
+
+    @Test
     void reapplyingThePermissionBaseMigrationKeepsSeedRowsStable() throws Exception {
         int menus = count("SELECT COUNT(*) FROM sys_menu");
         int buttons = count("SELECT COUNT(*) FROM sys_menu WHERE type = 2");
@@ -362,6 +500,22 @@ class FlywayMigrationContractTest {
             new V118__MonitorPages().migrate(context);
             // 系统工具目录与接口文档页（#246）同样可重复执行。
             new V122__ToolApiDocMenu().migrate(context);
+            // 部门管理页面与按钮点（#247）同样可重复执行。
+            new V123__SysDeptMenu().migrate(context);
+            // 岗位管理页面/按钮（#248）也必须幂等。
+            new V124__SysPostMenu().migrate(context);
+            // 用户重置密码按钮（#250）同样可重复执行。
+            new V125__SysUserResetPasswordMenu().migrate(context);
+            // 参数设置表/菜单/注册开关（#252）也必须幂等。
+            new V127__SysConfigSchemaAndMenu().migrate(context);
+            // 角色分配用户页面（#256）与字典管理（#251）的建表/菜单/授予种子（V129/V130）也必须幂等。
+            new V129__SysRoleAssignUserMenu().migrate(context);
+            new V130__SysDictSchemaAndMenu().migrate(context);
+            // 登录日志 event 列（#253）重放时不得重复加列。
+            new V131__SysLoginLogEvent().migrate(context);
+            // 用户导出与导入按钮（#259）同样可重复执行。
+            new V132__SysUserExportMenu().migrate(context);
+            new V133__SysUserImportMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

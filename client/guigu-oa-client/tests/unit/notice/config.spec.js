@@ -9,9 +9,7 @@ import {
   imageRequest,
   markReadRequest,
   noticeReadLabel,
-  noticeStatusLabel,
   noticeStatusTagType,
-  noticeTypeLabel,
   noticeTypeTagType,
   presentAdminListRecord,
   presentAdminQuery,
@@ -27,15 +25,9 @@ import {
 } from '@/notice/config'
 
 describe('公告标签与展示投影', () => {
-  it('renders the fixed type and status enums from one constant', () => {
-    expect(noticeTypeLabel(1)).toBe('通知')
-    expect(noticeTypeLabel(2)).toBe('公告')
-    expect(noticeTypeLabel(undefined)).toBe('')
+  it('keeps only the visual tag types; labels come from the notice dictionaries (#251)', () => {
     expect(noticeTypeTagType(2)).toBe('warning')
     expect(noticeTypeTagType(1)).toBe('info')
-    expect(noticeStatusLabel(0)).toBe('草稿')
-    expect(noticeStatusLabel(1)).toBe('已发布')
-    expect(noticeStatusLabel(2)).toBe('已撤回')
     expect(noticeStatusTagType(1)).toBe('success')
     expect(noticeStatusTagType(2)).toBe('danger')
     expect(noticeStatusTagType(0)).toBe('info')
@@ -55,7 +47,6 @@ describe('公告标签与展示投影', () => {
     expect(item).toMatchObject({
       id: 7,
       title: '系统维护',
-      typeLabel: '公告',
       typeTagType: 'warning',
       publisherName: '管理员',
       publishTime: '2026-11-03 10:00:00',
@@ -76,7 +67,6 @@ describe('公告标签与展示投影', () => {
     })
 
     expect(detail.content).toBe('<p><strong>x</strong></p>')
-    expect(detail.typeLabel).toBe('通知')
     expect(detail.read).toBe(true)
     expect(presentDetail().content).toBe('')
   })
@@ -90,7 +80,7 @@ describe('公告标签与展示投影', () => {
       content: '<p>不应出现在列表</p>',
     })
 
-    expect(row).toMatchObject({ id: 9, title: '草稿', statusLabel: '草稿', statusTagType: 'info' })
+    expect(row).toMatchObject({ id: 9, title: '草稿', statusTagType: 'info' })
     expect(row.content).toBeUndefined()
   })
 })

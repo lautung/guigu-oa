@@ -76,11 +76,11 @@ describe('全部公告列表', () => {
     expect(wrapper.vm.view.status).toBe('ready')
     expect(wrapper.vm.rows.map((row) => row.title)).toEqual(['公告 2', '公告 1'])
     expect(wrapper.vm.rows[0]).toMatchObject({
-      typeLabel: '公告',
+      type: 2,
       readLabel: '未读',
       readTagType: 'danger',
     })
-    expect(wrapper.vm.rows[1]).toMatchObject({ typeLabel: '通知', readLabel: '已读' })
+    expect(wrapper.vm.rows[1]).toMatchObject({ type: 1, readLabel: '已读' })
     expect(wrapper.vm.view.total).toBe(2)
   })
 

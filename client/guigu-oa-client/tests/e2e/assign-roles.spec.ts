@@ -92,6 +92,16 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
       state.infoCalls += 1
       return json(route, {
         name: 'Alice',
+        // V110 已种用户页按钮点；按钮权限投影后 mock 必须同样授予，否则按钮被指令移除。
+        permissions: [
+          'system:user:add',
+          'system:user:edit',
+          'system:user:remove',
+          'system:user:assignRole',
+          'system:user:export',
+          'system:user:import',
+          'system:user:resetPwd',
+        ],
         menus: [
           { path: '/system', title: '系统管理', type: 0, sort: 1 },
           {
@@ -106,6 +116,8 @@ async function setup(page: Page, options: Options = {}): Promise<State> {
     }
     if (path.startsWith('/admin/process/findPending/'))
       return json(route, { records: [], total: 0, pages: 0 })
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))
       return json(route, { records: users, total: users.length, pages: 1 })
     if (path.startsWith('/admin/system/sysRole/toAssign/')) {

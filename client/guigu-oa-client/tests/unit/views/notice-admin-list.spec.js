@@ -75,7 +75,8 @@ function mountList(permissions = []) {
 }
 
 function lastParams(http) {
-  return http.calls.at(-1)?.params
+  return http.calls.filter((call) => (call.url || '').startsWith('/admin/system/notices')).at(-1)
+    ?.params
 }
 
 let mounted
@@ -96,9 +97,7 @@ describe('通知公告列表筛选与分页', () => {
 
     expect(lastParams(mounted.http)).toEqual({ page: 1, limit: 10 })
     expect(mounted.wrapper.text()).toContain('系统维护')
-    expect(mounted.wrapper.text()).toContain('草稿')
-    expect(mounted.wrapper.text()).toContain('已发布')
-    expect(mounted.wrapper.text()).toContain('已撤回')
+    expect(mounted.wrapper.vm.rows.map((row) => row.status)).toEqual([0, 1, 2])
   })
 
   it('applies title/type/status filters and keeps them when paging', async () => {

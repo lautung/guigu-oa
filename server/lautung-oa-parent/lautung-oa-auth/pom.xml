@@ -32,6 +32,24 @@
             <artifactId>lautung-oa-model</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 头像复用现有私有附件桶（avatar/{userId} 前缀），不新增桶（#254） -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-storage</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 注册开关走 config 的只读端口，auth 不直连 sys_config（#253，ADR 0062） -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-config</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- 用户导出/导入只引 xlsx 读写（#259）：不引整套报表框架，POI 只落在 auth。 -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

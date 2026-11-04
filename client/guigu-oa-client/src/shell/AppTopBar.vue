@@ -5,17 +5,17 @@
         v-if="narrow"
         type="button"
         class="shell-icon-btn menu-toggle"
-        title="菜单"
-        aria-label="菜单"
+        :title="t('shell.menu')"
+        :aria-label="t('shell.menu')"
         @click="$emit('toggle-menu')"
       >
         <el-icon><component :is="shellIcon('Menu')" /></el-icon>
       </button>
       <div class="brand">
         <span class="brand-logo">云</span>
-        <span class="brand-text">云尚办公</span>
+        <span class="brand-text">{{ t('shell.brand') }}</span>
       </div>
-      <nav class="top-nav" aria-label="一级模块">
+      <nav class="top-nav" :aria-label="t('shell.modulesAria')">
         <button
           v-for="module in modules"
           :key="module.key"
@@ -34,22 +34,46 @@
 
     <div class="top-tools">
       <el-tag v-if="desktopHint" class="desktop-hint" size="small" type="warning">
-        建议桌面
+        {{ t('shell.desktopHint') }}
       </el-tag>
       <fullscreen-button />
       <menu-search />
       <notice-bell />
+      <el-dropdown class="locale-switch" trigger="click" @command="switchLocale">
+        <button
+          type="button"
+          class="locale-btn"
+          :title="t('shell.locale.label')"
+          :aria-label="t('shell.locale.label')"
+        >
+          <el-icon><component :is="shellIcon('Language')" /></el-icon>
+          <span class="locale-code">{{ locale === 'en' ? 'EN' : '中' }}</span>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item
+              v-for="option in LOCALE_OPTIONS"
+              :key="option.value"
+              :command="option.value"
+            >
+              {{ t(option.labelKey) }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <user-menu />
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import NoticeBell from './NoticeBell.vue'
 import FullscreenButton from './FullscreenButton.vue'
 import MenuSearch from './MenuSearch.vue'
 import UserMenu from './UserMenu.vue'
 import { shellIcon } from './shell-icons'
+import { LOCALE_OPTIONS, currentLocale, isLocale, setLocale, translate as t } from '@/i18n'
 import type { ShellModule, ShellModuleKey } from './shell-nav'
 
 defineProps<{
@@ -63,6 +87,14 @@ defineEmits<{
   (event: 'switch-module', key: ShellModuleKey): void
   (event: 'toggle-menu'): void
 }>()
+
+const locale = computed(() => currentLocale())
+
+function switchLocale(value: unknown): void {
+  if (isLocale(value)) setLocale(value)
+}
+
+defineExpose({ switchLocale })
 </script>
 
 <style lang="scss" scoped>
@@ -184,6 +216,32 @@ defineEmits<{
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);
   outline: none;
+}
+
+.locale-btn {
+  height: 32px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.locale-btn:hover,
+.locale-btn:focus-visible {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+  outline: none;
+}
+
+.locale-code {
+  font-size: 12px;
+  line-height: 1;
 }
 
 @media (max-width: 1180px) {

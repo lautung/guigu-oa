@@ -99,6 +99,7 @@ class LoginLogContractTest {
         assertEquals("Chrome", row.get("browser"));
         assertEquals("Windows", row.get("os"));
         assertEquals(0, intValue(row, "status"));
+        assertEquals("login", row.get("event"), "the login path defaults to the login dimension");
         assertNull(row.get("msg"));
         assertNotNull(row.get("create_time"), "create_time must be filled by the common-field handler");
         assertFalse(String.valueOf(row).contains("AppleWebKit"), "the raw user-agent must never be stored");
@@ -118,6 +119,7 @@ class LoginLogContractTest {
         assertEquals("Safari", row.get("browser"));
         assertEquals("macOS", row.get("os"));
         assertEquals(1, intValue(row, "status"));
+        assertEquals("login", row.get("event"));
         assertEquals("登录失败", row.get("msg"));
     }
 

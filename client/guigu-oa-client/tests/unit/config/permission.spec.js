@@ -268,10 +268,8 @@ describe('配置权限', () => {
         path: '/work/pending',
         group: 'work',
       })
-      expect(permission.entryOf('/work/profile')).toEqual({
-        path: '/work/profile',
-        group: 'work',
-      })
+      // 个人中心登录即有、不进后台菜单（#254）：不属于任何菜单组。
+      expect(permission.entryOf('/profile')).toBeNull()
     })
 
     it('prefers the longest 办事 entry', () => {

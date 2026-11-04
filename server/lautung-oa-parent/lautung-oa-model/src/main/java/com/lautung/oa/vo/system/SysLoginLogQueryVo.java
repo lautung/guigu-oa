@@ -24,6 +24,9 @@ public class SysLoginLogQueryVo implements Serializable {
     /** 0 成功 / 1 失败 / 2 锁定 / 3 解锁。 */
     private Integer status;
 
+    /** 事件类型：{@code login} / {@code register}（#253，ADR 0062）；为空不过滤。 */
+    private String event;
+
     private String createTimeBegin;
 
     private String createTimeEnd;

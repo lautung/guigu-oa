@@ -21,6 +21,16 @@
           />
         </el-select>
       </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="query.event" placeholder="请选类型" clearable>
+          <el-option
+            v-for="item in eventOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="登录时间">
         <el-date-picker
           v-model="query.createTimes"
@@ -70,14 +80,17 @@
           :index="list.rowIndex"
         />
         <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column prop="eventLabel" label="类型" width="80" align="center" />
         <el-table-column prop="ip" label="IP" min-width="130" />
         <el-table-column prop="browser" label="浏览器" width="110" />
         <el-table-column prop="os" label="操作系统" width="110" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.statusTagType" size="small">
-              {{ scope.row.statusLabel }}
-            </el-tag>
+            <DictTag
+              :dict-type="DICT_TYPES.loginStatus"
+              :value="scope.row.status"
+              :tag-type="scope.row.statusTagType"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="msg" label="说明" min-width="160" />
@@ -107,19 +120,22 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onBeforeUnmount } from 'vue'
+import { computed, defineComponent, onBeforeUnmount } from 'vue'
 
 import { clean, removeByIds, unlock } from '@/api/login-log'
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import { DICT_TYPES } from '@/config/dict'
 import {
+  LOGIN_EVENT_OPTIONS,
   LOGIN_LOG_PERMISSIONS,
-  LOGIN_STATUS_OPTIONS,
   emptyQuery,
   listRequest,
   presentListRecord,
   presentQuery,
 } from '@/config/login-log'
+import { useDict } from '@/dict/use-dict'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
@@ -128,7 +144,7 @@ import type { EntityId, LoginLogListItem, LoginLogRecord } from '@/types/domain'
 
 export default defineComponent({
   name: 'SysLoginLogList',
-  components: { ListLoadError, ListPagination },
+  components: { DictTag, ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -141,8 +157,17 @@ export default defineComponent({
       ...effects,
     })
     onBeforeUnmount(() => list.release())
+    const dict = useDict(DICT_TYPES.loginStatus)
     return {
       list,
+      DICT_TYPES,
+      statusOptions: computed(() =>
+        dict.optionsOf(DICT_TYPES.loginStatus).map((option) => ({
+          value: Number(option.dictValue),
+          label: option.dictLabel,
+        })),
+      ),
+      eventOptions: LOGIN_EVENT_OPTIONS,
       view: list.view,
       rows: list.rows,
       emptyText: list.emptyText,
@@ -153,7 +178,6 @@ export default defineComponent({
   data() {
     return {
       query: emptyQuery(),
-      statusOptions: LOGIN_STATUS_OPTIONS,
       selectedIds: [] as EntityId[],
     }
   },

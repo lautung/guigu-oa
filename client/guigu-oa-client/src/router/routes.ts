@@ -94,12 +94,6 @@ const workChildren: AppRoute[] = [
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
   },
-  {
-    path: childPath(PATHS.WORK, PATHS.WORK_PROFILE),
-    name: 'WorkProfile',
-    component: () => import('@/views/work/profile/index.vue'),
-    meta: { title: '基本信息', menuGroup: 'work' },
-  },
 ]
 
 const configChildren: AppRoute[] = [
@@ -120,6 +114,33 @@ const configChildren: AppRoute[] = [
     name: 'SysMenu',
     component: () => import('@/views/config/sysMenu/index.vue'),
     meta: { title: '菜单管理', menuGroup: 'config' },
+  },
+  {
+    // 部门管理（#247）：树表格 + 新增/编辑弹窗；读只判页面授予，写挂三个按钮点。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_DEPT),
+    name: 'SysDept',
+    component: () => import('@/views/config/sysDept/index.vue'),
+    meta: { title: '部门管理', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_POST),
+    name: 'SysPost',
+    component: () => import('@/views/config/sysPost/index.vue'),
+    meta: { title: '岗位管理', menuGroup: 'config' },
+  },
+  {
+    // 参数设置（#252）：键值 CRUD；内置项只读 key/元数据，写后刷新与手动刷新缓存。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_CONFIG),
+    name: 'SysConfig',
+    component: () => import('@/views/config/config/index.vue'),
+    meta: { title: '参数设置', menuGroup: 'config' },
+  },
+  {
+    // 字典管理（#251）：左类型、右数据两级；写后刷新与手动刷新缓存走各自的 list page。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_DICT),
+    name: 'SysDict',
+    component: () => import('@/views/config/dict/index.vue'),
+    meta: { title: '字典管理', menuGroup: 'config' },
   },
   {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
@@ -202,6 +223,12 @@ export const constantRoutes: AppRoute[] = [
   {
     path: PATHS.LOGIN,
     component: () => import('@/views/login/index.vue'),
+    hidden: true,
+  },
+  {
+    // 匿名注册（#253）：与登录页一样在外壳之外，开关关闭时页面本身给关闭态。
+    path: PATHS.REGISTER,
+    component: () => import('@/views/register/index.vue'),
     hidden: true,
   },
   {
@@ -293,6 +320,13 @@ export const constantRoutes: AppRoute[] = [
         // 不把它当后台页面（#224 的守卫只过滤 config 组）。
         path: PATHS.NOTICE,
         children: noticeChildren,
+      },
+      {
+        // 个人中心（#254）：登录即有，不进后台菜单、不设页面授予/按钮点。
+        path: PATHS.PROFILE,
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人中心' },
       },
       {
         path: PATHS.SYSTEM,

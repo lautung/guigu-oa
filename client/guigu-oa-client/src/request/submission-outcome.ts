@@ -1,7 +1,7 @@
 import { RequestFailure } from '@/request/request-failure'
 
 export type SubmissionAction =
-  'start-approval' | 'process-approval' | 'save-template' | 'assign-roles'
+  'start-approval' | 'process-approval' | 'save-template' | 'assign-roles' | 'assign-role-users'
 
 export type SubmissionOutcome = 'refused' | 'unconfirmed'
 
@@ -14,6 +14,8 @@ const REFUSED_BUSINESS_CODES: Record<SubmissionAction, ReadonlySet<number>> = {
   'process-approval': new Set([201, 205, 208, 209, 403]),
   'save-template': new Set([201, 205, 208, 209, 403]),
   'assign-roles': new Set([205, 208, 209, 403]),
+  // 角色侧成员替换的 201 只来自写前校验（角色不存在/用户不存在），不是提交后失效失败。
+  'assign-role-users': new Set([201, 205, 208, 209, 403]),
 }
 
 export function classifySubmissionFailure(

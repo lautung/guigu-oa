@@ -87,7 +87,7 @@ function realOptions(pinia) {
   return {
     global: {
       plugins: [pinia, ElementPlus],
-      stubs: { 'form-create': true, 'fc-designer': true },
+      stubs: { DictTag: true, 'form-create': true, 'fc-designer': true },
       directives: { hasPermi },
     },
   }
@@ -99,6 +99,13 @@ function buttonTexts(wrapper) {
 
 function button(wrapper, text) {
   return wrapper.findAll('button').find((node) => node.text() === text)
+}
+
+/** 登录日志页的标签读会并发打 batch；只看登录日志列表请求。 */
+function lastLoginCall() {
+  return http.calls
+    .filter((call) => (call.url || '').startsWith('/admin/system/sysLoginLog'))
+    .at(-1)
 }
 
 ensureDomApis()
@@ -247,11 +254,10 @@ describe('登录日志列表页', () => {
     expect(wrapper.vm.rows).toEqual([
       expect.objectContaining({
         username: 'alice',
-        statusLabel: '锁定',
         statusTagType: 'warning',
       }),
     ])
-    expect(http.calls.at(-1).url).toBe('/admin/system/sysLoginLog/1/10')
+    expect(lastLoginCall().url).toBe('/admin/system/sysLoginLog/1/10')
 
     wrapper.vm.query.username = 'alice'
     wrapper.vm.query.ip = '127.0.0.1'
@@ -259,7 +265,7 @@ describe('登录日志列表页', () => {
     wrapper.vm.query.createTimes = ['2026-01-01 00:00:00', '2026-01-31 23:59:59']
     wrapper.vm.search()
     await flushPromises()
-    expect(http.calls.at(-1).params).toEqual({
+    expect(lastLoginCall().params).toEqual({
       username: 'alice',
       ip: '127.0.0.1',
       status: 2,
@@ -269,7 +275,7 @@ describe('登录日志列表页', () => {
 
     wrapper.vm.list.handleSizeChange(20)
     await flushPromises()
-    expect(http.calls.at(-1).url).toBe('/admin/system/sysLoginLog/1/20')
+    expect(lastLoginCall().url).toBe('/admin/system/sysLoginLog/1/20')
   })
 
   it('unlocks the account after confirmation and shows the new unlock row', async () => {
@@ -290,7 +296,7 @@ describe('登录日志列表页', () => {
 
     expect(confirmMock).toHaveBeenCalledTimes(1)
     expect(loginLogApi.unlock).toHaveBeenCalledWith('alice')
-    expect(wrapper.vm.rows[0]).toMatchObject({ statusLabel: '解锁', msg: '手动解锁' })
+    expect(wrapper.vm.rows[0]).toMatchObject({ status: 3, msg: '手动解锁' })
   })
 
   it('does not unlock or clean when the confirmation is dismissed', async () => {

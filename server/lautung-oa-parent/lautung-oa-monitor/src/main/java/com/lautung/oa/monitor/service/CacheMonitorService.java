@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  * <ul>
  *   <li>INFO：一次 {@code INFO} 取回后只解析 server/memory/clients/stats/keyspace 五段为
  *       字段，不整段回传；读不到时各段为空，不 500。</li>
- *   <li>列表：{@code SCAN}（不用 {@code KEYS}）+ 前缀白名单四个；结果在内存里排序后按
+ *   <li>列表：{@code SCAN}（不用 {@code KEYS}）+ 前缀白名单六个；结果在内存里排序后按
  *       游标窗口切页（与在线列表同口径），单页上限 {@link #MAX_KEY_COUNT}（超界 201），
  *       每键附 TTL（秒，-1 无过期）。</li>
  *   <li>清理：单键删除只收 {@code perm:} 前缀，清空只收 {@code perm:cache:*}；
@@ -37,9 +37,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class CacheMonitorService {
 
-    /** 缓存列表的浏览白名单（ADR 0060）：四个前缀，空值或白名单外一律 201。 */
+    /** 缓存列表的浏览白名单（ADR 0060/0062）：六个前缀，空值或白名单外一律 201。 */
     static final Set<String> LIST_PREFIXES = Set.of(
-            "perm:", "login:session:", "login:attempt:", "token:revoked:");
+            "perm:", "login:session:", "login:attempt:", "token:revoked:", "config:", "dict:");
 
     /** 单键删除的清理白名单：只允许权限缓存家族（perm:*），ADR 0060。 */
     static final String DELETE_PREFIX = "perm:";

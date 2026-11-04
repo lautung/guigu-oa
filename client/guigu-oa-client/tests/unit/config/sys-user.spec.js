@@ -1,16 +1,33 @@
 import { describe, expect, it } from 'vitest'
 import { emptyMessageOf } from '../support/form-rules'
 import {
+  deptTreeRequest,
   emptyForm,
+  emptyResetPasswordForm,
   formRules,
   getRequest,
   listRequest,
+  postOptionsRequest,
+  presentDeptFilterTree,
+  presentDeptFormTree,
   presentForm,
   presentListPage,
+  presentPostOptions,
   removeRequest,
+  resetPasswordRequest,
+  resetPasswordRules,
+  SYS_USER_PERMISSIONS,
   updateStatusRequest,
   writeRequest,
 } from '@/config/sys-user'
+
+function messageOf(rule, value) {
+  let error
+  rule.validator({}, value, (result) => {
+    error = result
+  })
+  return error && error.message
+}
 
 describe('config/sys-user', () => {
   describe('presentListPage', () => {
@@ -89,7 +106,26 @@ describe('config/sys-user', () => {
           name: '李四',
           phone: '13900002222',
           status: 1,
+          postIds: [],
         },
+      })
+    })
+
+    it('sends the chosen department and posts on create', () => {
+      expect(
+        writeRequest({
+          username: 'lisi',
+          password: '123456',
+          name: '李四',
+          phone: '',
+          status: 1,
+          deptId: 11,
+          postIds: [301, 302],
+        }),
+      ).toMatchObject({
+        method: 'post',
+        url: '/admin/system/sysUser/save',
+        data: { deptId: 11, postIds: [301, 302] },
       })
     })
 
@@ -112,8 +148,38 @@ describe('config/sys-user', () => {
           name: '张三',
           phone: '13800001111',
           status: 1,
+          postIds: [],
         },
       })
+    })
+
+    it('omits an empty department so update keeps the current one', () => {
+      expect(
+        writeRequest({
+          id: 2,
+          username: 'zhangsan',
+          name: '张三',
+          phone: '',
+          status: 1,
+          deptId: '',
+          postIds: [301],
+        }),
+      ).toMatchObject({
+        method: 'put',
+        url: '/admin/system/sysUser/update',
+        data: { postIds: [301] },
+      })
+      expect(
+        writeRequest({
+          id: 2,
+          username: 'zhangsan',
+          name: '张三',
+          phone: '',
+          status: 1,
+          deptId: '',
+          postIds: [301],
+        }).data,
+      ).not.toHaveProperty('deptId')
     })
 
     it('deletes a 用户 with DELETE /admin/system/sysUser/remove/{id}', () => {
@@ -129,6 +195,45 @@ describe('config/sys-user', () => {
         url: '/admin/system/sysUser/updateStatus/2/0',
       })
     })
+
+    it('resets a 用户 password with POST /admin/system/sysUser/{id}/resetPassword', () => {
+      expect(resetPasswordRequest(2, '654321')).toEqual({
+        method: 'post',
+        url: '/admin/system/sysUser/2/resetPassword',
+        data: { newPassword: '654321' },
+      })
+    })
+  })
+
+  describe('重置密码', () => {
+    it('names the standalone button point and starts from an empty form', () => {
+      expect(SYS_USER_PERMISSIONS.resetPassword).toBe('system:user:resetPwd')
+      expect(emptyResetPasswordForm()).toEqual({ newPassword: '', confirmPassword: '' })
+    })
+
+    it('mirrors the server min 6 / max 100 password policy', () => {
+      const form = emptyResetPasswordForm()
+      const rules = resetPasswordRules(() => form)
+
+      expect(messageOf(rules.newPassword[0], '')).toBe('密码不能为空')
+      expect(messageOf(rules.newPassword[1], '12345')).toBe('密码长度必须在 6 到 100 位之间')
+      expect(messageOf(rules.newPassword[1], '1'.repeat(101))).toBe(
+        '密码长度必须在 6 到 100 位之间',
+      )
+      expect(messageOf(rules.newPassword[1], '123456')).toBeUndefined()
+    })
+
+    it('requires the confirmation to match the new password', () => {
+      const form = emptyResetPasswordForm()
+      const rules = resetPasswordRules(() => form)
+
+      expect(messageOf(rules.confirmPassword[0], '')).toBe('确认密码不能为空')
+
+      form.newPassword = '123456'
+      expect(messageOf(rules.confirmPassword[1], '123456')).toBeUndefined()
+      expect(messageOf(rules.confirmPassword[1], '654321')).toBe('两次输入的密码不一致')
+      expect(messageOf(rules.confirmPassword[1], '123456')).toBeUndefined()
+    })
   })
 
   describe('presentForm', () => {
@@ -140,6 +245,8 @@ describe('config/sys-user', () => {
         name: '',
         phone: '',
         status: 1,
+        deptId: '',
+        postIds: [],
       })
     })
 
@@ -152,6 +259,8 @@ describe('config/sys-user', () => {
           name: '张三',
           phone: '13800001111',
           status: 1,
+          deptId: 11,
+          postIds: [301],
         }),
       ).toEqual({
         id: 2,
@@ -160,7 +269,70 @@ describe('config/sys-user', () => {
         name: '张三',
         phone: '13800001111',
         status: 1,
+        deptId: 11,
+        postIds: [301],
       })
+    })
+
+    it('falls back to no department and no posts for older payloads', () => {
+      expect(presentForm({ id: 2, username: 'zhangsan' })).toMatchObject({
+        deptId: '',
+        postIds: [],
+      })
+    })
+  })
+
+  describe('部门树与岗位选项', () => {
+    const deptTree = [
+      {
+        id: 10,
+        parentId: 0,
+        name: '研发部',
+        status: 1,
+        children: [{ id: 11, parentId: 10, name: '前端组', status: 0, children: [] }],
+      },
+      { id: 20, parentId: 0, name: '市场部', status: 1, children: [] },
+    ]
+
+    it('reads the read-only dept tree and post options under the user page gate', () => {
+      expect(deptTreeRequest()).toEqual({
+        method: 'get',
+        url: '/admin/system/sysUser/depts',
+      })
+      expect(postOptionsRequest()).toEqual({
+        method: 'get',
+        url: '/admin/system/sysUser/posts',
+      })
+    })
+
+    it('prepends an 全部 node and keeps the dept hierarchy for the left filter', () => {
+      const tree = presentDeptFilterTree(deptTree)
+
+      expect(tree).toHaveLength(1)
+      expect(tree[0]).toMatchObject({ id: 0, name: '全部' })
+      expect(tree[0].children.map((node) => node.name)).toEqual(['研发部', '市场部'])
+      expect(tree[0].children[0].children[0]).toMatchObject({ id: 11, name: '前端组' })
+    })
+
+    it('marks disabled departments as unselectable in the form tree', () => {
+      const tree = presentDeptFormTree(deptTree)
+
+      expect(tree).toHaveLength(2)
+      expect(tree[0]).toMatchObject({ id: 10, disabled: false })
+      expect(tree[0].children[0]).toMatchObject({ id: 11, disabled: true })
+    })
+
+    it('maps post options to id and name', () => {
+      expect(
+        presentPostOptions([
+          { id: 301, name: '经理' },
+          { id: 302, name: '专员' },
+        ]),
+      ).toEqual([
+        { id: 301, name: '经理' },
+        { id: 302, name: '专员' },
+      ])
+      expect(presentPostOptions()).toEqual([])
     })
   })
 

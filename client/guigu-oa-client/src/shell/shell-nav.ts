@@ -1,4 +1,5 @@
 import { configPermission } from '@/config/permission'
+import { translate as t } from '@/i18n'
 import { WORK_BUILTIN_ITEMS } from '@/navigation/constants'
 import { PATHS, returnPathOfRoute } from '@/router/paths'
 import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
@@ -38,15 +39,30 @@ export interface ShellModuleDefinition {
 }
 
 /** 五个一级模块定义（ADR 0059）：顶部固定五项，不随权限增减。 */
-export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = [
-  { key: 'workbench', title: '工作台', icon: 'HomeFilled', prefix: PATHS.WORKBENCH },
-  { key: 'work', title: '办事', icon: 'Tickets', prefix: PATHS.WORK },
-  { key: 'system', title: '系统管理', icon: 'Setting', prefix: PATHS.SYSTEM },
-  { key: 'monitor', title: '系统监控', icon: 'Monitor', prefix: PATHS.MONITOR },
-  { key: 'tool', title: '系统工具', icon: 'Tools', prefix: PATHS.TOOL },
+const MODULE_DEFINITIONS = [
+  {
+    key: 'workbench',
+    titleKey: 'shell.modules.workbench',
+    icon: 'HomeFilled',
+    prefix: PATHS.WORKBENCH,
+  },
+  { key: 'work', titleKey: 'shell.modules.work', icon: 'Tickets', prefix: PATHS.WORK },
+  { key: 'system', titleKey: 'shell.modules.system', icon: 'Setting', prefix: PATHS.SYSTEM },
+  { key: 'monitor', titleKey: 'shell.modules.monitor', icon: 'Monitor', prefix: PATHS.MONITOR },
+  { key: 'tool', titleKey: 'shell.modules.tool', icon: 'Tools', prefix: PATHS.TOOL },
 ] as const
 
-const EMPTY_HINT = '暂无可用页面'
+/** 标题用 getter 读当前 locale：面包屑与导航在同一次渲染里拿到同一种语言。 */
+export const SHELL_MODULE_DEFINITIONS: readonly ShellModuleDefinition[] = MODULE_DEFINITIONS.map(
+  (definition) => ({
+    key: definition.key,
+    get title() {
+      return t(definition.titleKey)
+    },
+    icon: definition.icon,
+    prefix: definition.prefix,
+  }),
+)
 
 const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_START]: 'EditPen',
@@ -54,14 +70,31 @@ const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_PROCESSED]: 'CircleCheck',
   [PATHS.WORK_STARTED]: 'Promotion',
   [PATHS.WORK_COPIED]: 'Share',
-  [PATHS.WORK_PROFILE]: 'User',
+}
+
+const WORK_PAGE_TITLE_KEYS: Record<string, string> = {
+  [PATHS.WORK_START]: 'shell.workPages.start',
+  [PATHS.WORK_PENDING]: 'shell.workPages.pending',
+  [PATHS.WORK_PROCESSED]: 'shell.workPages.processed',
+  [PATHS.WORK_STARTED]: 'shell.workPages.started',
+  [PATHS.WORK_COPIED]: 'shell.workPages.copied',
+}
+
+/** 内置办事页的标签由客户端拥有；面包屑与侧栏共用这一处投影。 */
+export function workPageTitle(path: string, fallback = ''): string {
+  const key = WORK_PAGE_TITLE_KEYS[normalizePath(path)]
+  return key ? t(key) : fallback
 }
 
 /** 配置页按真实菜单形态分组：这三段前缀成为嵌套分组标题，其余 `/system/*` 平铺。 */
 const SYSTEM_GROUP_DEFINITIONS = [
-  { title: '日志管理', prefix: `${PATHS.SYSTEM}/log/`, icon: 'Document' },
-  { title: '审批设置', prefix: `${PATHS.PROCESS_SET}/`, icon: 'Setting' },
-  { title: '审批管理', prefix: `${PATHS.PROCESS_MGR}/`, icon: 'Files' },
+  { titleKey: 'shell.groups.logs', prefix: `${PATHS.SYSTEM}/log/`, icon: 'Document' },
+  { titleKey: 'shell.groups.processSettings', prefix: `${PATHS.PROCESS_SET}/`, icon: 'Setting' },
+  {
+    titleKey: 'shell.groups.processManagement',
+    prefix: `${PATHS.PROCESS_MGR}/`,
+    icon: 'Files',
+  },
 ] as const
 
 /** 目录本身不是页面：即使菜单授予里带目录行，也不在侧栏渲染成可点项。 */
@@ -93,12 +126,12 @@ function leavesOf(node: SidebarItem): ShellNavLeaf[] {
 
 function workbenchModule(): ShellModule {
   const items: ShellNavLeaf[] = [
-    { path: PATHS.WORKBENCH, title: '工作台', icon: 'HomeFilled' },
-    { path: PATHS.NOTICE, title: '全部公告', icon: 'Bell' },
+    { path: PATHS.WORKBENCH, title: t('shell.items.workbench'), icon: 'HomeFilled' },
+    { path: PATHS.NOTICE, title: t('shell.items.notice'), icon: 'Bell' },
   ]
   return {
     key: 'workbench',
-    title: '工作台',
+    title: t('shell.modules.workbench'),
     icon: 'HomeFilled',
     items,
     groups: [],
@@ -110,12 +143,12 @@ function workbenchModule(): ShellModule {
 function workModule(): ShellModule {
   const items = WORK_BUILTIN_ITEMS.map((item) => ({
     path: normalizePath(item.path),
-    title: item.title,
+    title: workPageTitle(item.path, item.title),
     icon: WORK_ICONS[item.path] || 'Document',
   }))
   return {
     key: 'work',
-    title: '办事',
+    title: t('shell.modules.work'),
     icon: 'Tickets',
     items,
     groups: [],
@@ -137,19 +170,19 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
   const groups: ShellNavGroup[] = SYSTEM_GROUP_DEFINITIONS.flatMap((definition) => {
     const groupItems = leaves.filter((leaf) => leaf.path.startsWith(definition.prefix))
     return groupItems.length
-      ? [{ title: definition.title, icon: definition.icon, items: groupItems }]
+      ? [{ title: t(definition.titleKey), icon: definition.icon, items: groupItems }]
       : []
   })
 
   const firstPath = items[0]?.path || groups[0]?.items[0]?.path || ''
   return {
     key: 'system',
-    title: '系统管理',
+    title: t('shell.modules.system'),
     icon: 'Setting',
     items,
     groups,
     firstPath,
-    emptyHint: firstPath ? '' : EMPTY_HINT,
+    emptyHint: firstPath ? '' : t('shell.empty.noPages'),
   }
 }
 
@@ -186,7 +219,7 @@ function flatDirectoryModule(
     items,
     groups: [],
     firstPath,
-    emptyHint: firstPath ? '' : EMPTY_HINT,
+    emptyHint: firstPath ? '' : t('shell.empty.noPages'),
   }
 }
 

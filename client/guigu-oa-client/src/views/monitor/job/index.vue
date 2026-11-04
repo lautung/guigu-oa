@@ -43,9 +43,12 @@
         <el-table-column prop="concurrencyLabel" label="并发" width="80" align="center" />
         <el-table-column label="最近状态" width="100" align="center">
           <template #default="scope">
-            <el-tag v-if="scope.row.lastStatusKind" :type="scope.row.lastStatusKind" size="small">{{
-              scope.row.lastStatusLabel
-            }}</el-tag>
+            <DictTag
+              v-if="scope.row.lastStatusKind"
+              :dict-type="DICT_TYPES.jobStatus"
+              :value="scope.row.lastStatus"
+              :tag-type="scope.row.lastStatusKind"
+            />
             <span v-else>—</span>
           </template>
         </el-table-column>
@@ -131,9 +134,12 @@
         <el-table-column prop="triggerLabel" label="触发方式" width="100" align="center" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="scope">
-            <el-tag v-if="scope.row.statusKind" :type="scope.row.statusKind" size="small">{{
-              scope.row.statusLabel
-            }}</el-tag>
+            <DictTag
+              v-if="scope.row.statusKind"
+              :dict-type="DICT_TYPES.jobStatus"
+              :value="scope.row.status"
+              :tag-type="scope.row.statusKind"
+            />
             <span v-else>—</span>
           </template>
         </el-table-column>
@@ -168,7 +174,9 @@ import {
 } from 'vue'
 
 import { runJob, updateJob } from '@/api/monitor'
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
+import { DICT_TYPES } from '@/config/dict'
 import {
   CRON_HINTS,
   DEFAULT_LOG_LIMIT,
@@ -201,7 +209,7 @@ interface JobRowLike {
 
 export default defineComponent({
   name: 'MonitorJobPage',
-  components: { ListLoadError },
+  components: { DictTag, ListLoadError },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -355,6 +363,7 @@ export default defineComponent({
 
     return {
       permissions: MONITOR_JOB_PERMISSIONS,
+      DICT_TYPES,
       rows,
       status,
       error,

@@ -1,19 +1,26 @@
 package com.lautung.oa.auth.service.impl;
 
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.auth.mapper.SysDeptMapper;
 import com.lautung.oa.auth.mapper.SysUserMapper;
+import com.lautung.oa.auth.service.SysPostService;
+import com.lautung.oa.auth.service.SysUserPostService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
+import com.lautung.oa.vo.system.SysUserDetailVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,6 +33,15 @@ import java.util.Map;
  */
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
+
+    @Autowired
+    private SysPostService sysPostService;
+
+    @Autowired
+    private SysUserPostService sysUserPostService;
+
+    @Autowired
+    private SysDeptMapper sysDeptMapper;
 
     //更新状态
     @Override
@@ -42,6 +58,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public void changePassword(Long id, String encodedPassword) {
         baseMapper.changePassword(id, encodedPassword);
+    }
+
+    //头像对象键只写 head_url 列，走实体更新让公共字段处理器刷新 update_time（ADR 0031）。
+    @Override
+    public boolean updateHeadUrl(Long id, String headUrl) {
+        SysUser user = new SysUser();
+        user.setId(id);
+        user.setHeadUrl(headUrl);
+        return baseMapper.updateById(user) > 0;
     }
 
     //根据用户名进行查询
@@ -112,5 +137,75 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         map.put("name", sysUser.getName());
         map.put("phone", sysUser.getPhone());
         return map;
+    }
+
+    /**
+     * 建号与挂岗位同一事务（#248）：部门与岗位先校验，非法集合不留下半个用户；
+     * postIds 缺省与空列表同义，都表示不挂岗位（ADR 0034 的 save 语义）。
+     */
+    @Transactional
+    @Override
+    public void saveUser(SysUser user, List<Long> postIds) {
+        ensureDeptAssignable(user.getDeptId());
+        List<Long> normalized = sysPostService.validateAssignablePostIds(postIds == null ? List.of() : postIds);
+        if (!save(user)) {
+            throw new BusinessException(201, "用户保存失败");
+        }
+        if (!normalized.isEmpty()) {
+            sysUserPostService.replaceUserPosts(user.getId(), normalized);
+        }
+    }
+
+    /**
+     * 更新与岗位同步同一事务（#248）：postIds 未传保留、空列表清空、非空替换；
+     * 显式 deptId 校验存在且启用（#249），非法集合不改用户行也不改关联行。
+     * 改密也在同一事务内、且晚于部门/岗位校验：校验失败时旧密码与旧令牌都不动（#260 二轮）。
+     */
+    @Transactional
+    @Override
+    public void updateUser(SysUser user, List<Long> postIds, String encodedPassword) {
+        ensureDeptAssignable(user.getDeptId());
+        List<Long> normalized = postIds == null ? null : sysPostService.validateAssignablePostIds(postIds);
+        if (encodedPassword != null) {
+            changePassword(user.getId(), encodedPassword);
+        }
+        if (!updateById(user)) {
+            throw new BusinessException(201, "用户不存在");
+        }
+        if (normalized != null) {
+            sysUserPostService.replaceUserPosts(user.getId(), normalized);
+        }
+    }
+
+    @Override
+    public SysUserDetailVo findDetail(Long id) {
+        SysUser user = id == null ? null : getById(id);
+        if (user == null) {
+            return null;
+        }
+        SysUserDetailVo detail = new SysUserDetailVo();
+        detail.setId(user.getId());
+        detail.setUsername(user.getUsername());
+        detail.setName(user.getName());
+        detail.setPhone(user.getPhone());
+        detail.setDeptId(user.getDeptId());
+        detail.setStatus(user.getStatus());
+        detail.setCreateTime(user.getCreateTime());
+        detail.setPostIds(sysUserPostService.findUserPostIds(user.getId()));
+        return detail;
+    }
+
+    /** 部门是用户归属的唯一来源（ADR 0057）：空表示不归属；存在但停用不允许新归属或改挂。 */
+    private void ensureDeptAssignable(Long deptId) {
+        if (deptId == null) {
+            return;
+        }
+        SysDept dept = sysDeptMapper.selectById(deptId);
+        if (dept == null) {
+            throw new BusinessException(201, "部门不存在");
+        }
+        if (dept.getStatus() == null || dept.getStatus() != 1) {
+            throw new BusinessException(201, "部门已停用");
+        }
     }
 }

@@ -123,6 +123,21 @@ describe('列表页 module', () => {
     expect(h.reads).toHaveLength(2)
   })
 
+  it('整表读（fetchAll）接受数组响应，写后仍刷新同一读', async () => {
+    const h = harness({ fetchAll: true })
+    h.reads[0].resolve({ code: 200, data: [{ id: 1 }, { id: 2 }] })
+    await h.list.ready
+    expect(h.list.view).toMatchObject({ status: 'ready', total: 2, pages: 1 })
+    expect(h.list.rows.value).toEqual([
+      { id: 1, label: '#1' },
+      { id: 2, label: '#2' },
+    ])
+
+    expect(await h.list.runWrite(async () => ({ message: '已保存' }))).toBe(true)
+    expect(h.reads).toHaveLength(2)
+    expect(h.notices).toEqual([['已保存', 'success']])
+  })
+
   it('settle 在一次性读取失败时返回 undefined', async () => {
     const h = harness()
     await ready(h)

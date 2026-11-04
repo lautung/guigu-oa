@@ -53,6 +53,9 @@ const ICONS: Record<string, IconSpec> = {
   User: {
     paths: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
   },
+  Lock: {
+    paths: ['M6 11h12v9H6z', 'M8.5 11V8a3.5 3.5 0 0 1 7 0v3'],
+  },
   Bell: {
     paths: ['M18 16v-5a6 6 0 1 0-12 0v5l-1.6 2h15.2L18 16z', 'M10 21a2 2 0 0 0 4 0'],
   },
@@ -82,6 +85,14 @@ const ICONS: Record<string, IconSpec> = {
   },
   Search: {
     paths: ['M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-5.2-5.2'],
+  },
+  Language: {
+    paths: [
+      'M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z',
+      'M3 12h18',
+      'M12 3a14 14 0 0 1 0 18',
+      'M12 3a14 14 0 0 0 0 18',
+    ],
   },
   FullScreen: {
     paths: ['M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'],

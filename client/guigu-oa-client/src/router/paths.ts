@@ -5,6 +5,8 @@ import type { EntityId, ProcessInstanceRecord } from '@/types/domain'
  */
 export const PATHS = {
   LOGIN: '/login',
+  /** 匿名注册（#253）：不套外壳，与登录页同一张入口。 */
+  REGISTER: '/register',
   WORKBENCH: '/workbench',
   MONITOR: '/monitor',
   MONITOR_ONLINE: '/monitor/online',
@@ -26,11 +28,16 @@ export const PATHS = {
   WORK_STARTED_DETAIL: '/work/started/:id',
   WORK_COPIED: '/work/copied',
   WORK_COPIED_DETAIL: '/work/copied/:id',
-  WORK_PROFILE: '/work/profile',
+  /** 个人中心（#254）：登录即有，不进后台菜单、不设页面授予。 */
+  PROFILE: '/profile',
   SYSTEM: '/system',
   SYSTEM_SYS_USER: '/system/sysUser',
   SYSTEM_SYS_ROLE: '/system/sysRole',
   SYSTEM_SYS_MENU: '/system/sysMenu',
+  SYSTEM_SYS_DEPT: '/system/sysDept',
+  SYSTEM_SYS_POST: '/system/sysPost',
+  SYSTEM_CONFIG: '/system/config',
+  SYSTEM_DICT: '/system/dict',
   SYSTEM_LOG_OPER: '/system/log/operLog',
   SYSTEM_LOG_LOGIN: '/system/log/loginLog',
   SYSTEM_ASSIGN_AUTH: '/system/assignAuth',
@@ -50,12 +57,12 @@ export const PATHS = {
 /** 办事列表的静态路径，保留既有 ROUTES 形状供导航使用。 */
 export const ROUTES = {
   LOGIN: PATHS.LOGIN,
+  REGISTER: PATHS.REGISTER,
   START: PATHS.WORK_START,
   PENDING: PATHS.WORK_PENDING,
   PROCESSED: PATHS.WORK_PROCESSED,
   STARTED: PATHS.WORK_STARTED,
   COPIED: PATHS.WORK_COPIED,
-  PROFILE: PATHS.WORK_PROFILE,
 } as const
 
 export const WORK_LIST_KINDS = {
@@ -148,10 +155,14 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.WORK_PROCESSED]: PATHS.WORK_PROCESSED,
   [PATHS.WORK_STARTED]: PATHS.WORK_STARTED,
   [PATHS.WORK_COPIED]: PATHS.WORK_COPIED,
-  [PATHS.WORK_PROFILE]: PATHS.WORK_PROFILE,
+  [PATHS.PROFILE]: PATHS.PROFILE,
   [PATHS.SYSTEM_SYS_USER]: PATHS.SYSTEM_SYS_USER,
   [PATHS.SYSTEM_SYS_ROLE]: PATHS.SYSTEM_SYS_ROLE,
   [PATHS.SYSTEM_SYS_MENU]: PATHS.SYSTEM_SYS_MENU,
+  [PATHS.SYSTEM_SYS_DEPT]: PATHS.SYSTEM_SYS_DEPT,
+  [PATHS.SYSTEM_SYS_POST]: PATHS.SYSTEM_SYS_POST,
+  [PATHS.SYSTEM_CONFIG]: PATHS.SYSTEM_CONFIG,
+  [PATHS.SYSTEM_DICT]: PATHS.SYSTEM_DICT,
   [PATHS.SYSTEM_LOG_OPER]: PATHS.SYSTEM_LOG_OPER,
   [PATHS.SYSTEM_LOG_LOGIN]: PATHS.SYSTEM_LOG_LOGIN,
   [PATHS.SYSTEM_ASSIGN_AUTH]: PATHS.SYSTEM_SYS_ROLE,

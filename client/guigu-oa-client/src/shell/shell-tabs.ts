@@ -1,3 +1,4 @@
+import { translate as t } from '@/i18n'
 import { PATHS } from '@/router/paths'
 
 /**
@@ -19,7 +20,7 @@ export function isFixedTab(path: string): boolean {
 }
 
 export function workbenchTab(): ShellTab {
-  return { path: PATHS.WORKBENCH, title: '工作台' }
+  return { path: PATHS.WORKBENCH, title: t('shell.modules.workbench') }
 }
 
 export function initialShellTabs(): ShellTab[] {

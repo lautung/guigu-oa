@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
+import { fulfillCommonRequest } from './helpers/common-requests'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { e2eCookieURL } from './helpers/base-url'
@@ -138,7 +139,21 @@ async function seedSession(page: Page) {
 async function mockApi(page: Page) {
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/dev-api/, '')
-    if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus })
+    if (await fulfillCommonRequest(route, path)) return
+    if (path === '/admin/system/index/info')
+      return json(route, {
+        name: 'Alice',
+        permissions: [
+          'system:user:add',
+          'system:user:edit',
+          'system:user:remove',
+          'system:user:assignRole',
+          'system:user:export',
+          'system:user:import',
+          'system:user:resetPwd',
+        ],
+        menus,
+      })
     if (path === '/admin/process/findStartable')
       return json(route, [
         {
@@ -181,6 +196,8 @@ async function mockApi(page: Page) {
         processDefinitionPath: 'opaque/old.zip',
         processDefinitionKey: 'old',
       })
+    if (path === '/admin/system/sysUser/depts') return json(route, [])
+    if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))
       return json(route, { records: users, total: users.length, pages: 1 })
     if (path.startsWith('/admin/system/sysRole/toAssign/'))

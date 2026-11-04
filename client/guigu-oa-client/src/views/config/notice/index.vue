@@ -57,14 +57,20 @@
         <el-table-column prop="title" label="标题" min-width="240" />
         <el-table-column label="类型" width="90" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.typeTagType" size="small">{{ scope.row.typeLabel }}</el-tag>
+            <DictTag
+              :dict-type="DICT_TYPES.noticeType"
+              :value="scope.row.type"
+              :tag-type="scope.row.typeTagType"
+            />
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.statusTagType" size="small">
-              {{ scope.row.statusLabel }}
-            </el-tag>
+            <DictTag
+              :dict-type="DICT_TYPES.noticeStatus"
+              :value="scope.row.status"
+              :tag-type="scope.row.statusTagType"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="publisherName" label="发布人" width="120" />
@@ -116,11 +122,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onBeforeUnmount } from 'vue'
+import { computed, defineComponent, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 
+import DictTag from '@/components/DictTag.vue'
 import ListLoadError from '@/components/ListLoadError.vue'
 import ListPagination from '@/components/ListPagination.vue'
+import { DICT_TYPES } from '@/config/dict'
+import { useDict } from '@/dict/use-dict'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import { publishNotice, removeNotice, withdrawNotice } from '@/notice/api'
@@ -132,8 +141,6 @@ import {
 import {
   NOTICE_PAGE_SIZE,
   NOTICE_PERMISSIONS,
-  NOTICE_STATUSES,
-  NOTICE_TYPES,
   adminListRequest,
   emptyAdminQuery,
   presentAdminListRecord,
@@ -151,7 +158,7 @@ import type { NoticeAdminListItem, NoticeAdminRecord } from '@/types/domain'
  */
 export default defineComponent({
   name: 'SysNoticeList',
-  components: { ListLoadError, ListPagination },
+  components: { DictTag, ListLoadError, ListPagination },
   setup() {
     const userStore = useUserStore()
     const recognition = userStore.recognition
@@ -166,9 +173,23 @@ export default defineComponent({
       ...effects,
     })
     onBeforeUnmount(() => list.release())
+    const dict = useDict(DICT_TYPES.noticeType, DICT_TYPES.noticeStatus)
     return {
       list,
       router,
+      DICT_TYPES,
+      typeOptions: computed(() =>
+        dict.optionsOf(DICT_TYPES.noticeType).map((option) => ({
+          value: Number(option.dictValue),
+          label: option.dictLabel,
+        })),
+      ),
+      statusOptions: computed(() =>
+        dict.optionsOf(DICT_TYPES.noticeStatus).map((option) => ({
+          value: Number(option.dictValue),
+          label: option.dictLabel,
+        })),
+      ),
       view: list.view,
       rows: list.rows,
       emptyText: list.emptyText,
@@ -179,8 +200,6 @@ export default defineComponent({
   data() {
     return {
       query: emptyAdminQuery(),
-      typeOptions: NOTICE_TYPES,
-      statusOptions: NOTICE_STATUSES,
     }
   },
   methods: {

@@ -18,6 +18,8 @@ class PublicApiPathsTest {
     void permitsEveryAnonymousEndpoint() {
         assertTrue(PublicApiPaths.permitsAnonymous("/admin/system/index/login"));
         assertTrue(PublicApiPaths.permitsAnonymous("/admin/system/index/refresh"));
+        assertTrue(PublicApiPaths.permitsAnonymous("/admin/system/index/register"));
+        assertTrue(PublicApiPaths.permitsAnonymous("/admin/system/index/register/switch"));
         assertTrue(PublicApiPaths.permitsAnonymous("/v3/api-docs"));
         assertTrue(PublicApiPaths.permitsAnonymous("/v3/api-docs/swagger-config"));
         assertTrue(PublicApiPaths.permitsAnonymous("/actuator/health"));
@@ -43,6 +45,8 @@ class PublicApiPathsTest {
     void keepsBusinessEndpointsBehindAuthentication() {
         assertFalse(PublicApiPaths.permitsAnonymous("/admin/system/sysUser/1/10"));
         assertFalse(PublicApiPaths.permitsAnonymous("/admin/process/findPending/1/10"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/admin/system/index/register/other"));
+        assertFalse(PublicApiPaths.permitsAnonymous("/admin/system/index/registerX"));
         assertFalse(PublicApiPaths.permitsAnonymous("/swagger-ui"));
         assertFalse(PublicApiPaths.permitsAnonymous("/v3/api-docs-other"));
     }
