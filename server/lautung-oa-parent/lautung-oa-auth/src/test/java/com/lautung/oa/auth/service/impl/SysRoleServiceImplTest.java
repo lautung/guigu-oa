@@ -162,8 +162,8 @@ class SysRoleServiceImplTest {
 
         service.doAssign(request);
 
-        verify(userRoleService).remove(any());
-        verify(userRoleService, org.mockito.Mockito.times(2)).save(any(SysUserRole.class));
+        // 用户侧与角色侧写同一关系表：整体替换走 replaceUserRoles，空值被过滤、重复值去重。
+        verify(userRoleService).replaceUserRoles(7L, List.of(1L, 2L));
         verify(cacheInvalidator).invalidateUserAfterCommit(7L);
     }
 
@@ -178,7 +178,7 @@ class SysRoleServiceImplTest {
 
         assertEquals(201, error.getCode());
         assertTrue(error.getMessage().contains("只能分配已存在的角色"));
-        verify(userRoleService, never()).remove(any());
+        verify(userRoleService, never()).replaceUserRoles(any(), any());
         verify(userRoleService, never()).save(any(SysUserRole.class));
         verify(cacheInvalidator, never()).invalidateUserAfterCommit(any());
     }
@@ -190,7 +190,8 @@ class SysRoleServiceImplTest {
 
         service.doAssign(request);
 
-        verify(userRoleService).remove(any());
+        // 未传角色列表按空列表清空（ADR 0034），仍走同一整体替换入口。
+        verify(userRoleService).replaceUserRoles(7L, List.of());
         verify(userRoleService, never()).save(any(SysUserRole.class));
         verify(cacheInvalidator).invalidateUserAfterCommit(7L);
     }
