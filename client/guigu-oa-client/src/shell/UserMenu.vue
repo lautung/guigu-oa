@@ -59,9 +59,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { requestBinary } from '@/request/request'
 import { PATHS } from '@/router/paths'
+import { avatarRequest } from '@/profile/config'
+import { createAvatarLoader } from '@/profile/avatar'
 import { useUserStore } from '@/store/modules/user'
 import { useLockScreenStore } from './lock-screen'
 import { useShellStore } from './shell-state'
@@ -86,11 +89,31 @@ const userStore = useUserStore()
 const shell = useShellStore()
 const lockScreen = useLockScreenStore()
 const open = ref(false)
-const avatarSrc = computed(() => userStore.avatar || DEFAULT_AVATAR)
+const avatarSrc = ref(DEFAULT_AVATAR)
+// /info.avatar 是已认证同源端点，`<img>` 拿不到 token 头：带认证取回 blob 再显示（#254）。
+const avatars = createAvatarLoader({
+  load: (path) => requestBinary(avatarRequest(path), { notifyNormalErrors: false }),
+  createObjectUrl: (blob) => URL.createObjectURL(blob),
+  revokeObjectUrl: (url) => URL.revokeObjectURL(url),
+})
+
+watch(
+  () => userStore.avatar,
+  async (path) => {
+    try {
+      avatarSrc.value = (path ? await avatars.read(path) : '') || DEFAULT_AVATAR
+    } catch {
+      avatarSrc.value = DEFAULT_AVATAR
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => avatars.dispose())
 
 function openProfile(): void {
   open.value = false
-  void router.push(PATHS.WORK_PROFILE)
+  void router.push(PATHS.PROFILE)
 }
 
 function handleLock(): void {

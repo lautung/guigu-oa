@@ -23,6 +23,9 @@ public interface SysUserService extends IService<SysUser> {
     //改密：写入新哈希并递增令牌版本，作废该用户此前签发的全部会话
     void changePassword(Long id, String encodedPassword);
 
+    //头像对象键：只写 head_url 列；返回 false 表示用户行不存在
+    boolean updateHeadUrl(Long id, String headUrl);
+
     //根据用户名进行查询
     SysUser getUserByUserName(String username);
 

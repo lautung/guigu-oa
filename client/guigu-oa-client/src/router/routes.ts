@@ -94,12 +94,6 @@ const workChildren: AppRoute[] = [
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
   },
-  {
-    path: childPath(PATHS.WORK, PATHS.WORK_PROFILE),
-    name: 'WorkProfile',
-    component: () => import('@/views/work/profile/index.vue'),
-    meta: { title: '基本信息', menuGroup: 'work' },
-  },
 ]
 
 const configChildren: AppRoute[] = [
@@ -313,6 +307,13 @@ export const constantRoutes: AppRoute[] = [
         // 不把它当后台页面（#224 的守卫只过滤 config 组）。
         path: PATHS.NOTICE,
         children: noticeChildren,
+      },
+      {
+        // 个人中心（#254）：登录即有，不进后台菜单、不设页面授予/按钮点。
+        path: PATHS.PROFILE,
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人中心' },
       },
       {
         path: PATHS.SYSTEM,

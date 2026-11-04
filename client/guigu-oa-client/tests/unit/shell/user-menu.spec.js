@@ -13,7 +13,7 @@ function menuRouter() {
     history: createMemoryHistory(),
     routes: [
       { path: '/', component: { template: '<div />' } },
-      { path: '/work/profile', component: { template: '<div />' } },
+      { path: '/profile', component: { template: '<div />' } },
     ],
   })
 }
@@ -38,7 +38,7 @@ describe('UserMenu', () => {
 
     await wrapper.find('.user-menu-profile').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/work/profile')
+    expect(router.currentRoute.value.path).toBe('/profile')
 
     await wrapper.find('.lock-btn').trigger('click')
     expect(useLockScreenStore(pinia).isLocked()).toBe(true)
@@ -63,6 +63,32 @@ describe('UserMenu', () => {
     await wrapper.find('[data-theme="light"]').trigger('click')
     expect(shell.theme).toBe('light')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
+  })
+
+  it('hydrates an uploaded avatar through the authenticated binary endpoint', async () => {
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:avatar')
+    URL.revokeObjectURL = vi.fn()
+    http = installHttp(() => new Blob(['png'], { type: 'image/png' }))
+    try {
+      const { pinia } = setupSession({
+        name: 'Alice',
+        avatar: '/admin/system/profile/avatar/2',
+      })
+      const wrapper = mount(UserMenu, mountOptions(pinia, menuRouter()))
+      await flushPromises()
+      await flushPromises()
+
+      expect(http.calls[0].url).toBe('/admin/system/profile/avatar/2')
+      expect(wrapper.find('img.avatar').attributes('src')).toBe('blob:avatar')
+
+      wrapper.unmount()
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:avatar')
+    } finally {
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
   })
 
   it('logs out through the existing user store action', async () => {

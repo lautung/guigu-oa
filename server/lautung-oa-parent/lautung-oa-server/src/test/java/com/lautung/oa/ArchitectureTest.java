@@ -18,7 +18,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  * common, model ← security
  * common ← storage
  * common, framework, security, model ← audit
- * common, framework, security, model ← auth
+ * common, framework, security, model, storage ← auth
  * common, framework, security, model, storage ← notice
  * common, framework, security, model, auth, storage ← process
  * common, framework, security, model ← monitor
@@ -57,8 +57,10 @@ class ArchitectureTest {
             .whereLayer("Storage").mayOnlyAccessLayers("Common")
             // 审计只接 framework/model/security 的端口，不依赖任何域模块，所以登录/业务路径不动（ADR 0054）
             .whereLayer("Audit").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
-            // config ← auth（ADR 0062）：注册开关等由 auth 注入只读端口，auth 不直连 sys_config
-            .whereLayer("Auth").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Config")
+            // config ← auth（ADR 0062）：注册开关等由 auth 注入只读端口，auth 不直连 sys_config；
+            // auth → storage（#254）：个人中心头像复用私有对象存储。
+            .whereLayer("Auth").mayOnlyAccessLayers(
+                    "Common", "Framework", "Security", "Model", "Config", "Storage")
             .whereLayer("Notice").mayOnlyAccessLayers("Common", "Framework", "Security", "Model", "Storage")
             .whereLayer("Process").mayOnlyAccessLayers(
                     "Common", "Framework", "Security", "Model", "Auth", "Storage")
@@ -76,7 +78,7 @@ class ArchitectureTest {
                     "Audit", "Auth", "Notice", "Process", "Monitor", "Config", "Server")
             .whereLayer("Model").mayOnlyBeAccessedByLayers(
                     "Security", "Audit", "Auth", "Notice", "Process", "Monitor", "Config", "Server")
-            .whereLayer("Storage").mayOnlyBeAccessedByLayers("Notice", "Process", "Server")
+            .whereLayer("Storage").mayOnlyBeAccessedByLayers("Auth", "Notice", "Process", "Server")
             .whereLayer("Audit").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Auth").mayOnlyBeAccessedByLayers("Process", "Server")
             .whereLayer("Notice").mayOnlyBeAccessedByLayers("Server")

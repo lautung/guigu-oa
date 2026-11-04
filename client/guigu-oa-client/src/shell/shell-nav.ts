@@ -54,7 +54,6 @@ const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_PROCESSED]: 'CircleCheck',
   [PATHS.WORK_STARTED]: 'Promotion',
   [PATHS.WORK_COPIED]: 'Share',
-  [PATHS.WORK_PROFILE]: 'User',
 }
 
 /** 配置页按真实菜单形态分组：这三段前缀成为嵌套分组标题，其余 `/system/*` 平铺。 */

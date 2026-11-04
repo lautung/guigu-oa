@@ -60,6 +60,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         baseMapper.changePassword(id, encodedPassword);
     }
 
+    //头像对象键只写 head_url 列，走实体更新让公共字段处理器刷新 update_time（ADR 0031）。
+    @Override
+    public boolean updateHeadUrl(Long id, String headUrl) {
+        SysUser user = new SysUser();
+        user.setId(id);
+        user.setHeadUrl(headUrl);
+        return baseMapper.updateById(user) > 0;
+    }
+
     //根据用户名进行查询
     @Override
     public SysUser getUserByUserName(String username) {

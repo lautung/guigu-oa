@@ -1,6 +1,7 @@
 package com.lautung.oa.auth.controller;
 
 import com.lautung.oa.auth.grant.BackofficeGrant;
+import com.lautung.oa.auth.service.ProfileService;
 import com.lautung.oa.auth.service.SysRoleService;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.common.jwt.JwtHelper;
@@ -90,8 +91,9 @@ public class IndexController {
         Map<String, Object> map = new HashMap<>();
         map.put("roles", sysRoleService.findRoleCodesByUserId(userId));
         map.put("name", sysUser.getName());
-        // 字段保留，空串由客户端同源默认图兜底：不再下发第三方占位图（#139 CSP）。
-        map.put("avatar", "");
+        // 头像走已认证同源二进制端点（#254），空串由客户端默认图兜底；
+        // 不再下发第三方占位图（#139 CSP）。
+        map.put("avatar", ProfileService.avatarUrl(sysUser));
         map.put("permissions", permissions);
         map.put("menus", menus);
         // ADR 0058 的小扩展（ADR 0060）：客户端据此标出本机会话；不改既有三段。

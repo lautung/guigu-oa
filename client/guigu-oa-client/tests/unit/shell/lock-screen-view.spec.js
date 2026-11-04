@@ -18,7 +18,7 @@ function shellRouter() {
       { path: '/work/processed', component: page('processed'), meta: { title: '已处理' } },
       { path: '/work/started', component: page('started'), meta: { title: '已发起' } },
       { path: '/work/copied', component: page('copied'), meta: { title: '抄送我的' } },
-      { path: '/work/profile', component: page('profile'), meta: { title: '个人信息' } },
+      { path: '/profile', component: page('profile'), meta: { title: '个人中心' } },
     ],
   })
   router.push('/work/pending')

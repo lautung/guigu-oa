@@ -32,6 +32,12 @@
             <artifactId>lautung-oa-model</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 头像复用现有私有附件桶（avatar/{userId} 前缀），不新增桶（#254） -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-storage</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

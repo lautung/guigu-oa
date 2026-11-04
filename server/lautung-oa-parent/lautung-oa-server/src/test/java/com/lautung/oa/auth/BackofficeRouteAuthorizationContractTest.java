@@ -5,6 +5,7 @@ import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
 import com.lautung.oa.auth.controller.SysDeptController;
 import com.lautung.oa.auth.controller.SysMenuController;
+import com.lautung.oa.auth.controller.ProfileController;
 import com.lautung.oa.auth.controller.SysPostController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
@@ -222,7 +223,9 @@ class BackofficeRouteAuthorizationContractTest {
     void everyControllerInTheBackofficePackagesIsInTheGateContract() {
         for (HandlerMethod handler : handlerMapping.getHandlerMethods().values()) {
             Class<?> bean = handler.getBeanType();
-            if (bean.equals(IndexController.class) || bean.equals(ProcessController.class)) {
+            // 个人中心登录即有，不是后台页（#254）：没有页面授予/按钮点，因而不进 gate 合同。
+            if (bean.equals(IndexController.class) || bean.equals(ProcessController.class)
+                    || bean.equals(ProfileController.class)) {
                 continue;
             }
             boolean backofficeController = bean.getPackageName().equals("com.lautung.oa.auth.controller")

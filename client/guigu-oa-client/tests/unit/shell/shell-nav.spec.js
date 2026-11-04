@@ -105,7 +105,7 @@ describe('shell 一级导航', () => {
     expect(SHELL_MODULE_DEFINITIONS.some((module) => 'placeholder' in module)).toBe(false)
   })
 
-  it('always exposes 工作台 entries and the six 办事 built-ins', () => {
+  it('always exposes 工作台 entries and the five 办事 built-ins', () => {
     const modules = buildShellNav([])
 
     expect(modules[0].items.map((item) => item.title)).toEqual(['工作台', '全部公告'])
@@ -115,7 +115,6 @@ describe('shell 一级导航', () => {
       '已处理',
       '已发起',
       '抄送我的',
-      '基本信息',
     ])
     expect(modules[1].firstPath).toBe('/work/start')
   })

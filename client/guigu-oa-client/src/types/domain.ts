@@ -683,9 +683,34 @@ export interface FormDesignerState {
   option: FormDesignerOption
 }
 
-export interface Profile {
+/** 个人中心（#254）：服务端资料形状；avatar 是已认证同源二进制端点路径或空串。 */
+export interface ProfileRecord {
+  username?: string
+  name?: string
+  phone?: string
+  avatar?: string
+}
+
+/** 个人中心表单投影：用户名只读，头像路径与 blob URL 分开存。 */
+export interface ProfileView {
+  username: string
   name: string
   phone: string
+  avatarPath: string
+}
+
+export interface ProfileWritePayload {
+  name: string
+  phone: string
+}
+
+export interface ProfilePasswordPayload {
+  oldPassword: string
+  newPassword: string
+}
+
+export interface ProfileAvatarResult {
+  url?: string
 }
 
 /** 公告（ADR 0055）：type 1 通知 / 2 公告；status 0 草稿 / 1 已发布 / 2 已撤回。 */
