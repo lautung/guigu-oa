@@ -42,11 +42,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 
 import ListLoadError from '@/components/ListLoadError.vue'
 import { cacheInfoRequest, presentCacheInfo } from '@/config/monitor-cache'
 import { openRequestScope } from '@/request/request-scope'
+import { createSnapshotRead } from '@/request/snapshot-read'
 import { useUserStore } from '@/store/modules/user'
 import type { CacheMonitorSnapshot } from '@/types/domain'
 
@@ -58,13 +59,8 @@ if (!recognition) throw new Error('认出 module 尚未接入')
 
 /** 一次页面打开一个请求作用域（工作台同款）：身份变化后迟到的读取不再画到当前页面。 */
 const scope = openRequestScope(recognition, { notifyNormalErrors: false })
-
-const status = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-const error = shallowRef('')
-const snapshot = shallowRef<CacheMonitorSnapshot | null>(null)
-/** 已拿到过一次响应：之后的刷新失败保留旧卡片，只叠加错误行。 */
-const loaded = shallowRef(false)
-let sequence = 0
+const snapshotRead = createSnapshotRead<CacheMonitorSnapshot>(scope)
+const { status, error, value: snapshot, loaded } = snapshotRead
 
 /** 各段独立降级：服务端读不到的段是 null，卡片显示「不可用」，不整页报错（ADR 0060）。 */
 const view = computed(() => (loaded.value ? presentCacheInfo(snapshot.value) : null))
@@ -91,36 +87,17 @@ const cards = computed(() => {
   }))
 })
 
-function failureMessage(failure: unknown): string {
-  return failure && typeof failure === 'object' && 'message' in failure
-    ? String((failure as { message?: unknown }).message || '')
-    : ''
-}
-
-async function load(): Promise<void> {
-  const number = ++sequence
-  status.value = 'loading'
-  error.value = ''
-
-  try {
-    const response = await scope.request<CacheMonitorSnapshot | null>(cacheInfoRequest())
-    if (number !== sequence || !scope.current()) return
-    snapshot.value = response.data ?? null
-    loaded.value = true
-    status.value = 'ready'
-  } catch (failure) {
-    if (number !== sequence || !scope.current()) return
-    status.value = 'failed'
-    error.value = failureMessage(failure)
-  }
+function load(): Promise<void> {
+  return snapshotRead.load(async (requestScope) => {
+    const response = await requestScope.request<CacheMonitorSnapshot | null>(cacheInfoRequest())
+    return response.data ?? null
+  })
 }
 
 onMounted(() => {
   void load()
 })
-onBeforeUnmount(() => {
-  sequence += 1
-})
+onBeforeUnmount(() => snapshotRead.release())
 </script>
 
 <style lang="scss" scoped>

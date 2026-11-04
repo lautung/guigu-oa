@@ -137,6 +137,7 @@ import { useRouter } from 'vue-router'
 import ListLoadError from '@/components/ListLoadError.vue'
 import { createNoticeUnreadSource } from '@/notice/unread'
 import { openRequestScope } from '@/request/request-scope'
+import { createSnapshotRead } from '@/request/snapshot-read'
 import { PATHS, noticeDetailPath } from '@/router/paths'
 import { useUserStore } from '@/store/modules/user'
 import { shellIcon } from '@/shell/shell-icons'
@@ -171,11 +172,9 @@ const requests = workbenchRequests()
  */
 const noticeSource = createNoticeUnreadSource((config) => scope.request(config))
 
-const status = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-const error = shallowRef('')
-const data = shallowRef<WorkbenchView | null>(null)
+const workbenchRead = createSnapshotRead<WorkbenchView>(scope)
+const { status, error, value: data } = workbenchRead
 const today = shallowRef(new Date())
-let sequence = 0
 
 const dateLabel = computed(() => formatWorkbenchDate(today.value))
 const headline = computed(() => {
@@ -192,31 +191,20 @@ const unreadLabel = computed(() => {
   return count > 0 ? `${count} 条未读` : '暂无未读'
 })
 
-function failureMessage(failure: unknown): string {
-  return failure && typeof failure === 'object' && 'message' in failure
-    ? String((failure as { message?: unknown }).message || '')
-    : ''
-}
-
-async function load(): Promise<void> {
-  const number = ++sequence
-  status.value = 'loading'
-  error.value = ''
-
-  try {
+function load(): Promise<void> {
+  return workbenchRead.load(async (requestScope) => {
     const [pending, processed, started, copied, recentPage, unread, unreadCount] =
       await Promise.all([
-        scope.request<PageResult<ProcessInstanceRecord>>(requests.total.pending),
-        scope.request<PageResult<ProcessInstanceRecord>>(requests.total.processed),
-        scope.request<PageResult<ProcessInstanceRecord>>(requests.total.started),
-        scope.request<PageResult<ProcessInstanceRecord>>(requests.total.copied),
-        scope.request<PageResult<ProcessInstanceRecord>>(requests.recent),
+        requestScope.request<PageResult<ProcessInstanceRecord>>(requests.total.pending),
+        requestScope.request<PageResult<ProcessInstanceRecord>>(requests.total.processed),
+        requestScope.request<PageResult<ProcessInstanceRecord>>(requests.total.started),
+        requestScope.request<PageResult<ProcessInstanceRecord>>(requests.total.copied),
+        requestScope.request<PageResult<ProcessInstanceRecord>>(requests.recent),
         noticeSource.recent(),
         noticeSource.count(),
       ])
-    if (number !== sequence || !scope.current()) return
 
-    data.value = presentWorkbench({
+    return presentWorkbench({
       totals: workbenchTotals({
         pending: pending.data,
         processed: processed.data,
@@ -227,12 +215,7 @@ async function load(): Promise<void> {
       notices: unread,
       unreadCount,
     })
-    status.value = 'ready'
-  } catch (failure) {
-    if (number !== sequence || !scope.current()) return
-    status.value = 'failed'
-    error.value = failureMessage(failure)
-  }
+  })
 }
 
 function go(path: string): void {
@@ -251,9 +234,7 @@ function openNotice(notice: NoticeFeedItem): void {
 onMounted(() => {
   void load()
 })
-onBeforeUnmount(() => {
-  sequence += 1
-})
+onBeforeUnmount(() => workbenchRead.release())
 </script>
 
 <style lang="scss" scoped>

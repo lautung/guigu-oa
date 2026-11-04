@@ -185,7 +185,9 @@ import {
   type MonitorJobRow,
 } from '@/config/monitor-job'
 import { listPageEffects } from '@/list/list-page-browser'
+import { failureMessage } from '@/request/request-failure'
 import { openRequestScope } from '@/request/request-scope'
+import { createSnapshotRead } from '@/request/snapshot-read'
 import { useUserStore } from '@/store/modules/user'
 import type { EntityId, MonitorJobLogRecord, MonitorJobRecord } from '@/types/domain'
 
@@ -209,35 +211,17 @@ export default defineComponent({
     const scope = openRequestScope(recognition, { notifyNormalErrors: false })
     const effects = listPageEffects()
 
-    const rows = ref<MonitorJobRow[]>([])
-    const status = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-    const error = shallowRef('')
-    const loaded = shallowRef(false)
-    let sequence = 0
+    const jobsRead = createSnapshotRead<MonitorJobRow[]>(scope)
+    const { status, error, loaded } = jobsRead
+    const rows = computed(() => jobsRead.value.value ?? [])
 
     const emptyText = computed(() => (loaded.value ? '暂无数据' : ''))
 
-    function failureMessage(failure: unknown): string {
-      return failure && typeof failure === 'object' && 'message' in failure
-        ? String((failure as { message?: unknown }).message || '')
-        : ''
-    }
-
-    async function load(): Promise<void> {
-      const number = ++sequence
-      status.value = 'loading'
-      error.value = ''
-      try {
-        const response = await scope.request<MonitorJobRecord[]>(jobsRequest())
-        if (number !== sequence || !scope.current()) return
-        rows.value = (response.data ?? []).map(presentJobRow)
-        loaded.value = true
-        status.value = 'ready'
-      } catch (failure) {
-        if (number !== sequence || !scope.current()) return
-        status.value = 'failed'
-        error.value = failureMessage(failure)
-      }
+    function load(): Promise<void> {
+      return jobsRead.load(async (requestScope) => {
+        const response = await requestScope.request<MonitorJobRecord[]>(jobsRequest())
+        return (response.data ?? []).map(presentJobRow)
+      })
     }
 
     /** 列表读：手动执行后由用户稍后刷新看记录，触发本身不刷新。 */
@@ -334,29 +318,17 @@ export default defineComponent({
     const drawerVisible = shallowRef(false)
     const drawerJobName = shallowRef('')
     const drawerJobId = shallowRef<number | string | null>(null)
-    const logRows = shallowRef<MonitorJobLogRow[]>([])
-    const logStatus = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-    const logError = shallowRef('')
-    const logLoaded = shallowRef(false)
-    let logSequence = 0
+    const logsRead = createSnapshotRead<MonitorJobLogRow[]>(scope)
+    const { status: logStatus, error: logError } = logsRead
+    const logRows = computed(() => logsRead.value.value ?? [])
 
-    async function loadLogs(jobId: number | string): Promise<void> {
-      const number = ++logSequence
-      logStatus.value = 'loading'
-      logError.value = ''
-      try {
-        const response = await scope.request<MonitorJobLogRecord[]>(
+    function loadLogs(jobId: number | string): Promise<void> {
+      return logsRead.load(async (requestScope) => {
+        const response = await requestScope.request<MonitorJobLogRecord[]>(
           jobLogsRequest(jobId, DEFAULT_LOG_LIMIT),
         )
-        if (number !== logSequence || !scope.current()) return
-        logRows.value = (response.data ?? []).map(presentJobLogRow)
-        logLoaded.value = true
-        logStatus.value = 'ready'
-      } catch (failure) {
-        if (number !== logSequence || !scope.current()) return
-        logStatus.value = 'failed'
-        logError.value = failureMessage(failure)
-      }
+        return (response.data ?? []).map(presentJobLogRow)
+      })
     }
 
     /** 打开抽屉重读最近 20 条；快速换行时 sequence 丢迟到的旧窗口。 */
@@ -377,8 +349,8 @@ export default defineComponent({
       refresh()
     })
     onBeforeUnmount(() => {
-      sequence += 1
-      logSequence += 1
+      jobsRead.release()
+      logsRead.release()
     })
 
     return {

@@ -1,6 +1,8 @@
 package com.lautung.oa.security.session;
 
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.model.monitor.OnlineSession;
+import com.lautung.oa.model.monitor.SessionTime;
 import com.lautung.oa.security.revocation.TokenRevocation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,8 +14,6 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,8 +37,6 @@ class RedisOnlineSessionRegistryTest {
     private static final String SESSION_ID = "4b9dd1de-7c69-4fcc-9c2d-3fd2f6d8a000";
     private static final String HASH_KEY = "login:session:" + SESSION_ID;
     private static final String ACTIVE_KEY = "login:session:active:" + SESSION_ID;
-    private static final DateTimeFormatter TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @SuppressWarnings("unchecked")
     private final RedisTemplate<String, String> redisTemplate = mock(RedisTemplate.class);
@@ -153,11 +151,11 @@ class RedisOnlineSessionRegistryTest {
         assertEquals(7L, session.userId());
         assertEquals("alice", session.username());
         assertEquals("爱丽丝", session.name());
-        assertEquals("2026-10-29 08:00:00", session.loginTime());
+        assertEquals("2026-10-29 08:00:00", session.loginTime().toString());
         assertEquals("203.0.113.9", session.ip());
         assertEquals("Chrome", session.browser());
         assertEquals("Windows", session.os());
-        assertEquals("2026-10-29 09:00:00", session.lastActive());
+        assertEquals("2026-10-29 09:00:00", session.lastActive().toString());
         assertEquals(3L, session.tokenVersion());
         // 节流键不是会话行；字段不全的坏 hash 直接跳过，不抛异常。
         verify(hashOperations, never()).entries(activeKey);
@@ -205,7 +203,7 @@ class RedisOnlineSessionRegistryTest {
     private static void assertTime(String value) {
         assertTrue(value != null && value.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"),
                 "expected yyyy-MM-dd HH:mm:ss but was " + value);
-        // 能被同一格式解析，供列表按字符串比较时间范围。
-        LocalDateTime.parse(value, TIME_FORMAT);
+        // 能被同一个值类型解析，供列表按时间范围过滤与排序。
+        assertNotNull(SessionTime.parse(value));
     }
 }

@@ -204,6 +204,16 @@ class OnlineSessionContractTest {
                         .header("token", admin.accessToken()))
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].username").value("user"));
+        // 形状不合法的边界按未提供处理（#245）：不放大成整页失败，也不悄悄改日。
+        mockMvc.perform(get("/admin/monitor/online/1/10")
+                        .param("beginTime", "not-a-time")
+                        .header("token", admin.accessToken()))
+                .andExpect(jsonPath("$.data.total").value(2));
+        // 2026-02-30 若被 SMART resolver 改成 02-28，会把 user 的 2000 年登录行过滤掉。
+        mockMvc.perform(get("/admin/monitor/online/1/10")
+                        .param("beginTime", "2026-02-30 00:00:00")
+                        .header("token", admin.accessToken()))
+                .andExpect(jsonPath("$.data.total").value(2));
         mockMvc.perform(get("/admin/monitor/online/1/1").header("token", admin.accessToken()))
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.records.length()").value(1))

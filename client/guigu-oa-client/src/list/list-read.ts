@@ -1,5 +1,6 @@
 import { reactive, readonly } from 'vue'
 import type { RequestScope } from '@/request/request-scope'
+import { failureMessage } from '@/request/request-failure'
 import type { ApiRequestConfig, PageResult } from '@/types/domain'
 
 export type ListReadStatus = 'loading' | 'ready' | 'failed'
@@ -40,14 +41,6 @@ function failureKind(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('kind' in error)) return undefined
   const kind = (error as { kind?: unknown }).kind
   return typeof kind === 'string' ? kind : undefined
-}
-
-function failureMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message) return message
-  }
-  return '加载失败'
 }
 
 function nextCommand<TQuery extends ListReadQuery>(
@@ -119,7 +112,7 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
         view.error = previous.error
         return
       }
-      view.error = failureMessage(error)
+      view.error = failureMessage(error) || '加载失败'
       view.status = 'failed'
     }
   }

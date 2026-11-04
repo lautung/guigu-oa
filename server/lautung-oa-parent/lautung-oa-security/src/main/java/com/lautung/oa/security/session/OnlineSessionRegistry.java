@@ -1,5 +1,7 @@
 package com.lautung.oa.security.session;
 
+import com.lautung.oa.model.monitor.OnlineSession;
+
 import java.util.List;
 
 /**

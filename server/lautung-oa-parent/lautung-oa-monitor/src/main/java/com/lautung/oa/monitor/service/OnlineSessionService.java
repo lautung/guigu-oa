@@ -2,10 +2,11 @@ package com.lautung.oa.monitor.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lautung.oa.framework.page.PageWindow;
+import com.lautung.oa.model.monitor.OnlineSession;
+import com.lautung.oa.model.monitor.SessionTime;
 import com.lautung.oa.monitor.mapper.OnlineSessionUser;
 import com.lautung.oa.monitor.mapper.OnlineSessionUserMapper;
 import com.lautung.oa.security.custom.AccountStatus;
-import com.lautung.oa.security.session.OnlineSession;
 import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.vo.monitor.OnlineSessionQueryVo;
 import com.lautung.oa.vo.monitor.OnlineSessionVo;
@@ -18,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -49,21 +51,14 @@ public class OnlineSessionService {
         Page<OnlineSessionVo> pageParam = PageWindow.of(page, limit);
         List<OnlineSessionVo> rows = liveSessions().stream()
                 .filter(session -> matchesUsername(session, queryVo))
-                .filter(session -> matchesLoginTime(session, queryVo))
+                .filter(loginTimeRange(queryVo))
                 .sorted(Comparator.comparing(
                         OnlineSession::loginTime, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(session -> toVo(session, currentSessionId))
+                .map(session -> OnlineSessionVo.of(session, currentSessionId))
                 .toList();
         pageParam.setTotal(rows.size());
         pageParam.setRecords(slice(rows, pageParam));
         return pageParam;
-    }
-
-    /**
-     * @return 该 sessionId 曾经登记过时 true；未知 sessionId 由调用方按 201 命名拒绝
-     */
-    public boolean forceLogout(String sessionId) {
-        return onlineSessionRegistry.forceLogout(sessionId);
     }
 
     private List<OnlineSession> liveSessions() {
@@ -93,7 +88,8 @@ public class OnlineSessionService {
         // 与认证链同一口径（AccountStatus/SessionVerifier），避免「能认证、列表不可见」的分叉。
         if (!AccountStatus.isEnabled(user.getStatus())) {
             return false;
-        }        // 改密递增 token_version，旧会话从这里退场（ADR 0029/0060）。
+        }
+        // 改密递增 token_version，旧会话从这里退场（ADR 0029/0060）。
         return user.tokenVersionOrDefault() == session.tokenVersion();
     }
 
@@ -106,38 +102,27 @@ public class OnlineSessionService {
                 && session.username().toLowerCase(Locale.ROOT).contains(needle);
     }
 
-    /** 登录时间与查询参数都是 {@code yyyy-MM-dd HH:mm:ss}，同格式字符串比较即时间顺序。 */
-    private static boolean matchesLoginTime(OnlineSession session, OnlineSessionQueryVo queryVo) {
-        if (queryVo == null) {
-            return true;
+    /**
+     * 登录时间闭区间：边界只解析一次（{@code yyyy-MM-dd HH:mm:ss}）。形状不合法的边界按
+     * 未提供处理——契约只承诺这个格式，坏值不该放大成整页失败；登记里缺登录时间的行在有
+     * 时间约束时不展示。
+     */
+    private static Predicate<OnlineSession> loginTimeRange(OnlineSessionQueryVo queryVo) {
+        SessionTime begin = queryVo == null ? null : SessionTime.parse(queryVo.getBeginTime());
+        SessionTime end = queryVo == null ? null : SessionTime.parse(queryVo.getEndTime());
+        if (begin == null && end == null) {
+            return session -> true;
         }
-        String loginTime = session.loginTime();
-        if (!StringUtils.hasText(queryVo.getBeginTime()) && !StringUtils.hasText(queryVo.getEndTime())) {
-            return true;
-        }
-        if (!StringUtils.hasText(loginTime)) {
-            return false;
-        }
-        if (StringUtils.hasText(queryVo.getBeginTime())
-                && loginTime.compareTo(queryVo.getBeginTime().trim()) < 0) {
-            return false;
-        }
-        return !StringUtils.hasText(queryVo.getEndTime())
-                || loginTime.compareTo(queryVo.getEndTime().trim()) <= 0;
-    }
-
-    private static OnlineSessionVo toVo(OnlineSession session, String currentSessionId) {
-        OnlineSessionVo row = new OnlineSessionVo();
-        row.setSessionId(session.sessionId());
-        row.setUsername(session.username());
-        row.setName(session.name());
-        row.setLoginTime(session.loginTime());
-        row.setIp(session.ip());
-        row.setBrowser(session.browser());
-        row.setOs(session.os());
-        row.setLastActive(session.lastActive());
-        row.setCurrent(session.sessionId() != null && session.sessionId().equals(currentSessionId));
-        return row;
+        return session -> {
+            SessionTime loginTime = session.loginTime();
+            if (loginTime == null) {
+                return false;
+            }
+            if (begin != null && loginTime.compareTo(begin) < 0) {
+                return false;
+            }
+            return end == null || loginTime.compareTo(end) <= 0;
+        };
     }
 
     private static List<OnlineSessionVo> slice(List<OnlineSessionVo> rows, Page<OnlineSessionVo> page) {

@@ -52,11 +52,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 
 import ListLoadError from '@/components/ListLoadError.vue'
 import { dataMetricsRequest, presentMonitorData, type MonitorDataView } from '@/config/monitor-data'
 import { openRequestScope } from '@/request/request-scope'
+import { createSnapshotRead } from '@/request/snapshot-read'
 import { useUserStore } from '@/store/modules/user'
 import type { MonitorDataSnapshot } from '@/types/domain'
 
@@ -68,47 +69,23 @@ if (!recognition) throw new Error('认出 module 尚未接入')
 
 /** 一次页面打开一个请求作用域（工作台同款）：身份变化后迟到的读取不再画到当前页面。 */
 const scope = openRequestScope(recognition, { notifyNormalErrors: false })
-
-const status = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-const error = shallowRef('')
-const data = shallowRef<MonitorDataView | null>(null)
-/** 已拿到过一次响应：之后的刷新失败保留旧内容，只叠加错误行。 */
-const loaded = shallowRef(false)
-let sequence = 0
+const snapshotRead = createSnapshotRead<MonitorDataView>(scope)
+const { status, error, value: data, loaded } = snapshotRead
 
 const view = computed(() => (loaded.value ? data.value : null))
 const thresholdLabel = computed(() => data.value?.thresholdLabel || '')
 
-function failureMessage(failure: unknown): string {
-  return failure && typeof failure === 'object' && 'message' in failure
-    ? String((failure as { message?: unknown }).message || '')
-    : ''
-}
-
-async function load(): Promise<void> {
-  const number = ++sequence
-  status.value = 'loading'
-  error.value = ''
-
-  try {
-    const response = await scope.request<MonitorDataSnapshot | null>(dataMetricsRequest())
-    if (number !== sequence || !scope.current()) return
-    data.value = presentMonitorData(response.data ?? null)
-    loaded.value = true
-    status.value = 'ready'
-  } catch (failure) {
-    if (number !== sequence || !scope.current()) return
-    status.value = 'failed'
-    error.value = failureMessage(failure)
-  }
+function load(): Promise<void> {
+  return snapshotRead.load(async (requestScope) => {
+    const response = await requestScope.request<MonitorDataSnapshot | null>(dataMetricsRequest())
+    return presentMonitorData(response.data ?? null)
+  })
 }
 
 onMounted(() => {
   void load()
 })
-onBeforeUnmount(() => {
-  sequence += 1
-})
+onBeforeUnmount(() => snapshotRead.release())
 </script>
 
 <style lang="scss" scoped>

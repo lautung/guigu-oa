@@ -6,6 +6,7 @@ import com.lautung.oa.framework.operlog.BusinessType;
 import com.lautung.oa.framework.operlog.OperLog;
 import com.lautung.oa.monitor.service.OnlineSessionService;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
+import com.lautung.oa.security.session.OnlineSessionRegistry;
 import com.lautung.oa.vo.monitor.OnlineSessionQueryVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +30,13 @@ public class OnlineSessionController {
 
     private final OnlineSessionService onlineSessionService;
 
-    public OnlineSessionController(OnlineSessionService onlineSessionService) {
+    private final OnlineSessionRegistry onlineSessionRegistry;
+
+    public OnlineSessionController(
+            OnlineSessionService onlineSessionService,
+            OnlineSessionRegistry onlineSessionRegistry) {
         this.onlineSessionService = onlineSessionService;
+        this.onlineSessionRegistry = onlineSessionRegistry;
     }
 
     @PreAuthorize("@backofficeGate.isAllowed('/monitor/online')")
@@ -48,7 +54,7 @@ public class OnlineSessionController {
     @OperLog(title = "在线用户·强退", businessType = BusinessType.OTHER)
     @PostMapping("{sessionId}/forceLogout")
     public Result forceLogout(@PathVariable String sessionId) {
-        if (!onlineSessionService.forceLogout(sessionId)) {
+        if (!onlineSessionRegistry.forceLogout(sessionId)) {
             throw new BusinessException(201, "会话不存在");
         }
         return Result.ok();

@@ -1,6 +1,8 @@
 package com.lautung.oa.security.session;
 
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.model.monitor.OnlineSession;
+import com.lautung.oa.model.monitor.SessionTime;
 import com.lautung.oa.security.login.UserAgentParser;
 import com.lautung.oa.security.revocation.TokenRevocation;
 import org.springframework.data.redis.core.Cursor;
@@ -11,8 +13,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,8 +31,6 @@ public class RedisOnlineSessionRegistry implements OnlineSessionRegistry {
     static final String ACTIVE_KEY_PREFIX = "login:session:active:";
     private static final Duration RETENTION = Duration.ofMillis(JwtHelper.REFRESH_TOKEN_LIFETIME_MILLIS);
     private static final Duration ACTIVE_THROTTLE = Duration.ofSeconds(60);
-    private static final DateTimeFormatter TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final String FIELD_USER_ID = "userId";
     private static final String FIELD_USERNAME = "username";
@@ -59,7 +57,7 @@ public class RedisOnlineSessionRegistry implements OnlineSessionRegistry {
         if (login == null || !StringUtils.hasText(login.sessionId())) {
             return;
         }
-        String now = LocalDateTime.now().format(TIME_FORMAT);
+        String now = SessionTime.now().toString();
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put(FIELD_USER_ID, String.valueOf(login.userId()));
         fields.put(FIELD_USERNAME, nullToEmpty(login.username()));
@@ -95,7 +93,7 @@ public class RedisOnlineSessionRegistry implements OnlineSessionRegistry {
         String key = key(sessionId);
         // 会话 hash 由 TTL 收尾；已过期的会话不能因为一次 touch 变成没有 TTL 的孤儿 hash。
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.opsForHash().put(key, FIELD_LAST_ACTIVE, LocalDateTime.now().format(TIME_FORMAT));
+            redisTemplate.opsForHash().put(key, FIELD_LAST_ACTIVE, SessionTime.now().toString());
         }
     }
 
@@ -158,11 +156,11 @@ public class RedisOnlineSessionRegistry implements OnlineSessionRegistry {
                 userId,
                 fields.get(FIELD_USERNAME),
                 fields.get(FIELD_NAME),
-                fields.get(FIELD_LOGIN_TIME),
+                SessionTime.parse(fields.get(FIELD_LOGIN_TIME)),
                 fields.get(FIELD_IP),
                 fields.get(FIELD_BROWSER),
                 fields.get(FIELD_OS),
-                fields.get(FIELD_LAST_ACTIVE),
+                SessionTime.parse(fields.get(FIELD_LAST_ACTIVE)),
                 tokenVersion);
     }
 

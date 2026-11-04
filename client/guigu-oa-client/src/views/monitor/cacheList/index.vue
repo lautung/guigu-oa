@@ -73,6 +73,7 @@ import {
 } from '@/config/monitor-cache'
 import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
+import { createSnapshotRead } from '@/request/snapshot-read'
 import { useUserStore } from '@/store/modules/user'
 import type { CacheKeyPage } from '@/types/domain'
 
@@ -89,52 +90,33 @@ export default defineComponent({
     const effects = listPageEffects()
 
     const prefix = shallowRef<CachePrefix>('perm:')
-    const rows = shallowRef<CacheKeyRow[]>([])
     /** 下一窗口的 SCAN 游标；0 表示扫描结束（服务端口径）。 */
     const cursor = shallowRef(0)
-    const status = shallowRef<'loading' | 'ready' | 'failed'>('loading')
-    const error = shallowRef('')
-    const loaded = shallowRef(false)
-    let sequence = 0
+    const cacheRead = createSnapshotRead<CacheKeyRow[]>(scope)
+    const { status, error, loaded } = cacheRead
+    const rows = computed(() => cacheRead.value.value ?? [])
 
     const hasMore = computed(() => loaded.value && cursor.value !== 0)
     const emptyText = computed(() => (loaded.value ? '暂无数据' : ''))
-
-    function failureMessage(failure: unknown): string {
-      return failure && typeof failure === 'object' && 'message' in failure
-        ? String((failure as { message?: unknown }).message || '')
-        : ''
-    }
 
     /**
      * 两种读法共用 sequence 丢迟到：refresh 是「写后刷新当前页」——把已累计的
      * 窗口整段重读（cursor 归零），more 继续当前游标向后追加一窗。
      */
-    async function runLoad(kind: 'refresh' | 'more'): Promise<void> {
-      const number = ++sequence
-      status.value = 'loading'
-      error.value = ''
-
-      const cursorValue = kind === 'more' ? cursor.value : 0
-      const count = kind === 'more' ? DEFAULT_KEY_COUNT : refreshCountOf(rows.value.length)
-
-      try {
-        const response = await scope.request<CacheKeyPage>(
+    function runLoad(kind: 'refresh' | 'more'): Promise<void> {
+      return cacheRead.load(async (requestScope, isCurrent) => {
+        const cursorValue = kind === 'more' ? cursor.value : 0
+        const count = kind === 'more' ? DEFAULT_KEY_COUNT : refreshCountOf(rows.value.length)
+        const response = await requestScope.request<CacheKeyPage>(
           cacheKeysRequest({ prefix: prefix.value, cursor: cursorValue, count }),
         )
-        if (number !== sequence || !scope.current()) return
+        if (!isCurrent()) return rows.value
         const page = response.data ?? { keys: [], nextCursor: 0 }
         const windowRows = (page.keys ?? []).map(presentCacheKeyRow)
-        rows.value = kind === 'more' ? [...rows.value, ...windowRows] : windowRows
         cursor.value =
           typeof page.nextCursor === 'number' && page.nextCursor > 0 ? page.nextCursor : 0
-        loaded.value = true
-        status.value = 'ready'
-      } catch (failure) {
-        if (number !== sequence || !scope.current()) return
-        status.value = 'failed'
-        error.value = failureMessage(failure)
-      }
+        return kind === 'more' ? [...rows.value, ...windowRows] : windowRows
+      })
     }
 
     /** 写后刷新当前页：整段重读已累计的窗口；窗口为空时退回一个默认首页。 */
@@ -151,9 +133,8 @@ export default defineComponent({
       if (!(CACHE_PREFIX_OPTIONS as readonly string[]).includes(value)) return
       if (value === prefix.value) return
       prefix.value = value as CachePrefix
-      rows.value = []
+      cacheRead.reset([])
       cursor.value = 0
-      loaded.value = false
       refresh()
     }
 
@@ -197,9 +178,7 @@ export default defineComponent({
     onMounted(() => {
       refresh()
     })
-    onBeforeUnmount(() => {
-      sequence += 1
-    })
+    onBeforeUnmount(() => cacheRead.release())
 
     return {
       prefixOptions: CACHE_PREFIX_OPTIONS,

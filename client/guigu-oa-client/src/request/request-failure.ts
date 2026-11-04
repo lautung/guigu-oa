@@ -51,6 +51,13 @@ export class PermissionRequestFailure extends BusinessRequestFailure {
   }
 }
 
+/** 页面把未知失败投影成一行文案：只认非空字符串 message，其余由调用方兜底。 */
+export function failureMessage(failure: unknown): string {
+  if (!failure || typeof failure !== 'object' || !('message' in failure)) return ''
+  const message = (failure as { message?: unknown }).message
+  return typeof message === 'string' ? message : ''
+}
+
 export function businessFailure(
   response: Partial<ApiResponse<unknown>>,
   operation: 'request' | 'refresh' = 'request',
