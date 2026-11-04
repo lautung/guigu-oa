@@ -5,9 +5,7 @@ import com.lautung.oa.auth.mapper.SysUserPostMapper;
 import com.lautung.oa.auth.service.SysPostService;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysPost;
-import com.lautung.oa.model.system.SysUserPost;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,11 +36,8 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
         if (id == null || getById(id) == null) {
             throw new BusinessException(201, "岗位不存在");
         }
-        // 只统计未删除用户：软删用户不是「仍在岗」，其残留关联行不应永久占住岗位删除（#248）。
-        QueryWrapper<SysUserPost> inUse = new QueryWrapper<>();
-        inUse.eq("post_id", id)
-                .inSql("user_id", "SELECT id FROM sys_user WHERE is_deleted = 0");
-        if (sysUserPostMapper.selectCount(inUse) > 0) {
+        // 只统计未删除用户：存活谓词收敛在 mapper 方法里，service 不再拼 SQL（#248）。
+        if (sysUserPostMapper.countLiveUsersByPostId(id) > 0) {
             throw new BusinessException(201, "岗位已分配用户，不能删除");
         }
         if (!removeById(id)) {

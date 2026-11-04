@@ -24,23 +24,27 @@ public class SysUserRoleServiceImpl extends ServiceImpl<SysUserRoleMapper, SysUs
     @Override
     @Transactional
     public void replaceUserRoles(Long userId, Collection<Long> roleIds) {
-        remove(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
-        for (Long roleId : roleIds) {
-            SysUserRole relation = new SysUserRole();
-            relation.setUserId(userId);
-            relation.setRoleId(roleId);
-            save(relation);
-        }
+        replace(userId, roleIds, true);
     }
 
     @Override
     @Transactional
     public void replaceRoleUsers(Long roleId, Collection<Long> userIds) {
-        remove(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, roleId));
-        for (Long userId : userIds) {
+        replace(roleId, userIds, false);
+    }
+
+    /**
+     * 同一张关系表的整体替换：按固定侧删干净后逐行重建。
+     * {@code fixedIsUser=true} 表示固定 userId、集合是 roleIds；false 则固定 roleId、集合是 userIds。
+     * 两个公共入口保留各自的语义，不把方向判断漏给调用方。
+     */
+    private void replace(Long fixedId, Collection<Long> otherIds, boolean fixedIsUser) {
+        remove(new LambdaQueryWrapper<SysUserRole>()
+                .eq(fixedIsUser ? SysUserRole::getUserId : SysUserRole::getRoleId, fixedId));
+        for (Long otherId : otherIds) {
             SysUserRole relation = new SysUserRole();
-            relation.setRoleId(roleId);
-            relation.setUserId(userId);
+            relation.setUserId(fixedIsUser ? fixedId : otherId);
+            relation.setRoleId(fixedIsUser ? otherId : fixedId);
             save(relation);
         }
     }

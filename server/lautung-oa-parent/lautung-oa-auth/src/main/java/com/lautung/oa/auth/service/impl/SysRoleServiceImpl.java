@@ -203,6 +203,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             throw new BusinessException(201, "角色不存在");
         }
         Page<SysUser> pageParam = PageWindow.of(page, limit);
+        // 成员集合先读出来：@TableLogic 由实体查询带出 is_deleted = 0，service 不再拼存活谓词。
+        Set<Long> memberIds = memberIdsOf(roleId);
 
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
@@ -214,15 +216,18 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         }
         // 角色是全局配置：成员列表不套数据范围（ADR 0056 的例外由本端点自己声明）。
         if (Boolean.TRUE.equals(assigned)) {
-            wrapper.inSql(SysUser::getId, memberSubquery(roleId));
-        } else if (Boolean.FALSE.equals(assigned)) {
-            wrapper.notInSql(SysUser::getId, memberSubquery(roleId));
+            if (memberIds.isEmpty()) {
+                wrapper.apply("1 = 0");
+            } else {
+                wrapper.in(SysUser::getId, memberIds);
+            }
+        } else if (Boolean.FALSE.equals(assigned) && !memberIds.isEmpty()) {
+            wrapper.notIn(SysUser::getId, memberIds);
         }
         // 稳定排序（ADR 0045）：分页翻页不因同值行漂移。
         wrapper.orderByAsc(SysUser::getId);
 
         IPage<SysUser> users = sysUserService.page(pageParam, wrapper);
-        Set<Long> memberIds = assigned == null ? memberIdsOf(roleId) : Set.of();
         Page<SysRoleUserVo> result = new Page<>(users.getCurrent(), users.getSize(), users.getTotal());
         result.setRecords(users.getRecords().stream()
                 .map(user -> toRoleUserVo(user,
@@ -259,10 +264,6 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         sysUserRoleService.replaceRoleUsers(roleId, requested);
         affected.addAll(requested);
         permissionCacheInvalidator.invalidateUsersAfterCommit(affected);
-    }
-
-    private String memberSubquery(Long roleId) {
-        return "SELECT user_id FROM sys_user_role WHERE role_id = " + roleId + " AND is_deleted = 0";
     }
 
     private Set<Long> memberIdsOf(Long roleId) {
