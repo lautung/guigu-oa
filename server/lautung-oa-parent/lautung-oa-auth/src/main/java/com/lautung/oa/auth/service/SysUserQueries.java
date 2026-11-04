@@ -28,6 +28,13 @@ public final class SysUserQueries {
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.like(SysUser::getUsername, query.getKeyword());
         }
+        // main 既有的时间范围过滤不在客户端使用，但属于公开 API 面，保留语义（#260 回归修复）。
+        if (StringUtils.hasText(query.getCreateTimeBegin())) {
+            wrapper.ge(SysUser::getCreateTime, query.getCreateTimeBegin());
+        }
+        if (StringUtils.hasText(query.getCreateTimeEnd())) {
+            wrapper.le(SysUser::getCreateTime, query.getCreateTimeEnd());
+        }
         if (query.getStatus() != null) {
             wrapper.eq(SysUser::getStatus, query.getStatus());
         }

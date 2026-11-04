@@ -251,6 +251,22 @@ class SysUserDeptContractTest {
                 .andExpect(jsonPath("$.code").value(205));
     }
 
+    @Test
+    void createTimeRangeFilterIsPreservedForApiCompatibility() throws Exception {
+        insertUser(120, "t249-time-early", 10, "2026-01-01 00:00:00");
+        insertUser(121, "t249-time-late", 10, "2026-06-01 00:00:00");
+
+        mockMvc.perform(userPage(101, "?keyword=t249-time-&createTimeBegin=2026-05-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[*].username", containsInAnyOrder("t249-time-late")));
+
+        mockMvc.perform(userPage(101, "?keyword=t249-time-&createTimeEnd=2026-02-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records[*].username", containsInAnyOrder("t249-time-early")));
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder userPage(
             long userId, String query) {
         return get("/admin/system/sysUser/1/50" + query).header("token", tokenOf(userId));
@@ -315,6 +331,13 @@ class SysUserDeptContractTest {
     private void insertUser(long id, String username, Integer deptId) {
         jdbcTemplate.update("INSERT INTO sys_user (id, username, password, name, status, dept_id, is_deleted) "
                 + "VALUES (?, ?, '', ?, 1, ?, 0)", id, username, username, deptId);
+    }
+
+    private void insertUser(long id, String username, Integer deptId, String createTime) {
+        jdbcTemplate.update("INSERT INTO sys_user "
+                        + "(id, username, password, name, status, dept_id, create_time, is_deleted) "
+                        + "VALUES (?, ?, '', ?, 1, ?, ?, 0)",
+                id, username, username, deptId, createTime);
     }
 
     private void assignRole(long userId, long roleId) {

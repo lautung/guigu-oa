@@ -19,6 +19,10 @@ public class SysUserQueryVo implements Serializable {
 	
 	private String keyword;
 
+	/** 创建时间范围（yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd）：保留 main 既有 API 过滤参数。 */
+	private String createTimeBegin;
+	private String createTimeEnd;
+
 	private Long roleId;
 	private Long deptId;
 
