@@ -45,7 +45,8 @@
 | `src/views/config/dict/index.vue` | 页面 `/system/dict` | 字典管理（#251）：左类型、右数据两级，各自 `createListPage`；行点击把类型编码带进右栏查询；类型/数据新建与编辑弹窗、删除二次确认；写后刷新 + 手动刷新缓存；类型仍有数据时的 201 文案由请求层上屏 |
 | `src/config/sys-menu.ts` | `presentAssignableConfigMenus` / `assignMenuLabel` / `collectCheckedIds` / `writeRequest` | 菜单树展示与角色授权：`type=2` 按钮点保留在树里并以 `名称（perms）` 标注、初始勾选逐项还原、按钮行写形状为空 path/component |
 | `src/config/sys-dept.ts` | `DEPT_PERMISSIONS` / `presentDeptTree` / `presentDeptNode` / `findTreeRequest` / `writeRequest` / `removeRequest` / `formRules` / `parentOptions` | 部门树投影与请求（#247）：服务端下发的嵌套 children 与含自身 `ancestors` 只映射；父级下拉排除被编辑节点整棵子树（镜像服务端环拒绝）；写载荷只带 parentId/名称/负责人/排序/状态，`ancestors` 由服务端重算 |
-| `src/config/sys-user.ts` | `SYS_USER_PERMISSIONS` / `ALL_DEPTS_ID` / `presentListRecord` / `presentDeptFilterTree` / `presentDeptFormTree` / `presentPostOptions` / `deptTreeRequest` / `postOptionsRequest` / `formRules` / `writeRequest` / `resetPasswordRequest` / `resetPasswordRules` | 用户页投影与请求构造：列表/详情/增删改/状态；左树「全部」节点与部门过滤、表单部门树（停用部门 disabled）与岗位选项、编辑回读 `deptId`/`postIds`（#249，部门/岗位选项走用户页自己的只读端点）；重置密码是独立按钮点 `system:user:resetPwd`（#250），请求体只收 `newPassword`，弹窗必填、min 6 与两次一致逐字镜像服务端 DTO |
+| `src/config/sys-user.ts` | `SYS_USER_PERMISSIONS` / `USER_STATUS_OPTIONS` / `ALL_DEPTS_ID` / `presentListRecord` / `presentDeptFilterTree` / `presentDeptFormTree` / `presentPostOptions` / `deptTreeRequest` / `postOptionsRequest` / `formRules` / `writeRequest` / `resetPasswordRequest` / `resetPasswordRules` | 用户页投影与请求构造：列表/详情/增删改/状态；左树「全部」节点与部门过滤、状态筛选（#259）、表单部门树（停用部门 disabled）与岗位选项、编辑回读 `deptId`/`postIds`（#249，部门/岗位选项走用户页自己的只读端点）；重置密码是独立按钮点 `system:user:resetPwd`（#250），请求体只收 `newPassword`，弹窗必填、min 6 与两次一致逐字镜像服务端 DTO |
+| `src/config/user-export.ts` | `SYS_USER_IO_PERMISSIONS` / `USER_EXCEL_COLUMNS` / `exportRequest` / `exportFileName` / `downloadBlob` | 用户导出的投影与下载（#259）：`GET /admin/system/sysUser/export` 带当前筛选（关键字/部门/状态）走 `responseType: 'blob'`，列固定为用户名/姓名/部门/岗位/手机/状态/创建时间；文件名在客户端生成，对象 URL 点击后释放；按钮点 `system:user:export` |
 | `src/config/oper-log.ts` | `BUSINESS_TYPE_OPTIONS` / `presentQuery` / `presentListRecord` / `presentDetail` / `formatOperParam` / `listRequest` / `detailRequest` / `removeRequest` / `cleanRequest` | 操作日志查询投影（空字段省略、时间范围映射）与请求构造；业务类型 0..7、状态 0/1 标签、列表与详情展示；`oper_param` JSON 缩进、截断/非 JSON 回退原文 |
 | `src/config/login-log.ts` | `LOGIN_EVENT_OPTIONS` / `loginEventLabel` / `presentQuery` / `presentListRecord` / `listRequest` / `removeRequest` / `cleanRequest` / `unlockRequest` / `loginStatusTagType` | 登录日志查询投影与请求；四值状态标签由字典 `sys_login_status` 供值（#251），本文件只留视觉 tag type；事件维度（登录/注册，#253）由 `LOGIN_EVENT_OPTIONS` 供值并参与查询；按 username 编码的解锁请求 |
 | `src/config/monitor-online.ts` | `MONITOR_ONLINE_PERMISSIONS` / `presentQuery` / `emptyQuery` / `presentListRecord` / `listRequest` / `forceLogoutRequest` | 在线用户页的查询投影（用户名包含、登录时间范围映射成 `beginTime`/`endTime`，ADR 0060）与请求构造：`page/limit` 路径参数、按 sessionId 编码的强退请求、`monitor:online:forceLogout` 按钮点；行的 `current` 标记由服务端按请求者会话算好下发，客户端只渲染 |
@@ -96,7 +97,7 @@
 
 部门管理页 `src/views/config/sysDept/index.vue`（#247）：树表格（`row-key`/`tree-props.children`，默认展开）展示名称/负责人/排序/状态/创建时间，行内「新增下级」与页头「新建」共用同一弹窗（上级部门、名称、负责人、排序、状态）；读走 `createListPage` 的 `fetchAll`（整表读），写后刷新与删除确认复用同一 module；名称必填走 `formRules()`，父级下拉由 `parentOptions` 排除自身子树；写失败的 201 文案（父级不存在/成环/删除保护两分支）由页面回显，205 仍由请求层统一提示。投影与请求收在 `src/config/sys-dept.ts`，HTTP 薄包装在 `src/api/sysDept.ts`。
 
-用户管理页 `src/views/config/sysUser/index.vue`：列表/筛选/新建与编辑/状态开关/分配角色沿用既有接线；左侧只读部门树含「全部」根节点，点击部门按「本部门及以下」过滤并回到第一页（`list.search` 重置页码），再点同一部门清除过滤（#249）；编辑弹窗的部门树只允许选中启用部门（停用节点 disabled），岗位多选选项来自用户页只读端点，编辑回读 `deptId`/`postIds`；重置密码是操作列独立按钮（`v-hasPermi` 走 `system:user:resetPwd`），弹窗只收新密码与确认（必填、min 6、两次一致），成功提示并刷新列表，不塞进编辑表单（#250，ADR 0029 的会话作废由服务端推进）。
+用户管理页 `src/views/config/sysUser/index.vue`：列表/筛选/新建与编辑/状态开关/分配角色沿用既有接线；左侧只读部门树含「全部」根节点，点击部门按「本部门及以下」过滤并回到第一页（`list.search` 重置页码），再点同一部门清除过滤（#249）；关键字与状态（正常/停用，#259）都进同一 `searchObj`；编辑弹窗的部门树只允许选中启用部门（停用节点 disabled），岗位多选选项来自用户页只读端点，编辑回读 `deptId`/`postIds`；重置密码是操作列独立按钮（`v-hasPermi` 走 `system:user:resetPwd`），弹窗只收新密码与确认（必填、min 6、两次一致），成功提示并刷新列表，不塞进编辑表单（#250，ADR 0029 的会话作废由服务端推进）。页头「导出」是独立按钮（`v-hasPermi` 走 `system:user:export`），按当前 `searchObj` 取回 blob 后本地下载（#259）。
 
 角色管理页 `src/views/config/sysRole/index.vue` 的操作列新增「分配用户」（`v-hasPermi` 走 `system:role:assignUser`），点开 `RoleUsersDrawer.vue` 的双列表抽屉：左未选/右已选，左侧关键字搜索与分页走服务端，右侧成员一次读全；未保存调整在关闭前确认丢弃，提交后的不确定结果进入 ADR 0006 的待确认面板（角色行标「待核实」），保存成功后重读成员、刷新操作者资料与菜单，关闭抽屉再刷新角色列表（#256）。
 
@@ -150,9 +151,9 @@
 ## 基座补齐（第 4–9 波，计划）
 
 以下 module 尚未落地，形状按 ADR 0062 与蓝图 §11 预记；实现票落地时把这一节改成现有事实。
+第 4–9 波的计划项（`src/i18n/`、`src/config/user-export.ts`）均已落地，当前无待实现 module；新增计划项仍先登记在本表。
 
 | 计划 module | interface / seam | 职责 |
 |---|---|---|
-| `src/config/user-export.ts` | 导出请求构造（下载） | 先导出；导入后置，单列部分成功语义 |
 
 路由计划：`/system/dict` 已由 #251 落地；`/register` 由 #253 落地为匿名、不套外壳的独立路由。`ROUTE_GROUP_ENTRIES` 与 `paths.ts` 仍由 `routes.ts` 派生，不另写第二份路径字符串。

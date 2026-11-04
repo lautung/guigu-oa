@@ -74,6 +74,11 @@ class BackofficeRouteAuthorizationContractTest {
     private static final Pattern GATE = Pattern.compile(
             "@backofficeGate\\.isAllowed\\('([^']+)'(?:,'([^']+)')?\\)");
     private static final Map<String, String> EXPECTED_GATES = new LinkedHashMap<>();
+    /**
+     * 只读但会一次带走大量行的数据动作：仍是 GET、仍不写服务端状态，但额外要求按钮点。
+     * 普通 GET 仍只判页面（ADR 0052/0056），这里每加一个都必须有票面理由。
+     */
+    private static final Set<String> GET_DATA_ACTION_BUTTONS = Set.of("SysUserController#export");
     private static final Set<Class<?>> BACKOFFICE_CONTROLLERS = Set.of(
             SysUserController.class,
             SysMenuController.class,
@@ -104,6 +109,8 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysUserController.class, "/system/sysUser", "system:user:remove", "remove");
         // 重置密码是独立按钮点（#250）：不复用 system:user:edit。
         expect(SysUserController.class, "/system/sysUser", "system:user:resetPwd", "resetPassword");
+        // 导出是只读的数据动作（#259）：GET 但一次带走大量行，额外要求独立按钮点。
+        expect(SysUserController.class, "/system/sysUser", "system:user:export", "export");
         expect(SysMenuController.class, "/system/sysRole", null, "toAssign");
         expect(SysMenuController.class, "/system/sysRole", "system:role:assignAuth", "doAssign");
         expect(SysMenuController.class, "/system/sysMenu", null, "findNodes");
@@ -263,6 +270,9 @@ class BackofficeRouteAuthorizationContractTest {
             if (isWrite(entry.getKey())) {
                 assertFalse(gate.permissions().isEmpty(),
                         "backoffice write route must declare a button point: " + key);
+            } else if (GET_DATA_ACTION_BUTTONS.contains(key)) {
+                assertFalse(gate.permissions().isEmpty(),
+                        "GET data action must declare its button point: " + key);
             } else {
                 assertTrue(gate.permissions().isEmpty(),
                         "backoffice read route must pass only the page: " + key);

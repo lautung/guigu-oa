@@ -18,6 +18,12 @@ export const SYS_USER_PERMISSIONS = {
   resetPassword: 'system:user:resetPwd',
 } as const
 
+/** 列表与导出的状态筛选（#259）：服务端按 sys_user.status 过滤。 */
+export const USER_STATUS_OPTIONS = [
+  { label: '正常', value: 1 },
+  { label: '停用', value: 0 },
+] as const
+
 export const RESET_PASSWORD_MIN_LENGTH = 6
 
 export const RESET_PASSWORD_MAX_LENGTH = 100

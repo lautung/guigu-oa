@@ -2,7 +2,10 @@
   <div class="config-page">
     <div class="page-header">
       <h2 class="page-title">用户管理</h2>
-      <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
+      <div class="page-actions">
+        <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
+        <el-button v-hasPermi="permissions.export" @click="handleExport">导出</el-button>
+      </div>
     </div>
 
     <div class="user-layout">
@@ -22,7 +25,17 @@
       <section class="user-main">
         <el-form :inline="true" class="filter-form" @submit.prevent="search">
           <el-form-item label="关键字">
-            <el-input v-model="keyword" placeholder="用户名/姓名/手机号码" clearable />
+            <el-input v-model="keyword" placeholder="用户名" clearable />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="statusFilter" clearable placeholder="全部" style="width: 120px">
+              <el-option
+                v-for="option in statusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="search">搜索</el-button>
@@ -183,6 +196,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, defineComponent } fro
 import { onBeforeRouteLeave } from 'vue-router'
 
 import {
+  exportUsers,
   findDeptTree,
   findPostOptions,
   getById,
@@ -207,7 +221,9 @@ import {
   presentPostOptions,
   resetPasswordRules,
   SYS_USER_PERMISSIONS,
+  USER_STATUS_OPTIONS,
 } from '@/config/sys-user'
+import { downloadBlob, exportFileName, SYS_USER_IO_PERMISSIONS } from '@/config/user-export'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
@@ -286,7 +302,8 @@ export default defineComponent({
       assignUser,
       isPending,
       openAssignRoles,
-      permissions: SYS_USER_PERMISSIONS,
+      permissions: { ...SYS_USER_PERMISSIONS, ...SYS_USER_IO_PERMISSIONS },
+      statusOptions: USER_STATUS_OPTIONS,
       list,
       view: list.view,
       rows: list.rows,
@@ -298,6 +315,7 @@ export default defineComponent({
     const resetForm = emptyResetPasswordForm()
     return {
       keyword: '',
+      statusFilter: '' as '' | number,
       dialogVisible: false,
       saving: false,
       form: emptyForm(),
@@ -345,6 +363,7 @@ export default defineComponent({
       const query: Record<string, string | number> = {}
       if (this.keyword) query.keyword = this.keyword
       if (this.currentDeptId !== ALL_DEPTS_ID) query.deptId = this.currentDeptId
+      if (this.statusFilter !== '') query.status = this.statusFilter
       return query
     },
     search() {
@@ -352,9 +371,15 @@ export default defineComponent({
     },
     reset() {
       this.keyword = ''
+      this.statusFilter = ''
       this.currentDeptId = ALL_DEPTS_ID
       this.syncDeptSelection()
       this.search()
+    },
+    /** 导出与列表共用当前筛选；失败由请求层上屏，不弹第二遍。 */
+    async handleExport() {
+      const blob = await this.list.settle(exportUsers(this.searchObj()))
+      if (blob) downloadBlob(blob, exportFileName())
     },
     /** 左树点击（#249）：选中部门过滤，再点同一部门清除；「全部」节点等价于清除。 */
     handleDeptClick(node?: { id?: EntityId }) {
@@ -454,6 +479,12 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .page-title {

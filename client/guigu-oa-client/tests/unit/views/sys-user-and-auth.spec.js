@@ -16,6 +16,7 @@ vi.mock('element-plus', async (importOriginal) => {
 })
 
 const sysUserApi = vi.hoisted(() => ({
+  exportUsers: vi.fn(),
   findDeptTree: vi.fn(),
   findPostOptions: vi.fn(),
   getById: vi.fn(),
@@ -160,6 +161,7 @@ beforeEach(() => {
   sysUserApi.resetPassword.mockResolvedValue(ok(null))
   sysUserApi.saveOrUpdate.mockResolvedValue(ok(null))
   sysUserApi.updateStatus.mockResolvedValue(ok(null))
+  sysUserApi.exportUsers.mockResolvedValue(new Blob(['xlsx']))
   sysMenuApi.getByIdForAssign.mockResolvedValue(ok(menuTree))
   sysMenuApi.doAssign.mockResolvedValue(ok(null))
   http = installHttp(responder)
@@ -249,6 +251,51 @@ describe('SysUser list page', () => {
     expect(wrapper.vm.keyword).toBe('')
     expect(wrapper.vm.currentDeptId).toBe(0)
     expect(http.calls.at(-1).params).toEqual({})
+  })
+
+  it('exports with the current keyword, dept and status and downloads the blob', async () => {
+    const { pinia } = setupSession({ permissions: ['system:user:export'] })
+    const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
+    await flushPromises()
+
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:export')
+    URL.revokeObjectURL = vi.fn()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      wrapper.vm.keyword = 'bob'
+      wrapper.vm.statusFilter = 0
+      wrapper.vm.handleDeptClick({ id: 10 })
+      await flushPromises()
+
+      await wrapper.vm.handleExport()
+
+      expect(sysUserApi.exportUsers).toHaveBeenCalledWith({
+        keyword: 'bob',
+        deptId: 10,
+        status: 0,
+      })
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(click).toHaveBeenCalledTimes(1)
+    } finally {
+      click.mockRestore()
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+
+  it('shows the 导出 header action only with the export button point', async () => {
+    const granted = setupSession({ permissions: ['system:user:export'] })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    expect(wrapper.find('.page-actions').text()).toContain('导出')
+    wrapper.unmount()
+
+    const denied = setupSession({ permissions: [] })
+    const deniedWrapper = mount(SysUser, realOptions(denied.pinia, testRouter()))
+    await flushPromises()
+    expect(deniedWrapper.find('.page-actions').text()).not.toContain('导出')
   })
 
   it('blocks the create with local required messages before the request', async () => {

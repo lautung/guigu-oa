@@ -4,6 +4,8 @@ package com.lautung.oa.auth.controller;
 import com.lautung.oa.auth.datascope.DataScopeResolver;
 import com.lautung.oa.auth.service.SysDeptService;
 import com.lautung.oa.auth.service.SysPostService;
+import com.lautung.oa.auth.service.SysUserExcelService;
+import com.lautung.oa.auth.service.SysUserQueries;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.framework.operlog.BusinessType;
@@ -12,7 +14,6 @@ import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
-import com.lautung.oa.vo.system.AssginRoleVo;
 import com.lautung.oa.vo.system.SysUserDetailVo;
 import com.lautung.oa.vo.system.SysUserQueryVo;
 import com.lautung.oa.vo.system.SysUserResetPasswordRequest;
@@ -23,6 +24,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,8 +32,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Set;
 
 /**
  * <p>
@@ -61,6 +65,9 @@ public class SysUserController {
     @Autowired
     private SysPostService sysPostService;
 
+    @Autowired
+    private SysUserExcelService sysUserExcelService;
+
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:edit')")
     @Operation(summary = "更新状态")
     @OperLog(title = "用户管理·更新用户状态", businessType = BusinessType.UPDATE)
@@ -80,38 +87,13 @@ public class SysUserController {
         //创建page对象
         Page<SysUser> pageParam = PageWindow.of(page, limit);
 
-        //封装条件，判断条件值不为空
-        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-        //获取条件值
-        String username = sysUserQueryVo.getKeyword();
-        String createTimeBegin = sysUserQueryVo.getCreateTimeBegin();
-        String createTimeEnd = sysUserQueryVo.getCreateTimeEnd();
-        //判断条件值不为空
-        //like 模糊查询
-        if(!StringUtils.isEmpty(username)) {
-            wrapper.like(SysUser::getUsername,username);
-        }
-        //ge 大于等于
-        if(!StringUtils.isEmpty(createTimeBegin)) {
-            wrapper.ge(SysUser::getCreateTime,createTimeBegin);
-        }
-        //le 小于等于
-        if(!StringUtils.isEmpty(createTimeEnd)) {
-            wrapper.le(SysUser::getCreateTime,createTimeEnd);
-        }
-        // 部门树过滤（#249）：选中部门按「本部门及以下」（ancestors 前缀，含自身）。
-        // 子树解析为空（部门不存在/已删）得到零行；它只是额外的 AND，不放宽数据范围。
-        Long deptId = sysUserQueryVo.getDeptId();
-        if (deptId != null) {
-            List<Long> subtreeIds = sysDeptService.findSubtreeIds(deptId);
-            if (subtreeIds.isEmpty()) {
-                wrapper.apply("1 = 0");
-            } else {
-                wrapper.in(SysUser::getDeptId, subtreeIds);
-            }
-        }
-        //数据范围（ADR 0057）：部门列 sys_user.dept_id，本人列 sys_user.id；空集是零行，不是全部。
-        applyDataScope(wrapper, dataScopeResolver.resolve(LoginUserInfoHelper.getUserId()));
+        // 关键字/状态/部门子树/DataScope 与导出共用同一组条件（#259）。
+        List<Long> subtreeIds = sysUserQueryVo.getDeptId() == null
+                ? List.of()
+                : sysDeptService.findSubtreeIds(sysUserQueryVo.getDeptId());
+        DataScope scope = dataScopeResolver.resolve(LoginUserInfoHelper.getUserId());
+        LambdaQueryWrapper<SysUser> wrapper = SysUserQueries.wrapper(
+                sysUserQueryVo, subtreeIds, scope, false);
 
         //调用mp的方法实现条件分页查询
         IPage<SysUser> pageModel = service.page(pageParam, wrapper);
@@ -119,30 +101,23 @@ public class SysUserController {
     }
 
     /**
-     * 查询侧只接受参数（ADR 0053）：部门集用 wrapper 的 {@code in}，本人行用 {@code eq}，
-     * 两者并集用 {@code or}；解析不出任何可见行时用常量 {@code 1 = 0} 得到零行。
+     * 导出（#259）：按与列表相同的筛选与 DataScope 流式写 xlsx。
+     * 导出是 GET 但会一次带走大量行，因此额外要求独立按钮点 {@code system:user:export}；
+     * 仍然只读，不产生服务端状态变更。
      */
-    private void applyDataScope(LambdaQueryWrapper<SysUser> wrapper, DataScope scope) {
-        if (scope.isUnrestricted()) {
-            return;
-        }
-        Set<Long> deptIds = scope.getDeptIds();
-        Long selfUserId = scope.getSelfUserId();
-        if (deptIds.isEmpty() && selfUserId == null) {
-            wrapper.apply("1 = 0");
-            return;
-        }
-        wrapper.and(nested -> {
-            if (!deptIds.isEmpty()) {
-                nested.in(SysUser::getDeptId, deptIds);
-            }
-            if (selfUserId != null) {
-                if (!deptIds.isEmpty()) {
-                    nested.or();
-                }
-                nested.eq(SysUser::getId, selfUserId);
-            }
-        });
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:export')")
+    @Operation(summary = "导出用户")
+    @OperLog(title = "用户·导出", businessType = BusinessType.OTHER)
+    @GetMapping("export")
+    public void export(SysUserQueryVo sysUserQueryVo, HttpServletResponse response) throws IOException {
+        DataScope scope = dataScopeResolver.resolve(LoginUserInfoHelper.getUserId());
+        String filename = "sys-user-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + ".xlsx";
+        response.setContentType(SysUserExcelService.XLSX_CONTENT_TYPE);
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + filename + "\"");
+        sysUserExcelService.export(sysUserQueryVo, scope, response.getOutputStream());
     }
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")

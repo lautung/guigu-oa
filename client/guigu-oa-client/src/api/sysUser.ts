@@ -1,4 +1,4 @@
-import request from '@/request/request'
+import request, { requestBinary } from '@/request/request'
 import {
   deptTreeRequest,
   getRequest,
@@ -8,6 +8,7 @@ import {
   updateStatusRequest,
   writeRequest,
 } from '@/config/sys-user'
+import { exportRequest } from '@/config/user-export'
 import type { ApiResponse, DeptRecord, EntityId, PostRecord, UserRecord } from '@/types/domain'
 
 export function getById(id: EntityId): Promise<ApiResponse<UserRecord>> {
@@ -39,4 +40,9 @@ export function findDeptTree(): Promise<ApiResponse<DeptRecord[]>> {
 /** 用户页只读岗位选项（#249）：服务端只回启用岗位。 */
 export function findPostOptions(): Promise<ApiResponse<PostRecord[]>> {
   return request(postOptionsRequest())
+}
+
+/** 按当前筛选导出 xlsx（#259）：二进制响应不与 JSON 信封混用。 */
+export function exportUsers(searchObj: Record<string, string | number>): Promise<Blob> {
+  return requestBinary(exportRequest(searchObj))
 }
