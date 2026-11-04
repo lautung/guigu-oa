@@ -12,6 +12,9 @@ import { PASSWORD } from './helpers'
 const SWITCH_KEY = 'sys.account.registerUser'
 const REGISTER_PATH = '/dev-api/admin/system/index/register'
 const SWITCH_PATH = `${REGISTER_PATH}/switch`
+// 限流用例直连后端：nginx 会用自己的 peer 覆盖 X-Real-IP，经它无法模拟不同来源。
+const API_ORIGIN = (process.env.API_ORIGIN || 'http://localhost:8800').replace(/\/$/, '')
+const BACKEND_REGISTER_PATH = `${API_ORIGIN}/admin/system/index/register`
 
 async function adminLogin(request: APIRequestContext): Promise<string> {
   const response = await request.post('/dev-api/admin/system/index/login', {
@@ -77,11 +80,21 @@ function register(request: APIRequestContext, sourceIp: string, body: ReturnType
   })
 }
 
+function registerFromBackend(
+  request: APIRequestContext,
+  sourceIp: string,
+  body: ReturnType<typeof payload>,
+) {
+  return request.post(BACKEND_REGISTER_PATH, {
+    headers: { 'X-Real-IP': sourceIp },
+    data: body,
+  })
+}
+
 test.describe.serial('SEC-REGISTER 匿名注册', () => {
   // 每个用例用独立来源；关闭态那一次也计数，共用 IP 会让限流用例提前量到窗口。
   const randomHost = () => Math.floor(Math.random() * 200) + 20
   const closedIp = `198.51.100.${randomHost()}`
-  const rateIp = `198.51.100.${randomHost()}`
 
   test('探测端点匿名可读且只回布尔', async ({ request }) => {
     const response = await request.get(SWITCH_PATH)
@@ -109,10 +122,12 @@ test.describe.serial('SEC-REGISTER 匿名注册', () => {
   test('开启后同一来源第 6 次被限流', async ({ request }) => {
     const { token, id } = await closeSwitch(request)
     await setSwitch(request, token, id, true)
+    // 每次运行独立来源，避免上一轮 1 分钟窗口的计数残留影响结果。
+    const rateIp = `198.51.100.${Math.floor(Math.random() * 200) + 20}`
     try {
       // 短密码让前五次都失败，同时证明失败尝试也计入 IP 次数。
       for (let attempt = 1; attempt <= 5; attempt += 1) {
-        const response = await register(
+        const response = await registerFromBackend(
           request,
           rateIp,
           payload(`sec-register-rate-${attempt}`, '12345'),
@@ -122,7 +137,11 @@ test.describe.serial('SEC-REGISTER 匿名注册', () => {
         expect(body.message).toBe('密码长度必须在 6 到 100 位之间')
       }
 
-      const limited = await register(request, rateIp, payload('sec-register-rate-sixth', 'secret1'))
+      const limited = await registerFromBackend(
+        request,
+        rateIp,
+        payload('sec-register-rate-sixth', 'secret1'),
+      )
       expect(limited.status()).toBe(200)
       const body = (await limited.json()) as { code: number; message?: string }
       expect(body.code).toBe(201)

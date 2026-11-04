@@ -5,6 +5,11 @@ server {
     # 只回 "Server: nginx"，不暴露精确版本号（#140）。
     server_tokens off;
 
+    # 与后端 spring.servlet.multipart.max-file-size=6MB 对齐：nginx 默认 1m 会在
+    # 公告图片（5MB）与个人中心头像/用户导入（2MB）到达应用前就回 413，业务层的
+    # 命名 201 文案永远不可见（#253/#254/#259 安全套件暴露）。
+    client_max_body_size 6m;
+
     root /usr/share/nginx/html;
     index index.html;
 
