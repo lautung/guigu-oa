@@ -7,7 +7,13 @@ const mapPath = join(root, 'docs/agents/client-modules.md')
 const clientRoot = join(root, 'client/guigu-oa-client')
 
 const text = readFileSync(mapPath, 'utf8')
-const paths = [...new Set([...text.matchAll(/`(src\/[^`]+)`/g)].map((match) => match[1]))]
+// 「基座补齐（计划）」段落预记尚未落地的 module，路径存在性只对已实现段落生效；
+// 计划项在落地票里搬进上表时再被本检查接管（ADR 0062）。
+const plannedIndex = text.indexOf('## 基座补齐')
+const implementedText = plannedIndex === -1 ? text : text.slice(0, plannedIndex)
+const paths = [
+  ...new Set([...implementedText.matchAll(/`(src\/[^`]+)`/g)].map((match) => match[1])),
+]
 const missing = paths.filter((path) => !existsSync(join(clientRoot, path)))
 
 if (missing.length) {
@@ -43,9 +49,16 @@ if (missingFromMap.length) {
 // 带省略号或通配的示意路径跳过（`lautung-oa-security/.../security/`、`…/V*.sql`）。
 const serverRoot = join(root, 'server/lautung-oa-parent')
 const serverText = readFileSync(join(root, 'docs/agents/server-modules.md'), 'utf8')
+// 计划模块（字典/参数等，ADR 0062）预记在地图里但目录尚未创建，存在性只对已落地行生效。
+const implementedServerText = serverText
+  .split('\n')
+  .filter((line) => !line.includes('计划'))
+  .join('\n')
 const serverPaths = [
   ...new Set(
-    [...serverText.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)].map((match) => match[1]),
+    [...implementedServerText.matchAll(/`((?:lautung-oa-[a-z-]+|server)\/[^`]*)`/g)].map(
+      (match) => match[1],
+    ),
   ),
 ].filter((path) => !/[*…]|\.\.\.|[<>]/.test(path))
 

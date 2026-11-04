@@ -122,6 +122,13 @@ const configChildren: AppRoute[] = [
     meta: { title: '菜单管理', menuGroup: 'config' },
   },
   {
+    // 部门管理（#247）：树表格 + 新增/编辑弹窗；读只判页面授予，写挂三个按钮点。
+    path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_DEPT),
+    name: 'SysDept',
+    component: () => import('@/views/config/sysDept/index.vue'),
+    meta: { title: '部门管理', menuGroup: 'config' },
+  },
+  {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_LOG_OPER),
     name: 'SysOperLog',
     component: () => import('@/views/config/operLog/index.vue'),

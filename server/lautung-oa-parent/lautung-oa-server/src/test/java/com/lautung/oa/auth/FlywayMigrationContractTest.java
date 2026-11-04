@@ -7,6 +7,7 @@ import db.migration.V116__NoticeSchemaAndMenu;
 import db.migration.V117__MonitorOnlineMenu;
 import db.migration.V118__MonitorPages;
 import db.migration.V122__ToolApiDocMenu;
+import db.migration.V123__SysDeptMenu;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -75,6 +76,7 @@ class FlywayMigrationContractTest {
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:role:add", "system:role:edit", "system:role:remove", "system:role:assignAuth",
             "system:menu:add", "system:menu:edit", "system:menu:remove",
+            "system:dept:add", "system:dept:edit", "system:dept:remove",
             "process:type:add", "process:type:edit", "process:type:remove",
             "process:template:add", "process:template:edit", "process:template:remove",
             "process:template:upload", "process:template:publish",
@@ -294,6 +296,7 @@ class FlywayMigrationContractTest {
                         "/system",
                         "/system/sysUser",
                         "/system/sysRole",
+                        "/system/sysDept",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
@@ -362,6 +365,8 @@ class FlywayMigrationContractTest {
             new V118__MonitorPages().migrate(context);
             // 系统工具目录与接口文档页（#246）同样可重复执行。
             new V122__ToolApiDocMenu().migrate(context);
+            // 部门管理页面与按钮点（#247）同样可重复执行。
+            new V123__SysDeptMenu().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));

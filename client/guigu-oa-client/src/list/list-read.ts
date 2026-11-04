@@ -27,6 +27,11 @@ export interface ListReadOptions<TQuery extends ListReadQuery = ListReadQuery> {
   toRequest: (command: ListReadCommand<TQuery>) => ApiRequestConfig
   size?: number
   query?: TQuery
+  /**
+   * 整表读（树列表）：响应 data 是记录数组而不是分页信封，total=records.length、pages=1。
+   * 写后刷新、迟到丢弃与失败策略与分页读完全相同（#247）。
+   */
+  fetchAll?: boolean
 }
 export interface ListReadOpening<TRecord, TQuery extends ListReadQuery = ListReadQuery> {
   view: Readonly<ListReadView<TRecord>>
@@ -95,10 +100,11 @@ export function createListRead<TRecord, TQuery extends ListReadQuery = ListReadQ
         () => !released && number === sequence,
       )
       if (released || number !== sequence) return
-      const data = response?.data || {}
-      view.records = data.records || []
-      view.total = data.total || 0
-      view.pages = data.pages || 0
+      const data = response?.data
+      const list = options.fetchAll && Array.isArray(data) ? data : null
+      view.records = list ?? (data as PageResult<TRecord> | undefined)?.records ?? []
+      view.total = list ? list.length : (data as PageResult<TRecord> | undefined)?.total || 0
+      view.pages = list ? 1 : (data as PageResult<TRecord> | undefined)?.pages || 0
       settled = { page: command.page, size: command.size }
       view.status = 'ready'
     } catch (error: unknown) {

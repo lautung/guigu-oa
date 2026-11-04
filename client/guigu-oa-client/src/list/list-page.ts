@@ -21,6 +21,8 @@ export interface ListPageOptions<
   openScope: () => RequestScope
   toRequest: (command: ListReadCommand<TQuery>) => ApiRequestConfig
   present?: (record: TRecord) => TItem
+  /** 整表读（树列表）：见 createListRead 的同名选项（#247）。 */
+  fetchAll?: boolean
   size?: number
   query?: TQuery
 }
@@ -55,6 +57,7 @@ export function createListPage<
   const opening = createListRead<TRecord, TQuery>({
     openScope: options.openScope,
     toRequest: options.toRequest,
+    fetchAll: options.fetchAll,
     size: options.size,
     query: options.query,
   })

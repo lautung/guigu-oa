@@ -166,6 +166,39 @@ export interface DeptOption {
   parentId?: EntityId
 }
 
+/** 部门维护行（#247）：ancestors 是服务端算好的含自身包裹逗号路径，客户端只展示。 */
+export interface DeptRecord {
+  id?: EntityId | ''
+  parentId?: EntityId
+  ancestors?: string
+  name?: string
+  leader?: string
+  sortValue?: number
+  status?: number
+  createTime?: string
+  children?: DeptRecord[]
+}
+
+export interface DeptTreeNode extends DeptRecord {
+  children: DeptTreeNode[]
+}
+
+export interface DeptForm {
+  id: EntityId | ''
+  parentId: EntityId
+  name: string
+  leader: string
+  sortValue: number
+  status: number
+}
+
+/** 父级下拉项：depth 只用于缩进展示（0＝顶级部门）。 */
+export interface DeptParentOption {
+  id: EntityId
+  name: string
+  depth: number
+}
+
 export interface UserRecord {
   id?: EntityId | ''
   username?: string

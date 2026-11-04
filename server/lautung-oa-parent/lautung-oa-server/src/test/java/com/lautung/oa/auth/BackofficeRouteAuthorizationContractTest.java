@@ -3,6 +3,7 @@ package com.lautung.oa.auth;
 import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
+import com.lautung.oa.auth.controller.SysDeptController;
 import com.lautung.oa.auth.controller.SysMenuController;
 import com.lautung.oa.auth.controller.SysRoleController;
 import com.lautung.oa.auth.controller.SysUserController;
@@ -73,6 +74,7 @@ class BackofficeRouteAuthorizationContractTest {
             SysUserController.class,
             SysMenuController.class,
             SysRoleController.class,
+            SysDeptController.class,
             OaProcessTypeController.class,
             OaProcessTemplateController.class,
             OaProcessController.class,
@@ -105,6 +107,11 @@ class BackofficeRouteAuthorizationContractTest {
         expect(SysRoleController.class, "/system/sysRole", "system:role:add", "save");
         expect(SysRoleController.class, "/system/sysRole", "system:role:edit", "update");
         expect(SysRoleController.class, "/system/sysRole", "system:role:remove", "remove", "batchRemove");
+        // 部门管理（#247）：树读只走页面授予；新增/修改/删除各要自己的按钮点。
+        expect(SysDeptController.class, "/system/sysDept", null, "findTree");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:add", "save");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:edit", "update");
+        expect(SysDeptController.class, "/system/sysDept", "system:dept:remove", "remove");
         expect(OaProcessTypeController.class, "/system/processSet/processType", null,
                 "findAll", "index", "get");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
@@ -291,6 +298,7 @@ class BackofficeRouteAuthorizationContractTest {
         assertCode("/admin/system/sysUser/1/10", 1L, "admin", 200);
         assertCode("/admin/system/sysRole/1/10", 1L, "admin", 200);
         assertCode("/admin/system/sysMenu/findNodes", 1L, "admin", 200);
+        assertCode("/admin/system/sysDept/findTree", 1L, "admin", 200);
         assertCode("/admin/process/processType/1/10", 1L, "admin", 200);
         assertCode("/admin/process/processTemplate/1/10", 1L, "admin", 200);
         assertCode("/admin/process/processTemplate/get/" + templateId, 1L, "admin", 200);
@@ -299,6 +307,7 @@ class BackofficeRouteAuthorizationContractTest {
         assertCode("/admin/system/sysUser/1/10", 2L, "user", 205);
         assertCode("/admin/system/sysRole/1/10", 2L, "user", 205);
         assertCode("/admin/system/sysMenu/findNodes", 2L, "user", 205);
+        assertCode("/admin/system/sysDept/findTree", 2L, "user", 205);
         assertCode("/admin/process/processType/1/10", 2L, "user", 205);
         assertCode("/admin/process/processTemplate/1/10", 2L, "user", 205);
         assertCode("/admin/process/processTemplate/get/" + templateId, 2L, "user", 205);
@@ -317,6 +326,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "system:user:assignRole", "system:role:add", "system:role:edit",
                         "system:role:remove", "system:role:assignAuth",
                         "system:menu:add", "system:menu:edit", "system:menu:remove",
+                        "system:dept:add", "system:dept:edit", "system:dept:remove",
                         "process:type:add", "process:type:edit", "process:type:remove",
                         "process:template:add", "process:template:edit", "process:template:remove",
                         "process:template:upload", "process:template:publish",
@@ -328,6 +338,7 @@ class BackofficeRouteAuthorizationContractTest {
                         "/system",
                         "/system/sysUser",
                         "/system/sysRole",
+                        "/system/sysDept",
                         "/system/assignAuth",
                         "/system/processSet",
                         "/system/processSet/processType",
