@@ -313,7 +313,8 @@ export default defineComponent({
       DictTypeListItem,
       Record<string, string | number>
     >({
-      openScope: () => openRequestScope(recognition),
+      // 读失败只在栏内 ListLoadError 显示一次，请求层不再弹全局提示（部门页同策）。
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => typeListRequest(page, size, query),
       present: presentTypeRecord,
       ...effects,
@@ -323,7 +324,7 @@ export default defineComponent({
       DictDataListItem,
       Record<string, string | number>
     >({
-      openScope: () => openRequestScope(recognition),
+      openScope: () => openRequestScope(recognition, { notifyNormalErrors: false }),
       toRequest: ({ page, size, query }) => dataListRequest(page, size, query),
       present: presentDataRecord,
       ...effects,

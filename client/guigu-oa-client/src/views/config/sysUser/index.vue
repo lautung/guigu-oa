@@ -3,7 +3,13 @@
     <div class="page-header">
       <h2 class="page-title">用户管理</h2>
       <div class="page-actions">
-        <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
+        <el-button
+          v-hasPermi="permissions.add"
+          type="primary"
+          icon="el-icon-plus"
+          @click="openCreate"
+          >新建</el-button
+        >
         <el-button v-hasPermi="permissions.export" @click="handleExport">导出</el-button>
         <el-button v-hasPermi="permissions.import" @click="openImport">导入</el-button>
       </div>
@@ -74,9 +80,14 @@
           <el-table-column prop="createTime" label="创建时间" />
           <el-table-column label="操作" width="330" align="center">
             <template #default="scope">
-              <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
+              <el-button v-hasPermi="permissions.edit" link @click="openEdit(scope.row.id)"
+                >编辑</el-button
+              >
               <span class="assign-action">
-                <el-button link @click="openAssignRoles(scope.row.id, scope.row.username)"
+                <el-button
+                  v-hasPermi="permissions.assignRole"
+                  link
+                  @click="openAssignRoles(scope.row.id, scope.row.username)"
                   >分配角色</el-button
                 >
                 <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
@@ -87,7 +98,9 @@
                 @click="openResetPassword(scope.row.id, scope.row.username)"
                 >重置密码</el-button
               >
-              <el-button link @click="remove(scope.row.id)">删除</el-button>
+              <el-button v-hasPermi="permissions.remove" link @click="remove(scope.row.id)"
+                >删除</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -460,8 +473,9 @@ export default defineComponent({
       const input = this.$refs.importFileInput as HTMLInputElement | undefined
       if (input) input.value = ''
     },
+    /** 模板下载失败只在弹窗内显示一次：请求层静默，不再弹全局提示。 */
     async handleDownloadTemplate() {
-      const blob = await this.list.settle(downloadImportTemplate())
+      const blob = await this.list.settle(downloadImportTemplate({ notifyNormalErrors: false }))
       if (blob) {
         downloadBlob(blob, IMPORT_TEMPLATE_FILE_NAME)
       } else {
@@ -498,7 +512,8 @@ export default defineComponent({
       this.importing = true
       this.importError = ''
       try {
-        const response = await importUsers(file)
+        // 导入失败文案在弹窗内展示；请求层静默，避免同一条失败提示两次。
+        const response = await importUsers(file, { notifyNormalErrors: false })
         this.importResult = presentImportResult(response.data)
         if (this.importResult.successCount > 0) this.list.refresh()
       } catch (failure) {

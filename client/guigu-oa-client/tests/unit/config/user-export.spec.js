@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  DOWNLOAD_URL_RELEASE_DELAY,
   downloadBlob,
   exportFileName,
   exportRequest,
@@ -96,26 +97,34 @@ describe('config/user-export', () => {
     ])
   })
 
-  it('downloads through an object URL and releases it', () => {
-    const link = { href: '', download: '', rel: '', click: vi.fn(), remove: vi.fn() }
-    const doc = {
-      createElement: vi.fn(() => link),
-      body: { appendChild: vi.fn() },
-    }
-    const urlApi = {
-      createObjectURL: vi.fn(() => 'blob:export'),
-      revokeObjectURL: vi.fn(),
-    }
-    const blob = new Blob(['xlsx'])
+  it('downloads through an object URL and releases it after the browser can read it', () => {
+    vi.useFakeTimers()
+    try {
+      const link = { href: '', download: '', rel: '', click: vi.fn(), remove: vi.fn() }
+      const doc = {
+        createElement: vi.fn(() => link),
+        body: { appendChild: vi.fn() },
+      }
+      const urlApi = {
+        createObjectURL: vi.fn(() => 'blob:export'),
+        revokeObjectURL: vi.fn(),
+      }
+      const blob = new Blob(['xlsx'])
 
-    downloadBlob(blob, '用户列表.xlsx', doc, urlApi)
+      downloadBlob(blob, '用户列表.xlsx', doc, urlApi)
 
-    expect(urlApi.createObjectURL).toHaveBeenCalledWith(blob)
-    expect(link.href).toBe('blob:export')
-    expect(link.download).toBe('用户列表.xlsx')
-    expect(link.click).toHaveBeenCalledTimes(1)
-    expect(doc.body.appendChild).toHaveBeenCalledWith(link)
-    expect(link.remove).toHaveBeenCalledTimes(1)
-    expect(urlApi.revokeObjectURL).toHaveBeenCalledWith('blob:export')
+      expect(urlApi.createObjectURL).toHaveBeenCalledWith(blob)
+      expect(link.href).toBe('blob:export')
+      expect(link.download).toBe('用户列表.xlsx')
+      expect(link.click).toHaveBeenCalledTimes(1)
+      expect(doc.body.appendChild).toHaveBeenCalledWith(link)
+      expect(link.remove).toHaveBeenCalledTimes(1)
+      // 点击后立即撤销会取消下载：必须先留给浏览器读取，再释放 URL。
+      expect(urlApi.revokeObjectURL).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(DOWNLOAD_URL_RELEASE_DELAY)
+      expect(urlApi.revokeObjectURL).toHaveBeenCalledWith('blob:export')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

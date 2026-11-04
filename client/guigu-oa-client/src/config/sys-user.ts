@@ -13,8 +13,12 @@ import type {
 import { lengthRule, requiredRule, type LengthRule, type RequiredRule } from './form-rules'
 import { presentDeptTree } from './sys-dept'
 
-/** 用户页的独立动作按钮点（ADR 0052/0056）：重置密码不复用编辑点。 */
+/** 用户页的按钮点（ADR 0052/0056，V110 种子）：重置密码不复用编辑点。 */
 export const SYS_USER_PERMISSIONS = {
+  add: 'system:user:add',
+  edit: 'system:user:edit',
+  remove: 'system:user:remove',
+  assignRole: 'system:user:assignRole',
   resetPassword: 'system:user:resetPwd',
 } as const
 

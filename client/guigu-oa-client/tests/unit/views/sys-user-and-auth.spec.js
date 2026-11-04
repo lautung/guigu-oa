@@ -181,6 +181,32 @@ beforeEach(() => {
 afterEach(() => http.restore())
 
 describe('SysUser list page', () => {
+  it('renders page and row actions only when their permission codes are granted', async () => {
+    const denied = mount(SysUser, realOptions(setupSession().pinia, testRouter()))
+    await flushPromises()
+    const deniedLabels = denied.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '分配角色', '删除']) {
+      expect(deniedLabels).not.toContain(label)
+    }
+    denied.unmount()
+
+    const granted = setupSession({
+      permissions: [
+        'system:user:add',
+        'system:user:edit',
+        'system:user:remove',
+        'system:user:assignRole',
+      ],
+    })
+    const wrapper = mount(SysUser, realOptions(granted.pinia, testRouter()))
+    await flushPromises()
+    const labels = wrapper.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '分配角色', '删除']) {
+      expect(labels).toContain(label)
+    }
+    wrapper.unmount()
+  })
+
   it('loads rows and runs the list actions', async () => {
     const { pinia } = setupSession()
     const wrapper = mount(SysUser, realOptions(pinia, testRouter()))
@@ -324,7 +350,8 @@ describe('SysUser list page', () => {
       expect(wrapper.vm.importDialogVisible).toBe(true)
 
       await wrapper.vm.handleDownloadTemplate()
-      expect(sysUserApi.downloadImportTemplate).toHaveBeenCalledTimes(1)
+      // 失败提示只在弹窗内一次：模板下载显式静默请求层（#260 二轮）。
+      expect(sysUserApi.downloadImportTemplate).toHaveBeenCalledWith({ notifyNormalErrors: false })
       expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
       expect(click).toHaveBeenCalledTimes(1)
 
@@ -354,7 +381,7 @@ describe('SysUser list page', () => {
       await wrapper.vm.submitImport()
       await flushPromises()
 
-      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file)
+      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file, { notifyNormalErrors: false })
       expect(wrapper.vm.importResult).toEqual(
         expect.objectContaining({ total: 3, successCount: 2, failureCount: 1 }),
       )

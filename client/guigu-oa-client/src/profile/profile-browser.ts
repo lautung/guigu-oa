@@ -40,6 +40,7 @@ export function createProfilePage() {
       const response = await request<ProfileAvatarResult>(uploadAvatarRequest(file))
       return response.data || {}
     },
+    refreshUser: () => userStore.getInfo(),
     loadAvatar: (path) => avatars.read(path),
     releaseAvatar: (url) => avatars.release(url),
     notify: (message, type = 'success') =>

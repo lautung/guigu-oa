@@ -15,6 +15,8 @@ export interface ProfileAdapter {
   save(payload: ProfileWritePayload): Promise<unknown>
   changePassword(payload: ProfilePasswordPayload): Promise<unknown>
   uploadAvatar(file: File): Promise<ProfileAvatarResult>
+  /** 头像上传成功后刷新用户 store（顶栏头像读的是同一份 avatar）；失败不反报上传失败。 */
+  refreshUser(): Promise<unknown>
   /** 认证取回头像字节并换成可显示的 blob URL。 */
   loadAvatar(path: string): Promise<string>
   releaseAvatar(url: string): void
@@ -148,6 +150,12 @@ export function createProfile(adapter: ProfileAdapter) {
       const result = await adapter.uploadAvatar(file)
       state.avatarPath = result.url || ''
       await hydrateAvatar(state.avatarPath)
+      // 顶栏读 store.avatar：上传成功后刷新 /info，不与页面新造第二份状态。
+      try {
+        await adapter.refreshUser()
+      } catch {
+        // 上传已经成功；顶栏刷新失败只影响头像即时更新，不反报上传失败。
+      }
       adapter.notify(t('profile.avatarUpdated'), 'success')
       return true
     } catch (error) {

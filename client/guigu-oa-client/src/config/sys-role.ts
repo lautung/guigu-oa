@@ -124,8 +124,12 @@ export function assignRolesRequest(
   }
 }
 
-/** 角色页的独立动作按钮点（ADR 0052/0056）：分配用户不复用菜单授权点。 */
+/** 角色页的按钮点（ADR 0052/0056，V110 种子）：分配用户不复用菜单授权点。 */
 export const SYS_ROLE_PERMISSIONS = {
+  add: 'system:role:add',
+  edit: 'system:role:edit',
+  remove: 'system:role:remove',
+  assignAuth: 'system:role:assignAuth',
   assignUser: 'system:role:assignUser',
 } as const
 

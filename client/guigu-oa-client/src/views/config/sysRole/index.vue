@@ -2,7 +2,9 @@
   <div class="config-page">
     <div class="page-header">
       <h2 class="page-title">角色管理</h2>
-      <el-button type="primary" icon="el-icon-plus" @click="openCreate">新建</el-button>
+      <el-button v-hasPermi="permissions.add" type="primary" icon="el-icon-plus" @click="openCreate"
+        >新建</el-button
+      >
     </div>
 
     <el-form :inline="true" class="filter-form" @submit.prevent="search">
@@ -30,8 +32,15 @@
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column label="操作" width="300" align="center">
         <template #default="scope">
-          <el-button link @click="openEdit(scope.row.id)">编辑</el-button>
-          <el-button link @click="openAssign(scope.row.id, scope.row.roleName)">菜单授权</el-button>
+          <el-button v-hasPermi="permissions.edit" link @click="openEdit(scope.row.id)"
+            >编辑</el-button
+          >
+          <el-button
+            v-hasPermi="permissions.assignAuth"
+            link
+            @click="openAssign(scope.row.id, scope.row.roleName)"
+            >菜单授权</el-button
+          >
           <span class="assign-action">
             <el-button
               v-hasPermi="permissions.assignUser"
@@ -41,7 +50,9 @@
             >
             <el-tag v-if="isPending(scope.row.id)" type="warning" size="small">待核实</el-tag>
           </span>
-          <el-button link @click="remove(scope.row.id)">删除</el-button>
+          <el-button v-hasPermi="permissions.remove" link @click="remove(scope.row.id)"
+            >删除</el-button
+          >
         </template>
       </el-table-column>
     </el-table>

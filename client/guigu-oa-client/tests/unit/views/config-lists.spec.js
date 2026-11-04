@@ -41,6 +41,7 @@ vi.mock('@/api/sysMenu', () => ({
 }))
 
 import ElementPlus from 'element-plus'
+import { hasPermi } from '@/permission'
 import ProcessInstance from '@/views/config/processInstance/index.vue'
 import ProcessTemplate from '@/views/config/processTemplate/index.vue'
 import ProcessType from '@/views/config/processType/index.vue'
@@ -93,6 +94,7 @@ function observeMount(pinia, router) {
   return {
     global: {
       plugins: [pinia, router, ElementPlus],
+      directives: { hasPermi },
       stubs: { 'form-create': true, 'fc-designer': true },
     },
   }
@@ -135,6 +137,32 @@ beforeEach(() => {
 afterEach(() => http.restore())
 
 describe('SysRole list page', () => {
+  it('renders role actions only when their permission codes are granted', async () => {
+    const denied = mount(SysRole, observeMount(setupSession().pinia, testRouter()))
+    await flushPromises()
+    const deniedLabels = denied.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '菜单授权', '删除']) {
+      expect(deniedLabels).not.toContain(label)
+    }
+    denied.unmount()
+
+    const granted = setupSession({
+      permissions: [
+        'system:role:add',
+        'system:role:edit',
+        'system:role:remove',
+        'system:role:assignAuth',
+      ],
+    })
+    const wrapper = mount(SysRole, observeMount(granted.pinia, testRouter()))
+    await flushPromises()
+    const labels = wrapper.findAll('button').map((node) => node.text().trim())
+    for (const label of ['新建', '编辑', '菜单授权', '删除']) {
+      expect(labels).toContain(label)
+    }
+    wrapper.unmount()
+  })
+
   it('loads rows, searches, and opens the create dialog', async () => {
     const { pinia } = setupSession()
     const router = testRouter()

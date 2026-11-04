@@ -97,7 +97,10 @@ export function importResultSummary(result: UserImportResultView): string {
   return `成功 ${result.successCount} 条，失败 ${result.failureCount} 条`
 }
 
-/** 已认证同源 blob 落到本地文件；临时 URL 在点击后释放。 */
+/** 点击后浏览器仍要异步读取 blob URL；立即撤销可能取消尚未开始的下载。 */
+export const DOWNLOAD_URL_RELEASE_DELAY = 1000
+
+/** 已认证同源 blob 落到本地文件；临时 URL 延迟释放，给浏览器留出读取时间。 */
 export function downloadBlob(
   blob: Blob,
   fileName: string,
@@ -112,5 +115,5 @@ export function downloadBlob(
   doc.body.appendChild(link)
   link.click()
   link.remove()
-  urlApi.revokeObjectURL(url)
+  setTimeout(() => urlApi.revokeObjectURL(url), DOWNLOAD_URL_RELEASE_DELAY)
 }

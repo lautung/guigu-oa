@@ -14,6 +14,7 @@ function fakeAdapter(overrides = {}) {
     save: vi.fn(async () => undefined),
     changePassword: vi.fn(async () => undefined),
     uploadAvatar: vi.fn(async () => ({ url: '/admin/system/profile/avatar/2' })),
+    refreshUser: vi.fn(async () => undefined),
     loadAvatar: vi.fn(async () => 'blob:avatar'),
     releaseAvatar: vi.fn(),
     notify: vi.fn(),
@@ -162,6 +163,21 @@ describe('profile module', () => {
     expect(adapter.releaseAvatar).toHaveBeenCalledWith('blob:old')
     expect(profile.state.avatarPath).toBe('/admin/system/profile/avatar/new')
     expect(profile.state.avatarUrl).toBe('blob:new')
+    // 顶栏头像读 store：上传成功后必须刷新 /info，而不是让顶栏停在旧图。
+    expect(adapter.refreshUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the upload successful when the header refresh fails', async () => {
+    const adapter = fakeAdapter({
+      refreshUser: vi.fn(async () => Promise.reject(new Error('info down'))),
+    })
+    const profile = createProfile(adapter)
+
+    expect(await profile.uploadAvatar(new File(['x'], 'a.png', { type: 'image/png' }))).toBe(true)
+
+    expect(adapter.refreshUser).toHaveBeenCalledTimes(1)
+    expect(adapter.notify).toHaveBeenCalledWith('头像已更新', 'success')
+    expect(profile.state.avatarError).toBe('')
   })
 
   it('validates the old/new/confirm passwords before calling changePassword', async () => {
