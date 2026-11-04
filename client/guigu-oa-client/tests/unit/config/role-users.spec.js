@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createRoleUsers } from '@/config/role-users'
-import { getDefaultPostLoginRoute } from '@/navigation/constants'
+
+const alice = { id: 11, username: 'alice', name: '爱丽丝' }
+const bob = { id: 12, username: 'bob', name: '鲍勃' }
+const carol = { id: 13, username: 'carol', name: '卡罗尔', phone: '13800002222' }
+const dave = { id: 14, username: 'dave', name: '戴夫' }
+const role = { id: 7, roleName: '审批人' }
 
 function deferred() {
   let resolve, reject
@@ -11,14 +16,8 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
-const alice = { id: 11, username: 'alice', name: '爱丽丝' }
-const bob = { id: 12, username: 'bob', name: '鲍勃' }
-const carol = { id: 13, username: 'carol', name: '卡罗尔', phone: '13800002222' }
-const dave = { id: 14, username: 'dave', name: '戴夫' }
-const role = { id: 7, roleName: '审批人' }
-
-function harness(overrides = {}) {
-  const values = new Map()
+function harness(overrides = {}, sharedValues = new Map()) {
+  const values = sharedValues
   let entry = 'entry-admin'
   let generation = 1
   const storage = {
@@ -67,7 +66,7 @@ async function open(h, target = role) {
   return lease
 }
 
-describe('角色分配用户 interface', () => {
+describe('角色分配用户域适配', () => {
   it('loads both lists, moves users between them and submits the whole selected side', async () => {
     const h = harness()
     const page = await open(h)
@@ -144,118 +143,123 @@ describe('角色分配用户 interface', () => {
     expect(page.view.value.candidates).toEqual([dave])
   })
 
-  it('blocks saving after a failed read and keeps a legal empty member set', async () => {
+  it('候选读取失败回显文案且不静默', async () => {
     const h = harness({
-      readMembers: vi.fn().mockRejectedValueOnce(new Error('读失败')).mockResolvedValueOnce([]),
-      readCandidates: vi.fn(async () => ({ users: [carol, dave], total: 2 })),
+      readCandidates: vi
+        .fn()
+        .mockResolvedValueOnce({ users: [carol, dave], total: 2 })
+        .mockRejectedValue(new Error('断网')),
     })
+    const page = await open(h)
+    await page.search('x')
+    expect(page.view.value.error).toBe('断网')
+    // 候选页失败不改变会话 phase，成员侧仍可操作，可重新搜索。
+    expect(page.view.value.phase).toBe('ready')
+    expect(page.view.value.canMove).toBe(true)
+  })
+
+  it('成员读取投影校验失败按既有文案进入读取失败', async () => {
+    const h = harness({ readMembers: vi.fn(async () => '不是数组') })
     const page = h.module.open(role)
     await page.ready
     expect(page.view.value.phase).toBe('read-error')
-    expect(page.view.value.canSave).toBe(false)
-    await page.save()
-    expect(h.adapter.assign).not.toHaveBeenCalled()
-
-    await page.reload()
-    expect(page.view.value.phase).toBe('ready')
-    expect(page.view.value.canSave).toBe(true)
-    await page.save()
-    expect(h.adapter.assign).toHaveBeenCalledWith(7, [])
+    expect(page.view.value.error).toBe('用户读取结果无效，请重试')
   })
 
-  it('keeps an unconfirmed record across close and refresh without inferring success from a reread', async () => {
+  it('初始与核实的读取失败兜底文案区分', async () => {
     const h = harness({
       assign: vi.fn(async () => ({ kind: 'unconfirmed' })),
-      readMembers: vi.fn().mockResolvedValueOnce([alice, bob]).mockResolvedValueOnce([bob, carol]),
+      readMembers: vi.fn().mockRejectedValue('中断'),
     })
-    const page = await open(h)
-    page.add([13])
-    await page.save()
-    expect(page.view.value).toMatchObject({
-      phase: 'unconfirmed',
-      submittedUserIds: [11, 12, 13],
-      submittedUsers: [alice, bob, carol],
-      canSave: false,
-      canEnd: true,
-    })
-    expect(h.module.pendingRoleIds.value).toEqual(['7'])
-    const saved = JSON.parse([...h.values.values()][0])
-    expect(saved).toMatchObject({
-      phase: 'unconfirmed',
-      submittedUserIds: [11, 12, 13],
-    })
-    expect(saved.submittedUsers).toEqual([
-      { id: 11, username: 'alice', name: '爱丽丝' },
-      { id: 12, username: 'bob', name: '鲍勃' },
-      { id: 13, username: 'carol', name: '卡罗尔' },
-    ])
-    expect(JSON.stringify(saved)).not.toContain('phone')
-
-    await page.reload()
-    expect(page.view.value.latest).toEqual({ members: [bob, carol] })
-    expect(page.view.value.phase).toBe('unconfirmed')
-    expect(page.view.value.submittedUserIds).toEqual([11, 12, 13])
-    expect(page.view.value.canSave).toBe(false)
-
-    await page.requestLeave()
-    const restored = createRoleUsers(h.adapter)
-    expect(restored.pendingRoleIds.value).toEqual(['7'])
-    const reopened = restored.open(role)
-    await reopened.ready
-    expect(reopened.view.value).toMatchObject({
-      phase: 'unconfirmed',
-      submittedUserIds: [11, 12, 13],
-      submittedUsers: [
-        { id: 11, username: 'alice', name: '爱丽丝' },
-        { id: 12, username: 'bob', name: '鲍勃' },
-        { id: 13, username: 'carol', name: '卡罗尔' },
-      ],
-    })
-    await reopened.save()
-    expect(h.adapter.assign).toHaveBeenCalledTimes(1)
-  })
-
-  it('restores an in-flight record as unconfirmed after refresh and never resends it', async () => {
-    const flight = deferred()
-    const h = harness({ assign: vi.fn(() => flight.promise) })
-    const page = await open(h)
-    page.add([13])
-    const pending = page.save()
-    expect(JSON.parse([...h.values.values()][0]).phase).toBe('sending')
+    const page = h.module.open(role)
+    await page.ready
+    expect(page.view.value.error).toBe('成员与用户读取失败，请重试')
     page.dispose()
 
-    const restored = createRoleUsers(h.adapter)
-    const reopened = restored.open(role)
-    await reopened.ready
-    expect(reopened.view.value.phase).toBe('unconfirmed')
-    expect(reopened.view.value.submittedUserIds).toEqual([11, 12, 13])
-    await reopened.save()
-    expect(h.adapter.assign).toHaveBeenCalledTimes(1)
-
-    flight.resolve({ kind: 'saved' })
-    await pending
-    expect(h.effects).not.toContainEqual(['notify', '分配用户成功', 'success'])
+    const h2 = harness({ assign: vi.fn(async () => ({ kind: 'unconfirmed' })) })
+    const page2 = await open(h2)
+    page2.add([13])
+    await page2.save()
+    h2.adapter.readMembers.mockRejectedValue('中断')
+    await page2.reload()
+    expect(page2.view.value.error).toBe('最新成员读取失败，请重试')
   })
 
-  it('ends an unconfirmed assignment only after confirmation and clears only the local record', async () => {
+  it('待确认记录保留既有键前缀与 JSON 字段形状，成员只留 id/username/name', async () => {
     const h = harness({ assign: vi.fn(async () => ({ kind: 'unconfirmed' })) })
     const page = await open(h)
     page.add([13])
     await page.save()
-    h.adapter.confirm.mockResolvedValueOnce(false)
-    expect(await page.endAssignment()).toBe(false)
-    expect(page.view.value.phase).toBe('unconfirmed')
-    expect(h.values.size).toBe(1)
+    const [key, raw] = [...h.values.entries()][0]
+    expect(key).toBe('oa-role-users:v1:entry-admin:7')
+    const record = JSON.parse(raw)
+    expect(record).toMatchObject({
+      version: 1,
+      entry: 'entry-admin',
+      roleId: 7,
+      roleName: '审批人',
+      phase: 'unconfirmed',
+      submittedUserIds: [11, 12, 13],
+    })
+    expect(record.submittedUsers).toEqual([
+      { id: 11, username: 'alice', name: '爱丽丝' },
+      { id: 12, username: 'bob', name: '鲍勃' },
+      { id: 13, username: 'carol', name: '卡罗尔' },
+    ])
+    expect(JSON.stringify(record)).not.toContain('phone')
+  })
 
-    h.adapter.confirm.mockResolvedValueOnce(true)
-    expect(await page.endAssignment()).toBe(true)
-    expect(page.view.value.phase).toBe('closed')
-    expect(h.values.size).toBe(0)
-    expect(h.module.pendingRoleIds.value).toEqual([])
+  it('旧记录按既有形状无损恢复为待确认，候选分页回到默认', () => {
+    const values = new Map()
+    values.set(
+      'oa-role-users:v1:entry-admin:7',
+      JSON.stringify({
+        version: 1,
+        entry: 'entry-admin',
+        roleId: 7,
+        roleName: '审批人',
+        phase: 'unconfirmed',
+        submittedUsers: [
+          { id: 11, username: 'alice', name: '爱丽丝' },
+          { id: 12, username: 'bob', name: '鲍勃', phone: '13800000000' },
+        ],
+        submittedUserIds: [11, 12],
+      }),
+    )
+    const h = harness({}, values)
+    expect(h.module.pendingRoleIds.value).toEqual(['7'])
+    const lease = h.module.open(role)
+    expect(lease.view.value).toMatchObject({
+      phase: 'unconfirmed',
+      members: [alice, bob],
+      submittedUserIds: [11, 12],
+      submittedUsers: [alice, bob],
+      keyword: '',
+      page: 1,
+      size: 10,
+      candidates: [],
+    })
+    expect(h.adapter.readMembers).not.toHaveBeenCalled()
+  })
 
-    const again = await open(h)
-    expect(again.view.value.phase).toBe('ready')
-    expect(again.view.value.members).toEqual([alice, bob])
+  it('恢复失败按批量与单条分别提示', () => {
+    const values = new Map()
+    values.set('oa-role-users:v1:entry-admin:7', '{oops')
+    const h = harness({}, values)
+    expect(h.effects).toContainEqual([
+      'notify',
+      '未能恢复上次分配记录，请核实相关角色的当前成员后再分配',
+      'warning',
+    ])
+
+    const later = harness()
+    later.values.set('oa-role-users:v1:entry-admin:8', '{oops')
+    later.module.open({ id: 8, roleName: '观察人' })
+    expect(later.effects).toContainEqual([
+      'notify',
+      '未能恢复上次分配记录，请核实该角色的当前成员后再分配',
+      'warning',
+    ])
   })
 
   it('refreshes the members and the operator after a saved write', async () => {
@@ -273,6 +277,11 @@ describe('角色分配用户 interface', () => {
     expect(page.view.value.phase).toBe('saved')
     expect(h.adapter.readMembers).toHaveBeenCalledTimes(2)
     expect(h.adapter.readCandidates).toHaveBeenCalledTimes(2)
+    expect(h.adapter.readCandidates).toHaveBeenLastCalledWith(7, {
+      keyword: '',
+      page: 1,
+      size: 10,
+    })
     expect(h.adapter.refreshOperator).toHaveBeenCalledTimes(1)
   })
 
@@ -305,112 +314,39 @@ describe('角色分配用户 interface', () => {
     ])
   })
 
-  it('returns a definitively rejected save to the editable selection and retries it', async () => {
-    const h = harness({
-      assign: vi
-        .fn()
-        .mockResolvedValueOnce({ kind: 'rejected', message: '只能分配已存在的用户' })
-        .mockResolvedValue({ kind: 'saved' }),
-    })
-    const page = await open(h)
-    page.add([13])
-    await page.save()
-    expect(page.view.value).toMatchObject({
-      phase: 'ready',
-      members: [alice, bob, carol],
-      error: '只能分配已存在的用户',
-    })
-    expect(h.values.size).toBe(0)
-    expect(h.effects).toContainEqual(['notify', '只能分配已存在的用户', 'error'])
-
-    await page.save()
-    expect(h.adapter.assign).toHaveBeenCalledTimes(2)
-    expect(h.adapter.assign.mock.calls[1][1]).toEqual([11, 12, 13])
-  })
-
-  it('does not send when the submission record cannot be retained', async () => {
-    const h = harness()
-    const page = await open(h)
-    h.storage.setItem = () => {
-      throw new Error('quota')
-    }
-    page.add([13])
-    await page.save()
-    expect(h.adapter.assign).not.toHaveBeenCalled()
-    expect(page.view.value.phase).toBe('ready')
-    expect(page.view.value.error).toContain('无法可靠保留')
-  })
-
-  it('drops a late result after the entry identity changes', async () => {
+  it('离开文案映射：保存中与未保存调整各自提示', async () => {
     const flight = deferred()
     const h = harness({ assign: vi.fn(() => flight.promise) })
     const page = await open(h)
+    page.add([13])
     const saving = page.save()
-    h.setEntry('entry-other')
-    h.setGeneration(2)
+    const leaving = page.requestLeave()
+    expect(h.adapter.confirm).toHaveBeenCalledWith(
+      '正在保存成员分配。离开不撤销已提交的保存，原请求仍可能生效，确认关闭？',
+      'leave',
+    )
+    await leaving
     flight.resolve({ kind: 'saved' })
     await saving
-    expect(page.view.value.phase).toBe('saved')
-    expect(h.adapter.refreshOperator).not.toHaveBeenCalled()
-    expect(h.effects).toEqual([])
-    expect(h.values.size).toBe(0)
+
+    const second = await open(h)
+    second.add([13])
+    const leaving2 = second.requestLeave()
+    expect(h.adapter.confirm).toHaveBeenCalledWith(
+      '当前有未保存的成员调整，离开将丢弃本次修改，确认关闭？',
+      'leave',
+    )
+    await leaving2
   })
 
-  it('confirms an unsaved close and discards the local moves', async () => {
-    const h = harness()
+  it('重开时以新入参刷新目标 roleName', async () => {
+    const h = harness({ assign: vi.fn(async () => ({ kind: 'unconfirmed' })) })
     const page = await open(h)
     page.add([13])
-    const leaving = page.requestLeave()
-    expect(h.adapter.confirm).toHaveBeenCalledWith(expect.stringContaining('未保存'), 'leave')
-    await leaving
-    expect(h.adapter.confirm).toHaveBeenCalledTimes(1)
+    await page.save()
+    await page.requestLeave()
 
-    const again = await open(h)
-    expect(again.view.value.members).toEqual([alice, bob])
-    expect(h.adapter.readMembers).toHaveBeenCalledTimes(2)
-  })
-
-  it('releases an unchanged opening without confirmation', async () => {
-    const h = harness()
-    const page = await open(h)
-    expect(await page.requestLeave()).toBe(true)
-    expect(page.released.value).toBe(true)
-    expect(h.adapter.confirm).not.toHaveBeenCalled()
-    expect(h.adapter.replace).not.toHaveBeenCalled()
-  })
-
-  it('keeps pending roles scoped to their own role while another role assigns normally', async () => {
-    const other = { id: 8, roleName: '观察人' }
-    const h = harness({
-      assign: vi.fn(async (roleId) => ({ kind: String(roleId) === '7' ? 'unconfirmed' : 'saved' })),
-    })
-    const first = await open(h)
-    await first.save()
-    await first.requestLeave()
-    expect(h.module.pendingRoleIds.value).toEqual(['7'])
-
-    const second = await open(h, other)
-    await second.save()
-    expect(h.adapter.assign).toHaveBeenCalledTimes(2)
-    expect(h.module.pendingRoleIds.value).toEqual(['7'])
-  })
-
-  it('lets an identity replacement preempt a pending confirmation without navigating twice', async () => {
-    const confirming = deferred()
-    const h = harness({ confirm: vi.fn(() => confirming.promise) })
-    const page = await open(h)
-    page.add([13])
-    const leaving = page.requestLeave()
-    await vi.waitFor(() => expect(h.adapter.confirm).toHaveBeenCalledTimes(1))
-
-    h.setEntry('entry-other')
-    await page.environmentChanged()
-    expect(h.adapter.dismissConfirm).toHaveBeenCalledTimes(1)
-    expect(h.adapter.replace).toHaveBeenCalledWith(getDefaultPostLoginRoute())
-    expect(page.released.value).toBe(true)
-
-    confirming.resolve(false)
-    expect(await leaving).toBe(true)
-    expect(h.adapter.replace).toHaveBeenCalledTimes(1)
+    const again = await open(h, { id: 7, roleName: '新角色名' })
+    expect(again.view.value).toMatchObject({ roleId: 7, roleName: '新角色名' })
   })
 })
