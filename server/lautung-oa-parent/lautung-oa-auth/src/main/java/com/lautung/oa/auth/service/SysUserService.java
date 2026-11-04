@@ -43,6 +43,8 @@ public interface SysUserService extends IService<SysUser> {
     /**
      * 更新用户并同步岗位（同一事务）：postIds 未传（null）保留既有关联，
      * 空列表清空，非空列表整体替换；显式 deptId 要求存在且启用；非法时拒绝整个请求（#248/#249）。
+     * {@code encodedPassword} 非 null 时在同一事务内先改密（递增令牌版本）；部门/岗位校验
+     * 先于改密，校验失败不会留下已改的密码与作废的会话（#260 二轮）。
      */
-    void updateUser(SysUser user, List<Long> postIds);
+    void updateUser(SysUser user, List<Long> postIds, String encodedPassword);
 }

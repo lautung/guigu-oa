@@ -204,16 +204,13 @@ public class SysUserController {
         String submittedPassword = user.getPassword();
         boolean passwordChanged = StringUtils.hasText(submittedPassword)
                 && !passwordEncoder.matches(submittedPassword, existing.getPassword());
-        if (passwordChanged) {
-            // The hash and the version bump land first; a later failure cannot leave old tokens alive.
-            service.changePassword(existing.getId(), passwordEncoder.encode(submittedPassword));
-        }
-        // The password column is written only by changePassword; a profile edit must not carry an
-        // old hash read before a concurrent change. update_time is filled by the common-field
-        // handler (ADR 0031), which also keeps the row update non-empty.
+        // 密码列只由 updateUser 事务内的 changePassword 写；部门/岗位校验先于改密，
+        // 非法归属不会留下已改的密码与作废的会话（#260 二轮）。update_time 由公共字段
+        // 处理器填（ADR 0031），updateById 不会因空更新失败。
+        String encodedPassword = passwordChanged ? passwordEncoder.encode(submittedPassword) : null;
         user.setPassword(null);
         // postIds 未传保留、空列表清空；同步与用户行更新同一事务（#248）。
-        service.updateUser(user, request.getPostIds());
+        service.updateUser(user, request.getPostIds(), encodedPassword);
         return Result.ok();
     }
 

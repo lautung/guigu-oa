@@ -201,6 +201,8 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
     }
 
     private UserImportResultVo importRows(Sheet sheet, DataFormatter formatter) {
+        // 先数行再装载/写库：2MB xlsx 可以有数万行，逐行 BCrypt + 独立事务会占满线程。
+        requireRowLimit(sheet, formatter);
         UserImportResultVo result = new UserImportResultVo();
         Map<String, List<SysDept>> deptsByName = sysDeptService.list().stream()
                 .collect(Collectors.groupingBy(dept -> normalize(dept.getName())));
@@ -235,6 +237,20 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
         result.setTotal(total);
         result.setSuccessCount(success);
         return result;
+    }
+
+    /** 空行不算数据行（与 importRows 的跳过规则一致）；超限整文件拒绝，不做部分导入。 */
+    private void requireRowLimit(Sheet sheet, DataFormatter formatter) {
+        int dataRows = 0;
+        int lastRow = sheet.getLastRowNum();
+        for (int index = 1; index <= lastRow; index++) {
+            if (!isBlankRow(sheet.getRow(index), formatter)) {
+                dataRows++;
+                if (dataRows > MAX_IMPORT_ROWS) {
+                    throw new BusinessException(201, "导入文件超过 " + MAX_IMPORT_ROWS + " 行限制");
+                }
+            }
+        }
     }
 
     private ParsedRow userFromRow(

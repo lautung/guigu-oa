@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -35,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -197,7 +195,7 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateUser(written.capture(), isNull());
+        verify(service).updateUser(written.capture(), isNull(), isNull());
         assertNull(written.getValue().getPassword());
         // 公共字段由 CommonFieldsMetaObjectHandler 填（ADR 0031），控制器不再自己写 update_time。
         assertNull(written.getValue().getUpdateTime());
@@ -218,7 +216,7 @@ class SysUserControllerTest {
         verify(passwordEncoder, never()).encode(any());
         verify(service, never()).changePassword(any(), any());
         verify(service, never()).updateById(any());
-        verify(service, never()).updateUser(any(), any());
+        verify(service, never()).updateUser(any(), any(), any());
     }
 
     @Test
@@ -233,7 +231,7 @@ class SysUserControllerTest {
         update.setId(3L);
         update.setPostIds(postIds);
         controller.updateById(update);
-        verify(service).updateUser(any(SysUser.class), eq(postIds));
+        verify(service).updateUser(any(SysUser.class), eq(postIds), isNull());
 
         SysUserSaveRequest save = new SysUserSaveRequest();
         save.setUsername("new-user");
@@ -246,7 +244,7 @@ class SysUserControllerTest {
     }
 
     @Test
-    void changesThePasswordAndItsVersionTogether() {
+    void handsTheEncodedPasswordToTheTransactionalUserWrite() {
         SysUser existing = new SysUser();
         existing.setId(3L);
         existing.setPassword("stored");
@@ -261,9 +259,9 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        InOrder order = inOrder(service);
-        order.verify(service).changePassword(3L, "hashed-new");
-        order.verify(service).updateUser(written.capture(), isNull());
+        // 改密与用户行/岗位同步同一事务：控制器不再单独提交 changePassword（#260 二轮）。
+        verify(service, never()).changePassword(any(), any());
+        verify(service).updateUser(written.capture(), isNull(), eq("hashed-new"));
         assertNull(written.getValue().getPassword());
     }
 
@@ -281,7 +279,7 @@ class SysUserControllerTest {
         controller.updateById(update);
 
         ArgumentCaptor<SysUser> written = ArgumentCaptor.forClass(SysUser.class);
-        verify(service).updateUser(written.capture(), isNull());
+        verify(service).updateUser(written.capture(), isNull(), isNull());
         assertNull(written.getValue().getPassword());
         assertNull(written.getValue().getTokenVersion());
         verify(passwordEncoder, never()).encode(any());

@@ -26,6 +26,9 @@ public interface SysUserExcelService {
     /** 导入文件业务上限：容器放到 6MB，service 再拒 2MB 以上。 */
     long MAX_IMPORT_BYTES = 2L * 1024L * 1024L;
 
+    /** 导入数据行上限（跳过空行）：每行独立事务 + BCrypt，行数不设限会把线程占满。 */
+    int MAX_IMPORT_ROWS = 1000;
+
     /** 模板列与导出列一致，导入后账号没有密码列，统一落这个初始密码并强制 BCrypt。 */
     String DEFAULT_IMPORT_PASSWORD = "123456";
 

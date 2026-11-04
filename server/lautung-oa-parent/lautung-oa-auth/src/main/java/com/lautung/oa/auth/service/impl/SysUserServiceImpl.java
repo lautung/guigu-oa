@@ -159,12 +159,16 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     /**
      * 更新与岗位同步同一事务（#248）：postIds 未传保留、空列表清空、非空替换；
      * 显式 deptId 校验存在且启用（#249），非法集合不改用户行也不改关联行。
+     * 改密也在同一事务内、且晚于部门/岗位校验：校验失败时旧密码与旧令牌都不动（#260 二轮）。
      */
     @Transactional
     @Override
-    public void updateUser(SysUser user, List<Long> postIds) {
+    public void updateUser(SysUser user, List<Long> postIds, String encodedPassword) {
         ensureDeptAssignable(user.getDeptId());
         List<Long> normalized = postIds == null ? null : sysPostService.validateAssignablePostIds(postIds);
+        if (encodedPassword != null) {
+            changePassword(user.getId(), encodedPassword);
+        }
         if (!updateById(user)) {
             throw new BusinessException(201, "用户不存在");
         }

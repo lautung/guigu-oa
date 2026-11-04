@@ -206,12 +206,16 @@ class SysPostContractTest {
         assertEquals(0, count("SELECT COUNT(*) FROM sys_user WHERE username = 't248-disabled'"));
 
         long userId = saveUser("t248-update-guard", "[]");
-        updateUser("{\"id\":" + userId + ",\"name\":\"不该落库\",\"postIds\":[999999]}")
+        updateUser("{\"id\":" + userId + ",\"name\":\"不该落库\","
+                + "\"password\":\"new-secret-248\",\"postIds\":[999999]}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("岗位不存在"));
         assertEquals("t248-update-guard", jdbcTemplate.queryForObject(
                 "SELECT name FROM sys_user WHERE id = ?", String.class, userId));
+        // 校验先于改密（#260 二轮）：失败请求不落新密码、不递增口令版本，旧密码仍可登录。
+        loginToken("t248-update-guard");
+        assertEquals(0, count("SELECT token_version FROM sys_user WHERE id = " + userId));
     }
 
     @Test
