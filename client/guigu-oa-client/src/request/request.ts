@@ -44,8 +44,10 @@ interface RequestTransport {
  *
  * 二进制读（`responseType: 'blob'`）：成功时直通 Blob；但 gate 拒绝是 HTTP 200 + JSON
  * 信封（导出/模板下载的 205），所以 Content-Type 为 JSON 时按信封分类，只有真正的
- * 二进制才直通。错误响应仍是 4xx/5xx，落回传输失败分支（图片失败不弹全局提示，
- * 由调用方保持原 `src`）。续期状态机与 JSON 入口共用同一个 transport。
+ * 二进制才直通。4xx 的 JSON 错误体同样被 axios 包成 Blob（401+208 的续期拒绝、
+ * 205/201 的命名失败），错误拦截器先把 Blob 解成信封再交给既有分类；真正的二进制
+ * 4xx/5xx 仍走传输失败（图片失败不弹全局提示，由调用方保持原 `src`）。续期状态机与
+ * JSON 入口共用同一个 transport。
  */
 const JSON_CONTENT_TYPE = /(?:application|text)\/json/i
 
@@ -120,9 +122,26 @@ function createTransport(recognition: Recognition): RequestTransport {
     throw rejectRequest(recognition, config, context, businessFailure(res || {}))
   }
 
+  /**
+   * #259 二轮：`responseType: 'blob'` 的错误响应体也会被 axios 包成 Blob，
+   * `businessEnvelope` 读不到 code 就会把 401+208 降级成传输失败（续期不触发、会话
+   * 不结束）。先从 Blob 解析出信封并写回 `error.response.data`，后续分类与 JSON 入口一致。
+   * 解析失败/真实二进制保持原样。
+   */
+  async function normalizeBlobError(error: unknown): Promise<void> {
+    if (!axios.isAxiosError(error) || !error.response) return
+    const config = error.config as RefreshableRequestConfig | undefined
+    if (config?.responseType !== 'blob') return
+    const data = error.response.data
+    if (!isJsonPayload(error.response, data)) return
+    const envelope = await readEnvelope(data)
+    if (envelope) error.response.data = envelope
+  }
+
   service.interceptors.response.use(
     (response) => handleResponse(response) as unknown as AxiosResponse,
-    (error: unknown) => {
+    async (error: unknown) => {
+      await normalizeBlobError(error)
       const config = axios.isAxiosError(error)
         ? (error.config as RefreshableRequestConfig)
         : undefined
