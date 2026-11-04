@@ -17,16 +17,19 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * 字典服务实现（#251，ADR 0062）：库是真相，{@code dict:<dictType>} 键只是读缓存。
@@ -48,6 +51,14 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
 
     /** 软删前让出唯一键：删除行不再占用原编码/值，同一编码可以重新创建。 */
     private static final String DELETED_PREFIX = "__deleted__";
+
+    /** 标签缓存 TTL：字典读多写少，脏键最多滞留一小时；写动作仍即时失效。 */
+    private static final Duration CACHE_TTL = Duration.ofHours(1);
+
+    /** 与 {@code sys_dict_type.dict_type VARCHAR(100)} 对齐，挡住任意长度/形状的缓存键。 */
+    private static final int DICT_TYPE_MAX_LENGTH = 100;
+
+    private static final Pattern DICT_TYPE_PATTERN = Pattern.compile("[A-Za-z0-9_.-]+");
 
     private final DictDataMapper dictDataMapper;
 
@@ -93,6 +104,11 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
         String effectiveType = dictType != null ? dictType : existing.getDictType();
         assertTypeNameAvailable(effectiveName, existing.getId());
         assertDictTypeAvailable(effectiveType, existing.getId());
+        boolean typeChanged = dictType != null && !dictType.equals(existing.getDictType());
+        if (typeChanged && dataCount(existing.getDictType()) > 0) {
+            // 改名会让旧类型下的数据行不可达，也绕过 removeType 的「有数据拒删」。
+            throw new BusinessException(201, "字典类型下仍有数据，不能修改类型编码");
+        }
 
         type.setDictName(dictName);
         type.setDictType(dictType);
@@ -113,21 +129,22 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
     }
 
     @Override
+    @Transactional
     public void removeType(Long id) {
         SysDictType existing = id == null ? null : getById(id);
         if (existing == null) {
             throw typeNotFound();
         }
-        long dataCount = dictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
-                .eq(SysDictData::getDictType, existing.getDictType()));
-        if (dataCount > 0) {
+        if (dataCount(existing.getDictType()) > 0) {
             throw new BusinessException(201, "字典类型下仍有数据，不能删除");
         }
         SysDictType releaseKeys = new SysDictType();
         releaseKeys.setId(id);
         releaseKeys.setDictName(DELETED_PREFIX + id);
         releaseKeys.setDictType(DELETED_PREFIX + id);
-        updateById(releaseKeys);
+        if (!updateById(releaseKeys)) {
+            throw typeNotFound();
+        }
         if (!removeById(id)) {
             throw typeNotFound();
         }
@@ -197,6 +214,7 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
     }
 
     @Override
+    @Transactional
     public void removeData(Long id) {
         SysDictData existing = id == null ? null : dictDataMapper.selectById(id);
         if (existing == null) {
@@ -205,7 +223,9 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
         SysDictData releaseValue = new SysDictData();
         releaseValue.setId(id);
         releaseValue.setDictValue(DELETED_PREFIX + id);
-        dictDataMapper.updateById(releaseValue);
+        if (dictDataMapper.updateById(releaseValue) == 0) {
+            throw dataNotFound();
+        }
         if (dictDataMapper.deleteById(id) == 0) {
             throw dataNotFound();
         }
@@ -217,7 +237,17 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
         if (!StringUtils.hasText(dictType)) {
             return List.of();
         }
-        String cacheKey = DictCacheKey.of(dictType);
+        String normalizedType = dictType.trim();
+        if (normalizedType.length() > DICT_TYPE_MAX_LENGTH
+                || !DICT_TYPE_PATTERN.matcher(normalizedType).matches()) {
+            return List.of();
+        }
+        if (baseMapper.selectCount(new LambdaQueryWrapper<SysDictType>()
+                .eq(SysDictType::getDictType, normalizedType)) == 0) {
+            // 未知类型不落键：读面的 PathVariable 不能成为任意 dict:* 键的来源。
+            return List.of();
+        }
+        String cacheKey = DictCacheKey.of(normalizedType);
         String cached = redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
             try {
@@ -228,8 +258,9 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
                 redisTemplate.delete(cacheKey);
             }
         }
-        List<DictDataVo> loaded = queryEnabledData(dictType);
-        redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(loaded));
+        List<DictDataVo> loaded = queryEnabledData(normalizedType);
+        redisTemplate.opsForValue().set(
+                cacheKey, objectMapper.writeValueAsString(loaded), CACHE_TTL);
         return loaded;
     }
 
@@ -272,6 +303,11 @@ public class SysDictServiceImpl extends ServiceImpl<DictTypeMapper, SysDictType>
                 .stream()
                 .map(DictDataVo::of)
                 .toList();
+    }
+
+    private long dataCount(String dictType) {
+        return dictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getDictType, dictType));
     }
 
     private void assertTypeNameAvailable(String dictName, Long excludeId) {

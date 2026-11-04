@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -154,6 +155,7 @@ public class SysConfigServiceImpl extends ServiceImpl<ConfigMapper, SysConfig>
     }
 
     @Override
+    @Transactional
     public void removeConfig(Long id) {
         SysConfig existing = id == null ? null : getById(id);
         if (existing == null) {
@@ -165,7 +167,9 @@ public class SysConfigServiceImpl extends ServiceImpl<ConfigMapper, SysConfig>
         SysConfig releaseKey = new SysConfig();
         releaseKey.setId(id);
         releaseKey.setConfigKey(DELETED_KEY_PREFIX + id);
-        updateById(releaseKey);
+        if (!updateById(releaseKey)) {
+            throw notFound();
+        }
         if (!removeById(id)) {
             throw notFound();
         }
