@@ -6,6 +6,8 @@ import {
   exportFileName,
   exportRequest,
   IMPORT_MAX_BYTES,
+  IMPORT_PASSWORD_LENGTH_MESSAGE,
+  IMPORT_PASSWORD_REQUIRED_MESSAGE,
   IMPORT_TEMPLATE_FILE_NAME,
   importRequest,
   importResultSummary,
@@ -13,6 +15,7 @@ import {
   presentImportResult,
   SYS_USER_IO_PERMISSIONS,
   validateImportFile,
+  validateImportPassword,
 } from '@/config/user-export'
 
 describe('config/user-export', () => {
@@ -48,14 +51,24 @@ describe('config/user-export', () => {
     expect(IMPORT_TEMPLATE_FILE_NAME).toBe('用户导入模板.xlsx')
   })
 
-  it('posts the selected file as the multipart field `file`', () => {
+  it('posts the selected file and the initial password as multipart fields', () => {
     const file = new File(['PK'], 'users.xlsx')
-    const config = importRequest(file)
+    const config = importRequest(file, 'Import#263')
 
     expect(config.method).toBe('post')
     expect(config.url).toBe('/admin/system/sysUser/import')
     expect(config.data).toBeInstanceOf(FormData)
     expect(config.data.get('file')).toBe(file)
+    expect(config.data.get('initialPassword')).toBe('Import#263')
+  })
+
+  it('requires a 6-100 character initial password with the server wording', () => {
+    expect(validateImportPassword('')).toBe(IMPORT_PASSWORD_REQUIRED_MESSAGE)
+    expect(validateImportPassword('   ')).toBe(IMPORT_PASSWORD_REQUIRED_MESSAGE)
+    expect(validateImportPassword('12345')).toBe(IMPORT_PASSWORD_LENGTH_MESSAGE)
+    expect(validateImportPassword('x'.repeat(101))).toBe(IMPORT_PASSWORD_LENGTH_MESSAGE)
+    expect(validateImportPassword('abc123')).toBe('')
+    expect(validateImportPassword('x'.repeat(100))).toBe('')
   })
 
   it('rejects empty, oversized and non-xlsx files locally with the server wording', () => {

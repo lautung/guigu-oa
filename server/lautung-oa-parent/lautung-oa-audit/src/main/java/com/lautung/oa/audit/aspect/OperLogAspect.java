@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -86,11 +87,18 @@ public class OperLogAspect {
         entry.setMethod(AuditText.truncate(
                 joinPoint.getSignature().getDeclaringTypeName() + "#" + joinPoint.getSignature().getName(),
                 METHOD_LIMIT));
-        entry.setOperParam(sanitizer.sanitize(joinPoint.getArgs()));
+        entry.setOperParam(sanitizer.sanitize(joinPoint.getArgs(), parameterNames(joinPoint)));
         entry.setOperId(LoginUserInfoHelper.getUserId());
         entry.setOperName(LoginUserInfoHelper.getUsername());
         fillRequest(entry);
         return entry;
+    }
+
+    /** 参数名来自编译期 {@code -parameters}（Boot parent 已开），裸密码参数靠它打码。 */
+    private static String[] parameterNames(ProceedingJoinPoint joinPoint) {
+        return joinPoint.getSignature() instanceof MethodSignature signature
+                ? signature.getParameterNames()
+                : null;
     }
 
     private void fillRequest(SysOperLog entry) {

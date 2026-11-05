@@ -62,15 +62,17 @@ export function downloadImportTemplate(
 }
 
 /**
- * 逐行导入（#259）：multipart 字段 `file`，返回部分成功汇总。
+ * 逐行导入（#259/#263）：multipart 字段 `file` + `initialPassword`，返回部分成功汇总。
+ * 初始密码是动作参数（必填、6–100 位），不是模板列，响应也不回显。
  * 调用方在导入弹窗内展示失败文案时传 `notifyNormalErrors: false`，避免再弹一条全局提示。
  */
 export function importUsers(
   file: File,
+  initialPassword: string,
   options: { notifyNormalErrors?: boolean } = {},
 ): Promise<ApiResponse<UserImportResult>> {
   const config: ScopedRequestConfig = {
-    ...importRequest(file),
+    ...importRequest(file, initialPassword),
     _notifyNormalErrors: options.notifyNormalErrors,
   }
   return request(config)

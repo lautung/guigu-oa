@@ -376,12 +376,29 @@ describe('SysUser list page', () => {
       wrapper.vm.handleImportFileChange({ target: { files: [file], value: 'users.xlsx' } })
       expect(wrapper.vm.importFile).toBe(file)
       expect(wrapper.vm.importError).toBe('')
+      // 初始密码是导入动作参数，不是模板列；弹窗不再展示固定口令。
+      expect(wrapper.vm.importPassword).toBe('')
+      expect(wrapper.text()).toContain('初始密码')
+      expect(wrapper.text()).not.toContain('123456')
 
+      // 必填与 6 位下限：本地拦住，不发请求；具体文案由 config 单测钉住。
       const readsBefore = http.calls.length
+      await wrapper.vm.submitImport()
+      expect(wrapper.vm.importError).not.toBe('')
+      expect(sysUserApi.importUsers).not.toHaveBeenCalled()
+
+      wrapper.vm.importPassword = '12345'
+      await wrapper.vm.submitImport()
+      expect(wrapper.vm.importError).not.toBe('')
+      expect(sysUserApi.importUsers).not.toHaveBeenCalled()
+
+      wrapper.vm.importPassword = 'Import#263'
       await wrapper.vm.submitImport()
       await flushPromises()
 
-      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file, { notifyNormalErrors: false })
+      expect(sysUserApi.importUsers).toHaveBeenCalledWith(file, 'Import#263', {
+        notifyNormalErrors: false,
+      })
       expect(wrapper.vm.importResult).toEqual(
         expect.objectContaining({ total: 3, successCount: 2, failureCount: 1 }),
       )
