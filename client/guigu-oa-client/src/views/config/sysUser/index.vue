@@ -214,8 +214,20 @@
           @change="handleImportFileChange"
         />
       </div>
+      <div class="import-password">
+        <label class="import-password-label" for="import-initial-password">初始密码</label>
+        <el-input
+          id="import-initial-password"
+          v-model="importPassword"
+          type="password"
+          show-password
+          autocomplete="new-password"
+          placeholder="至少 6 位，最长 100 位"
+          style="width: 280px"
+        />
+      </div>
       <p class="import-hint">
-        仅支持 xlsx，单个文件不超过 2 MB；导入用户的初始密码为 {{ importDefaultPassword }}。
+        仅支持 xlsx，单个文件不超过 2 MB；导入用户统一使用上面填写的初始密码（6–100 位）。
         失败行不会写入，修正后可重新导入。
       </p>
       <p v-if="importError" class="import-error">{{ importError }}</p>
@@ -288,12 +300,12 @@ import {
   downloadBlob,
   exportFileName,
   IMPORT_ACCEPT,
-  IMPORT_DEFAULT_PASSWORD,
   IMPORT_TEMPLATE_FILE_NAME,
   importResultSummary,
   presentImportResult,
   SYS_USER_IO_PERMISSIONS,
   validateImportFile,
+  validateImportPassword,
 } from '@/config/user-export'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
@@ -405,10 +417,10 @@ export default defineComponent({
       importDialogVisible: false,
       importing: false,
       importFile: null as File | null,
+      importPassword: '',
       importResult: null as UserImportResultView | null,
       importError: '',
       importAccept: IMPORT_ACCEPT,
-      importDefaultPassword: IMPORT_DEFAULT_PASSWORD,
     }
   },
   computed: {
@@ -464,9 +476,10 @@ export default defineComponent({
       const blob = await this.list.settle(exportUsers(this.searchObj()))
       if (blob) downloadBlob(blob, exportFileName())
     },
-    /** 导入弹窗每次打开都清掉上一次的文件与汇总，避免把旧结果当成新导入。 */
+    /** 导入弹窗每次打开都清掉上一次的文件、密码与汇总，避免把旧结果当成新导入。 */
     openImport() {
       this.importFile = null
+      this.importPassword = ''
       this.importResult = null
       this.importError = ''
       this.importDialogVisible = true
@@ -504,16 +517,23 @@ export default defineComponent({
     async submitImport() {
       const file = this.importFile
       if (!file) return
-      const reason = validateImportFile(file)
-      if (reason) {
-        this.importError = reason
+      const fileReason = validateImportFile(file)
+      if (fileReason) {
+        this.importError = fileReason
+        return
+      }
+      const passwordReason = validateImportPassword(this.importPassword)
+      if (passwordReason) {
+        this.importError = passwordReason
         return
       }
       this.importing = true
       this.importError = ''
       try {
         // 导入失败文案在弹窗内展示；请求层静默，避免同一条失败提示两次。
-        const response = await importUsers(file, { notifyNormalErrors: false })
+        const response = await importUsers(file, this.importPassword, {
+          notifyNormalErrors: false,
+        })
         this.importResult = presentImportResult(response.data)
         if (this.importResult.successCount > 0) this.list.refresh()
       } catch (failure) {
@@ -666,6 +686,18 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.import-password {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.import-password-label {
+  color: #606266;
+  font-size: 14px;
 }
 
 .import-hint {

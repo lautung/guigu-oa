@@ -11,30 +11,36 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 用户导入的 HTTP 合同（#259）：模板列与导出一致；逐行校验用户名必填/唯一、部门与岗位
- * 存在且启用；失败行不写、成功与失败行号/原因汇总返回；已有用户不被覆盖；xlsx 类型、
- * 2MB 上限与畸形文件在解析前拒绝；缺按钮点 205 且不写任何行。
+ * 用户导入的 HTTP 合同（#259/#263）：模板列与导出一致；初始密码必填且 6–100 位，按提交值
+ * BCrypt 落库，响应与操作日志都不回显；逐行校验用户名必填/唯一、部门与岗位存在且启用；
+ * 失败行不写、成功与失败行号/原因汇总返回；已有用户不被覆盖；xlsx 类型、2MB 上限、行列与
+ * 单元格维度上限在写库前拒绝；缺按钮点 205 且不写任何行。
  *
  * <p>用真迁移 + 真种子起库；夹具落在 1xx/2xx/3xx 段，测试结束按段清理。
  */
@@ -51,7 +57,10 @@ class SysUserImportContractTest {
 
     private static final String TEMPLATE_PATH = "/admin/system/sysUser/importTemplate";
 
-    private static final String DEFAULT_PASSWORD = "123456";
+    private static final String XLSX_CONTENT_TYPE =
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    private static final String INITIAL_PASSWORD = "Import#263pw";
 
     @Autowired
     private MockMvc mockMvc;
@@ -77,14 +86,14 @@ class SysUserImportContractTest {
 
         insertRole(201, 1);
         insertRole(202, 1);
-        insertUser(101, "t259i-operator", 10, 1);
-        insertUser(102, "t259i-existing", 10, 1);
-        insertUser(104, "t259i-denied", 10, 1);
-        assignRole(101, 201);
-        assignRole(104, 202);
+        insertUser(900101, "t259i-operator", 10, 1);
+        insertUser(900102, "t259i-existing", 10, 1);
+        insertUser(900104, "t259i-denied", 10, 1);
+        assignRole(900101, 201);
+        assignRole(900104, 202);
         grantUserPage(201, 202);
         grantButton("system:user:import", 201);
-        // 104 只有页面授予、没有导入按钮点：用来钉 205 与「不写行」。
+        // 900104 只有页面授予、没有导入按钮点：用来钉 205 与「不写行」。
     }
 
     @AfterEach
@@ -94,7 +103,7 @@ class SysUserImportContractTest {
 
     @Test
     void templateHasTheSameColumnsAsExportAndNoDataRows() throws Exception {
-        byte[] content = mockMvc.perform(get(TEMPLATE_PATH).header("token", tokenOf(101)))
+        byte[] content = mockMvc.perform(get(TEMPLATE_PATH).header("token", tokenOf(900101)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -120,10 +129,7 @@ class SysUserImportContractTest {
                 new String[]{"t259i-second", "第二人", "", "", "", "", ""},
                 new String[]{"t259i-bad-name", "", "", "", "", "正常", ""}));
 
-        mockMvc.perform(multipart(IMPORT_PATH)
-                        .file(new MockMultipartFile("file", "users.xlsx",
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file))
-                        .header("token", tokenOf(101)))
+        String responseBody = mockMvc.perform(importRequest(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.total").value(9))
@@ -138,19 +144,32 @@ class SysUserImportContractTest {
                 .andExpect(jsonPath("$.data.failures[4].reason").value("岗位已停用：岗位C"))
                 .andExpect(jsonPath("$.data.failures[5].reason").value("用户名已存在"))
                 .andExpect(jsonPath("$.data.failures[6].rowNumber").value(10))
-                .andExpect(jsonPath("$.data.failures[6].reason").value("姓名不能为空"));
+                .andExpect(jsonPath("$.data.failures[6].reason").value("姓名不能为空"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
 
-        // 成功行落库：部门/岗位/手机/状态按行值，初始密码 BCrypt 后写入。
+        assertFalse(responseBody.contains(INITIAL_PASSWORD), "导入响应不得回显初始密码");
+
+        // 成功行落库：部门/岗位/手机/状态按行值，初始密码按提交值 BCrypt 后写入。
         Map<String, Object> created = jdbcTemplate.queryForMap(
                 "SELECT * FROM sys_user WHERE username = 't259i-ok' AND is_deleted = 0");
         assertEquals(10L, ((Number) created.get("dept_id")).longValue());
         assertEquals("导入用户", created.get("name"));
         assertEquals("13800000111", created.get("phone"));
         assertEquals(1, ((Number) created.get("status")).intValue());
-        assertTrue(passwordEncoder.matches(DEFAULT_PASSWORD, (String) created.get("password")),
-                "导入用户必须写入 BCrypt 初始密码");
+        assertTrue(passwordEncoder.matches(INITIAL_PASSWORD, (String) created.get("password")),
+                "导入用户必须写入提交的初始密码（BCrypt）");
         assertEquals(List.of(301L), jdbcTemplate.queryForList(
                 "SELECT post_id FROM sys_user_post WHERE user_id = ?", Long.class, created.get("id")));
+
+        // 导入的账号能直接用这个初始密码登录。
+        mockMvc.perform(post("/admin/system/index/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"t259i-ok\",\"password\":\"" + INITIAL_PASSWORD + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
 
         Map<String, Object> second = jdbcTemplate.queryForMap(
                 "SELECT * FROM sys_user WHERE username = 't259i-second' AND is_deleted = 0");
@@ -160,7 +179,7 @@ class SysUserImportContractTest {
                 "SELECT COUNT(*) FROM sys_user_post WHERE user_id = ?", Integer.class, second.get("id")));
 
         // 已有用户不被覆盖；失败行一个都不写。
-        assertEquals("用户102", jdbcTemplate.queryForObject(
+        assertEquals("用户900102", jdbcTemplate.queryForObject(
                 "SELECT name FROM sys_user WHERE username = 't259i-existing'", String.class));
         assertEquals(0, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM sys_user WHERE username IN "
@@ -169,6 +188,97 @@ class SysUserImportContractTest {
 
         assertEquals(1, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM sys_oper_log WHERE title = '用户·导入'", Integer.class));
+        String operParam = jdbcTemplate.queryForObject(
+                "SELECT oper_param FROM sys_oper_log WHERE title = '用户·导入'", String.class);
+        assertFalse(operParam.contains(INITIAL_PASSWORD), "操作日志不得包含初始密码明文：" + operParam);
+        assertTrue(operParam.contains("\"***\""), "初始密码参数必须被打码：" + operParam);
+    }
+
+    @Test
+    void rejectsMissingOrInvalidInitialPasswordBeforeWritingRows() throws Exception {
+        byte[] file = workbook(List.<String[]>of(
+                new String[]{"t259i-pw", "密码校验", "", "", "", "", ""}));
+
+        mockMvc.perform(multipart(IMPORT_PATH)
+                        .file(xlsx(file))
+                        .header("token", tokenOf(900101)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("初始密码不能为空"));
+
+        mockMvc.perform(importRequest(file, "   "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("初始密码不能为空"));
+
+        mockMvc.perform(importRequest(file, "12345"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("初始密码长度必须在 6 到 100 位之间"));
+
+        mockMvc.perform(importRequest(file, "x".repeat(101)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("初始密码长度必须在 6 到 100 位之间"));
+
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username = 't259i-pw'", Integer.class));
+
+        // 6 位是下边界：通过并落库。
+        mockMvc.perform(importRequest(file, "abc123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.successCount").value(1));
+        String hash = jdbcTemplate.queryForObject(
+                "SELECT password FROM sys_user WHERE username = 't259i-pw' AND is_deleted = 0", String.class);
+        assertTrue(passwordEncoder.matches("abc123", hash));
+    }
+
+    @Test
+    void acceptsTheColumnBoundaryAndRejectsOneColumnMore() throws Exception {
+        byte[] twentyColumns = workbookWithColumns(20, List.<String[]>of(
+                new String[]{"t259i-wide", "宽表", "", "", "", "", "", "ignored"}));
+        mockMvc.perform(importRequest(twentyColumns))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.successCount").value(1));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username = 't259i-wide' AND is_deleted = 0",
+                Integer.class));
+
+        byte[] twentyOneColumns = workbookWithColumns(21, List.<String[]>of(
+                new String[]{"t259i-too-wide", "超宽", "", "", "", "", ""}));
+        assertRejected(xlsx(twentyOneColumns), "导入文件超过 20 列限制");
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username = 't259i-too-wide'", Integer.class));
+    }
+
+    @Test
+    void rejectsASparseFarCellBeforeWritingAnyRow() throws Exception {
+        byte[] sparse = workbookWithFarCell("t259i-sparse");
+
+        assertRejected(xlsx(sparse), "导入文件超过 20 列限制");
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username = 't259i-sparse'", Integer.class));
+    }
+
+    @Test
+    void importAcceptsTheRowBoundaryAndRejectsOneRowMore() throws Exception {
+        byte[] thousand = workbook(rows(1000, "t259i-bulk"));
+        mockMvc.perform(importRequest(thousand))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.total").value(1000))
+                .andExpect(jsonPath("$.data.successCount").value(1000))
+                .andExpect(jsonPath("$.data.failureCount").value(0));
+        assertEquals(1000, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username LIKE 't259i-bulk-%' AND is_deleted = 0",
+                Integer.class));
+
+        byte[] thousandAndOne = workbook(rows(1001, "t259i-over"));
+        assertRejected(xlsx(thousandAndOne), "导入文件超过 1000 行限制");
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_user WHERE username LIKE 't259i-over-%'", Integer.class));
     }
 
     @Test
@@ -190,7 +300,7 @@ class SysUserImportContractTest {
                 "导入文件超过 2 MB 限制");
         assertRejected(new MockMultipartFile("file", "empty.xlsx", "application/octet-stream",
                 new byte[0]), "导入文件不能为空");
-        mockMvc.perform(multipart(IMPORT_PATH).header("token", tokenOf(101)))
+        mockMvc.perform(multipart(IMPORT_PATH).header("token", tokenOf(900101)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("导入文件不能为空"));
@@ -200,12 +310,10 @@ class SysUserImportContractTest {
     void rejectsWrongTemplatesAndEmptyFilesWithNamedMessages() throws Exception {
         // 只有两列的表头仍然是一个能解析的 xlsx：拒绝理由必须是模板不正确，不是「文件坏了」。
         byte[] onlyTwoColumns = workbookWithHeaders(List.of("用户名", "姓名"));
-        assertRejected(new MockMultipartFile("file", "wrong.xlsx", "application/octet-stream",
-                onlyTwoColumns), "导入文件模板不正确");
+        assertRejected(xlsx(onlyTwoColumns), "导入文件模板不正确");
 
         byte[] headerOnly = workbook(List.of());
-        assertRejected(new MockMultipartFile("file", "empty-data.xlsx", "application/octet-stream",
-                headerOnly), "导入文件没有数据");
+        assertRejected(xlsx(headerOnly), "导入文件没有数据");
     }
 
     @Test
@@ -214,9 +322,9 @@ class SysUserImportContractTest {
                 new String[]{"t259i-denied-row", "无权限", "", "", "", "正常", ""}));
 
         mockMvc.perform(multipart(IMPORT_PATH)
-                        .file(new MockMultipartFile("file", "users.xlsx",
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file))
-                        .header("token", tokenOf(104)))
+                        .file(xlsx(file))
+                        .param("initialPassword", INITIAL_PASSWORD)
+                        .header("token", tokenOf(900104)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205))
                 .andExpect(jsonPath("$.message").value("没有操作权限"));
@@ -227,11 +335,40 @@ class SysUserImportContractTest {
                 "SELECT COUNT(*) FROM sys_oper_log WHERE title = '用户·导入'", Integer.class));
     }
 
+    private MockMultipartHttpServletRequestBuilder importRequest(byte[] file) {
+        return importRequest(file, INITIAL_PASSWORD);
+    }
+
+    private MockMultipartHttpServletRequestBuilder importRequest(byte[] file, String initialPassword) {
+        MockMultipartHttpServletRequestBuilder request = multipart(IMPORT_PATH)
+                .file(xlsx(file))
+                .header("token", tokenOf(900101));
+        if (initialPassword != null) {
+            request.param("initialPassword", initialPassword);
+        }
+        return request;
+    }
+
+    private MockMultipartFile xlsx(byte[] file) {
+        return new MockMultipartFile("file", "users.xlsx", XLSX_CONTENT_TYPE, file);
+    }
+
     private void assertRejected(MockMultipartFile file, String message) throws Exception {
-        mockMvc.perform(multipart(IMPORT_PATH).file(file).header("token", tokenOf(101)))
+        mockMvc.perform(multipart(IMPORT_PATH)
+                        .file(file)
+                        .param("initialPassword", INITIAL_PASSWORD)
+                        .header("token", tokenOf(900101)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value(message));
+    }
+
+    private List<String[]> rows(int count, String prefix) {
+        List<String[]> rows = new ArrayList<>(count);
+        for (int index = 0; index < count; index++) {
+            rows.add(new String[]{prefix + "-" + index, "批量用户" + index, "", "", "", "", ""});
+        }
+        return rows;
     }
 
     private byte[] workbook(List<String[]> rows) throws Exception {
@@ -262,8 +399,43 @@ class SysUserImportContractTest {
         }
     }
 
+    /** 前 7 列仍是模板表头，其余列填扩展值：列数上限看单元格最大列号，不看表头匹配。 */
+    private byte[] workbookWithColumns(int columns, List<String[]> rows) throws Exception {
+        List<String> headers = new ArrayList<>();
+        for (int index = 0; index < columns; index++) {
+            headers.add(index < HEADERS.size() ? HEADERS.get(index) : "扩展" + index);
+        }
+        List<String[]> padded = new ArrayList<>();
+        for (String[] row : rows) {
+            String[] values = new String[columns];
+            for (int index = 0; index < columns; index++) {
+                values[index] = index < row.length ? row[index] : "扩展" + index;
+            }
+            padded.add(values);
+        }
+        return workbookWithHeadersAndRows(headers, padded);
+    }
+
+    /** 极远稀疏单元格：最后一行最后一列。POI 写出的文件很小，但整表装载会按维度放大内存。 */
+    private byte[] workbookWithFarCell(String username) throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("用户");
+            Row header = sheet.createRow(0);
+            for (int index = 0; index < HEADERS.size(); index++) {
+                header.createCell(index).setCellValue(HEADERS.get(index));
+            }
+            Row row = sheet.createRow(1);
+            row.createCell(0).setCellValue(username);
+            row.createCell(1).setCellValue("稀疏行");
+            sheet.createRow(1_048_575).createCell(16_383).setCellValue("far");
+            workbook.write(output);
+            return output.toByteArray();
+        }
+    }
+
     private static List<String> rowValues(Row row, int size) {
-        List<String> values = new java.util.ArrayList<>();
+        List<String> values = new ArrayList<>();
         for (int index = 0; index < size; index++) {
             values.add(row.getCell(index) == null ? "" : row.getCell(index).getStringCellValue());
         }
@@ -325,12 +497,13 @@ class SysUserImportContractTest {
 
     private void cleanFixtures() {
         jdbcTemplate.update("DELETE FROM sys_oper_log");
+        jdbcTemplate.update("DELETE FROM sys_login_log WHERE username LIKE 't259i-%'");
         jdbcTemplate.update("DELETE FROM sys_role_menu WHERE role_id BETWEEN 201 AND 299");
         jdbcTemplate.update("DELETE FROM sys_user_role WHERE role_id BETWEEN 201 AND 299 "
-                + "OR user_id BETWEEN 101 AND 199");
-        jdbcTemplate.update("DELETE FROM sys_user_post WHERE user_id BETWEEN 101 AND 199 "
+                + "OR user_id BETWEEN 900101 AND 900199");
+        jdbcTemplate.update("DELETE FROM sys_user_post WHERE user_id BETWEEN 900101 AND 900199 "
                 + "OR post_id BETWEEN 301 AND 399");
-        jdbcTemplate.update("DELETE FROM sys_user WHERE id BETWEEN 101 AND 199 "
+        jdbcTemplate.update("DELETE FROM sys_user WHERE id BETWEEN 900101 AND 900199 "
                 + "OR username LIKE 't259i-%'");
         jdbcTemplate.update("DELETE FROM sys_dept WHERE id BETWEEN 10 AND 99");
         jdbcTemplate.update("DELETE FROM sys_role WHERE id BETWEEN 201 AND 299");

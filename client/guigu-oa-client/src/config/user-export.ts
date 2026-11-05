@@ -10,8 +10,14 @@ export const IMPORT_ACCEPT = '.xlsx'
 /** 模板下载文件名在客户端生成：二进制响应不暴露 Content-Disposition 头。 */
 export const IMPORT_TEMPLATE_FILE_NAME = '用户导入模板.xlsx'
 
-/** 导入用户的初始密码，与服务端 SysUserExcelService.DEFAULT_IMPORT_PASSWORD 同值。 */
-export const IMPORT_DEFAULT_PASSWORD = '123456'
+/** 初始密码是导入动作参数（#263）：必填、6–100 位，与服务端同一策略。 */
+export const IMPORT_PASSWORD_MIN_LENGTH = 6
+
+export const IMPORT_PASSWORD_MAX_LENGTH = 100
+
+export const IMPORT_PASSWORD_REQUIRED_MESSAGE = '初始密码不能为空'
+
+export const IMPORT_PASSWORD_LENGTH_MESSAGE = `初始密码长度必须在 ${IMPORT_PASSWORD_MIN_LENGTH} 到 ${IMPORT_PASSWORD_MAX_LENGTH} 位之间`
 
 const IMPORT_EXCEL_EXTENSION = '.xlsx'
 
@@ -55,10 +61,11 @@ export function importTemplateRequest(): ApiRequestConfig & { responseType: 'blo
   }
 }
 
-/** multipart 字段固定为 `file`（与服务端 @RequestParam 同名）。 */
-export function importRequest(file: File): ApiRequestConfig {
+/** multipart 字段固定为 `file` + `initialPassword`（与服务端 @RequestParam 同名）。 */
+export function importRequest(file: File, initialPassword: string): ApiRequestConfig {
   const data = new FormData()
   data.append('file', file)
+  data.append('initialPassword', initialPassword)
   return {
     method: 'post',
     url: `${SYS_USER_API}/import`,
@@ -74,6 +81,16 @@ export function validateImportFile(file: File | null | undefined): string {
   if (file.size === 0) return '导入文件不能为空'
   if (file.size > IMPORT_MAX_BYTES) return '导入文件超过 2 MB 限制'
   if (!file.name.toLowerCase().endsWith(IMPORT_EXCEL_EXTENSION)) return '仅支持 xlsx 文件'
+  return ''
+}
+
+/** 初始密码必填且 6–100 位；空白按缺失处理，与服务端 hasText 同语义。 */
+export function validateImportPassword(initialPassword: string): string {
+  if (!initialPassword.trim()) return IMPORT_PASSWORD_REQUIRED_MESSAGE
+  const length = initialPassword.length
+  if (length < IMPORT_PASSWORD_MIN_LENGTH || length > IMPORT_PASSWORD_MAX_LENGTH) {
+    return IMPORT_PASSWORD_LENGTH_MESSAGE
+  }
   return ''
 }
 

@@ -40,6 +40,7 @@ public class OperParamSanitizer {
             "oldpassword",
             "newpassword",
             "confirmpassword",
+            "initialpassword",
             "token",
             "refreshtoken",
             "secret",
@@ -55,10 +56,23 @@ public class OperParamSanitizer {
 
     /** 把控制器实参序列化成脱敏、打码并截断后的 JSON 数组。 */
     public String sanitize(Object[] args) {
+        return sanitize(args, null);
+    }
+
+    /**
+     * 带参数名时，裸标量（如 multipart 的 {@code initialPassword}）按参数名打码：
+     * 字段级黑名单只覆盖对象字段，独立 String 参数需要这一层才不落明文。
+     */
+    public String sanitize(Object[] args, String[] parameterNames) {
         ArrayNode serialized = objectMapper.createArrayNode();
         if (args != null) {
-            for (Object arg : args) {
+            for (int index = 0; index < args.length; index++) {
+                Object arg = args[index];
                 if (skip(arg)) {
+                    continue;
+                }
+                if (isSensitiveParameter(parameterNames, index)) {
+                    serialized.add(MASKED);
                     continue;
                 }
                 try {
@@ -77,6 +91,13 @@ public class OperParamSanitizer {
             return UNSERIALIZABLE;
         }
         return AuditText.truncate(PhoneNumberMasker.mask(json), OPER_PARAM_LIMIT);
+    }
+
+    private static boolean isSensitiveParameter(String[] parameterNames, int index) {
+        return parameterNames != null
+                && index < parameterNames.length
+                && parameterNames[index] != null
+                && SENSITIVE_FIELD_NAMES.contains(parameterNames[index].toLowerCase(Locale.ROOT));
     }
 
     private static boolean skip(Object arg) {
