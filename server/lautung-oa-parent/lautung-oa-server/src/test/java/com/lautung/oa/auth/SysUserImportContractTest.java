@@ -86,6 +86,7 @@ class SysUserImportContractTest {
 
         insertRole(201, 1);
         insertRole(202, 1);
+        // fixture 用户用高位 id：H2 自增从 1 开始，1000 行导入会撞上低位 fixture 主键（译成「用户名已存在」）。
         insertUser(900101, "t259i-operator", 10, 1);
         insertUser(900102, "t259i-existing", 10, 1);
         insertUser(900104, "t259i-denied", 10, 1);
