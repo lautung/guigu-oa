@@ -1,6 +1,8 @@
 package com.lautung.oa.security.config;
 
 import com.lautung.oa.common.jwt.JwtHelper;
+import com.lautung.oa.security.address.ClientAddressResolver;
+import com.lautung.oa.security.address.TrustedProxyClientAddressResolver;
 import com.lautung.oa.security.custom.BcryptPasswordEncoderWithLegacyMd5;
 import com.lautung.oa.security.custom.RestAccessDeniedHandler;
 import com.lautung.oa.security.custom.RestAuthenticationEntryPoint;
@@ -46,6 +48,17 @@ public class WebSecurityConfig {
     @Bean
     public JwtHelper jwtHelper(@Value("${lautung.jwt.secret}") String secret) {
         return new JwtHelper(secret);
+    }
+
+    /**
+     * 来源地址的唯一解析（#262）：默认空配置 = 不信任任何转发头，只信 socket 对端；
+     * 只有直接对端落在 {@code lautung.oa.security.trusted-proxies} 的 CIDR 内才读头。
+     */
+    @Bean
+    public ClientAddressResolver clientAddressResolver(
+            @Value("${lautung.oa.security.trusted-proxies:}") String trustedProxies
+    ) {
+        return new TrustedProxyClientAddressResolver(trustedProxies);
     }
 
     @Bean
@@ -116,6 +129,7 @@ public class WebSecurityConfig {
             SessionVerifier sessionVerifier,
             AuthenticationManager authenticationManager,
             LoginAttemptLimiter loginAttemptLimiter,
+            ClientAddressResolver clientAddressResolver,
             Validator validator,
             ObjectProvider<LoginAudit> loginAudit,
             OnlineSessionRegistry onlineSessionRegistry
@@ -137,8 +151,8 @@ public class WebSecurityConfig {
                         new TokenAuthenticationFilter(sessionVerifier, redisTemplate, onlineSessionRegistry),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilter(new TokenLoginFilter(
-                        authenticationManager, jwtHelper, loginAttemptLimiter, validator,
-                        auditOrFallback(loginAudit), onlineSessionRegistry))
+                        authenticationManager, jwtHelper, loginAttemptLimiter, clientAddressResolver,
+                        validator, auditOrFallback(loginAudit), onlineSessionRegistry))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

@@ -9,6 +9,7 @@ import com.lautung.oa.audit.support.OperParamSanitizer;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.framework.operlog.BusinessType;
 import com.lautung.oa.framework.operlog.OperLog;
+import com.lautung.oa.security.address.TrustedProxyClientAddressResolver;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -61,7 +62,9 @@ class OperLogAspectTest {
         when(operatorMapper.findOperatorSnapshot(1L)).thenReturn(snapshot);
 
         writer = new OperLogWriter(operLogMapper, operatorMapper);
-        aspect = new OperLogAspect(writer, new OperParamSanitizer(new ObjectMapper()));
+        // 对端 127.0.0.1 是受信代理，X-Real-IP 才是解析后的来源（#262）。
+        aspect = new OperLogAspect(writer, new OperParamSanitizer(new ObjectMapper()),
+                new TrustedProxyClientAddressResolver("127.0.0.1/32"));
 
         joinPoint = mock(ProceedingJoinPoint.class);
         Signature signature = mock(Signature.class);
@@ -159,7 +162,9 @@ class OperLogAspectTest {
     void aWriteFailureNeverChangesTheResponse() throws Throwable {
         OperLogWriter failingWriter = mock(OperLogWriter.class);
         doThrow(new RuntimeException("database down")).when(failingWriter).write(any());
-        OperLogAspect failingAspect = new OperLogAspect(failingWriter, new OperParamSanitizer(new ObjectMapper()));
+        OperLogAspect failingAspect = new OperLogAspect(failingWriter,
+                new OperParamSanitizer(new ObjectMapper()),
+                new TrustedProxyClientAddressResolver("127.0.0.1/32"));
         Result<Object> ok = Result.ok();
         when(joinPoint.getArgs()).thenReturn(new Object[0]);
         when(joinPoint.proceed()).thenReturn(ok);

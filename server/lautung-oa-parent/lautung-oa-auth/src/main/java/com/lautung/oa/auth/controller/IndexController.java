@@ -11,9 +11,9 @@ import com.lautung.oa.common.validation.ValidationMessages;
 import com.lautung.oa.config.service.ConfigReader;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.address.ClientAddressResolver;
 import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
-import com.lautung.oa.security.login.ClientAddress;
 import com.lautung.oa.security.login.LoginAudit;
 import com.lautung.oa.security.login.LoginEvent;
 import com.lautung.oa.security.login.LoginEventKind;
@@ -98,6 +98,9 @@ public class IndexController {
     @Autowired
     private RegisterAttemptLimiter registerAttemptLimiter;
 
+    @Autowired
+    private ClientAddressResolver clientAddressResolver;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -122,7 +125,7 @@ public class IndexController {
     public Result register(HttpServletRequest request,
                            @RequestBody(required = false) RegisterVo registerVo) {
         RegisterVo form = registerVo == null ? new RegisterVo() : registerVo;
-        String sourceAddress = ClientAddress.of(request);
+        String sourceAddress = clientAddressResolver.resolve(request);
         String userAgent = request.getHeader("User-Agent");
         String username = form.getUsername() == null ? null : form.getUsername().trim();
 

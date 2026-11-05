@@ -57,6 +57,24 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 | MinIO Console | `http://localhost:9001` |
 | MinIO S3 | `http://localhost:9000` |
 
+### 来源地址与受信代理
+
+登录失败计数、注册限流与操作日志共用同一个来源解析（#262，ADR 0063）。Compose 固定子网
+`172.31.250.0/24`，客户端 nginx 拿固定地址 `172.31.250.10`，后端只把这一条 `/32` 配成
+`TRUSTED_PROXIES`：
+
+- 经 `9530` 的请求：后端对端是 client 容器（受信），按 nginx 追加的 `X-Forwarded-For`
+  取真实客户端来源；
+- 直连 `8800` 的请求：后端对端是网桥网关，不在 `/32` 里，客户端自带的 `X-Real-IP` /
+  `X-Forwarded-For` 一律忽略，换头不会产生新的限流桶或伪造审计来源。
+
+固定地址是为了「受信集合」可配置：如果信任整个子网，宿主直连 8800 的网关地址也会被当成
+代理。换网段或地址时成对设置 `DEMO_SUBNET` / `DEMO_CLIENT_IP`（后端从 `DEMO_CLIENT_IP`
+拼出 `/32`）；同一台机器并行跑多个 Compose 项目时用它们避让网段冲突。
+
+本地不起 Compose、直接 `java -jar` 调后端时默认同样不信任转发头；需要从本机模拟代理时
+显式设置 `TRUSTED_PROXIES=127.0.0.1/32` 再启动。
+
 ### 演示账号
 
 密码均为 `111111`：

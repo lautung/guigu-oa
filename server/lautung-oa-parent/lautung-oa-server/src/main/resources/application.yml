@@ -24,6 +24,10 @@ lautung:
   oa:
     # Bind this directory to persistent storage in containers; template paths are relative to it.
     process-definition-dir: ${LAUTUNG_OA_PROCESS_DEFINITION_DIR:./data/process-definitions}
+    # #262：只有直接对端落在这些 CIDR 内才读 X-Real-IP / X-Forwarded-For；空值 = 只信 socket 对端。
+    # 生产入口是 nginx 时把它所在网段写进 TRUSTED_PROXIES；本地直连后端调试时显式配置回环/本机网段。
+    security:
+      trusted-proxies: ${TRUSTED_PROXIES:}
     # #151：慢 SQL 日志默认关闭，避免生产日志放大（与 springdoc 同款：base 关、dev 开）。
     # dev/demo 打开；生产临时排障用 LAUTUNG_OA_SQL_SLOW_SQL_ENABLED=true 环境变量打开。
     sql:

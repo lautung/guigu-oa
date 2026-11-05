@@ -6,8 +6,8 @@ import com.lautung.oa.audit.support.AuditText;
 import com.lautung.oa.audit.support.OperParamSanitizer;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.framework.operlog.OperLog;
+import com.lautung.oa.security.address.ClientAddressResolver;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
-import com.lautung.oa.security.login.ClientAddress;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -52,9 +52,13 @@ public class OperLogAspect {
 
     private final OperParamSanitizer sanitizer;
 
-    public OperLogAspect(OperLogWriter writer, OperParamSanitizer sanitizer) {
+    private final ClientAddressResolver clientAddressResolver;
+
+    public OperLogAspect(OperLogWriter writer, OperParamSanitizer sanitizer,
+                         ClientAddressResolver clientAddressResolver) {
         this.writer = writer;
         this.sanitizer = sanitizer;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     @Around("@annotation(operLog)")
@@ -100,7 +104,7 @@ public class OperLogAspect {
         HttpServletRequest request = attributes.getRequest();
         entry.setRequestMethod(request.getMethod());
         entry.setOperUrl(AuditText.truncate(request.getRequestURI(), URL_LIMIT));
-        entry.setOperIp(ClientAddress.of(request));
+        entry.setOperIp(clientAddressResolver.resolve(request));
     }
 
     private void judge(SysOperLog entry, Object result) {
