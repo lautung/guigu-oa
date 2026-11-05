@@ -7,7 +7,8 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 注册的按 IP 计数（#253，ADR 0062）：每分钟最多 5 次尝试，成功与失败都算。
+ * 注册的按来源计数（#253，ADR 0062）：每分钟最多 5 次尝试，成功与失败都算。来源地址由
+ * security 的 {@code ClientAddressResolver} 解析（#262），与登录/审计共用同一口径。
  *
  * <p>键前缀刻意独立于 {@code LoginAttemptLimiter} 的 {@code login:attempt:}：注册失败不计入
  * 登录失败、不产生账号锁定，解锁登录账号也不会清掉注册计数。超限的请求在解析字段之前

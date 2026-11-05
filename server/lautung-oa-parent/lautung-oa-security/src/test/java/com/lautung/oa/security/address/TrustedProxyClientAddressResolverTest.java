@@ -117,6 +117,24 @@ class TrustedProxyClientAddressResolverTest {
     }
 
     @Test
+    void ipv4CompatibleIpv6LiteralsAreAccepted() {
+        MockHttpServletRequest compressed = request("10.0.0.2");
+        compressed.addHeader("X-Forwarded-For", "::1.2.3.4");
+
+        assertEquals("::1.2.3.4", resolver(PROXY).resolve(compressed));
+
+        MockHttpServletRequest mapped = request("10.0.0.2");
+        mapped.addHeader("X-Forwarded-For", "::ffff:203.0.113.7");
+
+        assertEquals("::ffff:203.0.113.7", resolver(PROXY).resolve(mapped));
+
+        MockHttpServletRequest full = request("10.0.0.2");
+        full.addHeader("X-Forwarded-For", "1:2:3:4:5:6:203.0.113.7");
+
+        assertEquals("1:2:3:4:5:6:203.0.113.7", resolver(PROXY).resolve(full));
+    }
+
+    @Test
     void anUntrustedIpv6PeerCannotForge() {
         MockHttpServletRequest request = request("2001:db9::1");
         request.addHeader("X-Forwarded-For", "203.0.113.7");

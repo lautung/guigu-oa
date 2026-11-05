@@ -152,14 +152,14 @@ public final class TrustedProxyClientAddressResolver implements ClientAddressRes
             return false;
         }
         String address = value;
-        int embeddedIpv4Groups = 0;
         int lastColon = address.lastIndexOf(':');
         if (address.substring(lastColon + 1).indexOf('.') >= 0) {
+            // 内嵌 IPv4 占两个 16 位组：换成占位组再按普通 IPv6 数分组，
+            // 这样 "::1.2.3.4" 的压缩符与 "1:2:3:4:5:6:1.2.3.4" 的满 8 组都能算对。
             if (!isIpv4Literal(address.substring(lastColon + 1))) {
                 return false;
             }
-            embeddedIpv4Groups = 2;
-            address = address.substring(0, lastColon);
+            address = address.substring(0, lastColon + 1) + "0:0";
         }
         int compression = address.indexOf("::");
         if (compression != address.lastIndexOf("::")) {
@@ -182,8 +182,7 @@ public final class TrustedProxyClientAddressResolver implements ClientAddressRes
                 return false;
             }
         }
-        int present = groups.length + embeddedIpv4Groups;
-        return compression >= 0 ? present < 8 : present == 8;
+        return compression >= 0 ? groups.length < 8 : groups.length == 8;
     }
 
     private static boolean isHexGroup(String group) {
