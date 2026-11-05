@@ -381,15 +381,15 @@ describe('SysUser list page', () => {
       expect(wrapper.text()).toContain('初始密码')
       expect(wrapper.text()).not.toContain('123456')
 
-      // 必填与 6 位下限：本地拦住，不发请求。
+      // 必填与 6 位下限：本地拦住，不发请求；具体文案由 config 单测钉住。
       const readsBefore = http.calls.length
       await wrapper.vm.submitImport()
-      expect(wrapper.vm.importError).toBe('初始密码不能为空')
+      expect(wrapper.vm.importError).not.toBe('')
       expect(sysUserApi.importUsers).not.toHaveBeenCalled()
 
       wrapper.vm.importPassword = '12345'
       await wrapper.vm.submitImport()
-      expect(wrapper.vm.importError).toBe('初始密码长度必须在 6 到 100 位之间')
+      expect(wrapper.vm.importError).not.toBe('')
       expect(sysUserApi.importUsers).not.toHaveBeenCalled()
 
       wrapper.vm.importPassword = 'Import#263'

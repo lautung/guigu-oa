@@ -133,7 +133,7 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
     @Override
     public UserImportResultVo importUsers(MultipartFile file, String initialPassword) {
         byte[] content = requireXlsx(file);
-        String encodedPassword = requireInitialPassword(initialPassword);
+        String encodedPassword = encodeInitialPassword(initialPassword);
         List<UserImportSheetReader.ImportRow> rows = UserImportSheetReader.read(content);
         if (rows.isEmpty()) {
             throw new BusinessException(201, "导入文件没有数据");
@@ -146,16 +146,15 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
 
         int success = 0;
         for (UserImportSheetReader.ImportRow row : rows) {
-            String username = row.cells().get(0);
             try {
-                ParsedRow parsed = userFromRow(row.cells(), deptsByName, postsByName, encodedPassword);
+                ParsedRow parsed = userFromRow(row, deptsByName, postsByName, encodedPassword);
                 sysUserService.saveUser(parsed.user(), parsed.postIds());
                 success++;
             } catch (BusinessException exception) {
-                result.addFailure(row.rowNumber(), username, exception.getMsg());
+                result.addFailure(row.rowNumber(), row.username(), exception.getMsg());
             } catch (RuntimeException exception) {
                 // 单行的事务/DB 异常只记该行失败，不中断后续行；业务文案仍优先保留。
-                result.addFailure(row.rowNumber(), username, "该行处理失败");
+                result.addFailure(row.rowNumber(), row.username(), "该行处理失败");
             }
         }
         result.setTotal(rows.size());
@@ -164,10 +163,10 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
     }
 
     /**
-     * 初始密码是导入动作的参数，不是数据列：缺失/空白/越界整批拒绝，绝不回退到固定口令。
+     * 校验并编码初始密码：缺失/空白/越界整批拒绝，绝不回退到固定口令。
      * 同一批用户的明文相同，BCrypt 只算一次，避免 1000 行重复编码。
      */
-    private String requireInitialPassword(String initialPassword) {
+    private String encodeInitialPassword(String initialPassword) {
         if (!StringUtils.hasText(initialPassword)) {
             throw new BusinessException(201, "初始密码不能为空");
         }
@@ -212,16 +211,16 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
     }
 
     private ParsedRow userFromRow(
-            List<String> cells,
+            UserImportSheetReader.ImportRow row,
             Map<String, List<SysDept>> deptsByName,
             Map<String, List<SysPost>> postsByName,
             String encodedPassword) {
-        String username = cell(cells, 0);
-        String name = cell(cells, 1);
-        String deptName = cell(cells, 2);
-        String postNames = cell(cells, 3);
-        String phone = cell(cells, 4);
-        String statusText = cell(cells, 5);
+        String username = row.username();
+        String name = row.name();
+        String deptName = row.deptName();
+        String postNames = row.postNames();
+        String phone = row.phone();
+        String statusText = row.status();
 
         if (!StringUtils.hasText(username)) {
             throw new BusinessException(201, "用户名不能为空");
@@ -313,10 +312,6 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
             ids.add(post.getId());
         }
         return List.copyOf(ids);
-    }
-
-    private static String cell(List<String> cells, int index) {
-        return index < cells.size() ? cells.get(index) : "";
     }
 
     private static String normalize(String value) {

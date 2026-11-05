@@ -35,8 +35,15 @@ final class UserImportSheetReader {
     private UserImportSheetReader() {
     }
 
-    /** 一行数据：行号从 1 开始（表头是第 1 行），cells 固定模板列数、已 trim。 */
-    record ImportRow(int rowNumber, List<String> cells) {
+    /** 一行数据：行号从 1 开始（表头是第 1 行），字段按模板列顺序取出并已 trim。 */
+    record ImportRow(
+            int rowNumber,
+            String username,
+            String name,
+            String deptName,
+            String postNames,
+            String phone,
+            String status) {
     }
 
     static List<ImportRow> read(byte[] content) {
@@ -143,7 +150,7 @@ final class UserImportSheetReader {
                 throw new BusinessException(201,
                         "导入文件超过 " + SysUserExcelService.MAX_IMPORT_ROWS + " 行限制");
             }
-            rows.add(new ImportRow(rowNum + 1, padded(cells)));
+            rows.add(row(rowNum + 1, cells));
         }
 
         List<ImportRow> rows() {
@@ -193,12 +200,19 @@ final class UserImportSheetReader {
             cells.set(column, value);
         }
 
-        private static List<String> padded(List<String> cells) {
-            List<String> values = new ArrayList<>(SysUserExcelService.COLUMNS.size());
-            for (int index = 0; index < SysUserExcelService.COLUMNS.size(); index++) {
-                values.add(index < cells.size() ? cells.get(index) : "");
-            }
-            return List.copyOf(values);
+        private static ImportRow row(int rowNumber, List<String> cells) {
+            return new ImportRow(
+                    rowNumber,
+                    cell(cells, 0),
+                    cell(cells, 1),
+                    cell(cells, 2),
+                    cell(cells, 3),
+                    cell(cells, 4),
+                    cell(cells, 5));
+        }
+
+        private static String cell(List<String> cells, int column) {
+            return column < cells.size() ? cells.get(column) : "";
         }
     }
 }

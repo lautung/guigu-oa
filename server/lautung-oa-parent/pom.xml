@@ -34,6 +34,8 @@
     <properties>
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
+        <!-- 操作日志按参数名给裸密码参数打码依赖编译期参数名；Boot parent 默认已开，这里显式钉住。 -->
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <jjwt.version>0.13.0</jjwt.version>
         <springdoc.version>3.1.0</springdoc.version>
