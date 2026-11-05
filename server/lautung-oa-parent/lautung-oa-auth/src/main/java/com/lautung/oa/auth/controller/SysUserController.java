@@ -135,15 +135,18 @@ public class SysUserController {
     }
 
     /**
-     * 逐行导入（#259）：失败行不写、成功与失败行号/原因汇总返回，不做全量回滚；
-     * 已有用户名一律按「用户名已存在」拒绝，不覆盖。
+     * 逐行导入（#259/#263）：初始密码必填（6–100 位），按提交值 BCrypt 落库；失败行不写、
+     * 成功与失败行号/原因汇总返回，不做全量回滚；已有用户名一律按「用户名已存在」拒绝，不覆盖。
+     * 密码是动作参数而不是数据列，响应不回显，操作日志按参数名打码。
      */
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser','system:user:import')")
     @Operation(summary = "导入用户")
     @OperLog(title = "用户·导入", businessType = BusinessType.CREATE)
     @PostMapping("import")
-    public Result importUsers(@RequestParam(value = "file", required = false) MultipartFile file) {
-        return Result.ok(sysUserExcelService.importUsers(file));
+    public Result importUsers(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "initialPassword", required = false) String initialPassword) {
+        return Result.ok(sysUserExcelService.importUsers(file, initialPassword));
     }
 
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysUser')")

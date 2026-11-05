@@ -43,3 +43,5 @@
 Related: ADR 0023（登录失败计数与审计端口）、ADR 0039（日志脱敏接缝）、ADR 0049（审批账本）、ADR 0050（手写 SQL 存活过滤）、ADR 0052/0053（权限三层与数据范围）、ADR 0024（分页上限）、ADR 0031（公共字段）、ADR 0009（列表读）；issue #211、#210。
 
 2026-11-03 增注（#213–#226 实现收口）：实际迁移号是 V112（`sys_oper_log`）与 V114（`sys_login_log`）；V113/V115 是两组日志菜单种子，已按仓库标准从 `db/migration` 移到 `db/seed`，由同版本的 Java 迁移 `V113__AuditOperLogMenu` / `V115__AuditLoginLogMenu` 执行。audit 模块现在有 DB 版登录日志实现（`LoginLogWriter` 经 security 的 `LoginAudit` 端口接入），不再是「端口已留、实现未落」；「锁定期尝试不落库」的边界不变。
+
+2026-11-05 增注（#263）：落库脱敏从「字段级」扩到「字段名 + 方法参数名」——用户导入把初始密码作为独立 `String` 参数传入，字段黑名单管不到裸标量，`OperParamSanitizer.sanitize(args, parameterNames)` 按 `-parameters` 编译出的参数名把 `initialPassword` 打成 `"***"`（`maven.compiler.parameters` 在父 pom 显式钉住，合同测试同时断言明文不落库）。对象字段的黑名单与 `PhoneNumberMasker` 顺序不变。

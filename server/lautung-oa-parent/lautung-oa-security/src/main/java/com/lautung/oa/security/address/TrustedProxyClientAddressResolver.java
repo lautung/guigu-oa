@@ -11,7 +11,7 @@ import java.util.Enumeration;
 import java.util.List;
 
 /**
- * 客户端来源地址的默认解析（#262，ADR 0063）：socket 对端不在配置的受信代理网段内时，
+ * 客户端来源地址的默认解析（#262，ADR 0064）：socket 对端不在配置的受信代理网段内时，
  * {@code X-Real-IP} 与 {@code X-Forwarded-For} 一律忽略——直连后端无法靠换头制造新来源。
  *
  * <p>对端受信时，从 {@code X-Forwarded-For} 右向左跳过受信代理，取第一个非受信跳；链为空或

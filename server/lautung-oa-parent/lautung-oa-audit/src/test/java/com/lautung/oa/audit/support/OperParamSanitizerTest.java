@@ -90,6 +90,25 @@ class OperParamSanitizerTest {
         assertEquals("[{\"name\":\"alice\"}]", json);
     }
 
+    @Test
+    void masksBareSensitiveParametersByName() {
+        // 用户导入把初始密码作为独立 String 参数传入：字段黑名单管不到裸标量，必须按参数名打码。
+        String json = sanitizer.sanitize(
+                new Object[]{"users.xlsx", "import-secret"},
+                new String[]{"file", "initialPassword"});
+
+        assertFalse(json.contains("import-secret"), json);
+        assertTrue(json.contains("\"***\""), json);
+        assertTrue(json.contains("users.xlsx"), json);
+    }
+
+    @Test
+    void keepsBareParametersWhenNamesAreUnavailableOrNotSensitive() {
+        assertEquals("[\"alice\"]", sanitizer.sanitize(new Object[]{"alice"}));
+        assertEquals("[\"alice\",\"import-secret\"]",
+                sanitizer.sanitize(new Object[]{"alice", "import-secret"}, new String[]{"name", "note"}));
+    }
+
     private static int count(String value, String needle) {
         int count = 0;
         int index = 0;

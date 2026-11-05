@@ -17,7 +17,6 @@ import com.lautung.oa.model.system.SysUserPost;
 import com.lautung.oa.vo.system.SysUserQueryVo;
 import com.lautung.oa.vo.system.UserImportResultVo;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
@@ -28,7 +27,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -133,20 +131,52 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
     }
 
     @Override
-    public UserImportResultVo importUsers(MultipartFile file) {
+    public UserImportResultVo importUsers(MultipartFile file, String initialPassword) {
         byte[] content = requireXlsx(file);
-        XSSFWorkbook workbook = openWorkbook(content);
-        try (workbook) {
-            if (workbook.getNumberOfSheets() == 0) {
-                throw new BusinessException(201, "导入文件模板不正确");
-            }
-            Sheet sheet = workbook.getSheetAt(0);
-            DataFormatter formatter = new DataFormatter();
-            requireHeader(sheet, formatter);
-            return importRows(sheet, formatter);
-        } catch (IOException exception) {
-            throw new BusinessException(201, "导入文件读取失败");
+        String encodedPassword = encodeInitialPassword(initialPassword);
+        List<UserImportSheetReader.ImportRow> rows = UserImportSheetReader.read(content);
+        if (rows.isEmpty()) {
+            throw new BusinessException(201, "导入文件没有数据");
         }
+        UserImportResultVo result = new UserImportResultVo();
+        Map<String, List<SysDept>> deptsByName = sysDeptService.list().stream()
+                .collect(Collectors.groupingBy(dept -> normalize(dept.getName())));
+        Map<String, List<SysPost>> postsByName = sysPostService.list().stream()
+                .collect(Collectors.groupingBy(post -> normalize(post.getName())));
+
+        int success = 0;
+        for (UserImportSheetReader.ImportRow row : rows) {
+            try {
+                ParsedRow parsed = userFromRow(row, deptsByName, postsByName, encodedPassword);
+                sysUserService.saveUser(parsed.user(), parsed.postIds());
+                success++;
+            } catch (BusinessException exception) {
+                result.addFailure(row.rowNumber(), row.username(), exception.getMsg());
+            } catch (RuntimeException exception) {
+                // 单行的事务/DB 异常只记该行失败，不中断后续行；业务文案仍优先保留。
+                result.addFailure(row.rowNumber(), row.username(), "该行处理失败");
+            }
+        }
+        result.setTotal(rows.size());
+        result.setSuccessCount(success);
+        return result;
+    }
+
+    /**
+     * 校验并编码初始密码：缺失/空白/越界整批拒绝，绝不回退到固定口令。
+     * 同一批用户的明文相同，BCrypt 只算一次，避免 1000 行重复编码。
+     */
+    private String encodeInitialPassword(String initialPassword) {
+        if (!StringUtils.hasText(initialPassword)) {
+            throw new BusinessException(201, "初始密码不能为空");
+        }
+        if (initialPassword.length() < MIN_INITIAL_PASSWORD_LENGTH
+                || initialPassword.length() > MAX_INITIAL_PASSWORD_LENGTH) {
+            throw new BusinessException(201,
+                    "初始密码长度必须在 " + MIN_INITIAL_PASSWORD_LENGTH
+                            + " 到 " + MAX_INITIAL_PASSWORD_LENGTH + " 位之间");
+        }
+        return passwordEncoder.encode(initialPassword);
     }
 
     private byte[] requireXlsx(MultipartFile file) {
@@ -180,90 +210,17 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
         return content;
     }
 
-    private XSSFWorkbook openWorkbook(byte[] content) {
-        try {
-            return new XSSFWorkbook(new ByteArrayInputStream(content));
-        } catch (IOException | RuntimeException exception) {
-            throw new BusinessException(201, "导入文件不是有效的 Excel 文件");
-        }
-    }
-
-    private void requireHeader(Sheet sheet, DataFormatter formatter) {
-        Row header = sheet.getRow(0);
-        if (header == null) {
-            throw new BusinessException(201, "导入文件模板不正确");
-        }
-        for (int index = 0; index < COLUMNS.size(); index++) {
-            if (!COLUMNS.get(index).equals(cellText(header, index, formatter))) {
-                throw new BusinessException(201, "导入文件模板不正确");
-            }
-        }
-    }
-
-    private UserImportResultVo importRows(Sheet sheet, DataFormatter formatter) {
-        // 先数行再装载/写库：2MB xlsx 可以有数万行，逐行 BCrypt + 独立事务会占满线程。
-        requireRowLimit(sheet, formatter);
-        UserImportResultVo result = new UserImportResultVo();
-        Map<String, List<SysDept>> deptsByName = sysDeptService.list().stream()
-                .collect(Collectors.groupingBy(dept -> normalize(dept.getName())));
-        Map<String, List<SysPost>> postsByName = sysPostService.list().stream()
-                .collect(Collectors.groupingBy(post -> normalize(post.getName())));
-
-        int total = 0;
-        int success = 0;
-        int lastRow = sheet.getLastRowNum();
-        for (int index = 1; index <= lastRow; index++) {
-            Row row = sheet.getRow(index);
-            if (isBlankRow(row, formatter)) {
-                continue;
-            }
-            total++;
-            int rowNumber = index + 1;
-            String username = cellText(row, 0, formatter);
-            try {
-                ParsedRow parsed = userFromRow(row, formatter, deptsByName, postsByName);
-                sysUserService.saveUser(parsed.user(), parsed.postIds());
-                success++;
-            } catch (BusinessException exception) {
-                result.addFailure(rowNumber, username, exception.getMsg());
-            } catch (RuntimeException exception) {
-                // 单行的事务/DB 异常只记该行失败，不中断后续行；业务文案仍优先保留。
-                result.addFailure(rowNumber, username, "该行处理失败");
-            }
-        }
-        if (total == 0) {
-            throw new BusinessException(201, "导入文件没有数据");
-        }
-        result.setTotal(total);
-        result.setSuccessCount(success);
-        return result;
-    }
-
-    /** 空行不算数据行（与 importRows 的跳过规则一致）；超限整文件拒绝，不做部分导入。 */
-    private void requireRowLimit(Sheet sheet, DataFormatter formatter) {
-        int dataRows = 0;
-        int lastRow = sheet.getLastRowNum();
-        for (int index = 1; index <= lastRow; index++) {
-            if (!isBlankRow(sheet.getRow(index), formatter)) {
-                dataRows++;
-                if (dataRows > MAX_IMPORT_ROWS) {
-                    throw new BusinessException(201, "导入文件超过 " + MAX_IMPORT_ROWS + " 行限制");
-                }
-            }
-        }
-    }
-
     private ParsedRow userFromRow(
-            Row row,
-            DataFormatter formatter,
+            UserImportSheetReader.ImportRow row,
             Map<String, List<SysDept>> deptsByName,
-            Map<String, List<SysPost>> postsByName) {
-        String username = cellText(row, 0, formatter);
-        String name = cellText(row, 1, formatter);
-        String deptName = cellText(row, 2, formatter);
-        String postNames = cellText(row, 3, formatter);
-        String phone = cellText(row, 4, formatter);
-        String statusText = cellText(row, 5, formatter);
+            Map<String, List<SysPost>> postsByName,
+            String encodedPassword) {
+        String username = row.username();
+        String name = row.name();
+        String deptName = row.deptName();
+        String postNames = row.postNames();
+        String phone = row.phone();
+        String statusText = row.status();
 
         if (!StringUtils.hasText(username)) {
             throw new BusinessException(201, "用户名不能为空");
@@ -287,7 +244,7 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
         user.setPhone(phone);
         user.setStatus(resolveStatus(statusText));
         user.setDeptId(resolveDeptId(deptName, deptsByName));
-        user.setPassword(passwordEncoder.encode(DEFAULT_IMPORT_PASSWORD));
+        user.setPassword(encodedPassword);
         List<Long> postIds = resolvePostIds(postNames, postsByName);
 
         // 用户名唯一性不在这里查：saveUser → save 已按 ADR 0042 查重（唯一索引兜底），
@@ -355,25 +312,6 @@ public class SysUserExcelServiceImpl implements SysUserExcelService {
             ids.add(post.getId());
         }
         return List.copyOf(ids);
-    }
-
-    private boolean isBlankRow(Row row, DataFormatter formatter) {
-        if (row == null) {
-            return true;
-        }
-        for (int index = 0; index < COLUMNS.size(); index++) {
-            if (StringUtils.hasText(cellText(row, index, formatter))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static String cellText(Row row, int index, DataFormatter formatter) {
-        if (row == null || row.getCell(index) == null) {
-            return "";
-        }
-        return formatter.formatCellValue(row.getCell(index)).trim();
     }
 
     private static String normalize(String value) {

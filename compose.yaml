@@ -78,7 +78,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       LAUTUNG_OA_PROCESS_DEFINITION_DIR: /var/lib/guigu-oa/process-definitions
-      # #262（ADR 0063）：只有直接对端落在这些 CIDR 内才读 X-Real-IP / X-Forwarded-For。
+      # #262（ADR 0064）：只有直接对端落在这些 CIDR 内才读 X-Real-IP / X-Forwarded-For。
       # 只信 client 容器的固定地址（/32）。宿主直连 8800 的对端是网桥网关，即使它与
       # client 同网段也不在 /32 里，伪造头无效；写整个子网会把网关一起信进来。
       TRUSTED_PROXIES: ${DEMO_CLIENT_IP:-172.31.250.10}/32

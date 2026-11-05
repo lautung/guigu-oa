@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * #262 的来源信任边界（ADR 0063）：对端 127.0.0.1 不在受信配置里（`10.0.0.0/8`，另混入一个
+ * #262 的来源信任边界（ADR 0064）：对端 127.0.0.1 不在受信配置里（`10.0.0.0/8`，另混入一个
  * 非法 CIDR 证明启动容错），{@code X-Real-IP} / {@code X-Forwarded-For} 完全无效——换头
  * 不能制造新的注册限流桶，也不能让登录/注册审计记下伪造来源。非法 CIDR 只 WARN 不阻断
  * 启动的细节由 {@code TrustedProxyClientAddressResolverTest} 的 WARN 断言钉住。
