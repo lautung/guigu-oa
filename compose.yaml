@@ -78,6 +78,10 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       LAUTUNG_OA_PROCESS_DEFINITION_DIR: /var/lib/guigu-oa/process-definitions
+      # #262（ADR 0064）：只有直接对端落在这些 CIDR 内才读 X-Real-IP / X-Forwarded-For。
+      # 只信 client 容器的固定地址（/32）。宿主直连 8800 的对端是网桥网关，即使它与
+      # client 同网段也不在 /32 里，伪造头无效；写整个子网会把网关一起信进来。
+      TRUSTED_PROXIES: ${DEMO_CLIENT_IP:-172.31.250.10}/32
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: http://localhost:9000
       S3_BUCKET: guigu-oa-attachments
@@ -109,10 +113,22 @@ services:
       CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-http://localhost:9000}
     ports:
       - "9530:80"
+    networks:
+      default:
+        # 固定地址供后端作为受信代理识别；与 backend 的 TRUSTED_PROXIES、上面的 subnet 成对。
+        ipv4_address: ${DEMO_CLIENT_IP:-172.31.250.10}
     depends_on:
       lautung-oa-server:
         condition: service_healthy
     restart: unless-stopped
+
+networks:
+  # #262：固定子网让 client 有可配置的固定地址；换地址/网段时三处一起改
+  # （subnet、client.ipv4_address、backend.TRUSTED_PROXIES）。两个变量都可从 .env 覆盖。
+  default:
+    ipam:
+      config:
+        - subnet: ${DEMO_SUBNET:-172.31.250.0/24}
 
 volumes:
   mysql-data:

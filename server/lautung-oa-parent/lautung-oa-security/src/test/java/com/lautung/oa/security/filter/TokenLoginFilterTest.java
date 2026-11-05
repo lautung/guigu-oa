@@ -2,6 +2,7 @@ package com.lautung.oa.security.filter;
 
 import com.lautung.oa.common.jwt.JwtHelper;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.address.TrustedProxyClientAddressResolver;
 import com.lautung.oa.security.custom.CustomUser;
 import com.lautung.oa.security.login.InvalidLoginInputException;
 import com.lautung.oa.security.login.LoginAttemptLimiter;
@@ -251,7 +252,9 @@ public class TokenLoginFilterTest {
     }
 
     private TokenLoginFilter filter(AuthenticationManager manager) {
-        return new TokenLoginFilter(manager, jwtHelper, limiter, VALIDATOR, audit, onlineSessionRegistry);
+        // 默认不信任转发头：这些用例的请求不带来源头，来源就是 socket 对端 127.0.0.1。
+        return new TokenLoginFilter(manager, jwtHelper, limiter,
+                new TrustedProxyClientAddressResolver(""), VALIDATOR, audit, onlineSessionRegistry);
     }
 
     /** Exactly one event through the durable or the log-only path, never both. */

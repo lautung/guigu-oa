@@ -73,6 +73,9 @@ class OperLogContractTest {
 
         mockMvc.perform(post("/admin/system/sysUser/save")
                         .header("token", adminToken())
+                        // #262：test profile 把 127.0.0.1 配成受信代理，操作日志的来源必须是解析结果，
+                        // 不是 socket 对端。
+                        .header("X-Forwarded-For", "203.0.113.42")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"oper_log_target\",\"name\":\"审计目标\","
                                 + "\"password\":\"" + PLAIN_PASSWORD + "\",\"phone\":\"13800131234\"}"))
@@ -89,7 +92,8 @@ class OperLogContractTest {
         assertEquals(77L, longValue(row, "dept_id"));
         assertEquals("审计部", row.get("dept_name"));
         assertEquals("/admin/system/sysUser/save", row.get("oper_url"));
-        assertNotNull(row.get("oper_ip"), "oper_ip should be recorded");
+        assertEquals("203.0.113.42", row.get("oper_ip"),
+                "oper_ip must be the resolved client address, not the socket peer");
 
         String param = (String) row.get("oper_param");
         assertTrue(param.contains("\"password\":\"***\""), param);

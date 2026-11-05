@@ -26,6 +26,7 @@ Compose 项目名随工作目录（worktree 下即目录名），接手他人在
 3. Flowable 的 `ACT_*` 表由引擎按 `application-dev.yml` 的 `flowable.database-schema-update: true`、`flowable.history-level: full` 维护，空库首启动自动建表。坑史：Connector/J 8.x 起 `nullCatalogMeansCurrent` 默认 false，同服务器另一个库有 ACT_ 表时空库会被误判「引擎表已建」、误走 upgrade 链启动失败（#158）——已在 base `application.yml` 的 Hikari `data-source-properties` 钉回「当前库」语义，对所有 profile 与 URL 覆盖生效，删属性即复发。本地起真实服务验证：连已有库 + `--spring.flyway.validate-on-migrate=false`，配方见 `../agents/testing.md` 服务端节。从 Activiti 7 切库见 `server/lautung-oa-parent/sql/flowable8-cutover.md`。
 4. OpenAPI / Swagger UI：只在 `dev` profile 下无需登录可读（`/v3/api-docs`、`/swagger-ui.html`）。Compose 演示栈（`dev,demo`）与 `prod` 都关闭这两个端点（#140）。界面入口在后台「系统工具 → 接口文档」（`/tool/api-doc`，#246）：页面挂载探测 `/v3/api-docs`，可用时给「打开 Swagger UI」按钮，未启用时只显示空态；Vite 与 nginx 为此各加了 `/v3`、`/swagger-ui` 两段同源转发。业务接口仍用请求头 `token`。
 5. Compose 构建：本机 `docker compose build lautung-oa-server` 直连 Maven Central 会被代理打断 TLS 握手，需带镜像源 `MAVEN_MIRROR_URL=https://maven.aliyun.com/repository/public docker compose build lautung-oa-server`。
+6. 来源地址与 `TRUSTED_PROXIES`（#262，ADR 0064）：本地直连后端默认不信任 `X-Real-IP` / `X-Forwarded-For`，限流与操作日志只认 socket 对端。要从本机模拟受信代理（例如手测限流按来源区分），启动前显式 `TRUSTED_PROXIES=127.0.0.1/32`；Compose 演示栈的配置见 `compose-demo.md`。
 
 ## 数据库初始化
 

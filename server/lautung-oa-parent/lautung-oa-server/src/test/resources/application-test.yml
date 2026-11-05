@@ -30,6 +30,11 @@ flowable:
 lautung:
   jwt:
     secret: test-jwt-secret-for-contract-tests-0000000000000000000000000000000000000000
+  oa:
+    security:
+      # #262：MockMvc 的 socket 对端是 127.0.0.1，合同测试用 X-Forwarded-For 区分来源；
+      # 「对端不受信」的合同另起上下文覆盖该值（ClientAddressTrustContractTest 混入非法 CIDR）。
+      trusted-proxies: 127.0.0.1/32
 
 # root WARN keeps Flowable/Spring quiet; com.lautung.oa must stay INFO because
 # ObservabilityContractTest asserts the structured request log from TraceIdFilter.

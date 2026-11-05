@@ -11,9 +11,9 @@ import com.lautung.oa.common.validation.ValidationMessages;
 import com.lautung.oa.config.service.ConfigReader;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.security.address.ClientAddressResolver;
 import com.lautung.oa.security.cache.PermissionCacheKey;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
-import com.lautung.oa.security.login.ClientAddress;
 import com.lautung.oa.security.login.LoginAudit;
 import com.lautung.oa.security.login.LoginEvent;
 import com.lautung.oa.security.login.LoginEventKind;
@@ -98,6 +98,9 @@ public class IndexController {
     @Autowired
     private RegisterAttemptLimiter registerAttemptLimiter;
 
+    @Autowired
+    private ClientAddressResolver clientAddressResolver;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -110,7 +113,7 @@ public class IndexController {
     }
 
     /**
-     * 匿名注册（#253，ADR 0062）：开关关闭 → 201「注册未开放」；按 IP 5 次/分钟（独立键前缀，
+     * 匿名注册（#253，ADR 0062）：开关关闭 → 201「注册未开放」；按来源 5 次/分钟（独立键前缀，
      * 不进登录失败限流）；字段校验、确认密码与用户名唯一都落在此处。新用户 status 正常、
      * 零后台角色、无部门；成功/失败各写一条 {@code event=register} 的登录日志，不自动登录。
      *
@@ -122,7 +125,7 @@ public class IndexController {
     public Result register(HttpServletRequest request,
                            @RequestBody(required = false) RegisterVo registerVo) {
         RegisterVo form = registerVo == null ? new RegisterVo() : registerVo;
-        String sourceAddress = ClientAddress.of(request);
+        String sourceAddress = clientAddressResolver.resolve(request);
         String userAgent = request.getHeader("User-Agent");
         String username = form.getUsername() == null ? null : form.getUsername().trim();
 

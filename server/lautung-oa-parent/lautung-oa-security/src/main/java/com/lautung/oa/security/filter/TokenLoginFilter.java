@@ -6,7 +6,7 @@ import com.lautung.oa.common.result.Result;
 import com.lautung.oa.common.validation.ValidationMessages;
 import com.lautung.oa.security.custom.AccountStatus;
 import com.lautung.oa.security.custom.CustomUser;
-import com.lautung.oa.security.login.ClientAddress;
+import com.lautung.oa.security.address.ClientAddressResolver;
 import com.lautung.oa.security.login.InvalidLoginInputException;
 import com.lautung.oa.security.login.LoginAttemptLimiter;
 import com.lautung.oa.security.login.LoginAudit;
@@ -46,6 +46,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtHelper jwtHelper;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final ClientAddressResolver clientAddressResolver;
     private final Validator validator;
     private final LoginAudit loginAudit;
     private final OnlineSessionRegistry onlineSessionRegistry;
@@ -54,6 +55,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
             AuthenticationManager authenticationManager,
             JwtHelper jwtHelper,
             LoginAttemptLimiter loginAttemptLimiter,
+            ClientAddressResolver clientAddressResolver,
             Validator validator,
             LoginAudit loginAudit,
             OnlineSessionRegistry onlineSessionRegistry
@@ -61,6 +63,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         this.setAuthenticationManager(authenticationManager);
         this.jwtHelper = jwtHelper;
         this.loginAttemptLimiter = loginAttemptLimiter;
+        this.clientAddressResolver = clientAddressResolver;
         this.validator = validator;
         this.loginAudit = loginAudit;
         this.onlineSessionRegistry = onlineSessionRegistry;
@@ -76,7 +79,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
         LoginVo loginVo = readLoginVo(request);
         requireValid(loginVo);
         String username = loginVo.getUsername();
-        String sourceAddress = ClientAddress.of(request);
+        String sourceAddress = clientAddressResolver.resolve(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // Refused before the password is checked, so a locked account cannot be guessed.
             // Deliberately log-only: a locked-out attempt must not add a database row (ADR 0054).
@@ -126,7 +129,7 @@ public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
                                             Authentication auth)
             throws IOException, ServletException {
         String username = auth.getName();
-        String sourceAddress = ClientAddress.of(request);
+        String sourceAddress = clientAddressResolver.resolve(request);
         String userAgent = userAgent(request);
         if (loginAttemptLimiter.isBlocked(username, sourceAddress)) {
             // A concurrent request may have locked the account while this password was checked.
