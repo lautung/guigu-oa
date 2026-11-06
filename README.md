@@ -87,7 +87,7 @@ flowchart LR
 ## 工程化
 
 - 后端合同测试覆盖 API、Flowable 和持久层边界；前端使用 Vitest 与 Playwright 冒烟检查。
-- CI 检查前端 lint、类型、单测和 Playwright，运行 Maven 测试，并构建前后端容器镜像；不自动部署。覆盖率报告写入 Actions summary 并上传 artifact，不卡红。
+- CI 检查前端 lint、类型、单测和 Playwright，运行 Maven 测试与打包；draft PR 的推送不触发，转正后才开跑（ADR 0070）。镜像由主栈回归构建，PR 不重复构建；不自动部署。覆盖率报告写入 Actions summary 并上传 artifact，不卡红。
 - 统一客户端使用 TypeScript、ESLint 和 Prettier；业务表由 Flyway 管理，Flowable 引擎表由引擎创建。
 
 ## 快速开始

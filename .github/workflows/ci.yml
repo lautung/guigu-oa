@@ -2,6 +2,9 @@ name: CI
 
 on:
   pull_request:
+    # ready_for_review 不在默认类型里：draft 期间的 synchronize 由 job 级 if 跳过，
+    # 转正那一刻靠这个类型触发（ADR 0070）。
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "docs/**"
       - "**/*.md"
@@ -22,7 +25,9 @@ permissions:
 
 jobs:
   backend:
-    name: Backend tests and image
+    name: Backend tests and package
+    # draft PR 不付门禁成本；转正（ready_for_review）与转正后的 synchronize 照跑（ADR 0070）。
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -53,13 +58,12 @@ jobs:
       - name: Assert backend coverage report
         if: always() && steps.backend-tests.outcome == 'success'
         run: test -s server/lautung-oa-parent/lautung-oa-coverage-report/target/site/jacoco-aggregate/jacoco.csv
-      - name: Package backend image artifact
+      - name: Package backend
         run: mvn -B -f server/lautung-oa-parent/pom.xml -DskipTests package
-      - name: Build backend image
-        run: docker build --file server/lautung-oa-parent/lautung-oa-server/Dockerfile --tag lautung-oa-server:ci server/lautung-oa-parent
 
   frontend:
-    name: Frontend quality, smoke tests, and image
+    name: Frontend quality, smoke tests, and build
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -75,11 +79,7 @@ jobs:
       - run: npm ci
       - name: Verify frontend
         id: frontend-verify
-        run: npm run verify
-      - name: Collect frontend coverage
-        if: always()
-        continue-on-error: true
-        run: npm run coverage
+        run: npm run verify:ci
       - name: Report frontend coverage
         if: always()
         continue-on-error: true
@@ -95,12 +95,9 @@ jobs:
       - name: Assert frontend coverage report
         if: always() && steps.frontend-verify.outcome == 'success'
         run: test -s coverage/coverage-summary.json
-      # WebKit 是兼容性矩阵的备选引擎（#114/#117）。常态化拓扑见 ADR 0030：
-      # PR 只跑 Chromium 两档，push main 的栈回归才跑全矩阵。
-      - run: npx playwright install --with-deps chromium webkit
+      # PR 门禁只跑 Chromium 两档；WebKit 留给兼容性矩阵，不在这里装（ADR 0070）。
+      - run: npx playwright install --with-deps chromium
       - name: Run Playwright smoke tests
         run: npx playwright test --project=desktop-chromium --project=mobile-chromium
       - name: Build frontend
         run: npm run build:prod
-      - name: Build frontend image
-        run: docker build --file Dockerfile --tag guigu-oa-client:ci .

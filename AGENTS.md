@@ -10,6 +10,8 @@ Per-repo configuration for [Matt Pocock skills 1.3](https://github.com/mattpococ
 
 创建或更新 PR（包括草稿 PR）前，必须读取并使用 Matt Pocock 的 `pr` skill（在当前可用 skills 中定位 `pr/SKILL.md`），按其模板编写 PR 正文。
 
+PR 一律 `--draft` 创建：draft 期间的推送不触发 CI，本地 `./scripts/verify.sh` 绿且准备 review 才 `ready_for_review`（ADR 0070）。
+
 ### Commits
 
 一个 ADR / issue 完成即提交，不把两轮改动留在同一工作区：收尾时 `git status` 只应剩一个主题的改动。混在一起后只能按 hunk 手工拆分，拆分本身会静默丢内容。

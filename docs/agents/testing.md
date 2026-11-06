@@ -10,7 +10,8 @@
 
 前端（都在 `client/guigu-oa-client/` 下执行）：
 
-- `npm run verify`：lint + typecheck + format:check + 文档检查（模块地图、Markdown 相对链接、证据路径与体积）+ 旧品牌词检查 + shell 检查 + 合同断言 + 测试工具检查 + 单测（提交前必跑）。
+- `npm run verify`：`verify:static` + 单测；`verify:static` 是 lint + typecheck + format:check + 文档检查（模块地图、Markdown 相对链接、证据路径与体积）+ 旧品牌词检查 + shell 检查 + 合同断言 + 测试工具检查（提交前必跑）。
+- `npm run verify:ci`：与 `verify` 同一条前置链，末位换成带覆盖率的单测（CI 用）；两条链的 parity 由 `check:test-tooling` 校验，不要只往一条加检查。
 - `npm run test:e2e`：Playwright；默认自动启动 9530 dev server，设置 `E2E_BASE_URL` 指向已构建客户端时不再启动。
 - `npm run test:api`：接口套件（打已运行的 Compose 栈，见 `playwright.api.config.ts`）。**需要干净演示栈**：`globalSetup` 检测到压测造数会直接报错，先 `docker compose down --volumes --remove-orphans && docker compose up -d --build --wait`。改了服务端必须带 `--build`：直接 `up -d` 会沿用旧 jar，新用例红得莫名其妙、旧套件假绿。
 - `npm run build:prod`：类型检查 + 生产构建。
@@ -50,7 +51,7 @@
 - 验证未提交的本地改动时，Compose 客户端占着 9530，dev server 的 `strictPort` 起不来：先 `docker compose stop client`，跑完 `docker compose start client` 恢复；跑栈上的已构建产物才走 `E2E_BASE_URL`。
 - 种会话 cookie 一律用 `tests/e2e/helpers/base-url.ts` 的 `e2eCookieURL()`（它是 `E2E_BASE_URL` 的唯一解读者）。硬编码 `domain` 会让 `localhost` 与 `127.0.0.1` 两种入口表现不一致，失败点还会落在与该用例无关的断言上。
 - e2e helper 等**确认态正信号**——持久化完成后才出现的 UI 状态（如上传行内出现「删除」按钮与文件大小），不等上传开始时乐观渲染的名字；等错信号时守卫会静默拒绝，失败点落在后续无关断言上（#192）。
-- project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁仍只跑 Chromium 两档。
+- project：`desktop-chromium` / `mobile-chromium` / `desktop-webkit` / `mobile-webkit` 全量；`desktop-1440-chromium` 只跑 `compatibility-pages.spec.ts`。CI 门禁只跑 Chromium 两档，也只装 chromium（ADR 0070）。
 - **报告路径按 Playwright config 所在目录解析**：`tests/e2e-stack/` 与 `tests/security/` 的 JSON/JUnit 落在各自 `test-results/` 下，接口与 mock 套件在客户端根 `test-results/`。每次运行会清空自己的 outputDir，手工连着跑多套时先归档再跑下一套（`scripts/test-round.sh` 已内置归档顺序）。
 - **间歇用差异定性，不悬置**：套件内红、隔离单跑绿 ⇒ 顺序/并发依赖，直接进取证；套件内同用例两连红即停按「间歇」处理。「留观」必须带触发条件（再复现即根因）——#169 轮留观的 p0-3 附件竞态拖到 #192 轮才根因，多烧两轮套件。
 - **失败取证**：先看用例目录下的 `error-context.md`（页面快照 + 错误）；更深证据解 `test-results/<用例>/trace.zip`——`*-trace.network` 查请求是否发出与响应体、`*.trace` 查 console/pageError、`screencast/` 按文件名 epoch-ms 挑点击前后帧看 toast/校验错误。隔离复跑会覆盖 retain-on-failure 留下的 trace，取证前先拷走。
@@ -89,6 +90,12 @@
   ```
 
 - 完整 ZAP HTML/JSON 留在 `/tmp/security-evidence-full/<轮次>/`，入仓只留摘要；`check-docs` 拦单文件 >100KB、单轮 >5MB，`test-round.sh` 每轮收尾会自动跑它。
+
+## CI 门禁
+
+- PR 一律 draft 创建：draft 期间的推送不触发 CI，`ready_for_review` 与转正后的 `synchronize` 才跑（ADR 0070）。本地 `verify.sh` 仍是提交前门禁。
+- PR job 内容：backend 跑 `mvn test` + `-DskipTests package`；frontend 跑 `verify:ci` + Chromium 两档 mock e2e + `build:prod`。镜像不在 PR 构建，push main 由 Regression 的 `ci-stack` 从源码构建。
+- 覆盖率与单测同一轮：`verify:ci` 末位是 `test:unit:coverage`，CI 的 summary 与 artifact 读这一轮的 `coverage/coverage-summary.json`，不再单独跑 `npm run coverage`。
 
 ## 主栈回归
 
