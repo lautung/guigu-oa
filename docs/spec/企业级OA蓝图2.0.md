@@ -73,7 +73,7 @@
 4. **每域自己的单据表**：不做通用 JSON 单据表；业务单据用自己的 DTO 与 jsr303 校验（ADR 0033）。
 5. **提交时快照**：单据落库时记下部门、申请人与金额类字段；列表与统计读快照，不随调岗漂移。
 6. **引用 ID 不快照姓名**：主数据（员工/部门/岗位）的展示名走 join。
-7. **业务 key 形状留关联票**：`oa_process.business_type`/`business_id` 还是独立关联表由 #272 定；值域命名 `<域>.<单据>`（`hr.transfer`、`attendance.leave`、`expense.claim`）。
+7. **业务 key 定在审批行**：`oa_process.business_type`/`business_id` + 普通联合索引（ADR 0067）；一单可多审批、同一时刻最多一条进行中；值域命名 `<域>.<单据>`（`hr.transfer`、`attendance.leave`、`expense.claim`）。
 
 ## 6. 目标菜单树
 
