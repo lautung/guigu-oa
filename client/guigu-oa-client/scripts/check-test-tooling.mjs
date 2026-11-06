@@ -17,6 +17,27 @@ if (vitest !== coverage) {
   process.exit(1)
 }
 
+// ADR 0070：verify 与 verify:ci 只允许末位单测不同（本地不带覆盖率，CI 带），
+// 前置步骤必须逐字相同；否则以后只往一条链加检查，CI 与提交前门禁就会漂移。
+const verifyStatic = pkg.scripts?.['verify:static']
+const verifySteps = (pkg.scripts?.verify ?? '').split('&&').map((step) => step.trim())
+const verifyCiSteps = (pkg.scripts?.['verify:ci'] ?? '').split('&&').map((step) => step.trim())
+const staticSteps = verifySteps.slice(0, -1)
+const staticCiSteps = verifyCiSteps.slice(0, -1)
+
+if (
+  !verifyStatic ||
+  staticSteps.length === 0 ||
+  staticSteps.join('&&') !== staticCiSteps.join('&&') ||
+  verifySteps.at(-1) !== 'npm run test:unit' ||
+  verifyCiSteps.at(-1) !== 'npm run test:unit:coverage'
+) {
+  console.error(
+    'verify 与 verify:ci 必须共享同一段 verify:static 前置步骤，末位分别为 test:unit / test:unit:coverage（ADR 0070）',
+  )
+  process.exit(1)
+}
+
 // #226：办事列表行选择器只允许出现在共享 helper 里。security-xss 曾复制一份没有
 // #169 首轮正信号的裸扫，在慢 runner 上间歇红；禁止第三次复制。
 const WORK_LIST_SELECTOR = '.work-list-item'
