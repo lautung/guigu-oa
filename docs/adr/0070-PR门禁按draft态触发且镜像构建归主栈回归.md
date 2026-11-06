@@ -27,7 +27,7 @@
 - draft 期间 PR 不产生 check；转正前最后一次推送的结果才可见。与 ADR 0030 的文档-only 跳过同类：漂移由本地 `verify.sh` 兜底。
 - 改 `Dockerfile` / `compose.yaml` 的 PR 合并后才会在 Regression 暴露；频率低（一年几次），且合并后几分钟内可见。
 - push main 的 CI 少两次镜像构建；Regression 的构建是唯一真实镜像构建，失败仍会红在 main 上。
-- PR 门禁预期从 12–16 分钟降到 9–10 分钟（落地 PR 的实测值回填于此）。
+- PR 门禁实测 4m45s（run 42216438223，2026-11-06：backend 4m45s、frontend 4m01s；单测 60s、e2e 128s、后端测试 250s），从 12–16 分钟降下来；draft 期间的一次 `opened` 只产生 11 秒的 skipped run（run 42216155663）。
 - `npm run verify` 的本地语义不变（仍跑 `test:unit`，不带覆盖率）；`verify:ci` 只是 CI 组合，本地可手动跑。
 
 Related: #276、ADR 0030（测试常态化拓扑，本条只改 PR 触发与镜像归属）、`README.md`、`docs/agents/testing.md`。
