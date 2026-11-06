@@ -25,3 +25,5 @@ issue 提的迁移映射是「`oa_process_record`：status=1 → 通过侧新文
 - 新栈（Flyway 全量重放）与演示种子不受影响：种子不写这些文案，迁移为 no-op。
 - 测试同步：`ApprovalContractTest` 拒绝用例期望「已拒绝」；`TestApprovalEngine` 两处证据 SQL 改匹配 `('已通过','已拒绝')`；负例钉在 `RequestValidationContractTest`（缺 status →「审批状态不能为空」、status=0 →「审批状态只能为 1（通过）或 -1（拒绝）」）。
 - 未动：`waitingDescription`（等待审批文案）、发起行「发起申请」、客户端全部文案、GLOSSARY（「处理审批」词条本就合规）。
+
+**2026-11-06 修订（#271）**：文案扩到新动作（转办、加签、催办、撤回）与状态档 -2「已撤回」；流转时间线统一读 `oa_process_record` 的动作类型，历史行按 description 精确回填动作类型。见 ADR 0068。

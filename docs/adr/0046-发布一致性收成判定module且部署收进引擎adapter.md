@@ -67,4 +67,6 @@ Flowable 交互另立 adapter。
 - 下一处改发布语义只动 `PublicationVerifier` 一处；引擎升级或部署产物存储变更只动
   `FlowableProcessDeploymentEngine`；给发起/恢复加新的可用性理由只扩 verdict，消费方文案归并不动。
 
+**2026-11-06 修订（#271）**：证据核对覆盖发布产物（流程 zip 与审批人规则 sidecar 的合成件）；节点规则缺失、目标不存在或停用的发布校验在部署前拒绝；verdict 的三态形状不变。见 ADR 0069。
+
 Related: #175、#187、#188、#189、#190、#191、#192；ADR 0003、0005、0019；GLOSSARY「已发布」「发布证据」「流程 zip」。
