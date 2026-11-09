@@ -36,7 +36,11 @@
       <h3>处理结果待确认</h3>
       <p>尚不能确定原处理是否生效。请核实详情或已处理信息；系统不会自动重发。</p>
       <div v-for="record in state.recoveries" :key="record.operationId">
-        <p>所选动作：{{ record.status === 1 ? '通过' : '拒绝' }}</p>
+        <p>
+          所选动作：{{
+            record.action === 'withdraw' ? '撤回' : record.status === 1 ? '通过' : '拒绝'
+          }}
+        </p>
         <el-button
           v-if="opening?.canEndRecovery(record.operationId)"
           @click="opening?.endRecovery(record.operationId)"
@@ -53,9 +57,17 @@
       type="info"
       :closable="false"
       title="本次记录已结束"
-      description="这不表示原请求失败。如仍需处理，请返回最新待处理重新进入并主动选择。"
+      :description="
+        detail?.perspective?.kind === 'pending'
+          ? '这不表示原请求失败。如仍需处理，请返回最新待处理重新进入并主动选择。'
+          : '这不表示原请求失败。请刷新详情或返回列表核实当前状态。'
+      "
     />
-    <el-button v-if="state?.ended" @click="opening?.returnPending()">返回最新待处理</el-button>
+    <el-button
+      v-if="state?.ended && detail?.perspective?.kind === 'pending'"
+      @click="opening?.returnPending()"
+      >返回最新待处理</el-button
+    >
     <el-alert
       v-if="state?.actionError && !state.recoveries.length"
       type="warning"
@@ -68,6 +80,21 @@
         <p class="time">{{ detail.createTime }}</p>
         <p v-if="detail.progressLabel" class="progress">{{ detail.progressLabel }}</p>
         <el-tag :type="detail.statusTagType">{{ detail.statusLabel }}</el-tag>
+        <!-- 申请人动作（#287，ADR 0068）：只在已发起视角的审批中出现，不进待处理动作主格。 -->
+        <div v-if="state?.showWithdraw || state?.showUrge" class="applicant-actions">
+          <el-button
+            v-if="state?.showWithdraw"
+            :disabled="!state?.canWithdraw"
+            @click="opening?.withdraw()"
+            >撤回审批</el-button
+          >
+          <el-button v-if="state?.showUrge" :disabled="!state?.canUrge" @click="opening?.urge()"
+            >催办</el-button
+          >
+        </div>
+        <p v-if="state?.urgeDone" class="urge-hint" role="status">
+          已提醒当前处理人；同一审批 24 小时内仅可催办一次。
+        </p>
       </div>
 
       <section
@@ -294,6 +321,18 @@ function addFiles(event: Event) {
     margin: 0 0 8px;
     font-size: 14px;
     color: #606266;
+  }
+
+  .applicant-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .urge-hint {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #909399;
   }
 }
 

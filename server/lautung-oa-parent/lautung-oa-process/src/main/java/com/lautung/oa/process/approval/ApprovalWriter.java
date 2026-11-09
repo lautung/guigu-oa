@@ -5,6 +5,7 @@ import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.common.result.ResultCodeEnum;
 import com.lautung.oa.common.validation.ValidationMessages;
 import com.lautung.oa.model.process.Process;
+import com.lautung.oa.model.process.ProcessRecord;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.ProcessApprovalSupport;
@@ -29,7 +30,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -45,6 +49,8 @@ public class ApprovalWriter {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalWriter.class);
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
+    /** 催办频控（ADR 0068）：同一审批 24 小时内最多一次。 */
+    private static final Duration URGE_COOLDOWN = Duration.ofHours(24);
 
     private final ApprovalTemplate approvalTemplate;
     private final ApprovalEngine approvalEngine;
@@ -119,7 +125,7 @@ public class ApprovalWriter {
         process.setDescription(ProcessStartSupport.waitingDescription(nameList));
         processMapper.updateById(process);
 
-        processRecordService.record(process.getId(), 1, ProcessApprovalSupport.INITIATION_DESCRIPTION, user);
+        processRecordService.record(process.getId(), ProcessApprovalSupport.ApprovalAction.initiate(), user);
 
         return new Approval.StartOutcome(
                 process.getId(),
@@ -211,8 +217,7 @@ public class ApprovalWriter {
 
         processRecordService.record(
                 approvalVo.getProcessId(),
-                approvalVo.getStatus(),
-                ProcessApprovalSupport.recordDescription(approvalVo.getStatus()),
+                ProcessApprovalSupport.ApprovalAction.decision(approvalVo.getStatus()),
                 user);
 
         List<ApprovalEngine.CurrentTask> nextTasks =
@@ -234,6 +239,81 @@ public class ApprovalWriter {
         Integer status = approvalVo == null ? null : approvalVo.getStatus();
         if (status == null || (status != 1 && status != -1)) {
             throw new BusinessException(201, "审批状态只能为 1（通过）或 -1（拒绝）");
+        }
+    }
+
+    /**
+     * 撤回（ADR 0068，#287）：仅申请人、仅审批中；结束运行时实例，状态落 -2 已撤回，
+     * 写 WITHDRAW 账本。校验先于写：所有 201 的含义都是「确定未提交」。
+     * 已处理行、附件与抄送一律不动（保留面完整），撤回不可恢复，重新提交是另一次审批。
+     */
+    @Transactional
+    public Approval.WithdrawOutcome withdraw(SysUser user, Long processId) {
+        Process process = requireApplicantActiveProcess(user, processId, "撤回审批", "撤回");
+        try {
+            approvalEngine.cancel(process.getProcessInstanceId(), "申请人撤回");
+        } catch (FlowableObjectNotFoundException e) {
+            // 校验与取消之间，并发对手（通过/拒绝）已经结束实例：本侧确定未提交。
+            throw new BusinessException(201, "该审批已被其他人处理");
+        }
+        processRecordService.record(processId, ProcessApprovalSupport.ApprovalAction.withdraw(), user);
+        ProcessApprovalSupport.applyWithdrawn(process);
+        processMapper.updateById(process);
+        return new Approval.WithdrawOutcome(processId, process.getStatus());
+    }
+
+    /**
+     * 催办（ADR 0068，#287）：仅申请人、仅审批中；同一审批 24 小时内最多一次。
+     * 对象是当前全部处理人（含未认领候选人），写 URGE 账本带对象姓名；
+     * 不改状态、不发通知，白名单保证它不进任何人的已处理。
+     */
+    @Transactional
+    public Approval.UrgeOutcome urge(SysUser user, Long processId) {
+        Process process = requireApplicantActiveProcess(user, processId, "催办审批", "催办");
+        requireUrgeNotInCooldown(processId);
+        List<String> targetNames = approverNames(approvalEngine.currentTasks(process.getProcessInstanceId()));
+        String joined = String.join("、", targetNames);
+        processRecordService.record(
+                processId,
+                ProcessApprovalSupport.ApprovalAction.urge(joined.isEmpty() ? null : joined),
+                user);
+        return new Approval.UrgeOutcome(processId);
+    }
+
+    /** 申请人动作的共有前置（撤回/催办同族）：非申请人、非审批中都是 201 命名拒绝。 */
+    private Process requireApplicantActiveProcess(
+            SysUser user, Long processId, String applicantLabel, String activeLabel) {
+        if (user == null || user.getId() == null || processId == null) {
+            throw new BusinessException(201, "只有申请人可以" + applicantLabel);
+        }
+        Process process = processMapper.selectById(processId);
+        if (process == null) {
+            throw new BusinessException(201, "审批不存在");
+        }
+        if (!user.getId().equals(process.getUserId())) {
+            throw new BusinessException(201, "只有申请人可以" + applicantLabel);
+        }
+        if (!Integer.valueOf(1).equals(process.getStatus())
+                || !StringUtils.hasText(process.getProcessInstanceId())) {
+            throw new BusinessException(201, "只有审批中的审批可以" + activeLabel);
+        }
+        return process;
+    }
+
+    /** 催办频控（ADR 0068）：查账本最近一次 URGE，24 小时内已有则命名拒绝。 */
+    private void requireUrgeNotInCooldown(Long processId) {
+        LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProcessRecord::getProcessId, processId)
+                .eq(ProcessRecord::getActionType,
+                        ProcessApprovalSupport.ApprovalActionType.URGE.name())
+                .orderByDesc(ProcessRecord::getCreateTime);
+        List<ProcessRecord> urges = processRecordService.list(wrapper);
+        if (urges.isEmpty()) {
+            return;
+        }
+        Date latest = urges.get(0).getCreateTime();
+        if (latest != null && latest.toInstant().isAfter(Instant.now().minus(URGE_COOLDOWN))) {
+            throw new BusinessException(201, "24 小时内已催办过，请稍后再试");
         }
     }
 

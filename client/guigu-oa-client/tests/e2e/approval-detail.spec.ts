@@ -17,12 +17,16 @@ const record = {
   status: 1,
   formValues: JSON.stringify({ formShowData: { 原因: '出差' } }),
 }
-async function json(route: Route, data: unknown, code = 200) {
+async function json(route: Route, data: unknown, code = 200, message?: string) {
   await route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ code, data }),
+    body: JSON.stringify(message ? { code, data, message } : { code, data }),
   })
+}
+interface ActionHandlers {
+  withdraw?: (route: Route) => Promise<void>
+  urge?: (route: Route) => Promise<void>
 }
 async function setup(
   page: Page,
@@ -30,6 +34,7 @@ async function setup(
   uploadGate?: Promise<void>,
   readGate?: Promise<void>,
   completionGate?: Promise<void>,
+  handlers?: ActionHandlers,
 ) {
   const errors: string[] = []
   page.on('pageerror', (error) => {
@@ -40,7 +45,9 @@ async function setup(
     { name: 'guigu_oa_client_entry', value: 'login-detail-test', url: e2eCookieURL() },
   ])
   let approvals = 0,
-    completions = 0
+    completions = 0,
+    withdrawn = false,
+    urges = 0
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
     if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus: [] })
@@ -48,7 +55,7 @@ async function setup(
       const id = path.split('/').pop()
       if (id === 'A' && readGate) await readGate
       return json(route, {
-        process: { ...record, id, title: `审批 ${id}` },
+        process: { ...record, id, title: `审批 ${id}`, status: withdrawn ? -2 : 1 },
         processRecordList: [],
         isApprove: true,
       })
@@ -56,6 +63,16 @@ async function setup(
     if (path === '/admin/process/approve') {
       approvals++
       return approve(route)
+    }
+    if (path.startsWith('/admin/process/withdraw/')) {
+      withdrawn = true
+      if (handlers?.withdraw) return handlers.withdraw(route)
+      return json(route, null)
+    }
+    if (path.startsWith('/admin/process/urge/')) {
+      urges++
+      if (handlers?.urge) return handlers.urge(route)
+      return json(route, null)
     }
     if (path.startsWith('/admin/process/find'))
       return json(route, {
@@ -91,7 +108,13 @@ async function setup(
     if (uploadGate) await uploadGate
     await route.fulfill({ status: 200, body: '' })
   })
-  return { errors, approvals: () => approvals, completions: () => completions }
+  return {
+    errors,
+    approvals: () => approvals,
+    completions: () => completions,
+    urges: () => urges,
+    withdrawn: () => withdrawn,
+  }
 }
 
 test('通信故障后待确认跨浏览器刷新恢复，人工结束后从最新待处理重新进入', async ({ page }) => {
@@ -171,6 +194,71 @@ test('已处理入口保持只读并返回原列表', async ({ page }) => {
   await page.getByRole('button', { name: '返回', exact: true }).click()
   await expect(page).toHaveURL(/\/work\/processed$/)
   expect(h.approvals()).toBe(0)
+  expect(h.errors).toEqual([])
+})
+
+test('已发起审批可撤回：状态转已撤回，动作消失且无待确认面板', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null))
+  await page.goto('/work/started/A')
+  await expect(page.getByRole('heading', { name: '审批 A', exact: true })).toBeVisible()
+  const withdraw = page.getByRole('button', { name: '撤回审批', exact: true })
+  await expect(withdraw).toBeEnabled()
+  await withdraw.click()
+  await expect(page.getByText('已撤回', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '撤回审批', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '催办', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
+
+test('撤回被命名拒绝时确定未提交，上屏服务端文案且无待确认面板', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null), undefined, undefined, undefined, {
+    withdraw: (route) => json(route, null, 201, '只有审批中的审批可以撤回'),
+  })
+  await page.goto('/work/started/A')
+  await page.getByRole('button', { name: '撤回审批', exact: true }).click()
+  await expect(page.getByText('只有审批中的审批可以撤回', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
+
+test('撤回不确定结果进入待确认，跨刷新保留，人工结束后无待处理返回按钮', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null), undefined, undefined, undefined, {
+    withdraw: (route) => route.abort('failed'),
+  })
+  await page.goto('/work/started/A')
+  await page.getByRole('button', { name: '撤回审批', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toBeVisible()
+  await expect(page.getByText('所选动作：撤回', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toBeVisible()
+  await page.getByRole('button', { name: '我已核实，结束本次记录' }).click()
+  await expect(page.getByText('本次记录已结束', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '返回最新待处理', exact: true })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
+
+test('催办成功后本开合停用并提示已提醒', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null))
+  await page.goto('/work/started/A')
+  const urge = page.getByRole('button', { name: '催办', exact: true })
+  await expect(urge).toBeEnabled()
+  await urge.click()
+  await expect(urge).toBeDisabled()
+  await expect(page.getByText('已提醒当前处理人', { exact: false })).toBeVisible()
+  expect(h.urges()).toBe(1)
+  expect(h.errors).toEqual([])
+})
+
+test('催办被频控拒绝时上屏服务端文案且不建待确认记录', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null), undefined, undefined, undefined, {
+    urge: (route) => json(route, null, 201, '24 小时内已催办过，请稍后再试'),
+  })
+  await page.goto('/work/started/A')
+  await page.getByRole('button', { name: '催办', exact: true }).click()
+  await expect(page.getByText('24 小时内已催办过，请稍后再试', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toHaveCount(0)
+  expect(h.urges()).toBe(1)
   expect(h.errors).toEqual([])
 })
 

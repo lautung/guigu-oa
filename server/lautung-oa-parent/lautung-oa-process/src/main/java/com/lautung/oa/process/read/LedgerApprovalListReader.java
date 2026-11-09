@@ -3,7 +3,6 @@ package com.lautung.oa.process.read;
 import com.lautung.oa.model.system.DataScope;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.model.system.SysUser;
-import com.lautung.oa.process.ProcessApprovalSupport;
 import com.lautung.oa.process.approval.ApprovalEngine;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.vo.process.ProcessQueryVo;
@@ -68,12 +67,12 @@ public class LedgerApprovalListReader implements ApprovalListReader {
 
     @Override
     public IPage<ProcessVo> processed(Page<ProcessVo> page, SysUser user) {
-        // 行=审批（GLOSSARY「已处理」）：该用户的处理动作记录按审批去重（同人两节点只出一行，#186），
-        // 「发起申请」流转记录不算处理；最近一次处理时间倒序、同刻由审批 id 决胜，total=去重审批数。
-        String excludeDescription = ProcessApprovalSupport.INITIATION_DESCRIPTION;
-        long total = processMapper.countProcessedRows(user.getId(), excludeDescription);
+        // 行=审批（GLOSSARY「已处理」）：该用户的处理动作记录按审批去重（同人两节点只出一行，#186）；
+        // 谓词是动作类型白名单（#287，ADR 0049 修订）：只有 APPROVE/REJECT 算处理，负匹配退役。
+        // 最近一次处理时间倒序、同刻由审批 id 决胜，total=去重审批数。
+        long total = processMapper.countProcessedRows(user.getId());
         List<ProcessVo> records = processMapper.selectProcessedRows(
-                user.getId(), excludeDescription, PageWindow.offset(page), page.getSize());
+                user.getId(), PageWindow.offset(page), page.getSize());
         return pageOf(page, total, records);
     }
 

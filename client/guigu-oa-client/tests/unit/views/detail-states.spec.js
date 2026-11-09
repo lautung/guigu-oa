@@ -37,6 +37,7 @@ function state(overrides = {}) {
       records: [
         { operateUser: '张三', description: '提交申请', createTime: '2026-01-01', status: 1 },
       ],
+      perspective: { kind: 'pending' },
     },
     canSubmit: false,
     error: '',
@@ -54,6 +55,13 @@ function state(overrides = {}) {
     canAddAttachments: false,
     downloadingId: null,
     returnPath: '/work/pending',
+    showWithdraw: false,
+    canWithdraw: false,
+    withdrawing: false,
+    showUrge: false,
+    canUrge: false,
+    urgeBusy: false,
+    urgeDone: false,
     ...overrides,
   })
 }
@@ -70,6 +78,8 @@ function makeOpening(overrides = {}) {
     endRecovery: vi.fn(),
     viewProcessed: vi.fn(),
     returnPending: vi.fn(),
+    withdraw: vi.fn(),
+    urge: vi.fn(),
   }
 }
 
@@ -200,6 +210,79 @@ describe('PendingDetail states', () => {
 
     expect(wrapper.text()).toContain('提交失败')
     expect(wrapper.text()).toContain('返回最新待处理')
+  })
+
+  it('renders applicant actions only in started contexts and drives them through the opening', async () => {
+    holder.opening.state.showWithdraw = true
+    holder.opening.state.canWithdraw = true
+    holder.opening.state.showUrge = true
+    holder.opening.state.canUrge = true
+    const wrapper = await mountDetail()
+
+    const withdraw = wrapper.findAll('button').find((button) => button.text() === '撤回审批')
+    expect(withdraw).toBeDefined()
+    expect(withdraw.attributes('disabled')).toBeUndefined()
+    await withdraw.trigger('click')
+    expect(holder.opening.withdraw).toHaveBeenCalled()
+
+    const urge = wrapper.findAll('button').find((button) => button.text() === '催办')
+    expect(urge.attributes('disabled')).toBeUndefined()
+    await urge.trigger('click')
+    expect(holder.opening.urge).toHaveBeenCalled()
+  })
+
+  it('hides applicant actions in pending and disables them with the urge-done hint', async () => {
+    const pending = await mountDetail()
+    expect(pending.findAll('button').some((button) => button.text() === '撤回审批')).toBe(false)
+    expect(pending.findAll('button').some((button) => button.text() === '催办')).toBe(false)
+    pending.unmount()
+
+    holder.opening = makeOpening()
+    holder.opening.state.showWithdraw = true
+    holder.opening.state.showUrge = true
+    holder.opening.state.canWithdraw = false
+    holder.opening.state.canUrge = false
+    holder.opening.state.urgeDone = true
+    const wrapper = await mountDetail()
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === '撤回审批')
+        .attributes('disabled'),
+    ).toBeDefined()
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === '催办')
+        .attributes('disabled'),
+    ).toBeDefined()
+    expect(wrapper.text()).toContain('已提醒当前处理人')
+  })
+
+  it('renders the withdraw recovery with its own action label', async () => {
+    holder.opening.state.recoveries = [
+      { operationId: 'op-w', processId: 'p-1', action: 'withdraw' },
+    ]
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('所选动作：撤回')
+    const end = wrapper
+      .findAll('button')
+      .find((button) => button.text() === '我已核实，结束本次记录')
+    await end.trigger('click')
+    expect(holder.opening.endRecovery).toHaveBeenCalledWith('op-w')
+  })
+
+  it('keeps the pending-only return button out of started contexts after ending a record', async () => {
+    holder.opening.state.ended = true
+    holder.opening.state.detail.perspective = { kind: 'started' }
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('本次记录已结束')
+    expect(wrapper.text()).toContain('请刷新详情或返回列表核实当前状态')
+    expect(wrapper.findAll('button').some((button) => button.text() === '返回最新待处理')).toBe(
+      false,
+    )
   })
 
   it('drives the toolbar and attachment input through the opening', async () => {

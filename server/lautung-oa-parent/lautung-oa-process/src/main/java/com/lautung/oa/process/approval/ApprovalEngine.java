@@ -23,6 +23,12 @@ public interface ApprovalEngine extends MembershipEvidence {
 
     void rejectToEnd(String taskId);
 
+    /**
+     * 取消整个运行时实例（ADR 0068 撤回）：唯一入口，历史落 {@code STATE_=cancelled}。
+     * 实例已不存在（并发对手已结束它）时实现抛 {@code FlowableObjectNotFoundException}。
+     */
+    void cancel(String processInstanceId, String reason);
+
     List<PendingTask> pendingTasks(String username, int firstResult, int maxResults);
 
     long pendingCount(String username);

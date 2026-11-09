@@ -47,6 +47,36 @@ export function createHttpDetailAdapter(options: HttpDetailOptions): DetailAdapt
           }
         }
       },
+      // 撤回/催办（#287，ADR 0068）：失败一律 classifySubmissionFailure 二分，
+      // refused 是服务端命名拒绝（确定未提交），uncertain 才进待确认。
+      async withdraw(processId) {
+        try {
+          await request({ method: 'post', url: `/admin/process/withdraw/${processId}` })
+          return { kind: 'success' }
+        } catch (error: unknown) {
+          return {
+            kind:
+              classifySubmissionFailure(error, 'process-approval') === 'refused'
+                ? 'rejected'
+                : 'uncertain',
+            message: error instanceof Error ? error.message : '无法确认撤回结果',
+          }
+        }
+      },
+      async urge(processId) {
+        try {
+          await request({ method: 'post', url: `/admin/process/urge/${processId}` })
+          return { kind: 'success' }
+        } catch (error: unknown) {
+          return {
+            kind:
+              classifySubmissionFailure(error, 'process-approval') === 'refused'
+                ? 'rejected'
+                : 'uncertain',
+            message: error instanceof Error ? error.message : '无法确认催办结果',
+          }
+        }
+      },
       listAttachments: async (processId) =>
         (
           await request<ProcessAttachmentList>({

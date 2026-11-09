@@ -123,6 +123,11 @@ public final class ProcessEngineApproval {
                 .toList();
     }
 
+    /** 撤回的引擎命令（ADR 0068）：删除运行时实例，历史明确落 {@code STATE_=cancelled}。 */
+    public static void cancel(RuntimeService runtimeService, String processInstanceId, String reason) {
+        runtimeService.deleteProcessInstance(processInstanceId, reason);
+    }
+
     public static List<Task> currentTasks(TaskService taskService, String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
             return Collections.emptyList();

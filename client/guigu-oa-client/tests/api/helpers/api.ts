@@ -147,7 +147,6 @@ export interface ProcessRecord {
   status?: number
   formValues?: string
   processTemplateName?: string
-  currentAuditor?: string
   createTime?: string
 }
 

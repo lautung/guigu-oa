@@ -28,6 +28,16 @@ public interface Approval {
 
     DecisionOutcome approve(SysUser user, ApprovalVo approvalVo);
 
+    /**
+     * 撤回（ADR 0068，#287）：仅申请人、仅审批中；成功后状态 -2 已撤回，不可恢复。
+     */
+    WithdrawOutcome withdraw(SysUser user, Long processId);
+
+    /**
+     * 催办（ADR 0068，#287）：仅申请人、仅审批中；24 小时内最多一次；不改状态。
+     */
+    UrgeOutcome urge(SysUser user, Long processId);
+
     record StartOutcome(Long processId, String processInstanceId, List<String> currentTaskIds) {
         public StartOutcome {
             currentTaskIds = currentTaskIds == null ? List.of() : List.copyOf(currentTaskIds);
@@ -38,5 +48,11 @@ public interface Approval {
         public DecisionOutcome {
             nextTaskIds = nextTaskIds == null ? List.of() : List.copyOf(nextTaskIds);
         }
+    }
+
+    record WithdrawOutcome(Long processId, int status) {
+    }
+
+    record UrgeOutcome(Long processId) {
     }
 }

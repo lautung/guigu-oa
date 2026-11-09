@@ -23,15 +23,26 @@ export interface DecisionResult {
   kind: 'success' | 'rejected' | 'uncertain'
   message?: string
 }
-export interface RecoveryRecord extends Decision {
+/** 处理动作的恢复记录（旧记录无 action 字段，按处理解读）。 */
+export interface DecideRecoveryRecord extends Decision {
   operationId: string
+  action?: 'decide'
 }
+/** 撤回动作的恢复记录：整条审批一个动作，没有任务与方向（ADR 0068）。 */
+export interface WithdrawRecoveryRecord {
+  operationId: string
+  processId: EntityId
+  action: 'withdraw'
+}
+export type RecoveryRecord = DecideRecoveryRecord | WithdrawRecoveryRecord
 export interface DetailAdapter {
   forOpening?(isCurrent: () => boolean): DetailAdapter
   entryId(): string
   read(processId: EntityId): Promise<ProcessDetailPayload>
   navigate(path: string): void
   submit(decision: Decision): Promise<DecisionResult>
+  withdraw(processId: EntityId): Promise<DecisionResult>
+  urge(processId: EntityId): Promise<DecisionResult>
   listAttachments(processId: EntityId): Promise<ProcessAttachmentList>
   upload(processId: EntityId, file: File): Promise<AttachmentRecord>
   download(processId: EntityId, attachment: AttachmentRecord): Promise<void>
@@ -47,17 +58,18 @@ function forbidden(error: unknown) {
 function validRecords(value: unknown): value is RecoveryRecord[] {
   return (
     Array.isArray(value) &&
-    value.every(
-      (record) =>
-        record &&
-        typeof record.operationId === 'string' &&
-        record.operationId &&
-        ['string', 'number'].includes(typeof record.processId) &&
-        String(record.processId) &&
+    value.every((record) => {
+      if (!record || typeof record.operationId !== 'string' || !record.operationId) return false
+      if (!['string', 'number'].includes(typeof record.processId) || !String(record.processId))
+        return false
+      // 撤回记录只有审批维度；处理记录（含无 action 的历史记录）必须有任务与方向。
+      if (record.action === 'withdraw') return true
+      return (
         ['string', 'number'].includes(typeof record.taskId) &&
         String(record.taskId) &&
-        (record.status === 1 || record.status === -1),
-    )
+        (record.status === 1 || record.status === -1)
+      )
+    })
   )
 }
 
@@ -118,6 +130,13 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       canAddAttachments: false,
       downloadingId: null as EntityId | null,
       returnPath: target.perspective.returnPath,
+      showWithdraw: false,
+      canWithdraw: false,
+      withdrawing: false,
+      showUrge: false,
+      canUrge: false,
+      urgeBusy: false,
+      urgeDone: false,
     })
     function readRecords(): RecoveryRecord[] {
       const records = adapter.loadRecords(key)
@@ -158,12 +177,16 @@ export function createApprovalDetail(adapter: DetailAdapter) {
         !state.stale &&
         !state.recordError &&
         !state.submitting &&
+        !state.withdrawing &&
         !state.attachmentBusy &&
         !state.ended &&
         target.perspective.kind === 'pending' &&
         !!target.taskId &&
         !!state.detail?.canApprove &&
-        !state.recoveries.some((record) => String(record.taskId) === String(target.taskId))
+        !state.recoveries.some(
+          (record) =>
+            record.action !== 'withdraw' && String(record.taskId) === String(target.taskId),
+        )
       state.canAddAttachments =
         current() &&
         !!state.detail &&
@@ -173,6 +196,30 @@ export function createApprovalDetail(adapter: DetailAdapter) {
         !state.submitting &&
         !state.recoveries.length &&
         !state.recordError
+      // 申请人动作（#287，ADR 0068）：撤回/催办只出现在「已发起」视角的审批中，不进待处理主格。
+      const applicantActive =
+        current() &&
+        !!state.detail &&
+        state.detail.status === 1 &&
+        target.perspective.kind === 'started'
+      state.showWithdraw = applicantActive
+      state.showUrge = applicantActive
+      state.canWithdraw =
+        applicantActive &&
+        !state.loading &&
+        !state.stale &&
+        !state.recordError &&
+        !state.submitting &&
+        !state.withdrawing &&
+        !state.recoveries.some((record) => record.action === 'withdraw')
+      state.canUrge =
+        applicantActive &&
+        !state.loading &&
+        !state.stale &&
+        !state.submitting &&
+        !state.withdrawing &&
+        !state.urgeBusy &&
+        !state.urgeDone
     }
     attachmentBatch.openings.add(eligible)
     refreshRecords()
@@ -182,6 +229,10 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       discardIdleBatch()
       state.canSubmit = false
       state.canAddAttachments = false
+      state.showWithdraw = false
+      state.canWithdraw = false
+      state.showUrge = false
+      state.canUrge = false
     }
     releaseCurrent = release
     let readNumber = 0
@@ -221,7 +272,11 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       eligible()
       if (!state.canSubmit || !target.taskId) return
       const decision: Decision = { processId: target.processId, taskId: target.taskId, status }
-      const record: RecoveryRecord = { ...decision, operationId: crypto.randomUUID() }
+      const record: RecoveryRecord = {
+        ...decision,
+        operationId: crypto.randomUUID(),
+        action: 'decide',
+      }
       if (!updateRecords((records) => [...records, record])) return
       state.submitting = true
       state.actionError = ''
@@ -253,15 +308,90 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       if (result.kind === 'rejected') state.stale = true
       eligible()
     }
-    function canEndRecovery(operationId: string) {
-      return (
-        current() &&
-        !state.submitting &&
-        target.perspective.kind === 'pending' &&
-        state.recoveries.some(
-          (record) =>
-            record.operationId === operationId && String(record.taskId) === String(target.taskId),
+    /**
+     * 撤回（ADR 0068，#287）：仅申请人、仅审批中、整条结束不可恢复。
+     * 提交走「结果待确认」：refused 是确定未提交，unconfirmed 留恢复记录（动作维度键），
+     * 人工核实后结束。成功后重读详情展示已撤回，不导航。
+     */
+    async function withdraw() {
+      eligible()
+      if (!state.canWithdraw) return
+      const record: RecoveryRecord = {
+        operationId: crypto.randomUUID(),
+        processId: target.processId,
+        action: 'withdraw',
+      }
+      if (!updateRecords((records) => [...records, record])) return
+      state.withdrawing = true
+      state.actionError = ''
+      eligible()
+      let result: DecisionResult
+      try {
+        result = await io.withdraw(target.processId)
+      } catch (error: unknown) {
+        result = { kind: 'uncertain', message: message(error, '无法确认撤回结果') }
+      }
+      // 与处理动作同一份可靠结论语义：只有非 uncertain 且记录可清理才算收口。
+      const settled =
+        result.kind !== 'uncertain' &&
+        updateRecords((records) =>
+          records.filter((item) => item.operationId !== record.operationId),
         )
+      if (!current()) return
+      state.withdrawing = false
+      if (result.kind === 'success' && settled) {
+        await reload()
+        return
+      }
+      state.actionError =
+        result.message ||
+        (result.kind === 'uncertain'
+          ? '撤回结果待确认，请核实后结束本次记录'
+          : '撤回未获接受，请刷新详情核实当前资格')
+      if (result.kind === 'rejected') state.stale = true
+      eligible()
+    }
+    /**
+     * 催办（ADR 0068，#287）：非阻塞动作。不改状态、不建恢复记录——
+     * 24 小时频控在服务端，重复提交以命名拒绝收敛；成功后本开合内按钮停用。
+     */
+    async function urge() {
+      eligible()
+      if (!state.canUrge) return
+      state.urgeBusy = true
+      state.actionError = ''
+      eligible()
+      let result: DecisionResult
+      try {
+        result = await io.urge(target.processId)
+      } catch (error: unknown) {
+        result = { kind: 'uncertain', message: message(error, '无法确认催办结果') }
+      }
+      if (!current()) return
+      state.urgeBusy = false
+      if (result.kind === 'success') {
+        state.urgeDone = true
+        eligible()
+        return
+      }
+      state.actionError = result.message || '催办未获接受，请稍后重试'
+      eligible()
+    }
+    function canEndRecovery(operationId: string) {
+      if (!current() || state.submitting || state.withdrawing) return false
+      const record = state.recoveries.find((item) => item.operationId === operationId)
+      if (!record) return false
+      // 撤回记录按审批维度核实（已发起视角）；处理记录仍按任务维度（待处理视角）。
+      if (record.action === 'withdraw') {
+        return (
+          target.perspective.kind === 'started' &&
+          String(record.processId) === String(target.processId)
+        )
+      }
+      return (
+        target.perspective.kind === 'pending' &&
+        !!target.taskId &&
+        String(record.taskId) === String(target.taskId)
       )
     }
     function endRecovery(operationId: string) {
@@ -346,6 +476,8 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       reload,
       back,
       decide,
+      withdraw,
+      urge,
       endRecovery,
       canEndRecovery,
       viewProcessed,

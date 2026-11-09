@@ -99,6 +99,22 @@ public class ProcessController {
         return Result.ok();
     }
 
+    //撤回（办事动作，不挂页面 gate：资格由申请人 + 审批中校验兜底，ADR 0068）
+    @Operation(summary = "撤回")
+    @PostMapping("withdraw/{processId}")
+    public Result withdraw(@PathVariable Long processId) {
+        processService.withdraw(currentUser(), processId);
+        return Result.ok();
+    }
+
+    //催办（办事动作，不挂页面 gate：资格由申请人 + 审批中校验兜底，ADR 0068）
+    @Operation(summary = "催办")
+    @PostMapping("urge/{processId}")
+    public Result urge(@PathVariable Long processId) {
+        processService.urge(currentUser(), processId);
+        return Result.ok();
+    }
+
     @Operation(summary = "已处理")
     @GetMapping("/findProcessed/{page}/{limit}")
     public Result findProcessed(

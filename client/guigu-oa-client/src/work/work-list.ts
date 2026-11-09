@@ -86,6 +86,7 @@ export function statusLabel(status: number | undefined): string {
   if (status === 1) return '审批中'
   if (status === 2) return '审批通过'
   if (status === -1) return '审批拒绝'
+  if (status === -2) return '已撤回'
   return ''
 }
 
@@ -95,6 +96,7 @@ export function statusTagType(status: number | undefined): StatusTagType {
   if (status === 1) return 'warning'
   if (status === 2) return 'success'
   if (status === -1) return 'danger'
+  if (status === -2) return 'info'
   return 'info'
 }
 

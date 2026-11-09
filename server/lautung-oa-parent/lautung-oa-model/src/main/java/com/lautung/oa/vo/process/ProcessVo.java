@@ -44,10 +44,7 @@ public class ProcessVo {
 	@Schema(description = "流程实例id")
 	private String processInstanceId;
 
-	@Schema(description = "当前审批人")
-	private String currentAuditor;
-
-	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：拒绝）")
+	@Schema(description = "状态（0：默认 1：审批中 2：审批通过 -1：拒绝 -2：已撤回）")
 	private Integer status;
 
 	private String taskId;

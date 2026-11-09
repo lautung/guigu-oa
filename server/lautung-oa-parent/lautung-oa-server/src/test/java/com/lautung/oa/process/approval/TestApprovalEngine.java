@@ -161,6 +161,11 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void cancel(String processInstanceId, String reason) {
+        delegate.cancel(processInstanceId, reason);
+    }
+
+    @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         if (checkDecisionRecordBeforeCurrentTasks) {
             if (skipNextCurrentTasksCheck) {

@@ -56,6 +56,11 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void cancel(String processInstanceId, String reason) {
+        ProcessEngineApproval.cancel(runtimeService, processInstanceId, reason);
+    }
+
+    @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         return ProcessEngineApproval.currentTasks(taskService, processInstanceId).stream()
                 .map(task -> new CurrentTask(

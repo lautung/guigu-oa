@@ -32,6 +32,8 @@ let entrySequence = 0
 function harness(overrides = {}) {
   const reads = [],
     submissions = [],
+    withdraws = [],
+    urges = [],
     navigation = [],
     notifications = []
   const records = new Map()
@@ -48,6 +50,16 @@ function harness(overrides = {}) {
       submissions.push({ request, ...result })
       return result.promise
     },
+    withdraw: (processId) => {
+      const result = deferred()
+      withdraws.push({ processId, ...result })
+      return result.promise
+    },
+    urge: (processId) => {
+      const result = deferred()
+      urges.push({ processId, ...result })
+      return result.promise
+    },
     loadRecords: (key) => JSON.parse(records.get(key) || '[]'),
     saveRecords: (key, value) => records.set(key, JSON.stringify(value)),
     listAttachments: async () => ({ attachments: [], canUpload: true }),
@@ -62,6 +74,8 @@ function harness(overrides = {}) {
     adapter,
     reads,
     submissions,
+    withdraws,
+    urges,
     navigation,
     notifications,
     records,
@@ -546,3 +560,104 @@ it.each(['other-approval', 'new-entry'])(
     }
   },
 )
+
+it('已发起审批中可撤回：成功后重读详情转已撤回，动作记录收口', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', undefined, 'started'))
+  h.reads[0].resolve(payload('A'))
+  await opened.ready
+  expect(opened.state.canSubmit).toBe(false)
+  expect(opened.state.showWithdraw).toBe(true)
+  const sending = opened.withdraw()
+  h.withdraws[0].resolve({ kind: 'success' })
+  while (!h.reads[1]) await Promise.resolve()
+  h.reads[1].resolve(payload('A', { process: { id: 'A', status: -2, title: '审批 A' } }))
+  await sending
+  expect(h.withdraws).toHaveLength(1)
+  expect(h.reads).toHaveLength(2)
+  expect(opened.state.detail.status).toBe(-2)
+  expect(opened.state.detail.statusLabel).toBe('已撤回')
+  expect(opened.state.showWithdraw).toBe(false)
+  expect(opened.state.showUrge).toBe(false)
+  expect(opened.state.recoveries).toEqual([])
+  expect(opened.state.actionError).toBe('')
+})
+
+it('撤回被命名拒绝：确定未提交、不重读、留原地待核实，不保留动作记录', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', undefined, 'started'))
+  h.reads[0].resolve(payload('A'))
+  await opened.ready
+  const sending = opened.withdraw()
+  h.withdraws[0].resolve({ kind: 'rejected', message: '只有审批中的审批可以撤回' })
+  await sending
+  expect(h.reads).toHaveLength(1)
+  expect(opened.state.recoveries).toEqual([])
+  expect(opened.state.actionError).toBe('只有审批中的审批可以撤回')
+  expect(opened.state.stale).toBe(true)
+  expect(opened.state.canWithdraw).toBe(false)
+})
+
+it('撤回不确定结果留动作维度恢复记录，重开后人工核实结束', async () => {
+  const h = harness()
+  const first = h.module.open(target('A', undefined, 'started'))
+  h.reads[0].resolve(payload('A'))
+  await first.ready
+  const sending = first.withdraw()
+  h.withdraws[0].reject(new Error('断网'))
+  await sending
+  expect(first.state.recoveries).toHaveLength(1)
+  expect(first.state.recoveries[0]).toMatchObject({ processId: 'A', action: 'withdraw' })
+  const fresh = createApprovalDetail(h.adapter).open(target('A', undefined, 'started'))
+  h.reads[1].resolve(payload('A'))
+  await fresh.ready
+  expect(fresh.state.recoveries).toHaveLength(1)
+  expect(fresh.state.canWithdraw).toBe(false)
+  expect(fresh.canEndRecovery(fresh.state.recoveries[0].operationId)).toBe(true)
+  fresh.endRecovery(fresh.state.recoveries[0].operationId)
+  expect(fresh.state.recoveries).toEqual([])
+  expect(fresh.state.ended).toBe(true)
+})
+
+it.each(['processed', 'copied'])('%s 视角不出现申请人动作', async (kind) => {
+  const h = harness()
+  const opened = h.module.open(target('A', undefined, kind))
+  h.reads[0].resolve(payload('A'))
+  await opened.ready
+  expect(opened.state.showWithdraw).toBe(false)
+  expect(opened.state.showUrge).toBe(false)
+  await opened.withdraw()
+  await opened.urge()
+  expect(h.withdraws).toHaveLength(0)
+  expect(h.urges).toHaveLength(0)
+})
+
+it('催办成功后本开合停用；失败上屏命名文案且不建恢复记录', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', undefined, 'started'))
+  h.reads[0].resolve(payload('A'))
+  await opened.ready
+  expect(opened.state.showUrge).toBe(true)
+  const sending = opened.urge()
+  h.urges[0].resolve({ kind: 'success' })
+  await sending
+  expect(h.urges).toHaveLength(1)
+  expect(opened.state.urgeDone).toBe(true)
+  expect(opened.state.canUrge).toBe(false)
+  expect(opened.state.recoveries).toEqual([])
+
+  const refusedHarness = harness()
+  const refused = refusedHarness.module.open(target('A', undefined, 'started'))
+  refusedHarness.reads[0].resolve(payload('A'))
+  await refused.ready
+  const refusedSending = refused.urge()
+  refusedHarness.urges[0].resolve({
+    kind: 'rejected',
+    message: '24 小时内已催办过，请稍后再试',
+  })
+  await refusedSending
+  expect(refused.state.actionError).toBe('24 小时内已催办过，请稍后再试')
+  expect(refused.state.recoveries).toEqual([])
+  expect(refused.state.urgeDone).toBe(false)
+  expect(refused.state.canUrge).toBe(true)
+})

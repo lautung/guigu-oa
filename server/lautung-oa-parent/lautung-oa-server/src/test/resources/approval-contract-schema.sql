@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS oa_process_record (
   status TINYINT,
   operate_user_id BIGINT,
   operate_user VARCHAR(200),
+  action_type VARCHAR(20),
+  target_user_id BIGINT,
+  target_user_name VARCHAR(200),
   create_time TIMESTAMP,
   update_time TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0

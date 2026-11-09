@@ -95,4 +95,14 @@ public class OaProcessServiceImpl extends ServiceImpl<OaProcessMapper, Process> 
     public Approval.DecisionOutcome approve(SysUser user, ApprovalVo approvalVo) {
         return approvalWriter.approve(user, approvalVo);
     }
+
+    @Override
+    public Approval.WithdrawOutcome withdraw(SysUser user, Long processId) {
+        return approvalWriter.withdraw(user, processId);
+    }
+
+    @Override
+    public Approval.UrgeOutcome urge(SysUser user, Long processId) {
+        return approvalWriter.urge(user, processId);
+    }
 }
