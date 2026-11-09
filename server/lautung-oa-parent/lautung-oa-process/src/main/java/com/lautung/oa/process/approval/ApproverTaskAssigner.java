@@ -16,8 +16,9 @@ import java.util.List;
 
 /**
  * TASK_CREATED 时按部署里冻结的 sidecar 给任务下发审批人（ADR 0069，#285）。
- * 只在命中规则时动作：单一审批人直接 setAssignee（覆盖 BPMN assignee——规则优先），
- * 多人清掉 BPMN assignee 后按候选用户下发；未命中节点 / 无 sidecar 的部署一律 no-op。
+ * 只在命中规则时动作：解析成一人直接 setAssignee（覆盖 BPMN assignee——规则优先），
+ * 解析成多人清掉 BPMN assignee 后按候选用户下发（分叉看解析人数，不看来源类型）；
+ * 未命中节点 / 无 sidecar 的部署一律 no-op。
  *
  * <p>解析失败抛 {@link BusinessException}，监听器 isFailOnException=true，事务回滚——
  * 与抄送的 warn-and-continue 不同，绝不静默生成无人任务。
@@ -67,7 +68,7 @@ public class ApproverTaskAssigner {
         String initiatorUsername = initiatorUsername(trigger.businessKey());
         ApproverResolver.ResolvedApprovers resolved = resolver.resolve(rule, initiatorUsername);
         if (resolved.candidate()) {
-            // 规则覆盖 BPMN assignee：多人来源清掉写死的 assignee，按候选用户下发。
+            // 规则覆盖 BPMN assignee：解析成多人时清掉写死的 assignee，按候选用户下发。
             var task = taskService.createTaskQuery().taskId(trigger.taskId()).singleResult();
             if (task != null && StringUtils.hasText(task.getAssignee())) {
                 taskService.setAssignee(trigger.taskId(), null);
@@ -94,8 +95,9 @@ public class ApproverTaskAssigner {
         } catch (NumberFormatException e) {
             throw new BusinessException(201, "审批人无法解析：审批缺少发起记录");
         }
+        // ADR 0050：手写 SQL 不吃 @TableLogic，oa_process 直读的存活过滤显式写进每条读。
         List<Long> userIds = jdbcTemplate.queryForList(
-                "SELECT user_id FROM oa_process WHERE id = ?", Long.class, processId);
+                "SELECT user_id FROM oa_process WHERE id = ? AND is_deleted = 0", Long.class, processId);
         if (userIds.isEmpty() || userIds.get(0) == null) {
             throw new BusinessException(201, "审批人无法解析：审批缺少发起记录");
         }

@@ -5,14 +5,17 @@ import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.process.Process;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.process.ProcessApprovalSupport;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.membership.ApprovalMembershipResolver;
+import com.lautung.oa.process.read.ApprovalListReader;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.process.service.ApprovalTemplate;
 import com.lautung.oa.process.service.OaProcessApproverRuleService;
 import com.lautung.oa.vo.process.ApproverRuleRequest;
 import com.lautung.oa.vo.process.ApprovalVo;
 import com.lautung.oa.vo.process.ProcessFormVo;
+import com.lautung.oa.vo.process.ProcessVo;
 import org.flowable.engine.RuntimeService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +83,12 @@ class ApproverResolutionContractTest {
 
     @Autowired
     private ApprovalMembershipResolver membershipResolver;
+
+    @Autowired
+    private ApprovalListReader approvalListReader;
+
+    @Autowired
+    private ApproverTaskAssigner approverTaskAssigner;
 
     @Autowired
     private OaProcessMapper processMapper;
@@ -231,6 +240,41 @@ class ApproverResolutionContractTest {
     }
 
     @Test
+    public void roleOrPostResolvingToASingleMemberIsAssignedDirectly() {
+        // ADR 0069 字面分叉：按解析人数——解析成一人 assignee 直派（不再标「候选人之一」），多人才候选下发。
+        long roleTemplateId = publishTemplate("角色单人直派模板",
+                List.of(rule("first", "ROLE", 821L), rule("second", "ROLE", 821L)));
+
+        // 角色 821 {zhangsan,lisi}，申请人 lisi：剔除申请人后只剩 zhangsan 一人 → 直派。
+        approval.startUp(user(4L, "lisi", "李四"), form(roleTemplateId));
+        assertSingleAssignee("zhangsan");
+        approve(3L, "zhangsan");
+        approve(3L, "zhangsan");
+        assertEquals(审批通过, startedStatus());
+
+        long postTemplateId = publishTemplate("岗位单人直派模板",
+                List.of(rule("first", "POST", 811L), rule("second", "POST", 811L)));
+
+        // 岗位 811 {zhangsan,lisi}，申请人 lisi：同按解析人数分叉。
+        approval.startUp(user(4L, "lisi", "李四"), form(postTemplateId));
+        assertSingleAssignee("zhangsan");
+        approve(3L, "zhangsan");
+        approve(3L, "zhangsan");
+        assertEquals(审批通过, startedStatus());
+    }
+
+    /** 解析成一人：引擎任务有 assignee、无候选，待处理行是 APPROVE 直派面。 */
+    private void assertSingleAssignee(String expectedAssignee) {
+        List<ApprovalEngine.CurrentTask> tasks = currentTasks(latestProcessId());
+        assertEquals(expectedAssignee, tasks.get(0).assignee(), "解析成一人应直接指派 assignee");
+        assertTrue(tasks.get(0).candidates().isEmpty(), "单人解析不得按候选下发");
+        Process process = processMapper.selectById(latestProcessId());
+        ProcessVo pendingRow = approvalListReader.pendingRow(user(3L, "zhangsan", "张三"), process);
+        assertEquals(ProcessApprovalSupport.ACTION_KIND_APPROVE, pendingRow.getActionKind(),
+                "单人直派的待处理行不得再标「候选人之一」");
+    }
+
+    @Test
     public void roleWithOnlyTheApplicantFailsTheStart() {
         long templateId = publishTemplate("自审回避模板",
                 List.of(rule("first", "ROLE", 825L), rule("second", "ROLE", 821L)));
@@ -286,6 +330,27 @@ class ApproverResolutionContractTest {
         assertFalse(canAct(4L, "lisi"));
         approve(3L, "zhangsan");
         assertTrue(canAct(4L, "lisi"));
+    }
+
+    @Test
+    public void resolutionTreatsSoftDeletedProcessRowsAsMissingInitiation() {
+        // ADR 0050：监听器的 oa_process 直读不吃 @TableLogic，存活过滤必须显式写进 SQL；
+        // 已删行不得解析出发起人，按「缺少发起记录」命名失败。
+        long templateId = publishTemplate("软删直读模板",
+                List.of(rule("first", "ROLE", 821L), rule("second", "ROLE", 821L)));
+        approval.startUp(user(2L, "alice", "小艾"), form(templateId));
+        Long processId = latestProcessId();
+        String taskId = currentTasks(processId).get(0).taskId();
+        String instanceId = jdbcTemplate.queryForObject(
+                "SELECT process_instance_id FROM oa_process WHERE id = ?", String.class, processId);
+        String definitionId = runtimeService.createProcessInstanceQuery()
+                .processInstanceId(instanceId).singleResult().getProcessDefinitionId();
+
+        jdbcTemplate.update("UPDATE oa_process SET is_deleted = 1 WHERE id = ?", processId);
+        BusinessException failure = assertThrows(BusinessException.class, () ->
+                approverTaskAssigner.applyOnTaskCreated(new ApproverTaskAssigner.Trigger(
+                        definitionId, "first", taskId, String.valueOf(processId))));
+        assertEquals("审批人无法解析：审批缺少发起记录", failure.getMessage());
     }
 
     @Test

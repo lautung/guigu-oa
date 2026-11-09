@@ -6,6 +6,7 @@ import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.process.ApprovalTemplateSupport;
 import com.lautung.oa.process.ProcessDefinitionStorage;
 import com.lautung.oa.process.approval.ApproverSourceType;
+import com.lautung.oa.process.cc.CarbonCopyRecipient;
 import com.lautung.oa.process.mapper.OaProcessApproverRuleMapper;
 import com.lautung.oa.process.mapper.OaProcessTemplateMapper;
 import com.lautung.oa.process.publication.BpmnUserTasks;

@@ -180,7 +180,7 @@ test.describe.serial('H W1 审批动作与动态审批人', () => {
       expectCodeAndMessage(
         (await put([{ taskDefinitionKey: 'review', sourceType: 'ROLE' }])).body,
         201,
-        '角色不存在或已停用',
+        '角色不存在',
         'H1 角色缺目标',
       )
     } finally {

@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -171,10 +172,10 @@ class ApproverRuleContractTest {
                 "审批人来源类型无效");
         expectRejectedRuleSave(templateId,
                 "[{\"taskDefinitionKey\":\"first\",\"sourceType\":\"ROLE\",\"targetId\":999999}]",
-                "审批节点[一审]的角色不存在或已停用");
+                "审批节点[一审]的角色不存在");
         expectRejectedRuleSave(templateId,
                 "[{\"taskDefinitionKey\":\"first\",\"sourceType\":\"ROLE\",\"targetId\":822}]",
-                "审批节点[一审]的角色不存在或已停用");
+                "审批节点[一审]的角色不存在");
         expectRejectedRuleSave(templateId,
                 "[{\"taskDefinitionKey\":\"first\",\"sourceType\":\"POST\",\"targetId\":812}]",
                 "审批节点[一审]的岗位不存在或已停用");

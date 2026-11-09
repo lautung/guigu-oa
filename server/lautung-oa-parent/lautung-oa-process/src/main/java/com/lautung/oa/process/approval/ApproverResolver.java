@@ -19,7 +19,8 @@ import java.util.Set;
  *
  * <p>语义逐条对齐 ADR 0069：部门负责人=发起人所在部门的直接 leader_user_id（只认启用、
  * 不逐级向上、自审保留）；角色/岗位=启用成员集合剔除申请人（剔除后为空→解析失败）。
- * 解析结果按用户名排序，多候选等待名单的顺序确定。
+ * 直派/候选的分叉按解析结果集合大小：解析成一人→直接指派，解析成多人→候选下发——
+ * 不按来源类型（单人 ROLE/POST 同样直派）。解析结果按用户名排序，多候选等待名单的顺序确定。
  */
 @Component
 public class ApproverResolver {
@@ -32,7 +33,7 @@ public class ApproverResolver {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /** 解析结果：单一审批人（candidate=false，直接指派）或候选用户集合（candidate=true）。 */
+    /** 解析结果：解析成一人（candidate=false，直接指派）或多人候选集合（candidate=true），按集合大小分叉。 */
     public record ResolvedApprovers(List<String> usernames, boolean candidate) {
 
         public static ResolvedApprovers assignee(String username) {
@@ -116,7 +117,7 @@ public class ApproverResolver {
             String memberSql,
             Integer targetAlive) {
         if (targetAlive == null || targetAlive == 0) {
-            fail(rule, sourceType, "目标不存在或已停用");
+            fail(rule, sourceType, missingTargetReason(sourceType));
         }
         List<String> members = jdbcTemplate.queryForList(memberSql, String.class, rule.targetId());
         Set<String> candidates = new LinkedHashSet<>(members);
@@ -124,7 +125,10 @@ public class ApproverResolver {
         if (candidates.isEmpty()) {
             fail(rule, sourceType, "成员剔除申请人后无人可审");
         }
-        return ResolvedApprovers.candidates(List.copyOf(candidates));
+        // ADR 0069 字面：按解析人数分叉——解析成一人直接指派，解析成多人才按候选下发。
+        return candidates.size() == 1
+                ? ResolvedApprovers.assignee(candidates.iterator().next())
+                : ResolvedApprovers.candidates(List.copyOf(candidates));
     }
 
     private Integer roleAlive(ApproverSidecar.SidecarRule rule) {
@@ -134,6 +138,11 @@ public class ApproverResolver {
         return jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM sys_role WHERE id = ? AND is_deleted = 0",
                 Integer.class, rule.targetId());
+    }
+
+    /** 目标缺失的排查原因：sys_role 无停用档（只有 is_deleted），「已停用」只对岗位成立（ADR 0043 口径精神）。 */
+    private static String missingTargetReason(ApproverSourceType sourceType) {
+        return sourceType == ApproverSourceType.ROLE ? "角色不存在" : "岗位不存在或已停用";
     }
 
     private Integer postAlive(ApproverSidecar.SidecarRule rule) {
