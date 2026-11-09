@@ -148,6 +148,10 @@ export interface ProcessRecord {
   formValues?: string
   processTemplateName?: string
   createTime?: string
+  /** 待处理三源合成标记（#288）：行来源（APPROVE/CANDIDATE/ADD_SIGN）与挂起/催办位。 */
+  actionKind?: string
+  suspended?: boolean
+  urged?: boolean
 }
 
 export interface AttachmentRecord {
