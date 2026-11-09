@@ -3,14 +3,13 @@ package com.lautung.oa.process.business;
 import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.approval.ApprovalEngine;
+import com.lautung.oa.process.approval.ApproverNames;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.vo.process.BusinessApprovalSummary;
 import com.lautung.oa.vo.process.ProcessVo;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -54,7 +53,7 @@ public class BusinessApprovalReader {
 				endTime(row));
 	}
 
-	/** 当前审批人：仅审批中读引擎当前任务（处理人/候选名单，与等待文案同源），终态为 null。 */
+	/** 当前审批人：仅审批中读引擎当前任务（处理人/候选名单，与等待文案同口径），终态为 null。 */
 	private String currentApprover(ProcessVo row) {
 		if (!Integer.valueOf(1).equals(row.getStatus())
 				|| !StringUtils.hasText(row.getProcessInstanceId())) {
@@ -62,22 +61,16 @@ public class BusinessApprovalReader {
 		}
 		List<ApprovalEngine.CurrentTask> currentTasks =
 				approvalEngine.currentTasks(row.getProcessInstanceId());
-		List<String> names = new ArrayList<>();
-		for (ApprovalEngine.CurrentTask task : currentTasks) {
-			// 候选任务尚无 assignee：按候选用户集给名单（与 ApprovalWriter 等待文案同口径）。
-			LinkedHashSet<String> usernames = new LinkedHashSet<>();
-			if (StringUtils.hasText(task.assignee())) {
-				usernames.add(task.assignee());
-			}
-			usernames.addAll(task.candidates());
-			for (String username : usernames) {
-				SysUser assignee = sysUserService.getUserByUserName(username);
-				names.add(assignee != null && StringUtils.hasText(assignee.getName())
-						? assignee.getName()
-						: username);
-			}
-		}
+		List<String> names = ApproverNames.of(currentTasks, this::displayName);
 		return names.isEmpty() ? null : String.join("、", names);
+	}
+
+	/** 用户名 → 显示名（共享投影的解析缝；找不到用户或无名退回用户名）。 */
+	private String displayName(String username) {
+		SysUser assignee = sysUserService.getUserByUserName(username);
+		return assignee != null && StringUtils.hasText(assignee.getName())
+				? assignee.getName()
+				: username;
 	}
 
 	/** 终态时间：审批中的最后更新时刻不是结束时间，不下发（endTime null）。 */

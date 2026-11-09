@@ -481,6 +481,27 @@ public class ApprovalTransferAddSignContractTest {
     }
 
     @Test
+    public void urgeTargetsIncludePendingAddSignAssignees() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo engineRow = pending(zhangsan).getRecords().get(0);
+        Long processId = engineRow.getId();
+        // 前加签批次进行中：加签人 eve 属当前处理人（ADR 0068「对象是当前全部处理人」），
+        // 催办对象在引擎 assignee/候选人之外必须补上 PENDING 加签任务的加签人。
+        approval.addSign(zhangsan, processId, addSignVo(1, List.of(5L)));
+
+        approval.urge(alice, processId);
+
+        String targets = jdbcTemplate.queryForObject(
+                "SELECT target_user_name FROM oa_process_record "
+                        + "WHERE process_id = ? AND action_type = 'URGE'", String.class, processId);
+        assertTrue(targets.contains("张三"), "引擎 assignee 在催办对象里：" + targets);
+        assertTrue(targets.contains("小叶"), "PENDING 加签任务的加签人在催办对象里：" + targets);
+    }
+
+    @Test
     public void candidateClaimsConcurrentlyAndLatecomerIsRefused() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser lisi = user(4L, "lisi", "李四");

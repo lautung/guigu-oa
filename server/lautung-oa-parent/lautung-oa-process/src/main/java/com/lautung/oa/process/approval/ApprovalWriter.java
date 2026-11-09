@@ -62,7 +62,6 @@ import java.util.stream.Collectors;
 public class ApprovalWriter {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalWriter.class);
-    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
     /** 催办频控（ADR 0068）：同一审批 24 小时内最多一次（窗口常量与待处理催办标记同源）。 */
     private static final Duration URGE_COOLDOWN = ProcessApprovalSupport.URGE_MARK_WINDOW;
 
@@ -266,7 +265,7 @@ public class ApprovalWriter {
         if (idempotencyKey.isEmpty()) {
             throw new BusinessException(201, "提交标识不能为空");
         }
-        if (idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+        if (idempotencyKey.length() > ApproverNames.MAX_IDEMPOTENCY_KEY_LENGTH) {
             throw new BusinessException(201, "提交标识过长");
         }
         return idempotencyKey;
@@ -540,20 +539,43 @@ public class ApprovalWriter {
 
     /**
      * 催办（ADR 0068，#287）：仅申请人、仅审批中；同一审批 24 小时内最多一次。
-     * 对象是当前全部处理人（含未认领候选人），写 URGE 账本带对象姓名；
-     * 不改状态、不发通知，白名单保证它不进任何人的已处理。
+     * 对象是当前全部处理人（含未认领候选人与 PENDING 加签任务的加签人，ADR 0068「加签任务
+     * assignee 属当前处理人」），写 URGE 账本带对象姓名；不改状态、不发通知，
+     * 白名单保证它不进任何人的已处理。
      */
     @Transactional
     public Approval.UrgeOutcome urge(SysUser user, Long processId) {
         Process process = requireApplicantActiveProcess(user, processId, "催办审批", "催办");
         requireUrgeNotInCooldown(processId);
-        List<String> targetNames = approverNames(approvalEngine.currentTasks(process.getProcessInstanceId()));
+        List<String> targetNames = urgeTargetNames(process);
         String joined = String.join("、", targetNames);
         processRecordService.record(
                 processId,
                 ProcessApprovalSupport.ApprovalAction.urge(joined.isEmpty() ? null : joined),
                 user);
         return new Approval.UrgeOutcome(processId);
+    }
+
+    /**
+     * 催办对象（ADR 0068）：当前全部处理人——引擎 assignee/候选人，再加本审批 PENDING
+     * 加签任务的加签人（加签人也在等这件事，不催等于漏催）。按用户名去重后转显示名。
+     */
+    private List<String> urgeTargetNames(Process process) {
+        LinkedHashSet<String> usernames = new LinkedHashSet<>();
+        for (ApprovalEngine.CurrentTask task : approvalEngine.currentTasks(process.getProcessInstanceId())) {
+            usernames.addAll(ApproverNames.taskUsernames(task));
+        }
+        for (ProcessAddSignTask signTask : addSignTaskMapper.selectList(
+                new LambdaQueryWrapper<ProcessAddSignTask>()
+                        .eq(ProcessAddSignTask::getProcessId, process.getId())
+                        .eq(ProcessAddSignTask::getStatus, AddSignStatus.PENDING.name()))) {
+            SysUser assignee = signTask.getAssigneeId() == null
+                    ? null : sysUserService.getById(signTask.getAssigneeId());
+            if (assignee != null && StringUtils.hasText(assignee.getUsername())) {
+                usernames.add(assignee.getUsername());
+            }
+        }
+        return usernames.stream().map(this::displayName).toList();
     }
 
     /** 申请人动作的共有前置（撤回/催办同族）：非申请人、非审批中都是 201 命名拒绝。 */
@@ -576,18 +598,19 @@ public class ApprovalWriter {
         return process;
     }
 
-    /** 催办频控（ADR 0068）：查账本最近一次 URGE，24 小时内已有则命名拒绝。 */
+    /** 催办频控（ADR 0068）：查账本最近一次 URGE（LIMIT 1，不整段取回），24 小时内已有则命名拒绝。 */
     private void requireUrgeNotInCooldown(Long processId) {
         LambdaQueryWrapper<ProcessRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessRecord::getProcessId, processId)
                 .eq(ProcessRecord::getActionType,
                         ProcessApprovalSupport.ApprovalActionType.URGE.name())
-                .orderByDesc(ProcessRecord::getCreateTime);
-        List<ProcessRecord> urges = processRecordService.list(wrapper);
-        if (urges.isEmpty()) {
+                .orderByDesc(ProcessRecord::getCreateTime)
+                .last("LIMIT 1");
+        ProcessRecord latestUrge = processRecordService.getOne(wrapper);
+        if (latestUrge == null) {
             return;
         }
-        Date latest = urges.get(0).getCreateTime();
+        Date latest = latestUrge.getCreateTime();
         if (latest != null && latest.toInstant().isAfter(Instant.now().minus(URGE_COOLDOWN))) {
             throw new BusinessException(201, "24 小时内已催办过，请稍后再试");
         }
@@ -714,21 +737,14 @@ public class ApprovalWriter {
     }
 
     private List<String> approverNames(List<ApprovalEngine.CurrentTask> taskList) {
-        List<String> nameList = new ArrayList<>();
-        for (ApprovalEngine.CurrentTask task : taskList) {
-            // 候选任务尚无 assignee：按候选用户集给等待名单（order 由解析器排序）。
-            LinkedHashSet<String> usernames = new LinkedHashSet<>();
-            if (StringUtils.hasText(task.assignee())) {
-                usernames.add(task.assignee());
-            }
-            usernames.addAll(task.candidates());
-            for (String username : usernames) {
-                SysUser assignee = sysUserService.getUserByUserName(username);
-                nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
-                        ? assignee.getName()
-                        : username);
-            }
-        }
-        return nameList;
+        return ApproverNames.of(taskList, this::displayName);
+    }
+
+    /** 用户名 → 显示名（共享投影的解析缝，实现走 SysUserService；找不到用户或无名退回用户名）。 */
+    private String displayName(String username) {
+        SysUser assignee = sysUserService.getUserByUserName(username);
+        return assignee != null && StringUtils.hasText(assignee.getName())
+                ? assignee.getName()
+                : username;
     }
 }

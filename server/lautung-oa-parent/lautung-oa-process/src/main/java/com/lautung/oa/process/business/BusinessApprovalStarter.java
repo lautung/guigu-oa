@@ -3,6 +3,7 @@ package com.lautung.oa.process.business;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.process.OaBusinessTemplate;
 import com.lautung.oa.process.approval.ApprovalWriter;
+import com.lautung.oa.process.approval.ApproverNames;
 import com.lautung.oa.process.mapper.OaBusinessTemplateMapper;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.vo.process.BusinessApprovalStart;
@@ -24,8 +25,6 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class BusinessApprovalStarter {
-
-	static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
 
 	private final ApprovalWriter approvalWriter;
 	private final BusinessApprovalCallbackRegistry callbackRegistry;
@@ -76,7 +75,7 @@ public class BusinessApprovalStarter {
 			throw new BusinessException(201, "提交标识不能为空");
 		}
 		String idempotencyKey = rawIdempotencyKey.trim();
-		if (idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+		if (idempotencyKey.length() > ApproverNames.MAX_IDEMPOTENCY_KEY_LENGTH) {
 			throw new BusinessException(201, "提交标识过长");
 		}
 		return idempotencyKey;
