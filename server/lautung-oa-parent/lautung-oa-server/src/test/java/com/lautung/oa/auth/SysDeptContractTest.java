@@ -25,6 +25,7 @@ import java.util.Map;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -101,6 +102,36 @@ class SysDeptContractTest {
                 "SELECT status FROM sys_dept WHERE id = ?", Integer.class, root));
     }
 
+    /**
+     * 清空负责人显式置 null（#286）：updateById 的默认 NOT_NULL 策略会吞掉 null，
+     * leader_user_id 走专用更新语句按提交值写——置空后重读为空，其余字段不被波及。
+     */
+    @Test
+    void clearingTheLeaderWritesNullThroughTheUpdatePath() throws Exception {
+        insertUser(9010, "t247-leader-clear", 0);
+        long dept = createDept(0, "T247负责人", 1);
+
+        // 先设上负责人。
+        updateDept(dept, "{\"id\":" + dept + ",\"leaderUserId\":9010}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        assertEquals(9010L, jdbcTemplate.queryForObject(
+                "SELECT leader_user_id FROM sys_dept WHERE id = ?", Long.class, dept).longValue());
+
+        // 再清空：null 必须落库，而不是被字段策略吞掉。
+        updateDept(dept, "{\"id\":" + dept + ",\"leaderUserId\":null}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        assertNull(jdbcTemplate.queryForObject(
+                "SELECT leader_user_id FROM sys_dept WHERE id = ?", Long.class, dept));
+
+        // 同一次更新不波及其他字段：名称与状态原样。
+        assertEquals("T247负责人", jdbcTemplate.queryForObject(
+                "SELECT name FROM sys_dept WHERE id = ?", String.class, dept));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT status FROM sys_dept WHERE id = ?", Integer.class, dept).intValue());
+    }
+
     @Test
     void movingADepartmentRecalculatesTheWholeSubtree() throws Exception {
         long a = createDept(0, "T247A", 1);
@@ -132,7 +163,6 @@ class SysDeptContractTest {
         long a = createDept(0, "T247根", 1);
         long b = createDept(a, "T247子", 1);
         long c = createDept(b, "T247孙", 1);
-
         saveDept(999999, "T247孤儿", 1)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
