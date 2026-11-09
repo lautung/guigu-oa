@@ -153,26 +153,55 @@ public class ProcessEngineApprovalTest {
     }
 
     @Test
-    public void historicAssigneeCountsCurrentAndFinishedTasksButNotOtherUsers() {
+    public void reassignPermanentlyMovesTaskAndDropsTransferrerCandidateLink() {
         ProcessInstance instance = processEngine.getRuntimeService()
-                .startProcessInstanceByKey("approvalTwoStep", "13");
-
-        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), instance.getId(), "zhangsan"));
-        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), instance.getId(), "lisi"));
-
+                .startProcessInstanceByKey("approvalTwoStep", "12");
         Task first = ProcessEngineApproval.pendingTasks(
                 processEngine.getTaskService(), "zhangsan", 0, 10).get(0);
-        ProcessEngineApproval.complete(processEngine.getTaskService(), first.getId());
+        // 转办人同时是候选人（动态审批人来源）时的关键边界：候选身份必须一并移除，
+        // 否则转办经手人借候选链接继续出现在待处理并可处理（#288，ADR 0068）。
+        processEngine.getTaskService().addUserIdentityLink(
+                first.getId(), "zhangsan", org.flowable.identitylink.api.IdentityLinkType.CANDIDATE);
+        ProcessEngineApproval.reassign(
+                processEngine.getTaskService(), first.getId(), "zhangsan", "lisi");
 
-        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), instance.getId(), "zhangsan"));
-        assertTrue(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), instance.getId(), "lisi"));
-        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), null, "zhangsan"));
-        assertFalse(ProcessEngineApproval.hasHistoricAssignee(
-                processEngine.getHistoryService(), instance.getId(), " "));
+        Task reassigned = processEngine.getTaskService()
+                .createTaskQuery().taskId(first.getId()).singleResult();
+        assertEquals("lisi", reassigned.getAssignee());
+        assertTrue(ProcessEngineApproval.pendingTasks(
+                        processEngine.getTaskService(), "zhangsan", 0, 10).isEmpty(),
+                "转办经手人不得再出现在待处理（assignee 与候选身份都已移除）");
+        assertEquals(1, ProcessEngineApproval.pendingTasks(
+                processEngine.getTaskService(), "lisi", 0, 10).size());
+        assertEquals(instance.getId(), reassigned.getProcessInstanceId());
+    }
+
+    @Test
+    public void reassignRejectsMissingTaskWithNamedNotFound() {
+        assertThrows(org.flowable.common.engine.api.FlowableObjectNotFoundException.class,
+                () -> ProcessEngineApproval.reassign(
+                        processEngine.getTaskService(), "missing-task", "zhangsan", "lisi"));
+    }
+
+    @Test
+    public void candidateTasksArePendingForTheCandidateUntilClaimed() {
+        // 待处理第二源（#288，ADR 0068 修订 ADR 0045）：未认领任务上候选人与 assignee 同查；
+        // 任务被认领后（assignee 非空）原候选人不再以候选人身份出现在待处理（处理即认领）。
+        org.flowable.task.api.Task unclaimed = processEngine.getTaskService().newTask();
+        unclaimed.setName("candidate-task");
+        processEngine.getTaskService().saveTask(unclaimed);
+        processEngine.getTaskService().addUserIdentityLink(
+                unclaimed.getId(), "wangwu", org.flowable.identitylink.api.IdentityLinkType.CANDIDATE);
+
+        assertEquals(1, ProcessEngineApproval.pendingTasks(
+                processEngine.getTaskService(), "wangwu", 0, 10).size());
+        assertEquals(1L, ProcessEngineApproval.pendingCount(processEngine.getTaskService(), "wangwu"));
+
+        processEngine.getTaskService().claim(unclaimed.getId(), "zhangsan");
+        assertEquals(0, ProcessEngineApproval.pendingTasks(
+                        processEngine.getTaskService(), "wangwu", 0, 10).size(),
+                "被认领后原候选人的待处理行消失（Flowable taskCandidateOrAssigned 语义）");
+        assertEquals(1L, ProcessEngineApproval.pendingCount(processEngine.getTaskService(), "zhangsan"));
+        processEngine.getTaskService().deleteTask(unclaimed.getId(), true);
     }
 }

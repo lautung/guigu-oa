@@ -27,6 +27,8 @@ async function json(route: Route, data: unknown, code = 200, message?: string) {
 interface ActionHandlers {
   withdraw?: (route: Route) => Promise<void>
   urge?: (route: Route) => Promise<void>
+  transfer?: (route: Route) => Promise<void>
+  addSign?: (route: Route) => Promise<void>
 }
 async function setup(
   page: Page,
@@ -47,7 +49,12 @@ async function setup(
   let approvals = 0,
     completions = 0,
     withdrawn = false,
-    urges = 0
+    urges = 0,
+    transfers = 0,
+    addedSigns = 0
+  const pendingRow = { actionKind: 'APPROVE', suspended: false, urged: false }
+  const transferPayloads: unknown[] = []
+  const addSignPayloads: unknown[] = []
   await page.route('**/dev-api/**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/dev-api', '')
     if (path === '/admin/system/index/info') return json(route, { name: 'Alice', menus: [] })
@@ -57,8 +64,28 @@ async function setup(
       return json(route, {
         process: { ...record, id, title: `审批 ${id}`, status: withdrawn ? -2 : 1 },
         processRecordList: [],
-        isApprove: true,
+        // 挂起行没有动作面（#288）：isApprove 由服务端按「有可动作任务面」下发。
+        isApprove: !pendingRow.suspended,
+        pendingRow,
       })
+    }
+    if (path.startsWith('/admin/process/actionTargets/'))
+      return json(route, [
+        { id: 5, name: '小叶' },
+        { id: 4, name: '李四' },
+        { id: 2, name: 'Alice' },
+      ])
+    if (path.startsWith('/admin/process/transfer/')) {
+      transfers++
+      transferPayloads.push(route.request().postDataJSON())
+      if (handlers?.transfer) return handlers.transfer(route)
+      return json(route, null)
+    }
+    if (path.startsWith('/admin/process/addSign/')) {
+      addedSigns++
+      addSignPayloads.push(route.request().postDataJSON())
+      if (handlers?.addSign) return handlers.addSign(route)
+      return json(route, null)
     }
     if (path === '/admin/process/approve') {
       approvals++
@@ -114,6 +141,13 @@ async function setup(
     completions: () => completions,
     urges: () => urges,
     withdrawn: () => withdrawn,
+    transfers: () => transfers,
+    addedSigns: () => addedSigns,
+    transferPayloads: () => transferPayloads,
+    addSignPayloads: () => addSignPayloads,
+    suspendRow: () => {
+      pendingRow.suspended = true
+    },
   }
 }
 
@@ -311,5 +345,67 @@ test('附件登记在途离开列表后重开同审批，保持互斥直至原�
   await page.getByRole('button', { name: '通过', exact: true }).click()
   await expect(page).toHaveURL(/\/work\/processed$/)
   expect(h.approvals()).toBe(1)
+  expect(h.errors).toEqual([])
+})
+
+test('待处理当前处理人可转办：选人提交后回待处理，写前拒绝上屏服务端文案', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null))
+  await page.goto('/work/pending/A/task-A')
+  const transfer = page.getByRole('button', { name: '转办', exact: true })
+  await expect(transfer).toBeEnabled()
+  await transfer.click()
+  await page.getByRole('combobox').first().click()
+  // 排除本人（Alice）由客户端本地过滤；服务端已排除申请人。
+  await expect(page.getByRole('option', { name: 'Alice' })).toHaveCount(0)
+  await page.getByRole('option', { name: '小叶' }).click()
+  await page.getByRole('button', { name: '确认转办', exact: true }).click()
+  await expect(page).toHaveURL(/\/work\/pending$/)
+  expect(h.transfers()).toBe(1)
+  expect(h.transferPayloads()).toEqual([{ targetUserId: 5 }])
+  expect(h.errors).toEqual([])
+})
+
+test('转办被写前拒绝时确定未提交，上屏服务端文案且无待确认面板', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null), undefined, undefined, undefined, {
+    transfer: (route) => json(route, null, 201, '不能转办给申请人'),
+  })
+  await page.goto('/work/pending/A/task-A')
+  await page.getByRole('button', { name: '转办', exact: true }).click()
+  await page.getByRole('combobox').first().click()
+  await page.getByRole('option', { name: '小叶' }).click()
+  await page.getByRole('button', { name: '确认转办', exact: true }).click()
+  await expect(page.getByText('不能转办给申请人', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '处理结果待确认' })).toHaveCount(0)
+  expect(h.errors).toEqual([])
+})
+
+test('加签弹层一次可选多人并提交类型与清单', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null))
+  await page.goto('/work/pending/A/task-A')
+  await page.getByRole('button', { name: '加签', exact: true }).click()
+  await expect(page.getByRole('radio', { name: /前加签/ })).toBeVisible()
+  // multiple el-select 的自动宽输入在 webkit 下不可点：点外层选择器开下拉。
+  await page.locator('.dialog-select').first().click()
+  await expect(page.getByRole('option', { name: '李四' })).toBeVisible()
+  await page.getByRole('option', { name: '李四' }).click()
+  await page.getByRole('option', { name: '小叶' }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '确认加签', exact: true }).click()
+  await expect(page).toHaveURL(/\/work\/pending$/)
+  expect(h.addedSigns()).toBe(1)
+  expect(h.addSignPayloads()).toEqual([{ signType: 1, assigneeIds: [4, 5] }])
+  expect(h.errors).toEqual([])
+})
+
+test('挂起行隐藏动作区并显示等待加签人处理，加签行不出现转办/加签', async ({ page }) => {
+  const h = await setup(page, (route) => json(route, null))
+  await page.goto('/work/pending/A/task-A')
+  await expect(page.getByText('等待加签人处理', { exact: true })).toHaveCount(0)
+  h.suspendRow()
+  await page.reload()
+  await expect(page.getByText('等待加签人处理', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '转办', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '加签', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '通过', exact: true })).toHaveCount(0)
   expect(h.errors).toEqual([])
 })

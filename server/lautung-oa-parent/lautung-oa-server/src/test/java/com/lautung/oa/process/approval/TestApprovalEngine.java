@@ -196,7 +196,7 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
-    public boolean hasHistoricAssignee(String processInstanceId, String username) {
-        return delegate.hasHistoricAssignee(processInstanceId, username);
+    public void reassign(String taskId, String fromUsername, String toUsername) {
+        delegate.reassign(taskId, fromUsername, toUsername);
     }
 }

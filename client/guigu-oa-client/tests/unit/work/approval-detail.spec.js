@@ -34,8 +34,11 @@ function harness(overrides = {}) {
     submissions = [],
     withdraws = [],
     urges = [],
+    transfers = [],
+    addSigns = [],
     navigation = [],
     notifications = []
+  const targetResponses = []
   const records = new Map()
   let entry = `login-${++entrySequence}`
   const adapter = {
@@ -60,6 +63,17 @@ function harness(overrides = {}) {
       urges.push({ processId, ...result })
       return result.promise
     },
+    actionTargets: async () => targetResponses.shift() || [],
+    transfer: (processId, targetUserId) => {
+      const result = deferred()
+      transfers.push({ processId, targetUserId, ...result })
+      return result.promise
+    },
+    addSign: (processId, signType, assigneeIds) => {
+      const result = deferred()
+      addSigns.push({ processId, signType, assigneeIds, ...result })
+      return result.promise
+    },
     loadRecords: (key) => JSON.parse(records.get(key) || '[]'),
     saveRecords: (key, value) => records.set(key, JSON.stringify(value)),
     listAttachments: async () => ({ attachments: [], canUpload: true }),
@@ -76,6 +90,9 @@ function harness(overrides = {}) {
     submissions,
     withdraws,
     urges,
+    transfers,
+    addSigns,
+    targetResponses,
     navigation,
     notifications,
     records,
@@ -660,4 +677,161 @@ it('催办成功后本开合停用；失败上屏命名文案且不建恢复记�
   expect(refused.state.recoveries).toEqual([])
   expect(refused.state.urgeDone).toBe(false)
   expect(refused.state.canUrge).toBe(true)
+})
+
+const pendingPayload = (id, pendingRow = null, extra = {}) => payload(id, { pendingRow, ...extra })
+
+it('待处理当前处理人出现转办/加签；挂起行与加签行不出现，非待处理视角不出现', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false, urged: false }))
+  await opened.ready
+  expect(opened.state.showTransfer).toBe(true)
+  expect(opened.state.showAddSign).toBe(true)
+  expect(opened.state.canTransfer).toBe(true)
+  expect(opened.state.canAddSign).toBe(true)
+
+  const suspended = h.module.open(target('B', 'task-B'))
+  h.reads[1].resolve(pendingPayload('B', { actionKind: 'APPROVE', suspended: true, urged: false }))
+  await suspended.ready
+  expect(suspended.state.showTransfer).toBe(false)
+  expect(suspended.state.showAddSign).toBe(false)
+  await suspended.transfer(5)
+  await suspended.addSign(1, [5])
+  expect(h.transfers).toHaveLength(0)
+  expect(h.addSigns).toHaveLength(0)
+
+  const signer = h.module.open(target('C', 'sign-9'))
+  h.reads[2].resolve(
+    pendingPayload('C', { actionKind: 'ADD_SIGN', suspended: false, urged: false }),
+  )
+  await signer.ready
+  expect(signer.state.showTransfer).toBe(false)
+  expect(signer.state.showAddSign).toBe(false)
+
+  const started = h.module.open(target('A', undefined, 'started'))
+  h.reads[3].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false, urged: false }))
+  await started.ready
+  expect(started.state.showTransfer).toBe(false)
+  expect(started.state.showAddSign).toBe(false)
+})
+
+it('转办成功收口动作记录并回待处理列表', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await opened.ready
+  const sending = opened.transfer(5)
+  h.transfers[0].resolve({ kind: 'success' })
+  await sending
+  expect(h.transfers).toEqual([expect.objectContaining({ processId: 'A', targetUserId: 5 })])
+  expect(opened.state.recoveries).toEqual([])
+  expect(h.navigation).toEqual([expect.stringContaining('/work/pending')])
+})
+
+it('转办被命名拒绝：确定未提交、动作记录收口、留原地待核实', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await opened.ready
+  const sending = opened.transfer(5)
+  h.transfers[0].resolve({ kind: 'rejected', message: '不能转办给申请人' })
+  await sending
+  expect(h.reads).toHaveLength(1)
+  expect(opened.state.recoveries).toEqual([])
+  expect(opened.state.actionError).toBe('不能转办给申请人')
+  expect(opened.state.stale).toBe(true)
+  expect(opened.state.canTransfer).toBe(false)
+})
+
+it('转办不确定结果留审批维度恢复记录，重开后人工核实结束', async () => {
+  const h = harness()
+  const first = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await first.ready
+  const sending = first.transfer(5)
+  h.transfers[0].reject(new Error('断网'))
+  await sending
+  expect(first.state.recoveries).toHaveLength(1)
+  expect(first.state.recoveries[0]).toMatchObject({
+    processId: 'A',
+    action: 'transfer',
+    targetUserId: 5,
+  })
+  const fresh = createApprovalDetail(h.adapter).open(target('A', 'task-A'))
+  h.reads[1].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await fresh.ready
+  expect(fresh.state.recoveries).toHaveLength(1)
+  expect(fresh.state.canTransfer).toBe(false)
+  expect(fresh.canEndRecovery(fresh.state.recoveries[0].operationId)).toBe(true)
+  fresh.endRecovery(fresh.state.recoveries[0].operationId)
+  expect(fresh.state.recoveries).toEqual([])
+  expect(fresh.state.ended).toBe(true)
+})
+
+it('加签提交载荷含类型与加签人清单，成功回待处理列表', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await opened.ready
+  const sending = opened.addSign(2, [4, 5])
+  h.addSigns[0].resolve({ kind: 'success' })
+  await sending
+  expect(h.addSigns).toEqual([
+    expect.objectContaining({ processId: 'A', signType: 2, assigneeIds: [4, 5] }),
+  ])
+  expect(opened.state.recoveries).toEqual([])
+  expect(h.navigation).toEqual([expect.stringContaining('/work/pending')])
+})
+
+it('加签不确定结果留恢复记录；在途记录暂停再次转办/加签，人工核实后恢复', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await opened.ready
+  const sending = opened.addSign(1, [4])
+  h.addSigns[0].reject(new Error('断网'))
+  await sending
+  expect(opened.state.recoveries).toHaveLength(1)
+  expect(opened.state.recoveries[0]).toMatchObject({
+    processId: 'A',
+    action: 'addSign',
+    signType: 1,
+    assigneeIds: [4],
+  })
+  expect(opened.state.canTransfer).toBe(false)
+  expect(opened.state.canAddSign).toBe(false)
+  opened.endRecovery(opened.state.recoveries[0].operationId)
+  expect(opened.state.canAddSign).toBe(true)
+  expect(opened.state.canTransfer).toBe(true)
+})
+
+it('候选目标读取装填动作选项，失败单独上屏不阻塞其他动作', async () => {
+  const h = harness()
+  const opened = h.module.open(target('A', 'task-A'))
+  h.reads[0].resolve(pendingPayload('A', { actionKind: 'APPROVE', suspended: false }))
+  await opened.ready
+  h.targetResponses.push([
+    { id: 4, name: '李四' },
+    { id: 5, name: '小叶' },
+  ])
+  await opened.loadActionTargets()
+  expect(opened.state.actionTargets).toEqual([
+    { id: 4, name: '李四' },
+    { id: 5, name: '小叶' },
+  ])
+  expect(opened.state.actionTargetsLoading).toBe(false)
+
+  const failingHarness = harness({
+    actionTargets: async () => {
+      throw new Error('断网')
+    },
+  })
+  const failed = failingHarness.module.open(target('B', 'task-B'))
+  failingHarness.reads[0].resolve(pendingPayload('B', { actionKind: 'APPROVE', suspended: false }))
+  await failed.ready
+  await failed.loadActionTargets()
+  expect(failed.state.actionTargetsError).toBe('断网')
+  expect(failed.state.canSubmit).toBe(true)
+  expect(failed.state.canTransfer).toBe(true)
 })

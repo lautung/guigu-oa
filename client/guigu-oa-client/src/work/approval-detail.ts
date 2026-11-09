@@ -23,6 +23,11 @@ export interface DecisionResult {
   kind: 'success' | 'rejected' | 'uncertain'
   message?: string
 }
+/** 转办/加签选人（#288）：服务端排除申请人，排除本人由视图本地过滤（写前校验兜底）。 */
+export interface ActionTarget {
+  id: EntityId
+  name: string
+}
 /** 处理动作的恢复记录（旧记录无 action 字段，按处理解读）。 */
 export interface DecideRecoveryRecord extends Decision {
   operationId: string
@@ -34,7 +39,23 @@ export interface WithdrawRecoveryRecord {
   processId: EntityId
   action: 'withdraw'
 }
-export type RecoveryRecord = DecideRecoveryRecord | WithdrawRecoveryRecord
+/** 转办动作的恢复记录：审批维度 + 目标用户（ADR 0068，#288）。 */
+export interface TransferRecoveryRecord {
+  operationId: string
+  processId: EntityId
+  action: 'transfer'
+  targetUserId: EntityId
+}
+/** 加签动作的恢复记录：审批维度 + 加签类型与加签人清单（1 前加签 / 2 后加签）。 */
+export interface AddSignRecoveryRecord {
+  operationId: string
+  processId: EntityId
+  action: 'addSign'
+  signType: 1 | 2
+  assigneeIds: EntityId[]
+}
+export type RecoveryRecord =
+  DecideRecoveryRecord | WithdrawRecoveryRecord | TransferRecoveryRecord | AddSignRecoveryRecord
 export interface DetailAdapter {
   forOpening?(isCurrent: () => boolean): DetailAdapter
   entryId(): string
@@ -43,6 +64,9 @@ export interface DetailAdapter {
   submit(decision: Decision): Promise<DecisionResult>
   withdraw(processId: EntityId): Promise<DecisionResult>
   urge(processId: EntityId): Promise<DecisionResult>
+  actionTargets(processId: EntityId): Promise<ActionTarget[]>
+  transfer(processId: EntityId, targetUserId: EntityId): Promise<DecisionResult>
+  addSign(processId: EntityId, signType: 1 | 2, assigneeIds: EntityId[]): Promise<DecisionResult>
   listAttachments(processId: EntityId): Promise<ProcessAttachmentList>
   upload(processId: EntityId, file: File): Promise<AttachmentRecord>
   download(processId: EntityId, attachment: AttachmentRecord): Promise<void>
@@ -62,8 +86,19 @@ function validRecords(value: unknown): value is RecoveryRecord[] {
       if (!record || typeof record.operationId !== 'string' || !record.operationId) return false
       if (!['string', 'number'].includes(typeof record.processId) || !String(record.processId))
         return false
-      // 撤回记录只有审批维度；处理记录（含无 action 的历史记录）必须有任务与方向。
+      // 撤回记录只有审批维度；转办带目标用户；加签带类型与加签人清单。
       if (record.action === 'withdraw') return true
+      if (record.action === 'transfer')
+        return (
+          ['string', 'number'].includes(typeof record.targetUserId) && !!String(record.targetUserId)
+        )
+      if (record.action === 'addSign')
+        return (
+          (record.signType === 1 || record.signType === 2) &&
+          Array.isArray(record.assigneeIds) &&
+          record.assigneeIds.length > 0
+        )
+      // 处理记录（含无 action 的历史记录）必须有任务与方向。
       return (
         ['string', 'number'].includes(typeof record.taskId) &&
         String(record.taskId) &&
@@ -137,6 +172,15 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       canUrge: false,
       urgeBusy: false,
       urgeDone: false,
+      showTransfer: false,
+      canTransfer: false,
+      transferring: false,
+      showAddSign: false,
+      canAddSign: false,
+      addingSign: false,
+      actionTargets: [] as ActionTarget[],
+      actionTargetsLoading: false,
+      actionTargetsError: '',
     })
     function readRecords(): RecoveryRecord[] {
       const records = adapter.loadRecords(key)
@@ -185,7 +229,9 @@ export function createApprovalDetail(adapter: DetailAdapter) {
         !!state.detail?.canApprove &&
         !state.recoveries.some(
           (record) =>
-            record.action !== 'withdraw' && String(record.taskId) === String(target.taskId),
+            (!record.action || record.action === 'decide') &&
+            'taskId' in record &&
+            String(record.taskId) === String(target.taskId),
         )
       state.canAddAttachments =
         current() &&
@@ -220,6 +266,34 @@ export function createApprovalDetail(adapter: DetailAdapter) {
         !state.withdrawing &&
         !state.urgeBusy &&
         !state.urgeDone
+      // 转办/加签（#288，ADR 0068）：当前处理人且未挂起（挂起行与加签行不出现这两个动作）。
+      const handlerActive =
+        current() &&
+        !!state.detail &&
+        state.detail.canApprove &&
+        target.perspective.kind === 'pending' &&
+        !state.detail.pendingRow?.suspended &&
+        state.detail.pendingRow?.actionKind !== 'ADD_SIGN'
+      state.showTransfer = handlerActive
+      state.showAddSign = handlerActive
+      state.canTransfer =
+        handlerActive &&
+        !state.loading &&
+        !state.stale &&
+        !state.recordError &&
+        !state.submitting &&
+        !state.transferring &&
+        !state.addingSign &&
+        !state.recoveries.length
+      state.canAddSign =
+        handlerActive &&
+        !state.loading &&
+        !state.stale &&
+        !state.recordError &&
+        !state.submitting &&
+        !state.transferring &&
+        !state.addingSign &&
+        !state.recoveries.length
     }
     attachmentBatch.openings.add(eligible)
     refreshRecords()
@@ -233,6 +307,10 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       state.canWithdraw = false
       state.showUrge = false
       state.canUrge = false
+      state.showTransfer = false
+      state.canTransfer = false
+      state.showAddSign = false
+      state.canAddSign = false
     }
     releaseCurrent = release
     let readNumber = 0
@@ -377,14 +455,132 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       state.actionError = result.message || '催办未获接受，请稍后重试'
       eligible()
     }
+    /**
+     * 转办（#288，ADR 0068）：当前处理人把审批永久交给一个启用用户；成功后本处理人
+     * 变为转办经手人（只读），待处理行消失，回到待处理列表。提交走「结果待确认」：
+     * refused 是确定未提交（含目标非法 201），unconfirmed 留恢复记录，人工核实后结束。
+     */
+    async function transfer(targetUserId: EntityId) {
+      eligible()
+      if (!state.canTransfer) return
+      const record: RecoveryRecord = {
+        operationId: crypto.randomUUID(),
+        processId: target.processId,
+        action: 'transfer',
+        targetUserId,
+      }
+      if (!updateRecords((records) => [...records, record])) return
+      state.transferring = true
+      state.actionError = ''
+      eligible()
+      let result: DecisionResult
+      try {
+        result = await io.transfer(target.processId, targetUserId)
+      } catch (error: unknown) {
+        result = { kind: 'uncertain', message: message(error, '无法确认转办结果') }
+      }
+      const settled =
+        result.kind !== 'uncertain' &&
+        updateRecords((records) =>
+          records.filter((item) => item.operationId !== record.operationId),
+        )
+      if (!current()) return
+      state.transferring = false
+      if (result.kind === 'success' && settled) {
+        release()
+        adapter.navigate(workListPath(WORK_LIST_KINDS.PENDING))
+        return
+      }
+      state.actionError =
+        result.message ||
+        (result.kind === 'uncertain'
+          ? '转办结果待确认，请核实后结束本次记录'
+          : '转办未获接受，请刷新详情核实当前资格')
+      if (result.kind === 'rejected') state.stale = true
+      eligible()
+    }
+
+    /**
+     * 加签（#288，ADR 0068）：signType 1 前加签（本行转挂起，等待加签人）或 2 后加签
+     * （通过已记账、本行离开待处理）。成功后回待处理列表看新行状态。
+     */
+    async function addSign(signType: 1 | 2, assigneeIds: EntityId[]) {
+      eligible()
+      if (!state.canAddSign || !assigneeIds.length) return
+      const record: RecoveryRecord = {
+        operationId: crypto.randomUUID(),
+        processId: target.processId,
+        action: 'addSign',
+        signType,
+        assigneeIds,
+      }
+      if (!updateRecords((records) => [...records, record])) return
+      state.addingSign = true
+      state.actionError = ''
+      eligible()
+      let result: DecisionResult
+      try {
+        result = await io.addSign(target.processId, signType, assigneeIds)
+      } catch (error: unknown) {
+        result = { kind: 'uncertain', message: message(error, '无法确认加签结果') }
+      }
+      const settled =
+        result.kind !== 'uncertain' &&
+        updateRecords((records) =>
+          records.filter((item) => item.operationId !== record.operationId),
+        )
+      if (!current()) return
+      state.addingSign = false
+      if (result.kind === 'success' && settled) {
+        release()
+        adapter.navigate(workListPath(WORK_LIST_KINDS.PENDING))
+        return
+      }
+      state.actionError =
+        result.message ||
+        (result.kind === 'uncertain'
+          ? '加签结果待确认，请核实后结束本次记录'
+          : '加签未获接受，请刷新详情核实当前资格')
+      if (result.kind === 'rejected') state.stale = true
+      eligible()
+    }
+
+    /** 转办/加签候选目标（#288）：登录即可读；打开弹层时取一次，排除本人由视图本地过滤。 */
+    let targetsRead = 0
+    async function loadActionTargets() {
+      if (!current()) return
+      const request = ++targetsRead
+      state.actionTargetsLoading = true
+      state.actionTargetsError = ''
+      try {
+        const targets = await io.actionTargets(target.processId)
+        if (!current() || request !== targetsRead) return
+        state.actionTargets = targets
+      } catch (error: unknown) {
+        if (current() && request === targetsRead)
+          state.actionTargetsError = message(error, '候选目标读取失败，请重试')
+      } finally {
+        if (current() && request === targetsRead) {
+          state.actionTargetsLoading = false
+        }
+      }
+    }
+
     function canEndRecovery(operationId: string) {
       if (!current() || state.submitting || state.withdrawing) return false
       const record = state.recoveries.find((item) => item.operationId === operationId)
       if (!record) return false
-      // 撤回记录按审批维度核实（已发起视角）；处理记录仍按任务维度（待处理视角）。
+      // 撤回记录按审批维度核实（已发起视角）；处理记录仍按任务维度（待处理视角）；
+      // 转办/加签记录（#288）按审批维度核实（待处理视角发起的动作）。
       if (record.action === 'withdraw') {
         return (
           target.perspective.kind === 'started' &&
+          String(record.processId) === String(target.processId)
+        )
+      }
+      if (record.action === 'transfer' || record.action === 'addSign') {
+        return (
+          target.perspective.kind === 'pending' &&
           String(record.processId) === String(target.processId)
         )
       }
@@ -478,6 +674,9 @@ export function createApprovalDetail(adapter: DetailAdapter) {
       decide,
       withdraw,
       urge,
+      transfer,
+      addSign,
+      loadActionTargets,
       endRecovery,
       canEndRecovery,
       viewProcessed,

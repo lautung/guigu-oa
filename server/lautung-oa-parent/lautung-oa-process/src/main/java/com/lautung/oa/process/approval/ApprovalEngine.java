@@ -2,6 +2,7 @@ package com.lautung.oa.process.approval;
 
 import com.lautung.oa.process.membership.MembershipEvidence;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -29,10 +30,22 @@ public interface ApprovalEngine extends MembershipEvidence {
      */
     void cancel(String processInstanceId, String reason);
 
+    /**
+     * 转办的引擎命令（ADR 0068，#288）：把任务永久改派给目标用户；转办人自己的候选身份
+     * 一并移除（转办经手人只读，不得借候选身份继续处理）。任务已被并发对手处理掉时实现
+     * 抛 {@code FlowableObjectNotFoundException}。
+     */
+    void reassign(String taskId, String fromUsername, String toUsername);
+
+    /**
+     * 待处理第一/二源（ADR 0068 修订 ADR 0045）：assignee 或候选人之一的任务
+     * （Flowable {@code taskCandidateOrAssigned}）。
+     */
     List<PendingTask> pendingTasks(String username, int firstResult, int maxResults);
 
     long pendingCount(String username);
 
-    record PendingTask(String taskId, String processInstanceId, String businessKey) {
+    record PendingTask(String taskId, String processInstanceId, String businessKey,
+                       String assignee, Date createTime) {
     }
 }

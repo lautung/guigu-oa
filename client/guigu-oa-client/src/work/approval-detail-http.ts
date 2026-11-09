@@ -7,7 +7,7 @@ import type {
   ProcessDetailPayload,
   AttachmentUploadGrant,
 } from '@/types/domain'
-import type { DetailAdapter } from './approval-detail'
+import type { ActionTarget, DetailAdapter } from './approval-detail'
 import { uploadAttachment } from './attachments'
 
 interface HttpDetailOptions {
@@ -74,6 +74,52 @@ export function createHttpDetailAdapter(options: HttpDetailOptions): DetailAdapt
                 ? 'rejected'
                 : 'uncertain',
             message: error instanceof Error ? error.message : '无法确认催办结果',
+          }
+        }
+      },
+      // 转办/加签（#288，ADR 0068）：失败一律 classifySubmissionFailure 二分，
+      // refused 是服务端命名拒绝（目标合法性等写前校验，确定未提交），uncertain 才进待确认。
+      async actionTargets(processId) {
+        return (
+          await request<ActionTarget[]>({
+            method: 'get',
+            url: `/admin/process/actionTargets/${processId}`,
+          })
+        ).data
+      },
+      async transfer(processId, targetUserId) {
+        try {
+          await request({
+            method: 'post',
+            url: `/admin/process/transfer/${processId}`,
+            data: { targetUserId },
+          })
+          return { kind: 'success' }
+        } catch (error: unknown) {
+          return {
+            kind:
+              classifySubmissionFailure(error, 'process-approval') === 'refused'
+                ? 'rejected'
+                : 'uncertain',
+            message: error instanceof Error ? error.message : '无法确认转办结果',
+          }
+        }
+      },
+      async addSign(processId, signType, assigneeIds) {
+        try {
+          await request({
+            method: 'post',
+            url: `/admin/process/addSign/${processId}`,
+            data: { signType, assigneeIds },
+          })
+          return { kind: 'success' }
+        } catch (error: unknown) {
+          return {
+            kind:
+              classifySubmissionFailure(error, 'process-approval') === 'refused'
+                ? 'rejected'
+                : 'uncertain',
+            message: error instanceof Error ? error.message : '无法确认加签结果',
           }
         }
       },

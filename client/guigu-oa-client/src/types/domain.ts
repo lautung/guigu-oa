@@ -624,6 +624,19 @@ export interface ProcessInstanceRecord {
   updateTime?: string
   formValues?: string | ProcessFormValues
   taskId?: EntityId
+  /** 待处理行状态（#288，ADR 0068）：APPROVE 通过/拒绝、CANDIDATE 候选人之一、ADD_SIGN 加签处理。 */
+  actionKind?: string
+  /** 前加签挂起标记：true 表示等待加签人处理、不能动作。 */
+  suspended?: boolean
+  /** 催办标记：最近 24 小时内该审批存在催办记录。 */
+  urged?: boolean
+}
+
+/** 详情头部与待处理行共用的行状态（#288）：服务端按查看者合成，无待处理行时为 null。 */
+export interface PendingRowState {
+  actionKind?: string
+  suspended?: boolean
+  urged?: boolean
 }
 
 export interface ProcessInstanceListItem extends ProcessInstanceRecord {
@@ -665,6 +678,10 @@ export interface PresentedWorkListRecord {
   relationLabel: string
   progressLabel: string
   rowKey: string
+  /** 待处理行状态呈现（#288）：挂起/候选人行的行内文案；空串表示无特殊状态。 */
+  pendingRowLabel?: string
+  /** 催办标记（#288）：行内「已催办」小标。 */
+  urged?: boolean
 }
 
 export interface WorkRecordEntry {
@@ -677,6 +694,8 @@ export interface ProcessDetailPayload {
   process?: ProcessInstanceRecord
   processRecordList?: WorkRecordEntry[]
   isApprove?: boolean
+  /** 查看者的待处理行状态（#288）：挂起/候选人/催办标记在详情头部呈现；无待处理行时为 null。 */
+  pendingRow?: PendingRowState | null
 }
 
 export interface AttachmentRecord {

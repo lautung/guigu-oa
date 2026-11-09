@@ -5,21 +5,29 @@ import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.common.result.ResultCodeEnum;
 import com.lautung.oa.common.validation.ValidationMessages;
 import com.lautung.oa.model.process.Process;
+import com.lautung.oa.model.process.ProcessAddSignTask;
 import com.lautung.oa.model.process.ProcessRecord;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.ProcessApprovalSupport;
+import com.lautung.oa.process.ProcessApprovalSupport.AddSignStatus;
+import com.lautung.oa.process.ProcessApprovalSupport.AddSignType;
 import com.lautung.oa.process.ProcessStartSupport;
 import com.lautung.oa.process.attachment.AttachmentService;
 import com.lautung.oa.process.cc.CarbonCopyWriter;
+import com.lautung.oa.process.mapper.OaProcessAddSignTaskMapper;
 import com.lautung.oa.process.mapper.OaProcessMapper;
+import com.lautung.oa.process.membership.ApprovalMembership;
 import com.lautung.oa.process.membership.ApprovalMembershipResolver;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.process.service.ApprovalTemplate;
 import com.lautung.oa.process.service.OaProcessRecordService;
+import com.lautung.oa.vo.process.AddSignVo;
 import com.lautung.oa.vo.process.ApprovalVo;
 import com.lautung.oa.vo.process.ProcessFormVo;
+import com.lautung.oa.vo.process.TransferVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.common.engine.api.FlowableTaskAlreadyClaimedException;
 import org.flowable.common.engine.api.FlowableOptimisticLockingException;
@@ -36,6 +44,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 审批写入的唯一实现：账本、抄送、附件绑定、引擎命令的次序与事务边界都在这里。
@@ -49,8 +59,8 @@ public class ApprovalWriter {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalWriter.class);
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
-    /** 催办频控（ADR 0068）：同一审批 24 小时内最多一次。 */
-    private static final Duration URGE_COOLDOWN = Duration.ofHours(24);
+    /** 催办频控（ADR 0068）：同一审批 24 小时内最多一次（窗口常量与待处理催办标记同源）。 */
+    private static final Duration URGE_COOLDOWN = ProcessApprovalSupport.URGE_MARK_WINDOW;
 
     private final ApprovalTemplate approvalTemplate;
     private final ApprovalEngine approvalEngine;
@@ -58,6 +68,7 @@ public class ApprovalWriter {
     private final CarbonCopyWriter carbonCopyWriter;
     private final ApprovalMembershipResolver membershipResolver;
     private final OaProcessMapper processMapper;
+    private final OaProcessAddSignTaskMapper addSignTaskMapper;
     private final OaProcessRecordService processRecordService;
     private final SysUserService sysUserService;
 
@@ -68,6 +79,7 @@ public class ApprovalWriter {
             CarbonCopyWriter carbonCopyWriter,
             ApprovalMembershipResolver membershipResolver,
             OaProcessMapper processMapper,
+            OaProcessAddSignTaskMapper addSignTaskMapper,
             OaProcessRecordService processRecordService,
             SysUserService sysUserService) {
         this.approvalTemplate = approvalTemplate;
@@ -76,6 +88,7 @@ public class ApprovalWriter {
         this.carbonCopyWriter = carbonCopyWriter;
         this.membershipResolver = membershipResolver;
         this.processMapper = processMapper;
+        this.addSignTaskMapper = addSignTaskMapper;
         this.processRecordService = processRecordService;
         this.sysUserService = sysUserService;
     }
@@ -196,10 +209,23 @@ public class ApprovalWriter {
         }
     }
 
+    /**
+     * 处理动作（#288 起 id 双关）：taskId 命中加签任务行走加签路径（计数/批次完成/整条拒绝），
+     * 否则走引擎任务路径（认领 + complete/rejectToEnd）。两条路径共用同一端口形状。
+     */
     @Transactional
     public Approval.DecisionOutcome approve(SysUser user, ApprovalVo approvalVo) {
         requireStatusInDomain(approvalVo);
-        Process process = requireCurrentApprover(user, approvalVo);
+        Process process = requireApprovableProcess(user, approvalVo);
+        ProcessAddSignTask signTask = resolveSignTask(approvalVo.getTaskId(), process.getId());
+        if (signTask != null) {
+            return approveSignTask(user, process, signTask, approvalVo.getStatus());
+        }
+        return approveEngineTask(user, process, approvalVo);
+    }
+
+    private Approval.DecisionOutcome approveEngineTask(SysUser user, Process process, ApprovalVo approvalVo) {
+        requireCurrentApprover(user, process, approvalVo.getTaskId());
         try {
             // 处理动作本身认领（ADR 0069）：候选用户处理时先写 assignee，历史证据随之完整；
             // 并发后到者（认领冲突/乐观锁/任务已被处理掉）按「已被其他人处理」命名拒绝。
@@ -235,6 +261,105 @@ public class ApprovalWriter {
                 nextTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
     }
 
+    /**
+     * 加签任务的处理路径（#288，ADR 0068）：加签人对自己的未决加签任务通过或拒绝。
+     * 通过=计数（全部通过才触发批次收口）；拒绝=对配对引擎任务 rejectToEnd，整条审批拒绝，
+     * 剩余未决加签任务销毁，后加签原处理人已记账的通过保留。
+     */
+    private Approval.DecisionOutcome approveSignTask(
+            SysUser user, Process process, ProcessAddSignTask signTask, Integer status) {
+        if (!user.getId().equals(signTask.getAssigneeId())) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN);
+        }
+        // 条件更新收敛并发：重复提交或批次已被对手收口的后来者拿到 0 行，命名拒绝。
+        int updated = addSignTaskMapper.update(null, new LambdaUpdateWrapper<ProcessAddSignTask>()
+                .eq(ProcessAddSignTask::getId, signTask.getId())
+                .eq(ProcessAddSignTask::getStatus, AddSignStatus.PENDING.name())
+                .set(ProcessAddSignTask::getStatus,
+                        status != null && status == 1
+                                ? AddSignStatus.APPROVED.name()
+                                : AddSignStatus.REJECTED.name()));
+        if (updated == 0) {
+            throw new BusinessException(201, "该审批已被其他人处理");
+        }
+        processRecordService.record(process.getId(), ProcessApprovalSupport.ApprovalAction.decision(status), user);
+
+        if (status != null && status == 1) {
+            return settleBatchIfComplete(process, signTask);
+        }
+
+        // 任一加签人拒绝：整条审批拒绝（原处理人的通过记录保留，不删不改）。
+        try {
+            approvalEngine.rejectToEnd(signTask.getEngineTaskId());
+        } catch (FlowableObjectNotFoundException e) {
+            throw new BusinessException(201, "该审批已被其他人处理");
+        }
+        destroyPendingSignTasks(process.getId());
+        ProcessApprovalSupport.applyOutcome(process, status, List.of(), false);
+        processMapper.updateById(process);
+        return new Approval.DecisionOutcome(process.getId(), process.getStatus(), List.of());
+    }
+
+    /**
+     * 批次收口（#288）：本批次还有未决行则只计数返回；全部通过后——前加签解挂回原处理人
+     * （引擎任务原样活动，等待文案回原处理人），后加签用已记账的通过完成当前节点进入下一节点。
+     * 收口判定用锁定读（FOR UPDATE）：并发最后两人不再互相看不见对方的通过而双双搁置。
+     */
+    private Approval.DecisionOutcome settleBatchIfComplete(Process process, ProcessAddSignTask signTask) {
+        List<ProcessAddSignTask> stillPending = addSignTaskMapper.selectList(
+                new LambdaQueryWrapper<ProcessAddSignTask>()
+                        .eq(ProcessAddSignTask::getEngineTaskId, signTask.getEngineTaskId())
+                        .eq(ProcessAddSignTask::getBatchNo, signTask.getBatchNo())
+                        .eq(ProcessAddSignTask::getStatus, AddSignStatus.PENDING.name())
+                        .last("FOR UPDATE"));
+        if (!stillPending.isEmpty()) {
+            return new Approval.DecisionOutcome(process.getId(), process.getStatus(), List.of());
+        }
+        if (AddSignType.BEFORE.name().equals(signTask.getSignType())) {
+            refreshWaitingDescription(process);
+            processMapper.updateById(process);
+            return new Approval.DecisionOutcome(
+                    process.getId(), process.getStatus(), List.of(signTask.getEngineTaskId()));
+        }
+        try {
+            approvalEngine.complete(signTask.getEngineTaskId());
+        } catch (FlowableObjectNotFoundException e) {
+            throw new BusinessException(201, "该审批已被其他人处理");
+        }
+        List<ApprovalEngine.CurrentTask> nextTasks =
+                approvalEngine.currentTasks(process.getProcessInstanceId());
+        ProcessApprovalSupport.applyOutcome(
+                process, 1, approverNames(nextTasks), !nextTasks.isEmpty());
+        processMapper.updateById(process);
+        return new Approval.DecisionOutcome(
+                process.getId(),
+                process.getStatus(),
+                nextTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    /** 加签任务的行级识别：taskId 是数字且命中本审批的加签任务才走加签路径，其余归引擎路径。 */
+    private ProcessAddSignTask resolveSignTask(String taskId, Long processId) {
+        if (!StringUtils.hasText(taskId)) {
+            return null;
+        }
+        long signTaskId;
+        try {
+            signTaskId = Long.parseLong(taskId.trim());
+        } catch (NumberFormatException notAnEngineTaskId) {
+            return null;
+        }
+        ProcessAddSignTask signTask = addSignTaskMapper.selectById(signTaskId);
+        return signTask != null && processId.equals(signTask.getProcessId()) ? signTask : null;
+    }
+
+    /** 审批终态时未决加签任务的收场（拒绝/撤回共用）：全部销毁，不进任何人的待处理。 */
+    private void destroyPendingSignTasks(Long processId) {
+        addSignTaskMapper.update(null, new LambdaUpdateWrapper<ProcessAddSignTask>()
+                .eq(ProcessAddSignTask::getProcessId, processId)
+                .eq(ProcessAddSignTask::getStatus, AddSignStatus.PENDING.name())
+                .set(ProcessAddSignTask::getStatus, AddSignStatus.DESTROYED.name()));
+    }
+
     private static void requireStatusInDomain(ApprovalVo approvalVo) {
         Integer status = approvalVo == null ? null : approvalVo.getStatus();
         if (status == null || (status != 1 && status != -1)) {
@@ -256,10 +381,81 @@ public class ApprovalWriter {
             // 校验与取消之间，并发对手（通过/拒绝）已经结束实例：本侧确定未提交。
             throw new BusinessException(201, "该审批已被其他人处理");
         }
+        // 未决加签任务随终态销毁（#288）：加签等待面不越过撤回存活。
+        destroyPendingSignTasks(processId);
         processRecordService.record(processId, ProcessApprovalSupport.ApprovalAction.withdraw(), user);
         ProcessApprovalSupport.applyWithdrawn(process);
         processMapper.updateById(process);
         return new Approval.WithdrawOutcome(processId, process.getStatus());
+    }
+
+    /**
+     * 转办（ADR 0068，#288）：当前处理人把审批永久交给一个启用用户（不能本人/申请人）。
+     * 写 TRANSFER 账本（target=目标）；原处理人成为转办经手人（只读，经账本推导）；
+     * 不设转回与接受态；引擎侧经 ApprovalEngine.reassign 改派（转办人候选身份一并移除）。
+     * 校验先于写：所有 201 的含义都是「确定未提交」。
+     */
+    @Transactional
+    public Approval.TransferOutcome transfer(SysUser user, Long processId, TransferVo transferVo) {
+        Process process = requireActiveHandlerProcess(user, processId, "转办");
+        String engineTaskId = requireActionableEngineTaskId(user, process, "转办");
+        SysUser target = requireActionTarget(
+                user, process, transferVo == null ? null : transferVo.getTargetUserId(), "转办", "转办目标");
+        try {
+            approvalEngine.reassign(engineTaskId, user.getUsername(), target.getUsername());
+        } catch (FlowableObjectNotFoundException e) {
+            // 校验与改派之间，并发对手已经处理掉任务：本侧确定未提交。
+            throw new BusinessException(201, "该审批已被其他人处理");
+        }
+        processRecordService.record(
+                processId,
+                ProcessApprovalSupport.ApprovalAction.transfer(target.getId(), target.getName()),
+                user);
+        refreshWaitingDescription(process);
+        processMapper.updateById(process);
+        return new Approval.TransferOutcome(processId, process.getStatus());
+    }
+
+    /**
+     * 加签（ADR 0068，#288）：当前处理人指定 1..N 个加签人（不能本人/申请人，会签口径全部通过）。
+     * 前加签：原任务保持活动但挂起（成员资格挂起标记），加签人全部通过后解挂回原处理人；
+     * 后加签：原处理人的通过先记账（APPROVE 账本行）但引擎任务不完成，批次全部通过后才完成当前节点。
+     * 加签不注入 BPMN、不改已发布产物；加签人不能再加签、同一批次进行中不能再加签（可动作引擎任务
+     * 门槛统一拒绝）。
+     */
+    @Transactional
+    public Approval.AddSignOutcome addSign(SysUser user, Long processId, AddSignVo addSignVo) {
+        Process process = requireActiveHandlerProcess(user, processId, "加签");
+        String engineTaskId = requireActionableEngineTaskId(user, process, "加签");
+        AddSignType signType = requireAddSignType(addSignVo == null ? null : addSignVo.getSignType());
+        List<SysUser> targets =
+                requireAddSignTargets(user, process, addSignVo == null ? null : addSignVo.getAssigneeIds());
+        int batchNo = nextBatchNo(engineTaskId);
+
+        List<Long> signTaskIds = new ArrayList<>();
+        for (SysUser target : targets) {
+            ProcessAddSignTask signTask = new ProcessAddSignTask();
+            signTask.setProcessId(processId);
+            signTask.setEngineTaskId(engineTaskId);
+            signTask.setBatchNo(batchNo);
+            signTask.setSignType(signType.name());
+            signTask.setAssigneeId(target.getId());
+            signTask.setStatus(AddSignStatus.PENDING.name());
+            addSignTaskMapper.insert(signTask);
+            signTaskIds.add(signTask.getId());
+        }
+
+        // 后加签：原处理人的通过先记账（ADR 0068）——引擎任务不完成，批次全部通过后才用它收口。
+        if (signType == AddSignType.AFTER) {
+            processRecordService.record(processId, ProcessApprovalSupport.ApprovalAction.decision(1), user);
+        }
+        String targetNames = targets.stream().map(SysUser::getName).collect(Collectors.joining("、"));
+        processRecordService.record(processId, ProcessApprovalSupport.ApprovalAction.addSign(targetNames), user);
+
+        process.setDescription(ProcessApprovalSupport.addSignWaitingDescription(
+                targets.stream().map(SysUser::getName).toList()));
+        processMapper.updateById(process);
+        return new Approval.AddSignOutcome(processId, batchNo, signTaskIds);
     }
 
     /**
@@ -317,7 +513,7 @@ public class ApprovalWriter {
         }
     }
 
-    private Process requireCurrentApprover(SysUser user, ApprovalVo approvalVo) {
+    private Process requireApprovableProcess(SysUser user, ApprovalVo approvalVo) {
         if (user == null || !StringUtils.hasText(user.getUsername())
                 || approvalVo == null || approvalVo.getProcessId() == null
                 || !StringUtils.hasText(approvalVo.getTaskId())) {
@@ -327,10 +523,114 @@ public class ApprovalWriter {
         if (process == null || !StringUtils.hasText(process.getProcessInstanceId())) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
-        if (!membershipResolver.resolve(user, process).canAct(approvalVo.getTaskId())) {
+        return process;
+    }
+
+    /** 处理动作的成员资格门槛（引擎与加签两条路径各自的 id 语义都由 canAct 判定）。 */
+    private void requireCurrentApprover(SysUser user, Process process, String taskId) {
+        if (!membershipResolver.resolve(user, process).canAct(taskId)) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
+    }
+
+    /**
+     * 转办/加签的共有前置（#288）：审批存在且审批中，操作人是当前处理人。
+     * 与 approve 的 403 族不同，这类办事动作沿用撤回/催办的 201 命名拒绝（校验先于写）。
+     */
+    private Process requireActiveHandlerProcess(SysUser user, Long processId, String actionLabel) {
+        if (user == null || user.getId() == null || processId == null) {
+            throw new BusinessException(201, "只有当前处理人可以" + actionLabel);
+        }
+        Process process = processMapper.selectById(processId);
+        if (process == null) {
+            throw new BusinessException(201, "审批不存在");
+        }
+        if (!Integer.valueOf(1).equals(process.getStatus())
+                || !StringUtils.hasText(process.getProcessInstanceId())) {
+            throw new BusinessException(201, "只有审批中的审批可以" + actionLabel);
+        }
+        ApprovalMembership membership = membershipResolver.resolve(user, process);
+        if (!StringUtils.hasText(user.getUsername()) || membership.engineTaskIds().isEmpty()) {
+            throw new BusinessException(201, "只有当前处理人可以" + actionLabel);
+        }
         return process;
+    }
+
+    /**
+     * 可动作的引擎任务 id（#288）：挂起中的任务（有未决加签批次压着）不能发起转办/加签——
+     * 前加签挂起的原处理人不能动作，同一批次进行中不能再加签，加签人也够不到这个门槛
+     * （他们只有加签任务 id，没有引擎任务）。并行流程多任务可动作时取解析序的第一个。
+     */
+    private String requireActionableEngineTaskId(SysUser user, Process process, String actionLabel) {
+        ApprovalMembership membership = membershipResolver.resolve(user, process);
+        for (String engineTaskId : membership.engineTaskIds()) {
+            if (!membership.suspendedTaskIds().contains(engineTaskId)) {
+                return engineTaskId;
+            }
+        }
+        if (!membership.engineTaskIds().isEmpty()) {
+            throw new BusinessException(201, "加签处理中，暂不能" + actionLabel);
+        }
+        throw new BusinessException(201, "只有当前处理人可以" + actionLabel);
+    }
+
+    /** 转办/加签目标的合法性（#288）：启用用户、不能本人、不能申请人；201 命名拒绝。 */
+    private SysUser requireActionTarget(
+            SysUser actor, Process process, Long targetUserId, String actionLabel, String targetLabel) {
+        if (targetUserId == null) {
+            throw new BusinessException(201, targetLabel + "不能为空");
+        }
+        if (targetUserId.equals(actor.getId())) {
+            throw new BusinessException(201, "不能" + actionLabel + "给自己");
+        }
+        SysUser target = sysUserService.getById(targetUserId);
+        if (target == null || !Integer.valueOf(1).equals(target.getStatus())) {
+            throw new BusinessException(201, targetLabel + "不存在或已停用");
+        }
+        if (targetUserId.equals(process.getUserId())) {
+            throw new BusinessException(201, "不能" + actionLabel + "给申请人");
+        }
+        return target;
+    }
+
+    private AddSignType requireAddSignType(Integer signType) {
+        if (signType == null || (signType != 1 && signType != 2)) {
+            throw new BusinessException(201, "加签类型只能为 1（前加签）或 2（后加签）");
+        }
+        return signType == 1 ? AddSignType.BEFORE : AddSignType.AFTER;
+    }
+
+    private List<SysUser> requireAddSignTargets(SysUser actor, Process process, List<Long> assigneeIds) {
+        Set<Long> requested = assigneeIds == null ? Set.of() : new LinkedHashSet<>(assigneeIds);
+        if (requested.isEmpty()) {
+            throw new BusinessException(201, "加签人不能为空");
+        }
+        List<SysUser> targets = new ArrayList<>();
+        for (Long assigneeId : requested) {
+            targets.add(requireActionTarget(actor, process, assigneeId, "加签", "加签人"));
+        }
+        return targets;
+    }
+
+    /** 同一引擎任务内的批次序号：历史最大批次 +1（前加签回到原处理人后可再来一批）。 */
+    private int nextBatchNo(String engineTaskId) {
+        List<ProcessAddSignTask> existing = addSignTaskMapper.selectList(
+                new LambdaQueryWrapper<ProcessAddSignTask>()
+                        .eq(ProcessAddSignTask::getEngineTaskId, engineTaskId)
+                        .select(ProcessAddSignTask::getBatchNo));
+        return existing.stream()
+                .map(ProcessAddSignTask::getBatchNo)
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .max()
+                .orElse(0) + 1;
+    }
+
+    /** 等待文案回写（等待文案由 description 唯一拥有，ADR 0043）：按当前任务的处理人名单重算。 */
+    private void refreshWaitingDescription(Process process) {
+        List<ApprovalEngine.CurrentTask> nextTasks =
+                approvalEngine.currentTasks(process.getProcessInstanceId());
+        process.setDescription(ProcessStartSupport.waitingDescription(approverNames(nextTasks)));
     }
 
     private List<String> approverNames(List<ApprovalEngine.CurrentTask> taskList) {

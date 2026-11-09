@@ -49,4 +49,13 @@ public class ProcessVo {
 
 	private String taskId;
 
+	@Schema(description = "待处理行动作面（#288：APPROVE 通过/拒绝、CANDIDATE 候选人之一处理即认领、ADD_SIGN 加签处理；仅待处理行下发）")
+	private String actionKind;
+
+	@Schema(description = "前加签挂起标记（#288）：true 表示本行是挂起中的原处理人，等待加签人处理、不能动作")
+	private Boolean suspended;
+
+	@Schema(description = "催办标记（#288）：最近 24 小时内该审批存在 URGE 账本行（process 级判定）")
+	private Boolean urged;
+
 }

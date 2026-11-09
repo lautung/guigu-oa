@@ -21,6 +21,9 @@
           <span v-if="item.processTypeName">审批类型：{{ item.processTypeName }}</span>
         </div>
         <p v-if="item.relationLabel" class="item-relation">{{ item.relationLabel }}</p>
+        <p v-if="item.pendingRowLabel" class="item-relation item-row-state">
+          {{ item.pendingRowLabel }}
+        </p>
         <p v-if="item.progressLabel" class="item-progress">{{ item.progressLabel }}</p>
         <div v-if="item.summaryFields.length" class="item-fields">
           <p v-for="field in item.summaryFields" :key="field.key">
@@ -28,6 +31,7 @@
           </p>
         </div>
         <div class="item-status">
+          <el-tag v-if="item.urged" size="small" type="warning" effect="plain">已催办</el-tag>
           <el-tag size="small" :type="item.statusTagType">
             {{ item.statusLabel }}
           </el-tag>
@@ -163,6 +167,10 @@ export default defineComponent({
   margin: 4px 0;
   font-size: 13px;
   color: #606266;
+}
+
+.item-row-state {
+  color: #e6a23c;
 }
 
 .item-fields {

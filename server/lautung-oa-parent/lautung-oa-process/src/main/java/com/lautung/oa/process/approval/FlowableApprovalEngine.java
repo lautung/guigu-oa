@@ -1,7 +1,6 @@
 package com.lautung.oa.process.approval;
 
 import com.lautung.oa.process.ProcessEngineApproval;
-import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -22,17 +21,14 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     private final RuntimeService runtimeService;
     private final RepositoryService repositoryService;
     private final TaskService taskService;
-    private final HistoryService historyService;
 
     public FlowableApprovalEngine(
             RuntimeService runtimeService,
             RepositoryService repositoryService,
-            TaskService taskService,
-            HistoryService historyService) {
+            TaskService taskService) {
         this.runtimeService = runtimeService;
         this.repositoryService = repositoryService;
         this.taskService = taskService;
-        this.historyService = historyService;
     }
 
     @Override
@@ -61,6 +57,11 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void reassign(String taskId, String fromUsername, String toUsername) {
+        ProcessEngineApproval.reassign(taskService, taskId, fromUsername, toUsername);
+    }
+
+    @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         return ProcessEngineApproval.currentTasks(taskService, processInstanceId).stream()
                 .map(task -> new CurrentTask(
@@ -81,17 +82,14 @@ public class FlowableApprovalEngine implements ApprovalEngine {
                 .map(task -> new PendingTask(
                         task.getId(),
                         task.getProcessInstanceId(),
-                        businessKeys.get(task.getProcessInstanceId())))
+                        businessKeys.get(task.getProcessInstanceId()),
+                        task.getAssignee(),
+                        task.getCreateTime()))
                 .toList();
     }
 
     @Override
     public long pendingCount(String username) {
         return ProcessEngineApproval.pendingCount(taskService, username);
-    }
-
-    @Override
-    public boolean hasHistoricAssignee(String processInstanceId, String username) {
-        return ProcessEngineApproval.hasHistoricAssignee(historyService, processInstanceId, username);
     }
 }

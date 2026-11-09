@@ -62,6 +62,15 @@ function state(overrides = {}) {
     canUrge: false,
     urgeBusy: false,
     urgeDone: false,
+    showTransfer: false,
+    canTransfer: false,
+    transferring: false,
+    showAddSign: false,
+    canAddSign: false,
+    addingSign: false,
+    actionTargets: [],
+    actionTargetsLoading: false,
+    actionTargetsError: '',
     ...overrides,
   })
 }
@@ -80,6 +89,9 @@ function makeOpening(overrides = {}) {
     returnPending: vi.fn(),
     withdraw: vi.fn(),
     urge: vi.fn(),
+    transfer: vi.fn(),
+    addSign: vi.fn(),
+    loadActionTargets: vi.fn(),
   }
 }
 
@@ -301,5 +313,106 @@ describe('PendingDetail states', () => {
 
     wrapper.unmount()
     expect(holder.opening.release).toHaveBeenCalled()
+  })
+})
+
+describe('PendingDetail 转办/加签动作面（#288）', () => {
+  it('挂起行、候选人行与催办标记在详情头部呈现', async () => {
+    holder.opening.state.detail.pendingRow = { actionKind: 'APPROVE', suspended: true, urged: true }
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('等待加签人处理')
+    expect(wrapper.text()).toContain('已催办')
+    expect(wrapper.text()).not.toContain('候选人之一，处理即认领')
+
+    holder.opening.state.detail.pendingRow = {
+      actionKind: 'CANDIDATE',
+      suspended: false,
+      urged: false,
+    }
+    const candidate = await mountDetail()
+    expect(candidate.text()).toContain('候选人之一，处理即认领')
+  })
+
+  it('转办/加签按钮随资格出现，点击打开弹层并读取候选目标', async () => {
+    holder.opening.state.detail.canApprove = true
+    holder.opening.state.detail.pendingRow = { actionKind: 'APPROVE', suspended: false }
+    holder.opening.state.showTransfer = true
+    holder.opening.state.showAddSign = true
+    holder.opening.state.canTransfer = true
+    holder.opening.state.canAddSign = true
+    const wrapper = await mountDetail()
+
+    const transfer = wrapper.findAll('button').find((button) => button.text() === '转办')
+    expect(transfer).toBeDefined()
+    expect(transfer.attributes('disabled')).toBeUndefined()
+    await transfer.trigger('click')
+    expect(holder.opening.loadActionTargets).toHaveBeenCalled()
+
+    const addSign = wrapper.findAll('button').find((button) => button.text() === '加签')
+    expect(addSign).toBeDefined()
+    await addSign.trigger('click')
+    expect(holder.opening.loadActionTargets).toHaveBeenCalledTimes(2)
+  })
+
+  it('挂起行与加签行不出现转办/加签按钮，动作按钮按资格停用', async () => {
+    holder.opening.state.detail.canApprove = false
+    holder.opening.state.detail.pendingRow = { actionKind: 'APPROVE', suspended: true }
+    const suspended = await mountDetail()
+    expect(suspended.findAll('button').some((button) => button.text() === '转办')).toBe(false)
+    expect(suspended.findAll('button').some((button) => button.text() === '加签')).toBe(false)
+    suspended.unmount()
+
+    holder.opening = makeOpening()
+    holder.opening.state.detail.canApprove = true
+    holder.opening.state.detail.pendingRow = { actionKind: 'ADD_SIGN', suspended: false }
+    holder.opening.state.showTransfer = false
+    holder.opening.state.showAddSign = false
+    const signer = await mountDetail()
+    expect(signer.findAll('button').some((button) => button.text() === '转办')).toBe(false)
+    expect(signer.findAll('button').some((button) => button.text() === '加签')).toBe(false)
+    signer.unmount()
+
+    holder.opening = makeOpening()
+    holder.opening.state.detail.canApprove = true
+    holder.opening.state.detail.pendingRow = { actionKind: 'APPROVE', suspended: false }
+    holder.opening.state.showTransfer = true
+    holder.opening.state.showAddSign = true
+    holder.opening.state.canTransfer = false
+    holder.opening.state.canAddSign = false
+    const disabled = await mountDetail()
+    expect(
+      disabled
+        .findAll('button')
+        .find((button) => button.text() === '转办')
+        .attributes('disabled'),
+    ).toBeDefined()
+    expect(
+      disabled
+        .findAll('button')
+        .find((button) => button.text() === '加签')
+        .attributes('disabled'),
+    ).toBeDefined()
+  })
+
+  it('转办/加签恢复记录显示对应动作文案；提交在途时面板让位给提交提示', async () => {
+    holder.opening.state.recoveries = [
+      { operationId: 'op-t', processId: 'p-1', action: 'transfer', targetUserId: 5 },
+      { operationId: 'op-a', processId: 'p-1', action: 'addSign', signType: 1, assigneeIds: [4] },
+    ]
+    const wrapper = await mountDetail()
+
+    expect(wrapper.text()).toContain('所选动作：转办')
+    expect(wrapper.text()).toContain('所选动作：加签')
+    wrapper.unmount()
+
+    holder.opening = makeOpening()
+    holder.opening.state.recoveries = [
+      { operationId: 'op-t', processId: 'p-1', action: 'transfer', targetUserId: 5 },
+    ]
+    holder.opening.state.transferring = true
+    const inFlight = await mountDetail()
+    expect(inFlight.text()).not.toContain('处理结果待确认')
+    expect(inFlight.text()).toContain('可以直接离开；离开不会撤销已提交的处理。')
   })
 })

@@ -119,7 +119,7 @@ class AttachmentServiceTest {
     void registersAnUploadOnTheApprovalForAnApplicant() {
         when(processMapper.selectById(9L)).thenReturn(process(9L));
         when(membershipResolver.resolve(any(), any()))
-                .thenReturn(new ApprovalMembership(true, Set.of(), false, false));
+                .thenReturn(new ApprovalMembership(true, Set.of(), Set.of(), Set.of(), false, false, false));
         when(objectStore.presignUpload(any(), any(), any())).thenReturn("https://s3.test/put");
 
         service.createUpload(user, request("a.txt", "text/plain", 1L, 9L, null));
@@ -191,7 +191,7 @@ class AttachmentServiceTest {
         when(attachmentMapper.selectById(1L)).thenReturn(attachment);
         when(processMapper.selectById(9L)).thenReturn(process(9L));
         when(membershipResolver.resolve(any(), any()))
-                .thenReturn(new ApprovalMembership(true, Set.of(), false, false));
+                .thenReturn(new ApprovalMembership(true, Set.of(), Set.of(), Set.of(), false, false, false));
         when(objectStore.head("pending/storage-1"))
                 .thenReturn(new AttachmentObjectStore.StoredObject(10L, "text/plain"));
         TransactionSynchronizationManager.initSynchronization();
@@ -216,7 +216,7 @@ class AttachmentServiceTest {
         when(attachmentMapper.selectById(1L)).thenReturn(attachment);
         when(processMapper.selectById(9L)).thenReturn(process(9L));
         when(membershipResolver.resolve(any(), any()))
-                .thenReturn(new ApprovalMembership(true, Set.of(), false, false));
+                .thenReturn(new ApprovalMembership(true, Set.of(), Set.of(), Set.of(), false, false, false));
         when(objectStore.head("pending/storage-1"))
                 .thenReturn(new AttachmentObjectStore.StoredObject(10L, "text/plain"));
         org.mockito.Mockito.doThrow(new IllegalStateException("s3 down"))
@@ -295,7 +295,7 @@ class AttachmentServiceTest {
         assertEquals(205, code(() -> service.listForProcess(user, 9L)));
 
         when(membershipResolver.resolve(any(), any()))
-                .thenReturn(new ApprovalMembership(true, Set.of(), false, false));
+                .thenReturn(new ApprovalMembership(true, Set.of(), Set.of(), Set.of(), false, false, false));
         when(attachmentMapper.selectList(any())).thenReturn(List.of(pending(1L, "storage-1")));
         ProcessAttachmentList list = service.listForProcess(user, 9L);
 
@@ -352,7 +352,7 @@ class AttachmentServiceTest {
         assertEquals(205, code(() -> service.createDownloadGrant(user, 9L, 3L)));
 
         when(membershipResolver.resolve(any(), any()))
-                .thenReturn(new ApprovalMembership(false, Set.of(), false, true));
+                .thenReturn(new ApprovalMembership(false, Set.of(), Set.of(), Set.of(), false, true, false));
         when(objectStore.presignDownload(any(), any(), any())).thenReturn("https://s3.test/get");
         AttachmentDownloadGrant grant = service.createDownloadGrant(user, 9L, 3L);
 
