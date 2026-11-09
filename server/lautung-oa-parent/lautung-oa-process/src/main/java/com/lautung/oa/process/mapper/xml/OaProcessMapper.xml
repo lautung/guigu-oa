@@ -11,6 +11,7 @@
     -->
     <sql id="approvalRowColumns">
         a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.status,a.create_time,a.update_time,
+        a.business_type,a.business_id,
         d.name as name,
         b.name as processTemplateName,
         c.name as processTypeName
@@ -156,5 +157,22 @@
         where g.user_id = #{userId} and g.is_deleted = 0 and <include refid="approvalRowLiveness"/>
         order by a.create_time desc, a.id desc
         limit #{limit} offset #{offset}
+    </select>
+
+    <!-- 业务键回查最近一条审批（#289，ADR 0067）：单据表不存 process_id，域详情按
+         (business_type, business_id) 等值 + id 倒序取一条拼审批摘要；一张单据可积累多次
+         审批（重提起新审批），最近一条即当前真相。索引形状见 V138 头注释（EXPLAIN ANALYZE
+         取证：idx_oa_process_business 等值反向扫描，无排序步骤）；is_deleted 是残余谓词
+         （#198 同一取舍，等值列里插 is_deleted 会破坏排序匹配）。 -->
+    <select id="selectLatestBusinessRow" resultType="com.lautung.oa.vo.process.ProcessVo">
+        select
+            <include refid="approvalRowColumns"/>
+        from oa_process a
+            <include refid="approvalRowJoins"/>
+        where <include refid="approvalRowLiveness"/>
+          and a.business_type = #{businessType}
+          and a.business_id = #{businessId}
+        order by a.id desc
+        limit 1
     </select>
 </mapper>

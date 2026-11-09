@@ -58,4 +58,10 @@ public class ProcessVo {
 	@Schema(description = "催办标记（#288）：最近 24 小时内该审批存在 URGE 账本行（process 级判定）")
 	private Boolean urged;
 
+	@Schema(description = "业务类型（#289，ADR 0067）：值域 <域>.<单据>，供前端标来源；通用审批为空")
+	private String businessType;
+
+	@Schema(description = "业务单据 id（#289，ADR 0067）：通用审批为空；单据表不存 process_id，反向回查靠本列")
+	private Long businessId;
+
 }

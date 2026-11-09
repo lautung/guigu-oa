@@ -53,4 +53,12 @@ public class Process extends BaseEntity {
 	@Schema(description = "发起提交标识（同一次提交重复送达时相同）")
 	@TableField("idempotency_key")
 	private String idempotencyKey;
+
+	@Schema(description = "业务类型（值域 <域>.<单据>，如 hr.transfer；通用审批为空）")
+	@TableField("business_type")
+	private String businessType;
+
+	@Schema(description = "业务单据 id（单据表不存 process_id，详情按两列回查最近一条审批；通用审批为空）")
+	@TableField("business_id")
+	private Long businessId;
 }

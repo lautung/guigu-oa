@@ -43,4 +43,8 @@ public interface OaProcessMapper extends BaseMapper<Process> {
     List<ProcessVo> selectCarbonCopiedRows(@Param("userId") Long userId,
                                            @Param("offset") long offset,
                                            @Param("limit") long limit);
+
+    //业务键回查最近一条审批（#289，ADR 0067）：(business_type, business_id) 等值 + id 倒序取一条
+    ProcessVo selectLatestBusinessRow(@Param("businessType") String businessType,
+                                      @Param("businessId") Long businessId);
 }

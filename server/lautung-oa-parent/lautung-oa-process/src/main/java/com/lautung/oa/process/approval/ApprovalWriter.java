@@ -13,6 +13,9 @@ import com.lautung.oa.process.ProcessApprovalSupport;
 import com.lautung.oa.process.ProcessApprovalSupport.AddSignStatus;
 import com.lautung.oa.process.ProcessApprovalSupport.AddSignType;
 import com.lautung.oa.process.ProcessStartSupport;
+import com.lautung.oa.process.business.BusinessApprovalCallback;
+import com.lautung.oa.process.business.BusinessApprovalCallbackRegistry;
+import com.lautung.oa.process.business.BusinessApprovalOutcome;
 import com.lautung.oa.process.attachment.AttachmentService;
 import com.lautung.oa.process.cc.CarbonCopyWriter;
 import com.lautung.oa.process.mapper.OaProcessAddSignTaskMapper;
@@ -24,6 +27,7 @@ import com.lautung.oa.process.service.ApprovalTemplate;
 import com.lautung.oa.process.service.OaProcessRecordService;
 import com.lautung.oa.vo.process.AddSignVo;
 import com.lautung.oa.vo.process.ApprovalVo;
+import com.lautung.oa.vo.process.BusinessApprovalStart;
 import com.lautung.oa.vo.process.ProcessFormVo;
 import com.lautung.oa.vo.process.TransferVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -71,6 +75,7 @@ public class ApprovalWriter {
     private final OaProcessAddSignTaskMapper addSignTaskMapper;
     private final OaProcessRecordService processRecordService;
     private final SysUserService sysUserService;
+    private final BusinessApprovalCallbackRegistry businessCallbackRegistry;
 
     public ApprovalWriter(
             ApprovalTemplate approvalTemplate,
@@ -81,7 +86,8 @@ public class ApprovalWriter {
             OaProcessMapper processMapper,
             OaProcessAddSignTaskMapper addSignTaskMapper,
             OaProcessRecordService processRecordService,
-            SysUserService sysUserService) {
+            SysUserService sysUserService,
+            BusinessApprovalCallbackRegistry businessCallbackRegistry) {
         this.approvalTemplate = approvalTemplate;
         this.approvalEngine = approvalEngine;
         this.attachmentService = attachmentService;
@@ -91,6 +97,7 @@ public class ApprovalWriter {
         this.addSignTaskMapper = addSignTaskMapper;
         this.processRecordService = processRecordService;
         this.sysUserService = sysUserService;
+        this.businessCallbackRegistry = businessCallbackRegistry;
     }
 
     @Transactional
@@ -144,6 +151,75 @@ public class ApprovalWriter {
                 process.getId(),
                 processInstanceId,
                 currentTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    /**
+     * 业务发起（ADR 0067，#289）：业务域经 {@code BusinessApprovalStarter} 进入，次序与
+     * {@link #startUp} 同构（幂等重放 → 模板发布证据 → insert → 抄送 → 引擎 → 等待文案 → 账本），
+     * 差异只有三处：业务键两列随行写入、表单值是提交快照（formShowData，不校验模板表单结构与
+     * 动态必填）、不经附件绑定（单据附件由各域票自行挂 oa_attachment.process_id）。
+     * 模板按 oa_business_template 映射解析；发布证据在任何写入之前核验（201 = 什么都没发生）。
+     */
+    @Transactional
+    public Approval.StartOutcome startBusiness(
+            BusinessApprovalStart command, String idempotencyKey, Long processTemplateId) {
+        Process started = startedProcess(command.applicant(), idempotencyKey);
+        if (started != null) {
+            return replayedOutcome(started);
+        }
+
+        ApprovalTemplate.PublishedApproval publication =
+                approvalTemplate.resolveForInitiation(processTemplateId);
+
+        Process process = new Process();
+        process.setBusinessType(command.businessType());
+        process.setBusinessId(command.businessId());
+        process.setStatus(1);
+        process.setProcessCode(System.currentTimeMillis() + "");
+        process.setUserId(command.applicant().getId());
+        process.setFormValues(ProcessStartSupport.businessFormValues(command.summaryText()));
+        process.setTitle(ProcessStartSupport.title(
+                command.applicant().getName(), publication.template().getName()));
+        process.setIdempotencyKey(idempotencyKey);
+        processMapper.insert(process);
+
+        carbonCopyWriter.copyAtStart(command.applicant(), process.getId(), command.ccUserIds());
+
+        String processInstanceId = approvalEngine.start(
+                publication.processDefinitionId(),
+                String.valueOf(process.getId()),
+                ProcessStartSupport.engineVariables(process.getFormValues()));
+
+        List<ApprovalEngine.CurrentTask> currentTasks = approvalEngine.currentTasks(processInstanceId);
+        process.setProcessInstanceId(processInstanceId);
+        process.setDescription(ProcessStartSupport.waitingDescription(approverNames(currentTasks)));
+        processMapper.updateById(process);
+
+        processRecordService.record(
+                process.getId(), ProcessApprovalSupport.ApprovalAction.initiate(), command.applicant());
+
+        return new Approval.StartOutcome(
+                process.getId(),
+                processInstanceId,
+                currentTasks.stream().map(ApprovalEngine.CurrentTask::taskId).toList());
+    }
+
+    /**
+     * 业务审批终态回调（ADR 0067，#289）：审批动作同一事务内、账本更新之后调用
+     * （四个调用点都在终态 updateById 之后）；同值 no-op 与异值回滚由回调实现按单据
+     * 自己的状态仲裁，抛错回滚整个动作（含引擎动作）。通用审批（无业务键）与中间
+     * 节点（status 仍为 1）不回调。
+     */
+    private void notifyBusinessTerminal(Process process) {
+        BusinessApprovalOutcome outcome = BusinessApprovalOutcome.ofStatus(process.getStatus());
+        if (outcome == null) {
+            return;
+        }
+        BusinessApprovalCallback callback = businessCallbackRegistry.get(process.getBusinessType());
+        if (callback == null) {
+            return;
+        }
+        callback.onTerminal(process.getBusinessId(), outcome);
     }
 
     /**
@@ -254,6 +330,7 @@ public class ApprovalWriter {
                 approverNames(nextTasks),
                 !nextTasks.isEmpty());
         processMapper.updateById(process);
+        notifyBusinessTerminal(process);
 
         return new Approval.DecisionOutcome(
                 process.getId(),
@@ -297,6 +374,7 @@ public class ApprovalWriter {
         destroyPendingSignTasks(process.getId());
         ProcessApprovalSupport.applyOutcome(process, status, List.of(), false);
         processMapper.updateById(process);
+        notifyBusinessTerminal(process);
         return new Approval.DecisionOutcome(process.getId(), process.getStatus(), List.of());
     }
 
@@ -331,6 +409,7 @@ public class ApprovalWriter {
         ProcessApprovalSupport.applyOutcome(
                 process, 1, approverNames(nextTasks), !nextTasks.isEmpty());
         processMapper.updateById(process);
+        notifyBusinessTerminal(process);
         return new Approval.DecisionOutcome(
                 process.getId(),
                 process.getStatus(),
@@ -386,6 +465,7 @@ public class ApprovalWriter {
         processRecordService.record(processId, ProcessApprovalSupport.ApprovalAction.withdraw(), user);
         ProcessApprovalSupport.applyWithdrawn(process);
         processMapper.updateById(process);
+        notifyBusinessTerminal(process);
         return new Approval.WithdrawOutcome(processId, process.getStatus());
     }
 

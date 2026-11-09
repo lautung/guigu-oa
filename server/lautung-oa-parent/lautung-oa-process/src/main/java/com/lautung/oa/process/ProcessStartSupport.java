@@ -157,6 +157,30 @@ public final class ProcessStartSupport {
         return variables;
     }
 
+    /**
+     * 业务发起的提交快照（#289，ADR 0067）：摘要文本写进 {@code form_values} 的
+     * {@code formShowData}，走现有详情页渲染路径（客户端按 formShowData 键值逐行渲染）；
+     * {@code formData} 留空对象——业务发起不填模板表单，形状与无表单模板的通用发起一致。
+     * 提交时定稿，之后改单据不影响在途审批。
+     */
+    public static String businessFormValues(String summaryText) {
+        Map<String, Object> formShowData = new LinkedHashMap<>();
+        if (StringUtils.hasText(summaryText)) {
+            formShowData.put(SUMMARY_FIELD_KEY, summaryText);
+        }
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("formData", Map.of());
+        root.put("formShowData", formShowData);
+        try {
+            return OBJECT_MAPPER.writeValueAsString(root);
+        } catch (Exception e) {
+            throw new IllegalStateException("业务提交快照序列化失败", e);
+        }
+    }
+
+    /** 业务快照在 formShowData 里的展示键：客户端详情按键名渲染成一行摘要。 */
+    public static final String SUMMARY_FIELD_KEY = "摘要";
+
     public static String title(String userName, String templateName) {
         return userName + "发起" + templateName + "申请";
     }
