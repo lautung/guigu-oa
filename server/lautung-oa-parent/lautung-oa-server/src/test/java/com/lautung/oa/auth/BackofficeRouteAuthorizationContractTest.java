@@ -156,9 +156,12 @@ class BackofficeRouteAuthorizationContractTest {
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:edit", "updateById");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:remove", "remove");
-        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", null, "index", "get");
+        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", null, "index", "get",
+                "approverRules");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:add", "save");
-        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:edit", "updateById");
+        // 审批人规则（#285）：读走页面授予，保存是模板编辑的一部分（复用 edit 按钮点）。
+        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:edit", "updateById",
+                "replaceApproverRules");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:remove", "remove");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:upload", "uploadProcessDefinition");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:publish", "publish");

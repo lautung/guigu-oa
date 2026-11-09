@@ -9,6 +9,7 @@ import com.lautung.oa.process.ProcessDefinitionStorage;
 import com.lautung.oa.process.deployment.ProcessDeploymentEngine;
 import com.lautung.oa.process.mapper.OaProcessTemplateMapper;
 import com.lautung.oa.process.publication.PublicationVerifier;
+import com.lautung.oa.process.service.OaProcessApproverRuleService;
 import com.lautung.oa.process.mapper.OaProcessTemplatePublicationMapper;
 import com.lautung.oa.process.service.OaProcessTypeService;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -51,6 +52,7 @@ class OaProcessTemplateServiceImplTest {
             mock(OaProcessTemplatePublicationMapper.class);
     private final ProcessDefinitionStorage storage = mock(ProcessDefinitionStorage.class);
     private final ProcessDeploymentEngine deploymentEngine = mock(ProcessDeploymentEngine.class);
+    private final OaProcessApproverRuleService approverRuleService = mock(OaProcessApproverRuleService.class);
 
     private final OaProcessTemplateServiceImpl service = new OaProcessTemplateServiceImpl();
 
@@ -70,6 +72,10 @@ class OaProcessTemplateServiceImplTest {
         ReflectionTestUtils.setField(service, "deploymentEngine", deploymentEngine);
         ReflectionTestUtils.setField(service, "publicationVerifier",
                 new PublicationVerifier(storage, deploymentEngine));
+        ReflectionTestUtils.setField(service, "approverRuleService", approverRuleService);
+        // 发布/上传路径会解析上传 zip 里的 BPMN：默认给一个 start→end 的最小流程（无节点可校验）。
+        when(storage.open(anyString())).thenReturn(
+                new java.io.ByteArrayInputStream(minimalBpmnZip()));
 
         when(deploymentEngine.definitionById(anyString())).thenReturn(
                 new ProcessDeploymentEngine.DefinitionSnapshot("def-1", KEY, "dep-1", false));
@@ -182,11 +188,13 @@ class OaProcessTemplateServiceImplTest {
         ProcessTemplate template = publishable(6L);
         when(templateMapper.selectByIdForUpdate(6L)).thenReturn(template);
         when(templateMapper.updateById(template)).thenReturn(1);
+        when(approverRuleService.findRules(6L)).thenReturn(List.of());
 
         service.publish(6L);
 
         assertEquals(ApprovalTemplateSupport.已发布, template.getStatus());
         verify(publicationMapper).insert(any(ProcessTemplatePublication.class));
+        // 无规则模板的发布产物就是上传原件（旧形状不变）。
         verify(deploymentEngine).deployVerified(PATH, KEY, SHA);
     }
 
@@ -209,6 +217,7 @@ class OaProcessTemplateServiceImplTest {
         when(templateMapper.selectByIdForUpdate(3L)).thenReturn(template(3L, 0));
         service.removeUnpublished(3L);
         verify(templateMapper).deleteById(3L);
+        verify(approverRuleService).removeAll(3L);
     }
 
     @Test
@@ -253,6 +262,34 @@ class OaProcessTemplateServiceImplTest {
 
         assertEquals(PATH, uploaded.processDefinitionPath());
         assertEquals(KEY, uploaded.processDefinitionKey());
+        assertEquals(List.of(), uploaded.userTasks(), "最小流程没有 userTask");
+    }
+
+    /** start→end 的最小 BPMN zip：让发布校验与上传解析在没有规则时平滑通过。 */
+    private static byte[] minimalBpmnZip() {
+        String bpmn = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                             targetNamespace="http://bpmn.io/schema/bpmn">
+                  <process id="leave" isExecutable="true">
+                    <startEvent id="start"/>
+                    <endEvent id="end"/>
+                    <sequenceFlow id="flow" sourceRef="start" targetRef="end"/>
+                  </process>
+                </definitions>
+                """;
+        try {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.ZipOutputStream zip =
+                         new java.util.zip.ZipOutputStream(bytes, java.nio.charset.StandardCharsets.UTF_8)) {
+                zip.putNextEntry(new java.util.zip.ZipEntry("leave.bpmn20.xml"));
+                zip.write(bpmn.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+            return bytes.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.lautung.oa.process.service.impl;
 
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.process.ProcessApproverRule;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.process.ProcessTemplatePublication;
 import com.lautung.oa.model.process.ProcessType;
@@ -9,8 +10,11 @@ import com.lautung.oa.process.ProcessDefinitionStorage;
 import com.lautung.oa.process.deployment.ProcessDeploymentEngine;
 import com.lautung.oa.process.mapper.OaProcessTemplateMapper;
 import com.lautung.oa.process.mapper.OaProcessTemplatePublicationMapper;
+import com.lautung.oa.process.publication.ApproverSidecar;
+import com.lautung.oa.process.publication.BpmnUserTasks;
 import com.lautung.oa.process.publication.PublicationVerifier;
 import com.lautung.oa.process.service.ApprovalTemplate;
+import com.lautung.oa.process.service.OaProcessApproverRuleService;
 import com.lautung.oa.process.service.OaProcessTemplateService;
 import com.lautung.oa.process.service.OaProcessTypeService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -50,6 +54,9 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     @Autowired
     private PublicationVerifier publicationVerifier;
+
+    @Autowired
+    private OaProcessApproverRuleService approverRuleService;
 
     @Override
     public IPage<ProcessTemplate> findPage(Page<ProcessTemplate> pageParam) {
@@ -118,20 +125,57 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
             throw new BusinessException(201, "流程 zip 无法让发起成立");
         }
 
-        String artifactSha256;
+        String uploadedSha256;
         try {
-            artifactSha256 = processDefinitionStorage.sha256(template.getProcessDefinitionPath());
+            uploadedSha256 = processDefinitionStorage.sha256(template.getProcessDefinitionPath());
         } catch (IOException e) {
             throw new BusinessException(201, "流程 zip 不存在或无法读取");
         }
-        if (!processDefinitionStorage.isContentAddressedPath(template.getProcessDefinitionPath(), artifactSha256)) {
+        if (!processDefinitionStorage.isContentAddressedPath(template.getProcessDefinitionPath(), uploadedSha256)) {
             throw new BusinessException(201, "流程 zip 路径必须由内容摘要确定，请重新上传流程 zip");
         }
+
+        // 发布校验（ADR 0069）：解析 BPMN userTask，验「每节点至少一个来源（规则或 assignee）」
+        // 与规则目标存在且启用；解析不出 BPMN 的 zip 在这里拒绝。
+        List<BpmnUserTasks.UserTaskRef> userTasks;
+        try {
+            userTasks = BpmnUserTasks.parse(
+                    uploadedZipBytes(template.getProcessDefinitionPath()), template.getProcessDefinitionKey());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(201, e.getMessage() + "，无法发布");
+        }
+        List<ProcessApproverRule> rules = approverRuleService.findRules(id);
+        approverRuleService.validateForPublish(userTasks, rules);
+
+        // 发布产物（ADR 0003/0046 修订）：有规则时把规则冻结成 oa-approvers.json sidecar，
+        // 与上传 zip 合成 content-addressed 发布产物，证据指向合成件；上传原件保留但不再是
+        // 发布产物。无规则时发布产物就是上传原件（旧模板形状不变，监听器 no-op）。
+        String artifactPath = template.getProcessDefinitionPath();
+        if (!rules.isEmpty()) {
+            byte[] synthesized;
+            try {
+                synthesized = ApproverSidecar.synthesize(
+                        uploadedZipBytes(template.getProcessDefinitionPath()),
+                        template.getProcessDefinitionKey(),
+                        sidecarRules(rules, userTasks));
+                artifactPath = processDefinitionStorage
+                        .store(template.getProcessDefinitionKey() + ".zip", synthesized)
+                        .processDefinitionPath();
+            } catch (IOException e) {
+                throw new BusinessException(201, "发布产物合成失败：流程 zip 无法读取");
+            }
+        }
+        String artifactSha256;
+        try {
+            artifactSha256 = processDefinitionStorage.sha256(artifactPath);
+        } catch (IOException e) {
+            throw new BusinessException(201, "发布产物不存在或无法读取");
+        }
         ProcessDeploymentEngine.DeploymentResult deployed = deploymentEngine.deployVerified(
-                template.getProcessDefinitionPath(), template.getProcessDefinitionKey(), artifactSha256);
+                artifactPath, template.getProcessDefinitionKey(), artifactSha256);
         ProcessTemplatePublication publication = new ProcessTemplatePublication();
         publication.setProcessTemplateId(template.getId());
-        publication.setArtifactPath(template.getProcessDefinitionPath());
+        publication.setArtifactPath(artifactPath);
         publication.setArtifactSha256(deployed.sha256());
         publication.setProcessDefinitionKey(template.getProcessDefinitionKey());
         publication.setDeploymentId(deployed.deploymentId());
@@ -144,6 +188,36 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         }
     }
 
+    /** 规则行 → 冻结 sidecar 行；order 取该节点在 BPMN 里的步序（1 起始，失败文案用）。 */
+    private static List<ApproverSidecar.SidecarRule> sidecarRules(
+            List<ProcessApproverRule> rules, List<BpmnUserTasks.UserTaskRef> userTasks) {
+        List<ApproverSidecar.SidecarRule> sidecarRules = new ArrayList<>(rules.size());
+        for (ProcessApproverRule rule : rules) {
+            int order = 0;
+            for (int index = 0; index < userTasks.size(); index++) {
+                if (userTasks.get(index).key().equals(rule.getTaskDefinitionKey())) {
+                    order = index + 1;
+                    break;
+                }
+            }
+            sidecarRules.add(new ApproverSidecar.SidecarRule(
+                    rule.getTaskDefinitionKey(), rule.getSourceType(), rule.getTargetId(), order));
+        }
+        return sidecarRules;
+    }
+
+    private byte[] uploadedZipBytes(String relativePath) {
+        try {
+            java.io.InputStream content = processDefinitionStorage.open(relativePath);
+            if (content == null) {
+                throw new BusinessException(201, "流程 zip 不存在或无法读取");
+            }
+            return content.readAllBytes();
+        } catch (IOException e) {
+            throw new BusinessException(201, "流程 zip 不存在或无法读取");
+        }
+    }
+
     @Override
     @Transactional
     public void removeUnpublished(Long id) {
@@ -152,6 +226,7 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
         if (!ApprovalTemplateSupport.canWrite(existing.getStatus())) {
             throw new BusinessException(201, "已发布的审批模板不能删除");
         }
+        approverRuleService.removeAll(id);
         baseMapper.deleteById(id);
     }
 
@@ -185,7 +260,19 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
     @Override
     public UploadedProcessDefinition uploadProcessDefinition(MultipartFile file) throws IOException {
         ProcessDefinitionStorage.UploadedProcessDefinition uploaded = processDefinitionStorage.store(file);
-        return new UploadedProcessDefinition(uploaded.processDefinitionPath(), uploaded.processDefinitionKey());
+        // 解析不出 BPMN 的 zip 允许保存（ADR 0069）：节点清单为空，发布时拒绝。
+        List<BpmnUserTasks.UserTaskRef> userTasks = List.of();
+        try {
+            java.io.InputStream content = processDefinitionStorage.open(uploaded.processDefinitionPath());
+            if (content != null) {
+                userTasks = BpmnUserTasks.parse(
+                        content.readAllBytes(), uploaded.processDefinitionKey());
+            }
+        } catch (IllegalArgumentException | IOException unparsable) {
+            userTasks = List.of();
+        }
+        return new UploadedProcessDefinition(
+                uploaded.processDefinitionPath(), uploaded.processDefinitionKey(), userTasks);
     }
 
     @Override

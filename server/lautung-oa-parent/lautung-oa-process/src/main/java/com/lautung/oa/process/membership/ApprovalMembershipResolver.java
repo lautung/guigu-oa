@@ -38,8 +38,11 @@ public class ApprovalMembershipResolver {
                     evidence.currentTasks(process.getProcessInstanceId());
             if (currentTasks != null) {
                 for (MembershipEvidence.CurrentTask task : currentTasks) {
-                    if (task != null && StringUtils.hasText(task.taskId())
-                            && username.equals(task.assignee())) {
+                    if (task == null || !StringUtils.hasText(task.taskId())) {
+                        continue;
+                    }
+                    // assignee 或候选用户都能处理（ADR 0069：处理动作本身认领）。
+                    if (username.equals(task.assignee()) || task.candidates().contains(username)) {
                         currentTaskIds.add(task.taskId());
                     }
                 }

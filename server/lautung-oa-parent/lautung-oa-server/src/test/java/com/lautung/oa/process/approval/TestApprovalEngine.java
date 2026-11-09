@@ -116,6 +116,11 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void claim(String taskId, String username) {
+        delegate.claim(taskId, username);
+    }
+
+    @Override
     public void complete(String taskId) {
         if (failNextComplete) {
             failNextComplete = false;

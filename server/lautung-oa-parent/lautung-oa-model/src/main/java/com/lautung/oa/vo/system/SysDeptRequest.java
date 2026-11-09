@@ -2,7 +2,6 @@ package com.lautung.oa.vo.system;
 
 import com.lautung.oa.model.system.SysDept;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -12,9 +11,8 @@ import lombok.Data;
 @Data
 public abstract class SysDeptRequest {
 
-    @Size(max = 50, message = "负责人过长")
-    @Schema(description = "负责人")
-    private String leader;
+    @Schema(description = "负责人用户id（ADR 0065：部门表单选启用用户，不写姓名文本）")
+    private Long leaderUserId;
 
     @Schema(description = "排序")
     private Integer sortValue;
@@ -24,7 +22,7 @@ public abstract class SysDeptRequest {
 
     /** 填充公共字段；壳的 toEntity 设完自己的字段后调用。ancestors 由 service 按父级路径算。 */
     protected void fill(SysDept dept) {
-        dept.setLeader(leader);
+        dept.setLeaderUserId(leaderUserId);
         dept.setSortValue(sortValue);
         dept.setStatus(status);
     }

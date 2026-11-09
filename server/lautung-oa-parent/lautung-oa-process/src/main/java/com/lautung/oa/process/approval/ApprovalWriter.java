@@ -19,6 +19,9 @@ import com.lautung.oa.process.service.OaProcessRecordService;
 import com.lautung.oa.vo.process.ApprovalVo;
 import com.lautung.oa.vo.process.ProcessFormVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.flowable.common.engine.api.FlowableObjectNotFoundException;
+import org.flowable.common.engine.api.FlowableTaskAlreadyClaimedException;
+import org.flowable.common.engine.api.FlowableOptimisticLockingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -27,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -190,10 +194,19 @@ public class ApprovalWriter {
     public Approval.DecisionOutcome approve(SysUser user, ApprovalVo approvalVo) {
         requireStatusInDomain(approvalVo);
         Process process = requireCurrentApprover(user, approvalVo);
-        if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
-            approvalEngine.complete(approvalVo.getTaskId());
-        } else {
-            approvalEngine.rejectToEnd(approvalVo.getTaskId());
+        try {
+            // 处理动作本身认领（ADR 0069）：候选用户处理时先写 assignee，历史证据随之完整；
+            // 并发后到者（认领冲突/乐观锁/任务已被处理掉）按「已被其他人处理」命名拒绝。
+            approvalEngine.claim(approvalVo.getTaskId(), user.getUsername());
+            if (approvalVo.getStatus() != null && approvalVo.getStatus() == 1) {
+                approvalEngine.complete(approvalVo.getTaskId());
+            } else {
+                approvalEngine.rejectToEnd(approvalVo.getTaskId());
+            }
+        } catch (FlowableTaskAlreadyClaimedException
+                | FlowableOptimisticLockingException
+                | FlowableObjectNotFoundException e) {
+            throw new BusinessException(201, "该审批已被其他人处理");
         }
 
         processRecordService.record(
@@ -243,14 +256,18 @@ public class ApprovalWriter {
     private List<String> approverNames(List<ApprovalEngine.CurrentTask> taskList) {
         List<String> nameList = new ArrayList<>();
         for (ApprovalEngine.CurrentTask task : taskList) {
-            String assigneeName = task.assignee();
-            if (!StringUtils.hasText(assigneeName)) {
-                continue;
+            // 候选任务尚无 assignee：按候选用户集给等待名单（order 由解析器排序）。
+            LinkedHashSet<String> usernames = new LinkedHashSet<>();
+            if (StringUtils.hasText(task.assignee())) {
+                usernames.add(task.assignee());
             }
-            SysUser assignee = sysUserService.getUserByUserName(assigneeName);
-            nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
-                    ? assignee.getName()
-                    : assigneeName);
+            usernames.addAll(task.candidates());
+            for (String username : usernames) {
+                SysUser assignee = sysUserService.getUserByUserName(username);
+                nameList.add(assignee != null && StringUtils.hasText(assignee.getName())
+                        ? assignee.getName()
+                        : username);
+            }
         }
         return nameList;
     }

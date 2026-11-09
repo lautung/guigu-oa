@@ -15,6 +15,12 @@ public interface ApprovalEngine extends MembershipEvidence {
 
     void complete(String taskId);
 
+    /**
+     * 处理动作本身认领（ADR 0069）：任务尚无 assignee 时把处理人写为 assignee；
+     * 已有 assignee 时不动（认领冲突在 complete 上显式失败）。
+     */
+    void claim(String taskId, String username);
+
     void rejectToEnd(String taskId);
 
     List<PendingTask> pendingTasks(String username, int firstResult, int maxResults);

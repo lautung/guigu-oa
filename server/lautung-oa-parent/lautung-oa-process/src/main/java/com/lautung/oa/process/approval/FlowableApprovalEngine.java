@@ -46,6 +46,11 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void claim(String taskId, String username) {
+        ProcessEngineApproval.claim(taskService, taskId, username);
+    }
+
+    @Override
     public void rejectToEnd(String taskId) {
         ProcessEngineApproval.rejectToEnd(repositoryService, taskService, taskId);
     }
@@ -53,7 +58,10 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         return ProcessEngineApproval.currentTasks(taskService, processInstanceId).stream()
-                .map(task -> new CurrentTask(task.getId(), task.getAssignee()))
+                .map(task -> new CurrentTask(
+                        task.getId(),
+                        task.getAssignee(),
+                        ProcessEngineApproval.candidateUsers(taskService, task.getId())))
                 .toList();
     }
 

@@ -5,11 +5,14 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
 import org.flowable.bpmn.model.FlowNode;
 import org.flowable.bpmn.model.SequenceFlow;
+import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.identitylink.api.IdentityLink;
+import org.flowable.identitylink.api.IdentityLinkType;
 import org.flowable.task.api.Task;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -95,6 +98,31 @@ public final class ProcessEngineApproval {
         taskService.complete(taskId);
     }
 
+    /**
+     * 处理动作本身认领（ADR 0069）：任务尚无 assignee 时把当前处理人写为 assignee，
+     * 已有 assignee（含并发对手刚认领）时不动——认领冲突统一在完成动作上显式失败。
+     */
+    public static void claim(TaskService taskService, String taskId, String username) {
+        if (!StringUtils.hasText(username)) {
+            return;
+        }
+        Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        if (task != null && !StringUtils.hasText(task.getAssignee())) {
+            taskService.claim(taskId, username);
+        }
+    }
+
+    /** 任务的候选用户（ADR 0069 多人来源）；没有候选返回空列表。 */
+    public static List<String> candidateUsers(TaskService taskService, String taskId) {
+        return taskService.getIdentityLinksForTask(taskId).stream()
+                .filter(link -> IdentityLinkType.CANDIDATE.equals(link.getType()))
+                .map(IdentityLink::getUserId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
     public static List<Task> currentTasks(TaskService taskService, String processInstanceId) {
         if (!StringUtils.hasText(processInstanceId)) {
             return Collections.emptyList();
@@ -104,6 +132,10 @@ public final class ProcessEngineApproval {
 
     public static void rejectToEnd(RepositoryService repositoryService, TaskService taskService, String taskId) {
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        if (task == null) {
+            // 任务已被并发对手处理掉：显式命名失败，绝不在共享代码里 NPE。
+            throw new FlowableObjectNotFoundException("无法找到任务 " + taskId, Task.class);
+        }
         BpmnModel bpmnModel = repositoryService.getBpmnModel(task.getProcessDefinitionId());
         List<EndEvent> endEventList = bpmnModel.getMainProcess().findFlowElementsOfType(EndEvent.class);
         if (CollectionUtils.isEmpty(endEventList)) {
