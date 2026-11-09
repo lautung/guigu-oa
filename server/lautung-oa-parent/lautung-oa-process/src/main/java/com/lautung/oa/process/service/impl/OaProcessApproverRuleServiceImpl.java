@@ -152,6 +152,22 @@ public class OaProcessApproverRuleServiceImpl implements OaProcessApproverRuleSe
     }
 
     /**
+     * 规则目标选项（#286）：模板设置页目标下拉的专用只读投影，不再借道系统管理的
+     * 角色全量与岗位选项端点。口径与 {@link #requireTarget} 的保存/发布校验一致：
+     * 角色未删（sys_role 无停用档），岗位启用且未删。
+     */
+    @Override
+    public RuleTargets findRuleTargets() {
+        List<CarbonCopyRecipient> roles = jdbcTemplate.query(
+                "SELECT id, role_name FROM sys_role WHERE is_deleted = 0 ORDER BY id",
+                (row, index) -> new CarbonCopyRecipient(row.getLong("id"), row.getString("role_name")));
+        List<CarbonCopyRecipient> posts = jdbcTemplate.query(
+                "SELECT id, name FROM sys_post WHERE status = 1 AND is_deleted = 0 ORDER BY id",
+                (row, index) -> new CarbonCopyRecipient(row.getLong("id"), row.getString("name")));
+        return new RuleTargets(roles, posts);
+    }
+
+    /**
      * 来源目标的存在性与启用校验（保存与发布共用同一道门）：部门负责人按发起人
      * 所在部门解析，不指定目标；角色必须存在未删；岗位必须存在且启用。
      */
@@ -166,8 +182,9 @@ public class OaProcessApproverRuleServiceImpl implements OaProcessApproverRuleSe
                 yield null;
             }
             case ROLE -> {
+                // sys_role 无停用档（只有 is_deleted），「已停用」只对岗位成立（ADR 0043 口径精神）。
                 if (targetId == null || count("SELECT COUNT(*) FROM sys_role WHERE id = ? AND is_deleted = 0", targetId) == 0) {
-                    throw new BusinessException(201, "审批节点[" + node + "]的角色不存在或已停用");
+                    throw new BusinessException(201, "审批节点[" + node + "]的角色不存在");
                 }
                 yield targetId;
             }

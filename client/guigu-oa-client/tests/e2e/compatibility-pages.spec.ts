@@ -202,10 +202,11 @@ async function mockApi(page: Page) {
         userTasks: [{ key: 'dept-approve', name: '部门审批', assignee: 'lisi' }],
         rules: [],
       })
-    if (path === '/admin/system/sysRole/findAll')
-      return json(route, [{ id: 7, roleName: '审批主管', roleCode: 'approver' }])
-    if (path === '/admin/system/sysUser/posts')
-      return json(route, [{ id: 5, name: '部门经理', status: 1 }])
+    if (path === '/admin/process/processTemplate/ruleTargets')
+      return json(route, {
+        roles: [{ id: 7, name: '审批主管' }],
+        posts: [{ id: 5, name: '部门经理' }],
+      })
     if (path === '/admin/system/sysUser/depts') return json(route, [])
     if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))

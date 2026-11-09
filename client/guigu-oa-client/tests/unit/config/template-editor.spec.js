@@ -57,8 +57,7 @@ function harness() {
               ? config.method === 'put'
                 ? approverSaves
                 : approverReads
-              : config.url === '/admin/system/sysRole/findAll' ||
-                  config.url === '/admin/system/sysUser/posts'
+              : config.url === '/admin/process/processTemplate/ruleTargets'
                 ? optionReads
                 : saves
         group.push({ config, isRelevant, scope, ...pending })
@@ -641,8 +640,8 @@ async function transportHarness(respond) {
         ? { code: 200, data: record() }
         : config.url.includes('/approverRules/') && config.method === 'get'
           ? { code: 200, data: { userTasks: [], rules: [] } }
-          : config.url === '/admin/system/sysUser/posts'
-            ? { code: 200, data: [] }
+          : config.url === '/admin/process/processTemplate/ruleTargets'
+            ? { code: 200, data: { roles: [], posts: [] } }
             : await respond(config, calls)
     return { data, config, status: 200, statusText: 'OK', headers: {} }
   }
@@ -925,25 +924,28 @@ it('编辑既有模板时一次读取节点清单与当前规则，未配置节�
   expect(edit.state.phase).toBe('ready')
 })
 
-it('节点或规则数据损坏时明确报错可重试，角色岗位选项读取失败只降级目标选择', async () => {
+it('节点或规则数据损坏时明确报错可重试，规则目标选项读取失败只降级目标选择', async () => {
   const h = harness()
   const edit = h.module.open('A')
   await flushPromises()
   h.reads[0].resolve({ code: 200, data: record() })
   await edit.ready
-  h.optionReads[0].resolve({ code: 200, data: [{ id: 5, roleName: '审批主管' }] })
-  h.optionReads[1].reject(new Error('无岗位页权限'))
+  // 目标选项走 process 专用只读端点 ruleTargets（#286）：一次请求带角色与岗位两组。
+  h.optionReads[0].resolve({
+    code: 200,
+    data: { roles: [{ id: 5, name: '审批主管' }], posts: [{ id: 2, name: '经理' }] },
+  })
   h.approverReads[0].resolve({ code: 200, data: { userTasks: 'broken', rules: [] } })
   await flushPromises()
   expect(edit.state.approverStatus).toBe('error')
   expect(edit.state.approverError).not.toBe('')
   expect(edit.state.approverRoles).toEqual([{ id: 5, name: '审批主管' }])
-  expect(edit.state.approverPosts).toEqual([])
-  expect(edit.state.approverOptionsError).not.toBe('')
+  expect(edit.state.approverPosts).toEqual([{ id: 2, name: '经理' }])
+  expect(h.optionReads[0].config.url).toBe('/admin/process/processTemplate/ruleTargets')
 
+  // 选项读取失败只降级目标下拉，不挡配置读取的可重试。
   const retry = edit.retryApprovers()
-  h.optionReads[2].reject(new Error('无岗位页权限'))
-  h.optionReads[3].resolve({ code: 200, data: [{ id: 2, name: '经理', status: 1 }] })
+  h.optionReads[1].reject(new Error('选项读取失败'))
   h.approverReads[1].resolve(approverConfig())
   await retry
   await flushPromises()
@@ -952,7 +954,9 @@ it('节点或规则数据损坏时明确报错可重试，角色岗位选项读�
     { key: 'approve', name: '部门审批', assignee: 'lisi', sourceType: 'ROLE', targetId: 7 },
     { key: 'manager', name: '经理审批', assignee: '', sourceType: '', targetId: '' },
   ])
-  expect(edit.state.approverPosts).toEqual([{ id: 2, name: '经理' }])
+  expect(edit.state.approverRoles).toEqual([])
+  expect(edit.state.approverPosts).toEqual([])
+  expect(edit.state.approverOptionsError).not.toBe('')
   expect(h.approverReads[1].config.url).toBe('/admin/process/processTemplate/approverRules/A')
 })
 

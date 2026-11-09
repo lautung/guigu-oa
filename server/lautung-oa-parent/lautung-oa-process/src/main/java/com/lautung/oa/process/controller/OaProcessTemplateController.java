@@ -124,6 +124,15 @@ public class OaProcessTemplateController {
         return Result.ok();
     }
 
+    // 规则目标选项（#286）：模板设置页审批人配置的目标下拉专用只读端点（启用角色 + 启用岗位），
+    // 挂审批模板页授予，不借道 /admin/system/sysRole/findAll 与 /admin/system/sysUser/posts。
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
+    @Operation(summary = "审批人规则目标选项")
+    @GetMapping("/ruleTargets")
+    public Result ruleTargets() {
+        return Result.ok(approverRuleService.findRuleTargets());
+    }
+
     //部署流程定义（发布）
     @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:publish')")
     @Operation(summary = "发布")

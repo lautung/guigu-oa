@@ -121,16 +121,17 @@ async function setup(
       saved.push(route.request().postDataJSON() as Record<string, unknown>)
       return options.save ? options.save(route) : json(route, null)
     }
-    if (path === '/admin/system/sysRole/findAll')
-      return json(route, [
-        { id: 7, roleName: '审批主管', roleCode: 'approver' },
-        { id: 8, roleName: '人事专员', roleCode: 'hr' },
-      ])
-    if (path === '/admin/system/sysUser/posts')
-      return json(route, [
-        { id: 5, name: '部门经理', status: 1 },
-        { id: 6, name: '会计', status: 1 },
-      ])
+    if (path === '/admin/process/processTemplate/ruleTargets')
+      return json(route, {
+        roles: [
+          { id: 7, name: '审批主管' },
+          { id: 8, name: '人事专员' },
+        ],
+        posts: [
+          { id: 5, name: '部门经理' },
+          { id: 6, name: '会计' },
+        ],
+      })
     if (path === '/admin/process/processTemplate/1/10')
       return json(route, { records: [original], total: 1, pages: 1 })
     if (path.startsWith('/admin/process/findPending/'))

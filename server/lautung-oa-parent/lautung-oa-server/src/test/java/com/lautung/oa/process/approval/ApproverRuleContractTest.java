@@ -197,6 +197,35 @@ class ApproverRuleContractTest {
                         .content("[{\"taskDefinitionKey\":\"first\",\"sourceType\":\"DEPT_LEADER\"}]"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
+
+        // 规则目标选项端点（#286）挂审批模板页授予：无授予 205。
+        mockMvc.perform(get("/admin/process/processTemplate/ruleTargets").header("token", plainToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+    }
+
+    /** 规则目标选项（#286）：启用角色 + 启用岗位的 {id,name} 投影，口径对齐保存/发布校验。 */
+    @Test
+    void ruleTargetsListEnabledRolesAndPostsWithTheTemplatePageGrant() throws Exception {
+        String body = mockMvc.perform(get("/admin/process/processTemplate/ruleTargets")
+                        .header("token", adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn().getResponse().getContentAsString();
+
+        List<Map<String, Object>> roles = JsonPath.read(body, "$.data.roles");
+        assertTrue(roles.stream().anyMatch(row -> ((Number) row.get("id")).intValue() == 821),
+                "启用未删角色进选项");
+        assertTrue(roles.stream().noneMatch(row -> ((Number) row.get("id")).intValue() == 822),
+                "已删角色不进选项（sys_role 无停用档）");
+        assertTrue(roles.stream().allMatch(row -> row.get("name") != null), "角色投影带 {id,name}");
+
+        List<Map<String, Object>> posts = JsonPath.read(body, "$.data.posts");
+        assertTrue(posts.stream().anyMatch(row -> ((Number) row.get("id")).intValue() == 811),
+                "启用岗位进选项");
+        assertTrue(posts.stream().noneMatch(row -> ((Number) row.get("id")).intValue() == 812),
+                "停用岗位不进选项");
+        assertTrue(posts.stream().allMatch(row -> row.get("name") != null), "岗位投影带 {id,name}");
     }
 
     @Test
@@ -320,7 +349,7 @@ class ApproverRuleContractTest {
                         .header("token", adminToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
-                .andExpect(jsonPath("$.message").value("审批节点[二审]的角色不存在或已停用"));
+                .andExpect(jsonPath("$.message").value("审批节点[二审]的角色不存在"));
     }
 
     @Test

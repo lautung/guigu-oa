@@ -2,6 +2,7 @@ package com.lautung.oa.process.service;
 
 import com.lautung.oa.model.process.ProcessApproverRule;
 import com.lautung.oa.model.process.ProcessTemplate;
+import com.lautung.oa.process.cc.CarbonCopyRecipient;
 import com.lautung.oa.process.publication.BpmnUserTasks;
 import com.lautung.oa.vo.process.ApproverRuleRequest;
 
@@ -38,7 +39,18 @@ public interface OaProcessApproverRuleService {
     /** 删除未发布模板时清掉它的规则行（硬删）。 */
     void removeAll(Long templateId);
 
+    /**
+     * 规则目标选项（#286）：模板设置页审批人配置的目标下拉专用只读投影——
+     * 启用角色（sys_role 无停用档，未删即可用）与启用岗位（status=1 且未删），
+     * 口径与保存/发布的 {@code requireTarget} 校验一致；形状照 {id,name}（CarbonCopyRecipient）。
+     */
+    RuleTargets findRuleTargets();
+
     /** 配置页读取结果：节点清单 + 当前规则。 */
     record RuleConfig(List<BpmnUserTasks.UserTaskRef> userTasks, List<ProcessApproverRule> rules) {
+    }
+
+    /** 规则目标选项：角色与岗位各一份 {id,name} 投影。 */
+    record RuleTargets(List<CarbonCopyRecipient> roles, List<CarbonCopyRecipient> posts) {
     }
 }

@@ -557,15 +557,23 @@ export function createTemplateEditor(options: EditorOptions) {
     // 角色/岗位目标选项与节点读取互不阻塞：选项失败只降级目标下拉，不挡配置回显。
     let approverReadNumber = 0
     async function loadTargetOptions(number: number) {
-      const [roles, posts] = await Promise.all([
-        request<unknown>({ method: 'get', url: '/admin/system/sysRole/findAll' }).catch(() => null),
-        request<unknown>({ method: 'get', url: '/admin/system/sysUser/posts' }).catch(() => null),
-      ])
-      if (!current() || number !== approverReadNumber) return
-      state.approverRoles = targetOptions(roles === null ? [] : roles.data, 'roleName')
-      state.approverPosts = targetOptions(posts === null ? [] : posts.data, 'name')
-      state.approverOptionsError =
-        roles === null || posts === null ? '角色或岗位选项读取失败，目标下拉可能为空' : ''
+      // 目标选项走 process 模块的专用只读端点（启用角色 + 启用岗位，#286 审查轮），
+      // 不再借道 /admin/system/sysRole/findAll 与 /admin/system/sysUser/posts。
+      try {
+        const response = await request<{ roles: unknown; posts: unknown }>({
+          method: 'get',
+          url: `${API}/ruleTargets`,
+        })
+        if (!current() || number !== approverReadNumber) return
+        state.approverRoles = targetOptions(response.data?.roles, 'name')
+        state.approverPosts = targetOptions(response.data?.posts, 'name')
+        state.approverOptionsError = ''
+      } catch {
+        if (!current() || number !== approverReadNumber) return
+        state.approverRoles = []
+        state.approverPosts = []
+        state.approverOptionsError = '角色或岗位选项读取失败，目标下拉可能为空'
+      }
     }
     async function loadApprovers() {
       if (id == null || !current() || state.leaving) return
