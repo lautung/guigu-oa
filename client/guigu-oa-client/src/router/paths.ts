@@ -48,6 +48,13 @@ export const PATHS = {
   PROCESS_MGR: '/system/processMgr',
   PROCESS_MGR_PROCESS: '/system/processMgr/process',
   PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
+  /** 考勤（#278，ADR 0073）：后台五页挂在 /business/attendance 目录下。 */
+  BUSINESS_ATTENDANCE: '/business/attendance',
+  BUSINESS_ATTENDANCE_GROUP: '/business/attendance/group',
+  BUSINESS_ATTENDANCE_RECORD: '/business/attendance/record',
+  BUSINESS_ATTENDANCE_REPAIR: '/business/attendance/repair',
+  BUSINESS_ATTENDANCE_LEAVE: '/business/attendance/leave',
+  BUSINESS_ATTENDANCE_STAT: '/business/attendance/stat',
   NOTICE: '/notice',
   NOTICE_DETAIL: '/notice/:id',
   SYSTEM_NOTICE: '/system/notice',
@@ -172,6 +179,11 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.PROCESS_MGR_PROCESS]: PATHS.PROCESS_MGR_PROCESS,
   [PATHS.NOTICE]: PATHS.NOTICE,
   [PATHS.SYSTEM_NOTICE]: PATHS.SYSTEM_NOTICE,
+  [PATHS.BUSINESS_ATTENDANCE_GROUP]: PATHS.BUSINESS_ATTENDANCE_GROUP,
+  [PATHS.BUSINESS_ATTENDANCE_RECORD]: PATHS.BUSINESS_ATTENDANCE_RECORD,
+  [PATHS.BUSINESS_ATTENDANCE_REPAIR]: PATHS.BUSINESS_ATTENDANCE_REPAIR,
+  [PATHS.BUSINESS_ATTENDANCE_LEAVE]: PATHS.BUSINESS_ATTENDANCE_LEAVE,
+  [PATHS.BUSINESS_ATTENDANCE_STAT]: PATHS.BUSINESS_ATTENDANCE_STAT,
 }
 
 const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = [

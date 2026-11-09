@@ -1,5 +1,8 @@
 package com.lautung.oa.auth;
 
+import com.lautung.oa.attendance.controller.AttendanceGroupController;
+import com.lautung.oa.attendance.controller.AttendanceHolidayController;
+import com.lautung.oa.attendance.controller.AttendanceShiftController;
 import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
@@ -97,9 +100,26 @@ class BackofficeRouteAuthorizationContractTest {
             CacheMonitorController.class,
             ServerMonitorController.class,
             DataMonitorController.class,
-            MonitorJobController.class);
+            MonitorJobController.class,
+            AttendanceShiftController.class,
+            AttendanceGroupController.class,
+            AttendanceHolidayController.class);
 
     static {
+        expect(AttendanceShiftController.class, "/business/attendance/group", null,
+                "pageQuery", "options");
+        expect(AttendanceShiftController.class, "/business/attendance/group", "attendance:group:add", "save");
+        expect(AttendanceShiftController.class, "/business/attendance/group", "attendance:group:edit", "update");
+        expect(AttendanceShiftController.class, "/business/attendance/group", "attendance:group:remove", "remove");
+        expect(AttendanceGroupController.class, "/business/attendance/group", null,
+                "pageQuery", "members", "userOptions");
+        expect(AttendanceGroupController.class, "/business/attendance/group", "attendance:group:add", "save");
+        expect(AttendanceGroupController.class, "/business/attendance/group", "attendance:group:edit", "update");
+        expect(AttendanceGroupController.class, "/business/attendance/group", "attendance:group:remove", "remove");
+        expect(AttendanceHolidayController.class, "/business/attendance/group", null, "pageQuery");
+        expect(AttendanceHolidayController.class, "/business/attendance/group", "attendance:group:add", "save");
+        expect(AttendanceHolidayController.class, "/business/attendance/group", "attendance:group:edit", "update");
+        expect(AttendanceHolidayController.class, "/business/attendance/group", "attendance:group:remove", "remove");
         expect(SysUserController.class, "/system/sysUser", null,
                 "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
                 "depts", "posts", "importTemplate");

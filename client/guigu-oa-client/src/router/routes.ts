@@ -96,6 +96,42 @@ const workChildren: AppRoute[] = [
   },
 ]
 
+// 考勤五页（#278，ADR 0073）：考勤组与班次完整交付，其余四页是占位壳，
+// 后续票填肉。路径挂在 /business/attendance 目录下，组归属与配置页同一条
+// config 组 coversPage 路径（守卫分组看 navigation/index.ts）。
+const attendanceChildren: AppRoute[] = [
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_GROUP),
+    name: 'AttendanceGroup',
+    component: () => import('@/views/business/attendance/group/index.vue'),
+    meta: { title: '考勤组与班次', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_RECORD),
+    name: 'AttendanceRecord',
+    component: () => import('@/views/business/attendance/record/index.vue'),
+    meta: { title: '打卡记录', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_REPAIR),
+    name: 'AttendanceRepair',
+    component: () => import('@/views/business/attendance/repair/index.vue'),
+    meta: { title: '补卡处理', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_LEAVE),
+    name: 'AttendanceLeave',
+    component: () => import('@/views/business/attendance/leave/index.vue'),
+    meta: { title: '假期类型与发放', menuGroup: 'config' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_STAT),
+    name: 'AttendanceStat',
+    component: () => import('@/views/business/attendance/stat/index.vue'),
+    meta: { title: '月度统计', menuGroup: 'config' },
+  },
+]
+
 const configChildren: AppRoute[] = [
   {
     path: childPath(PATHS.SYSTEM, PATHS.SYSTEM_SYS_USER),
@@ -359,6 +395,13 @@ export const constantRoutes: AppRoute[] = [
             hidden: true,
           },
         ],
+      },
+      {
+        // 考勤目录（#278）：页面授予走 config 组同一条 coversPage 路径。
+        path: PATHS.BUSINESS_ATTENDANCE,
+        redirect: PATHS.BUSINESS_ATTENDANCE_GROUP,
+        meta: { menuGroup: 'config' },
+        children: attendanceChildren,
       },
     ],
   },

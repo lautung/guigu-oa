@@ -27,6 +27,7 @@
         <module>lautung-oa-monitor</module>
         <module>lautung-oa-dict</module>
         <module>lautung-oa-config</module>
+        <module>lautung-oa-attendance</module>
         <module>lautung-oa-server</module>
         <module>lautung-oa-coverage-report</module>
     </modules>

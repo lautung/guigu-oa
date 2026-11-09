@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 采集守卫（ADR 0054）：{@code /admin/system/*} 与 {@code /admin/monitor/*} 下的后台 controller
+ * 采集守卫（ADR 0054）：{@code /admin/system/*}、{@code /admin/monitor/*} 与 {@code /admin/attendance/*} 下的后台 controller
  * 写方法必须挂 {@link OperLog}，漏挂即红。{@code IndexController} 是登录/续期/退出的传输端点，
  * 不是操作日志材料，显式排除。
  *
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class OperLogCoverageTest {
 
-    private static final List<String> BACKOFFICE_PREFIXES = List.of("/admin/system", "/admin/monitor");
+    private static final List<String> BACKOFFICE_PREFIXES = List.of("/admin/system", "/admin/monitor", "/admin/attendance");
 
     private static final String EXCLUDED_CONTROLLER = "IndexController";
 

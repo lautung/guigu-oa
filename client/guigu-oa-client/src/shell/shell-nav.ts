@@ -103,6 +103,7 @@ const SYSTEM_DIRECTORY_ROOTS = new Set([
   `${PATHS.SYSTEM}/log`,
   PATHS.PROCESS_SET,
   PATHS.PROCESS_MGR,
+  PATHS.BUSINESS_ATTENDANCE,
 ])
 
 function normalizePath(path: string | undefined): string {
@@ -161,7 +162,12 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
   const permission = configPermission([...menus])
   const leaves = permission.grantedMenus
     .flatMap((root) => leavesOf(root))
-    .filter((leaf) => leaf.path.startsWith(`${PATHS.SYSTEM}/`))
+    // 考勤（#278）挂在 /business/attendance 目录下，与 /system/* 同属系统管理侧栏。
+    .filter(
+      (leaf) =>
+        leaf.path.startsWith(`${PATHS.SYSTEM}/`) ||
+        leaf.path.startsWith(`${PATHS.BUSINESS_ATTENDANCE}/`),
+    )
     .filter((leaf) => !SYSTEM_DIRECTORY_ROOTS.has(leaf.path))
 
   const items = leaves.filter(
@@ -240,6 +246,7 @@ export function activeModuleKey(path: string): ShellModuleKey | null {
   if (normalized.startsWith(`${PATHS.NOTICE}/`)) return 'workbench'
   if (normalized === PATHS.WORK || normalized.startsWith(`${PATHS.WORK}/`)) return 'work'
   if (normalized === PATHS.SYSTEM || normalized.startsWith(`${PATHS.SYSTEM}/`)) return 'system'
+  if (normalized.startsWith(`${PATHS.BUSINESS_ATTENDANCE}/`)) return 'system'
   if (normalized === PATHS.MONITOR || normalized.startsWith(`${PATHS.MONITOR}/`)) return 'monitor'
   if (normalized === PATHS.TOOL || normalized.startsWith(`${PATHS.TOOL}/`)) return 'tool'
   return null

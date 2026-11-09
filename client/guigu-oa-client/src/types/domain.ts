@@ -938,3 +938,80 @@ export interface DictDataForm {
   status: number
   remark: string
 }
+
+export interface AttendanceShiftRecord {
+  id?: EntityId | ''
+  name?: string
+  startTime?: string
+  endTime?: string
+  lunchStart?: string | null
+  lunchEnd?: string | null
+  graceMinutes?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceShiftListItem extends AttendanceShiftRecord {
+  id: EntityId
+}
+
+export interface AttendanceShiftForm {
+  id: EntityId | ''
+  name: string
+  startTime: string
+  endTime: string
+  lunchStart: string
+  lunchEnd: string
+  graceMinutes: number
+  remark: string
+}
+
+export interface AttendanceGroupRecord {
+  id?: EntityId | ''
+  name?: string
+  shiftId?: EntityId
+  shiftName?: string
+  workdays?: string
+  memberCount?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceGroupListItem extends AttendanceGroupRecord {
+  id: EntityId
+}
+
+export interface AttendanceMemberRecord {
+  id?: EntityId
+  userId?: EntityId
+  username?: string
+  name?: string
+}
+
+export interface AttendanceGroupForm {
+  id: EntityId | ''
+  name: string
+  shiftId: EntityId | ''
+  workdays: number[]
+  memberUserIds: EntityId[]
+  remark: string
+}
+
+export interface AttendanceHolidayRecord {
+  id?: EntityId | ''
+  holidayDate?: string
+  name?: string
+  dayType?: number
+  createTime?: string
+}
+
+export interface AttendanceHolidayListItem extends AttendanceHolidayRecord {
+  id: EntityId
+}
+
+export interface AttendanceHolidayForm {
+  id: EntityId | ''
+  holidayDate: string
+  name: string
+  dayType: number
+}

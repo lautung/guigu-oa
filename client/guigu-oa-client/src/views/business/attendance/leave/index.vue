@@ -1,0 +1,29 @@
+<template>
+  <div class="config-page placeholder-page">
+    <h2 class="page-title">假期类型与发放</h2>
+    <el-empty description="页面建设中，考勤底座就绪后由后续票交付" />
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent } from 'vue'
+
+/**
+ * 假期类型与发放 占位页（#278）：菜单与路由先行，页面实现归后续票。
+ */
+export default defineComponent({
+  name: 'AttendanceLeavePage',
+})
+</script>
+
+<style lang="scss" scoped>
+.placeholder-page {
+  min-height: 320px;
+}
+
+.page-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: #303133;
+}
+</style>
