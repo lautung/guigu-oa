@@ -35,7 +35,7 @@ const TREE = [
     parentId: 0,
     ancestors: ',0,1,',
     name: '总部',
-    leader: '张三',
+    leaderUserId: 11,
     sortValue: 1,
     status: 1,
     createTime: '2026-01-01 10:00:00',
@@ -45,13 +45,18 @@ const TREE = [
         parentId: 1,
         ancestors: ',0,1,2,',
         name: '研发部',
-        leader: '',
+        leaderUserId: null,
         sortValue: 2,
         status: 0,
         children: [{ id: 3, parentId: 2, ancestors: ',0,1,2,3,', name: '平台组' }],
       },
     ],
   },
+]
+
+const USERS = [
+  { id: 11, username: 'zhangsan', name: '张三' },
+  { id: 12, username: 'lisi', name: '李四' },
 ]
 
 let notifications
@@ -77,6 +82,7 @@ function mountPage() {
 
 function responder(config) {
   if ((config.url || '').endsWith('/admin/system/sysDept/findTree')) return ok(TREE)
+  if ((config.url || '').endsWith('/admin/system/sysDept/userOptions')) return ok(USERS)
   const override = writeResponder?.(config)
   return override || ok(null)
 }
@@ -110,13 +116,15 @@ function writes(method) {
 }
 
 describe('SysDept tree page', () => {
-  it('loads the tree once and presents nested children', async () => {
+  it('loads the tree once and presents nested children with the joined leader name', async () => {
     wrapper = mountPage()
     await flushPromises()
 
     expect(treeReads()).toHaveLength(1)
     expect(wrapper.vm.rows).toHaveLength(1)
     expect(wrapper.vm.rows[0]).toMatchObject({ id: 1, name: '总部', ancestors: ',0,1,' })
+    expect(wrapper.vm.leaderLabel(wrapper.vm.rows[0])).toBe('张三')
+    expect(wrapper.vm.leaderLabel(wrapper.vm.rows[0].children[0])).toBe('')
     expect(wrapper.vm.rows[0].children[0]).toMatchObject({
       id: 2,
       name: '研发部',
@@ -126,12 +134,23 @@ describe('SysDept tree page', () => {
     expect(wrapper.vm.rows[0].children[0].children[0]).toMatchObject({ id: 3, name: '平台组' })
   })
 
+  it('loads enabled user options for the leader selector', async () => {
+    wrapper = mountPage()
+    await flushPromises()
+
+    const optionReads = http.calls.filter((config) =>
+      (config.url || '').endsWith('/admin/system/sysDept/userOptions'),
+    )
+    expect(optionReads).toHaveLength(1)
+    expect(wrapper.vm.userOptions).toHaveLength(2)
+  })
+
   it('opens 新建 under a row and edits with parent options excluding its own subtree', async () => {
     wrapper = mountPage()
     await flushPromises()
 
     wrapper.vm.openCreate(wrapper.vm.rows[0].children[0])
-    expect(wrapper.vm.form).toMatchObject({ id: '', parentId: 2, status: 1 })
+    expect(wrapper.vm.form).toMatchObject({ id: '', parentId: 2, status: 1, leaderUserId: '' })
     expect(wrapper.vm.parentChoices.map((option) => option.id)).toEqual([0, 1, 2, 3])
 
     wrapper.vm.openEdit(wrapper.vm.rows[0].children[0])
@@ -141,6 +160,7 @@ describe('SysDept tree page', () => {
       name: '研发部',
       sortValue: 2,
       status: 0,
+      leaderUserId: '',
     })
     expect(wrapper.vm.parentChoices.map((option) => option.id)).toEqual([0, 1])
   })
@@ -162,17 +182,25 @@ describe('SysDept tree page', () => {
     ])
   })
 
-  it('saves an edited department and refreshes the tree', async () => {
+  it('saves an edited department with the selected leader and refreshes the tree', async () => {
     wrapper = mountPage()
     await flushPromises()
 
     wrapper.vm.openEdit(wrapper.vm.rows[0].children[0])
+    wrapper.vm.form.leaderUserId = 12
     await flushPromises()
     await wrapper.vm.save()
     await flushPromises()
 
     expect(JSON.parse(writes('put')[0].data)).toEqual(
-      expect.objectContaining({ id: 2, parentId: 1, name: '研发部', sortValue: 2, status: 0 }),
+      expect.objectContaining({
+        id: 2,
+        parentId: 1,
+        name: '研发部',
+        leaderUserId: 12,
+        sortValue: 2,
+        status: 0,
+      }),
     )
     expect(wrapper.vm.dialogVisible).toBe(false)
     expect(treeReads()).toHaveLength(2)

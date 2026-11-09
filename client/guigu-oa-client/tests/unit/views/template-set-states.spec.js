@@ -47,6 +47,7 @@ function state(overrides = {}) {
     phase: 'ready',
     step: 0,
     form: {
+      id: '8',
       processTypeId: 2,
       name: '请假模板',
       iconUrl: '',
@@ -59,6 +60,18 @@ function state(overrides = {}) {
     uploadError: '',
     zipStatus: 'empty',
     zip: null,
+    approvers: [],
+    approverStatus: 'ready',
+    approverError: '',
+    approverSaving: false,
+    approverSaveError: '',
+    approverDirty: false,
+    approverRoles: [],
+    approverPosts: [],
+    approverOptionsError: '',
+    staleApproverKeys: [],
+    zipUnparsable: false,
+    canSaveApprovers: false,
     dirty: false,
     capturing: false,
     leaving: false,
@@ -85,6 +98,9 @@ function makeEditor(overrides = {}) {
     removeZip: vi.fn(),
     restoreZip: vi.fn(),
     retryUpload: vi.fn(),
+    updateApprover: vi.fn(),
+    saveApprovers: vi.fn(),
+    retryApprovers: vi.fn(),
     endEditing: vi.fn(),
     openList: vi.fn(),
     requestLeave: vi.fn(async () => true),
@@ -251,6 +267,83 @@ describe('TemplateSet states', () => {
     const wrapper = await mountTemplateSet()
     wrapper.unmount()
     expect(holder.current.opening.dispose).toHaveBeenCalled()
+  })
+
+  it('renders approver rows on the zip step and drives the config save through the editor', async () => {
+    holder.current = makeEditor({
+      step: 2,
+      zipStatus: 'ready',
+      zip: { name: 'leave.zip', path: 'processes/a.zip', key: 'a' },
+      canSaveApprovers: true,
+      approvers: [
+        { key: 'approve', name: '部门审批', assignee: 'lisi', sourceType: 'ROLE', targetId: 7 },
+        { key: 'manager', name: '经理审批', assignee: '', sourceType: '', targetId: '' },
+      ],
+      approverRoles: [{ id: 7, name: '审批主管' }],
+    })
+    holder.editor = holder.current.editor
+    const wrapper = await mountTemplateSet()
+
+    expect(wrapper.text()).toContain('此处规则将覆盖流程 zip 中的 assignee')
+    expect(wrapper.text()).toContain('部门审批')
+    expect(wrapper.text()).toContain('经理审批')
+    expect(wrapper.text()).toContain('缺少审批人来源')
+
+    const save = wrapper.findAll('button').find((button) => button.text() === '保存审批人配置')
+    await save.trigger('click')
+    expect(holder.current.opening.saveApprovers).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the publish-blocked hint when the adopted zip parses no BPMN nodes', async () => {
+    holder.current = makeEditor({
+      step: 2,
+      zipStatus: 'ready',
+      zip: { name: 'empty.zip', path: 'processes/e.zip', key: 'e' },
+      zipUnparsable: true,
+    })
+    holder.editor = holder.current.editor
+    const wrapper = await mountTemplateSet()
+
+    expect(wrapper.text()).toContain('流程 zip 解析不出 BPMN 节点')
+    expect(wrapper.text()).toContain('不可发布')
+  })
+
+  it('warns about saved rules that no longer match the adopted zip', async () => {
+    holder.current = makeEditor({
+      step: 2,
+      zipStatus: 'ready',
+      staleApproverKeys: ['approve'],
+    })
+    holder.editor = holder.current.editor
+    const wrapper = await mountTemplateSet()
+
+    expect(wrapper.text()).toContain('不存在的节点')
+    expect(wrapper.text()).toContain('approve')
+  })
+
+  it('offers the retry read when the approver config read fails', async () => {
+    holder.current = makeEditor({
+      step: 2,
+      approverStatus: 'error',
+      approverError: '审批人配置读取失败',
+    })
+    holder.editor = holder.current.editor
+    const wrapper = await mountTemplateSet()
+
+    expect(wrapper.text()).toContain('审批人配置读取失败')
+    const retry = wrapper.findAll('button').find((button) => button.text() === '重试读取')
+    await retry.trigger('click')
+    expect(holder.current.opening.retryApprovers).toHaveBeenCalledTimes(1)
+  })
+
+  it('tells new templates to save before configuring approvers', async () => {
+    holder.current = makeEditor({ step: 2, zipStatus: 'ready' })
+    holder.current.opening.state.form.id = ''
+    holder.editor = holder.current.editor
+    const wrapper = await mountTemplateSet()
+
+    expect(wrapper.text()).toContain('先提交保存，再从模板列表打开编辑后配置审批人')
+    expect(wrapper.find('.approver-row').exists()).toBe(false)
   })
 
   it('wires the basic step to the local required rules', async () => {

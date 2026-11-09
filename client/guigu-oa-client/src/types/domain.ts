@@ -175,13 +175,13 @@ export interface DeptOption {
   parentId?: EntityId
 }
 
-/** 部门维护行（#247）：ancestors 是服务端算好的含自身包裹逗号路径，客户端只展示。 */
+/** 部门维护行（#247/#286）：ancestors 是服务端算好的含自身包裹逗号路径，负责人是启用用户的引用。 */
 export interface DeptRecord {
   id?: EntityId | ''
   parentId?: EntityId
   ancestors?: string
   name?: string
-  leader?: string
+  leaderUserId?: EntityId | null
   sortValue?: number
   status?: number
   createTime?: string
@@ -201,7 +201,7 @@ export interface DeptForm {
   id: EntityId | ''
   parentId: EntityId
   name: string
-  leader: string
+  leaderUserId: EntityId | ''
   sortValue: number
   status: number
 }
@@ -263,6 +263,14 @@ export interface DeptParentOption {
   id: EntityId
   name: string
   depth: number
+}
+
+/** 启用用户选项（#286，ADR 0069）：部门负责人选择器只可选启用用户，label 供下拉展示。 */
+export interface UserOption {
+  id: EntityId
+  username: string
+  name: string
+  label: string
 }
 
 export interface UserRecord {

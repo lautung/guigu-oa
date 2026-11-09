@@ -22,6 +22,11 @@ const original = {
   processDefinitionPath: 'opaque/old.zip',
   processDefinitionKey: 'old',
 }
+// 既有模板的审批人配置读取（#286）：默认一个带 assignee 的节点、无已存规则。
+const approverConfig = {
+  userTasks: [{ key: 'dept-approve', name: '部门审批', assignee: 'lisi' }],
+  rules: [] as Array<Record<string, unknown>>,
+}
 async function json(route: Route, data: unknown, code = 200) {
   await route.fulfill({
     status: 200,
@@ -36,12 +41,15 @@ async function setup(
     read?: (route: Route) => Promise<void>
     upload?: (route: Route) => Promise<void>
     save?: (route: Route) => Promise<void>
+    approverRules?: (route: Route) => Promise<void>
     menus?: boolean
   } = {},
 ) {
   const errors: string[] = []
   const saved: Record<string, unknown>[] = []
   const uploads: string[] = []
+  const approverReads: unknown[] = []
+  const approverWrites: unknown[] = []
   page.on('pageerror', (error) => {
     if (!isKnownBrowserNoise(error.message)) errors.push(error.message)
   })
@@ -88,11 +96,23 @@ async function setup(
       return options.read
         ? options.read(route)
         : json(route, options.record === undefined ? original : options.record)
+    if (path.startsWith('/admin/process/processTemplate/approverRules/')) {
+      if (route.request().method() === 'PUT') {
+        approverWrites.push(route.request().postDataJSON())
+        return json(route, null)
+      }
+      approverReads.push(path)
+      return options.approverRules ? options.approverRules(route) : json(route, approverConfig)
+    }
     if (path === '/admin/process/processTemplate/uploadProcessDefinition') {
       uploads.push(route.request().headers()['token'] || '')
       return options.upload
         ? options.upload(route)
-        : json(route, { processDefinitionPath: 'opaque/new.zip', processDefinitionKey: 'new' })
+        : json(route, {
+            processDefinitionPath: 'opaque/new.zip',
+            processDefinitionKey: 'new',
+            userTasks: approverConfig.userTasks,
+          })
     }
     if (
       path === '/admin/process/processTemplate/save' ||
@@ -101,6 +121,16 @@ async function setup(
       saved.push(route.request().postDataJSON() as Record<string, unknown>)
       return options.save ? options.save(route) : json(route, null)
     }
+    if (path === '/admin/system/sysRole/findAll')
+      return json(route, [
+        { id: 7, roleName: '审批主管', roleCode: 'approver' },
+        { id: 8, roleName: '人事专员', roleCode: 'hr' },
+      ])
+    if (path === '/admin/system/sysUser/posts')
+      return json(route, [
+        { id: 5, name: '部门经理', status: 1 },
+        { id: 6, name: '会计', status: 1 },
+      ])
     if (path === '/admin/process/processTemplate/1/10')
       return json(route, { records: [original], total: 1, pages: 1 })
     if (path.startsWith('/admin/process/findPending/'))
@@ -114,7 +144,7 @@ async function setup(
     if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${path}`)
   })
-  return { errors, saved, uploads }
+  return { errors, saved, uploads, approverReads, approverWrites }
 }
 async function flowStep(page: Page) {
   await page.getByRole('button', { name: '下一步', exact: true }).click()
@@ -549,5 +579,68 @@ test('进入结果被替换时清理编辑，旧上传结果不影响重新进�
   await expect(page.getByText('opaque/old.zip')).toBeVisible()
   await expect(page.getByText('old-identity.zip')).toHaveCount(0)
   expect(h.saved).toHaveLength(0)
+  expect(h.errors).toEqual([])
+})
+
+test('编辑既有模板配置节点审批人并整体保存，部门负责人来源不带目标', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const h = await setup(page)
+  await page.goto('/system/processSet/templateSet?id=97')
+  await flowStep(page)
+
+  await expect(page.getByText('此处规则将覆盖流程 zip 中的 assignee')).toBeVisible()
+  const row = page.locator('.approver-row').filter({ hasText: '部门审批' })
+  await expect(row).toBeVisible()
+  await expect(row.getByText('写死审批人：lisi')).toBeVisible()
+
+  await row.locator('.el-select').first().click()
+  await page.getByRole('option', { name: '部门负责人', exact: true }).click()
+  await expect(row.getByText('按发起人所在部门的负责人解析')).toBeVisible()
+
+  await page.getByRole('button', { name: '保存审批人配置', exact: true }).click()
+  await expect(page.getByText('审批人配置已保存')).toBeVisible()
+  expect(h.approverWrites).toEqual([
+    [{ taskDefinitionKey: 'dept-approve', sourceType: 'DEPT_LEADER' }],
+  ])
+  expect(h.errors).toEqual([])
+})
+
+test('配置角色来源要选目标，保存载荷带 targetId', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const h = await setup(page)
+  await page.goto('/system/processSet/templateSet?id=97')
+  await flowStep(page)
+
+  const row = page.locator('.approver-row').filter({ hasText: '部门审批' })
+  await expect(row).toBeVisible()
+  await row.locator('.el-select').first().click()
+  await page.getByRole('option', { name: '角色', exact: true }).click()
+  await expect(page.getByRole('button', { name: '保存审批人配置', exact: true })).toBeDisabled()
+
+  await row.locator('.el-select').nth(1).click()
+  await page.getByRole('option', { name: '审批主管', exact: true }).click()
+  await page.getByRole('button', { name: '保存审批人配置', exact: true }).click()
+  await expect(page.getByText('审批人配置已保存')).toBeVisible()
+  expect(h.approverWrites).toEqual([
+    [{ taskDefinitionKey: 'dept-approve', sourceType: 'ROLE', targetId: 7 }],
+  ])
+  expect(h.errors).toEqual([])
+})
+
+test('上传解析不出 BPMN 的 zip 明示不可发布', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const h = await setup(page, {
+    upload: (route) =>
+      json(route, {
+        processDefinitionPath: 'opaque/nobpmn.zip',
+        processDefinitionKey: 'nobpmn',
+        userTasks: [],
+      }),
+  })
+  await page.goto('/system/processSet/templateSet?id=97')
+  await flowStep(page)
+  await file(page, 'nobpmn.zip')
+  await expect(page.getByText('流程 zip 解析不出 BPMN 节点，保存后模板不可发布')).toBeVisible()
+  await expect(page.getByRole('button', { name: '保存审批人配置', exact: true })).toBeDisabled()
   expect(h.errors).toEqual([])
 })

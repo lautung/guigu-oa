@@ -27,6 +27,9 @@ function harness() {
   const reads = [],
     uploads = [],
     saves = [],
+    approverReads = [],
+    approverSaves = [],
+    optionReads = [],
     navigation = [],
     replacements = [],
     notices = [],
@@ -50,7 +53,14 @@ function harness() {
           ? reads
           : config.url.endsWith('/uploadProcessDefinition')
             ? uploads
-            : saves
+            : config.url.includes('/approverRules/')
+              ? config.method === 'put'
+                ? approverSaves
+                : approverReads
+              : config.url === '/admin/system/sysRole/findAll' ||
+                  config.url === '/admin/system/sysUser/posts'
+                ? optionReads
+                : saves
         group.push({ config, isRelevant, scope, ...pending })
         return pending.promise
       },
@@ -89,6 +99,9 @@ function harness() {
     reads,
     uploads,
     saves,
+    approverReads,
+    approverSaves,
+    optionReads,
     navigation,
     replacements,
     notices,
@@ -626,7 +639,11 @@ async function transportHarness(respond) {
       ? { code: 200, data: [{ id: 3, name: '请假' }] }
       : config.url.includes('/get/')
         ? { code: 200, data: record() }
-        : await respond(config, calls)
+        : config.url.includes('/approverRules/') && config.method === 'get'
+          ? { code: 200, data: { userTasks: [], rules: [] } }
+          : config.url === '/admin/system/sysUser/posts'
+            ? { code: 200, data: [] }
+            : await respond(config, calls)
     return { data, config, status: 200, statusText: 'OK', headers: {} }
   }
   const client = createRequestClient(recognition)
@@ -875,6 +892,178 @@ it('保存中与待确认可往返核对完整提交快照，查看不读取设�
   expect(edit.state.canSave).toBe(false)
   expect(edit.state.snapshot).toEqual(snapshot)
   expect(edit.state.inspectionDesign.rule[0].title).toBe('核对原因')
+})
+
+const approverConfig = (overrides = {}) => ({
+  code: 200,
+  data: {
+    userTasks: [
+      { key: 'approve', name: '部门审批', assignee: 'lisi' },
+      { key: 'manager', name: '经理审批', assignee: '' },
+    ],
+    rules: [{ id: 1, taskDefinitionKey: 'approve', sourceType: 'ROLE', targetId: 7 }],
+    ...overrides,
+  },
+})
+
+it('编辑既有模板时一次读取节点清单与当前规则，未配置节点回落 BPMN 写死，配置读取不阻塞模板编辑', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  expect(edit.state.phase).toBe('ready')
+  expect(edit.state.approverStatus).toBe('loading')
+  h.approverReads[0].resolve(approverConfig())
+  await flushPromises()
+  expect(edit.state.approverStatus).toBe('ready')
+  expect(edit.state.approvers).toEqual([
+    { key: 'approve', name: '部门审批', assignee: 'lisi', sourceType: 'ROLE', targetId: 7 },
+    { key: 'manager', name: '经理审批', assignee: '', sourceType: '', targetId: '' },
+  ])
+  // 配置读取失败不阻塞模板本身的编辑（phase 仍是 ready）。
+  expect(edit.state.phase).toBe('ready')
+})
+
+it('节点或规则数据损坏时明确报错可重试，角色岗位选项读取失败只降级目标选择', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  h.optionReads[0].resolve({ code: 200, data: [{ id: 5, roleName: '审批主管' }] })
+  h.optionReads[1].reject(new Error('无岗位页权限'))
+  h.approverReads[0].resolve({ code: 200, data: { userTasks: 'broken', rules: [] } })
+  await flushPromises()
+  expect(edit.state.approverStatus).toBe('error')
+  expect(edit.state.approverError).not.toBe('')
+  expect(edit.state.approverRoles).toEqual([{ id: 5, name: '审批主管' }])
+  expect(edit.state.approverPosts).toEqual([])
+  expect(edit.state.approverOptionsError).not.toBe('')
+
+  const retry = edit.retryApprovers()
+  h.optionReads[2].reject(new Error('无岗位页权限'))
+  h.optionReads[3].resolve({ code: 200, data: [{ id: 2, name: '经理', status: 1 }] })
+  h.approverReads[1].resolve(approverConfig())
+  await retry
+  await flushPromises()
+  expect(edit.state.approverStatus).toBe('ready')
+  expect(edit.state.approvers).toEqual([
+    { key: 'approve', name: '部门审批', assignee: 'lisi', sourceType: 'ROLE', targetId: 7 },
+    { key: 'manager', name: '经理审批', assignee: '', sourceType: '', targetId: '' },
+  ])
+  expect(edit.state.approverPosts).toEqual([{ id: 2, name: '经理' }])
+  expect(h.approverReads[1].config.url).toBe('/admin/process/processTemplate/approverRules/A')
+})
+
+it('保存走整体替换 PUT approverRules：部门负责人不带目标，角色岗位必须选目标，保存成功清脏', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  h.approverReads[0].resolve(approverConfig())
+  await flushPromises()
+
+  edit.updateApprover('manager', { sourceType: 'ROLE' })
+  expect(edit.state.approverDirty).toBe(true)
+  expect(edit.state.canSaveApprovers).toBe(false)
+  await edit.saveApprovers()
+  expect(h.approverSaves).toHaveLength(0)
+
+  edit.updateApprover('manager', { targetId: 7 })
+  edit.updateApprover('approve', { sourceType: 'DEPT_LEADER' })
+  expect(edit.state.canSaveApprovers).toBe(true)
+  const saving = edit.saveApprovers()
+  h.approverSaves[0].resolve({ code: 200, data: null })
+  await saving
+  expect(h.approverSaves[0].config).toMatchObject({
+    method: 'put',
+    url: '/admin/process/processTemplate/approverRules/A',
+    data: [
+      { taskDefinitionKey: 'approve', sourceType: 'DEPT_LEADER' },
+      { taskDefinitionKey: 'manager', sourceType: 'ROLE', targetId: 7 },
+    ],
+  })
+  expect(edit.state.approverDirty).toBe(false)
+  expect(edit.state.approverSaveError).toBe('')
+  expect(h.notices).toContain('审批人配置已保存')
+})
+
+it('保存失败文案上屏可重试；来源切回 BPMN 写死的节点不再进载荷', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  h.approverReads[0].resolve(approverConfig())
+  await flushPromises()
+  const saving = edit.saveApprovers()
+  h.approverSaves[0].reject(new Error('断网'))
+  await saving
+  expect(edit.state.approverSaveError).toBe('断网')
+  expect(edit.state.approverSaving).toBe(false)
+
+  edit.updateApprover('approve', { sourceType: 'BPMN_ASSIGNEE' })
+  edit.updateApprover('manager', { sourceType: 'ROLE', targetId: 7 })
+  const retry = edit.saveApprovers()
+  h.approverSaves[1].resolve({ code: 200, data: null })
+  await retry
+  expect(h.approverSaves[1].config.data).toEqual([
+    { taskDefinitionKey: 'manager', sourceType: 'ROLE', targetId: 7 },
+  ])
+})
+
+it('新建模板没有 id：审批人配置不可编辑不可保存，提交保存不受影响', async () => {
+  const h = harness()
+  const edit = h.module.open()
+  await edit.ready
+  expect(edit.state.approverStatus).toBe('idle')
+  edit.updateApprover('approve', { sourceType: 'DEPT_LEADER' })
+  expect(edit.state.approvers).toEqual([])
+  expect(edit.state.approverDirty).toBe(false)
+  expect(edit.state.canSaveApprovers).toBe(false)
+  await edit.saveApprovers()
+  expect(h.approverSaves).toHaveLength(0)
+})
+
+it('上传新 zip 后按其节点清单重建行且同 key 选择保留，陈旧规则有警告；解析不出 BPMN 明示不可发布', async () => {
+  const h = harness()
+  const edit = h.module.open('A')
+  await flushPromises()
+  h.reads[0].resolve({ code: 200, data: record() })
+  await edit.ready
+  h.approverReads[0].resolve(approverConfig())
+  await flushPromises()
+  expect(edit.state.zipUnparsable).toBe(false)
+
+  const upload = edit.selectZip(zip())
+  h.uploads[0].resolve({
+    code: 200,
+    data: {
+      processDefinitionPath: 'opaque/new.zip',
+      processDefinitionKey: 'new',
+      userTasks: [{ key: 'manager', name: '经理审批', assignee: '' }],
+    },
+  })
+  await upload
+  expect(edit.state.approvers).toEqual([
+    { key: 'manager', name: '经理审批', assignee: '', sourceType: '', targetId: '' },
+  ])
+  expect(edit.state.staleApproverKeys).toEqual(['approve'])
+
+  const other = edit.selectZip(zip('other.zip'))
+  h.uploads[1].resolve({
+    code: 200,
+    data: {
+      processDefinitionPath: 'opaque/other.zip',
+      processDefinitionKey: 'other',
+      userTasks: [],
+    },
+  })
+  await other
+  expect(edit.state.zipUnparsable).toBe(true)
+  expect(edit.state.canSaveApprovers).toBe(false)
 })
 
 describe('template formRules', () => {

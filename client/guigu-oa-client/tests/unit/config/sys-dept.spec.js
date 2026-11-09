@@ -6,10 +6,13 @@ import {
   emptyForm,
   findTreeRequest,
   formRules,
+  leaderOptions,
   parentOptions,
   presentDeptTree,
   presentForm,
+  presentUserOptions,
   removeRequest,
+  userOptionsRequest,
   writeRequest,
 } from '@/config/sys-dept'
 
@@ -19,7 +22,7 @@ const TREE = [
     parentId: 0,
     ancestors: ',0,1,',
     name: '总部',
-    leader: '张三',
+    leaderUserId: 11,
     sortValue: 1,
     status: 1,
     createTime: '2026-01-01 10:00:00',
@@ -29,7 +32,7 @@ const TREE = [
         parentId: 1,
         ancestors: ',0,1,2,',
         name: '研发部',
-        leader: '',
+        leaderUserId: null,
         sortValue: 2,
         status: 0,
         children: [{ id: 3, parentId: 2, ancestors: ',0,1,2,3,', name: '平台组' }],
@@ -47,7 +50,7 @@ describe('config/sys-dept', () => {
       expect(tree[0]).toMatchObject({
         id: 1,
         name: '总部',
-        leader: '张三',
+        leaderUserId: 11,
         ancestors: ',0,1,',
         status: 1,
       })
@@ -56,7 +59,7 @@ describe('config/sys-dept', () => {
         name: '研发部',
         ancestors: ',0,1,2,',
         status: 0,
-        leader: '',
+        leaderUserId: null,
       })
       expect(tree[0].children[0].children[0]).toMatchObject({ id: 3, name: '平台组', children: [] })
     })
@@ -65,7 +68,7 @@ describe('config/sys-dept', () => {
       expect(presentDeptTree([{ id: 9, name: '空部门' }])[0]).toMatchObject({
         parentId: 0,
         ancestors: '',
-        leader: '',
+        leaderUserId: null,
         sortValue: 0,
         status: 1,
         children: [],
@@ -81,13 +84,20 @@ describe('config/sys-dept', () => {
       })
     })
 
+    it('loads leader options with GET /admin/system/sysDept/userOptions', () => {
+      expect(userOptionsRequest()).toEqual({
+        method: 'get',
+        url: '/admin/system/sysDept/userOptions',
+      })
+    })
+
     it('creates a 部门 with POST /admin/system/sysDept/save', () => {
       expect(
-        writeRequest({ parentId: 1, name: '研发部', leader: '李四', sortValue: 2, status: 1 }),
+        writeRequest({ parentId: 1, name: '研发部', leaderUserId: 12, sortValue: 2, status: 1 }),
       ).toEqual({
         method: 'post',
         url: '/admin/system/sysDept/save',
-        data: { parentId: 1, name: '研发部', leader: '李四', sortValue: 2, status: 1 },
+        data: { parentId: 1, name: '研发部', leaderUserId: 12, sortValue: 2, status: 1 },
       })
     })
 
@@ -97,14 +107,14 @@ describe('config/sys-dept', () => {
           id: 2,
           parentId: 0,
           name: '研发部',
-          leader: '',
+          leaderUserId: '',
           sortValue: 0,
           status: 0,
         }),
       ).toEqual({
         method: 'put',
         url: '/admin/system/sysDept/update',
-        data: { id: 2, parentId: 0, name: '研发部', leader: '', sortValue: 0, status: 0 },
+        data: { id: 2, parentId: 0, name: '研发部', leaderUserId: null, sortValue: 0, status: 0 },
       })
     })
 
@@ -115,11 +125,11 @@ describe('config/sys-dept', () => {
       })
     })
 
-    it('trims name and leader before writing', () => {
+    it('trims name before writing', () => {
       expect(
-        writeRequest({ parentId: 1, name: '  研发部 ', leader: ' 李四 ', sortValue: 2, status: 1 })
+        writeRequest({ parentId: 1, name: '  研发部 ', leaderUserId: 12, sortValue: 2, status: 1 })
           .data,
-      ).toEqual({ parentId: 1, name: '研发部', leader: '李四', sortValue: 2, status: 1 })
+      ).toEqual({ parentId: 1, name: '研发部', leaderUserId: 12, sortValue: 2, status: 1 })
     })
 
     it('exposes the page button points (no :query)', () => {
@@ -144,7 +154,7 @@ describe('config/sys-dept', () => {
         id: '',
         parentId: 0,
         name: '',
-        leader: '',
+        leaderUserId: '',
         sortValue: 0,
         status: 1,
       })
@@ -156,10 +166,37 @@ describe('config/sys-dept', () => {
         id: 2,
         parentId: 1,
         name: '研发部',
-        leader: '',
+        leaderUserId: '',
         sortValue: 2,
         status: 0,
       })
+      expect(presentForm({ id: 5, leaderUserId: 11 })).toMatchObject({ leaderUserId: 11 })
+    })
+  })
+
+  describe('负责人选择器选项', () => {
+    it('projects enabled users with a 姓名（用户名） label and drops id-less rows', () => {
+      expect(
+        presentUserOptions([
+          { id: 11, username: 'zhangsan', name: '张三' },
+          { id: 12, username: '', name: '李四' },
+          { id: '', username: 'ghost', name: '无id' },
+        ]),
+      ).toEqual([
+        { id: 11, username: 'zhangsan', name: '张三', label: '张三（zhangsan）' },
+        { id: 12, username: '', name: '李四', label: '李四' },
+      ])
+    })
+
+    it('keeps the current leader selectable when it left the enabled options', () => {
+      const options = presentUserOptions([{ id: 11, username: 'zhangsan', name: '张三' }])
+      expect(leaderOptions(options, 11)).toEqual(options)
+      expect(leaderOptions(options, '')).toEqual(options)
+      expect(leaderOptions(options, null)).toEqual(options)
+      expect(leaderOptions(options, 99)).toEqual([
+        ...options,
+        { id: 99, username: '', name: '', label: '当前负责人已停用或已删除' },
+      ])
     })
   })
 

@@ -8,6 +8,7 @@ import com.lautung.oa.auth.service.SysDeptService;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.vo.system.SysUserOptionVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -109,6 +110,17 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         if (!removeById(id)) {
             throw new BusinessException(201, "部门删除失败");
         }
+    }
+
+    @Override
+    public List<SysUserOptionVo> findEnabledUserOptions() {
+        List<SysUser> users = sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getStatus, 1)
+                .orderByAsc(SysUser::getUsername)
+                .orderByAsc(SysUser::getId));
+        return users.stream()
+                .map(user -> new SysUserOptionVo(user.getId(), user.getUsername(), user.getName()))
+                .toList();
     }
 
     /**

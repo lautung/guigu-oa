@@ -270,6 +270,46 @@ class SysDeptContractTest {
                 .andExpect(jsonPath("$.code").value(205));
     }
 
+    /**
+     * 部门负责人选择器的启用用户选项（#286，ADR 0069）：只判部门页授予、不要求用户管理页；
+     * 只列启用且未删用户，响应不带 password 列。
+     */
+    @Test
+    void userOptionsListsEnabledUsersForTheDeptPageOnly() throws Exception {
+        insertUser(9001, "t247-leader-a", 0);
+        insertUser(9002, "t247-leader-b", 0);
+        insertUser(9003, "t247-leader-c", 0);
+        jdbcTemplate.update("UPDATE sys_user SET status = 0 WHERE id = 9002");
+        jdbcTemplate.update("UPDATE sys_user SET is_deleted = 1 WHERE id = 9003");
+
+        String body = mockMvc.perform(get("/admin/system/sysDept/userOptions").header("token", adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn().getResponse().getContentAsString();
+
+        List<Map<String, Object>> options = JsonPath.read(body, "$.data");
+        List<String> usernames = options.stream().map(row -> (String) row.get("username")).toList();
+        assertTrue(usernames.contains("t247-leader-a"));
+        // 停用与已删用户都不进选项；种子账号（admin/user）不碍事。
+        assertTrue(!usernames.contains("t247-leader-b"));
+        assertTrue(!usernames.contains("t247-leader-c"));
+        Map<String, Object> first = options.stream()
+                .filter(row -> "t247-leader-a".equals(row.get("username")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(9001, ((Number) first.get("id")).intValue());
+        assertEquals("t247-leader-a", first.get("name"));
+        assertTrue(!first.containsKey("password"));
+
+        // 没有部门页授予的用户读不到选项：页面 gate 是唯一强制点。
+        insertRole(9004, "t247-nooption");
+        insertUser(9004, "t247-nooption", 0);
+        assignRole(9004, 9004);
+        mockMvc.perform(get("/admin/system/sysDept/userOptions").header("token", token(9004, "t247-nooption")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(205));
+    }
+
     @Test
     void v123SeedsTheDeptPageButtonsAndGrantsSuperAdminIdempotently() throws Exception {
         assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history "
