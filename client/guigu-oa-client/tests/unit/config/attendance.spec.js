@@ -4,6 +4,24 @@ import {
   ATTENDANCE_DAY_TYPE_OPTIONS,
   ATTENDANCE_PERMISSIONS,
   DEFAULT_WORKDAYS,
+  attendanceHoursText,
+  balancesRequest,
+  emptyGrantForm,
+  emptyLeaveTypeForm,
+  grantableLeaveTypes,
+  ledgerGrantRequest,
+  ledgerListRequest,
+  ledgerQueryOf,
+  ledgerUsersRequest,
+  leaveTypeFormRules,
+  leaveTypeListRequest,
+  leaveTypeOptionsRequest,
+  leaveTypeRemoveRequest,
+  leaveTypeWriteRequest,
+  presentBalances,
+  presentLeaveTypeForm,
+  presentLeaveTypeListPage,
+  presentLedgerListPage,
   PUNCH_SOURCE_OPTIONS,
   WORKDAY_OPTIONS,
   attendanceDayTypeLabel,
@@ -55,6 +73,10 @@ describe('config/attendance', () => {
       edit: 'attendance:group:edit',
       remove: 'attendance:group:remove',
       repair: 'attendance:record:repair',
+      typeAdd: 'attendance:type:add',
+      typeEdit: 'attendance:type:edit',
+      typeRemove: 'attendance:type:remove',
+      grant: 'attendance:ledger:grant',
     })
   })
 
@@ -585,6 +607,191 @@ describe('config/attendance', () => {
         url: '/admin/attendance/repair/save',
         data: { userId: 11, repairDate: '2026-03-09', clockOutTime: '18:30:00' },
       })
+    })
+  })
+
+  describe('假期类型与发放（#280）', () => {
+    it('lists types and options, and only offers balance-required enabled types for grants', () => {
+      expect(leaveTypeListRequest(2, 20, { name: '年假' })).toEqual({
+        method: 'get',
+        url: '/admin/attendance/leave-type/2/20',
+        params: { name: '年假' },
+      })
+      expect(leaveTypeOptionsRequest()).toEqual({
+        method: 'get',
+        url: '/admin/attendance/leave-type/options',
+      })
+      const options = [
+        { id: 1, name: '年假', balanceRequired: 1, status: 1 },
+        { id: 2, name: '事假', balanceRequired: 0, status: 1 },
+        { id: 3, name: '调休', balanceRequired: 1, status: 0 },
+      ]
+      expect(grantableLeaveTypes(options)).toEqual([
+        expect.objectContaining({ id: 1, name: '年假' }),
+      ])
+      expect(presentLeaveTypeListPage({ records: options, total: 3, pages: 1 })).toEqual({
+        records: [
+          expect.objectContaining({ id: 1, name: '年假', status: 1, sortNo: 0 }),
+          expect.objectContaining({ id: 2, name: '事假', balanceRequired: 0 }),
+          expect.objectContaining({ id: 3, name: '调休', status: 0 }),
+        ],
+        total: 3,
+        pages: 1,
+      })
+    })
+
+    it('writes types as full-form payloads and mirrors the required name message', () => {
+      expect(emptyMessageOf(leaveTypeFormRules().name[0])).toBe('假期类型名称不能为空')
+      expect(
+        leaveTypeWriteRequest({
+          ...emptyLeaveTypeForm(),
+          name: ' 育儿假 ',
+          remark: ' 备注 ',
+        }),
+      ).toEqual({
+        method: 'post',
+        url: '/admin/attendance/leave-type/save',
+        data: {
+          name: '育儿假',
+          balanceRequired: 1,
+          overtimeCredit: 0,
+          status: 1,
+          sortNo: 0,
+          remark: '备注',
+        },
+      })
+      expect(
+        leaveTypeWriteRequest({
+          id: 7,
+          name: '调休',
+          balanceRequired: 1,
+          overtimeCredit: 1,
+          status: 0,
+          sortNo: 4,
+          remark: '',
+        }),
+      ).toEqual({
+        method: 'put',
+        url: '/admin/attendance/leave-type/update',
+        data: {
+          id: 7,
+          name: '调休',
+          balanceRequired: 1,
+          overtimeCredit: 1,
+          status: 0,
+          sortNo: 4,
+          remark: '',
+        },
+      })
+      expect(presentLeaveTypeForm({ id: 7, name: '调休', overtimeCredit: 1 })).toEqual(
+        expect.objectContaining({ id: 7, name: '调休', overtimeCredit: 1, status: 1 }),
+      )
+      expect(leaveTypeRemoveRequest(7)).toEqual({
+        method: 'delete',
+        url: '/admin/attendance/leave-type/remove/7',
+      })
+    })
+
+    it('pages ledger rows and projects signed hours with entry labels', () => {
+      expect(ledgerListRequest(1, 10, { leaveTypeId: 1 })).toEqual({
+        method: 'get',
+        url: '/admin/attendance/ledger/1/10',
+        params: { leaveTypeId: 1 },
+      })
+      expect(ledgerQueryOf({ leaveTypeId: '', beginDate: '2026-03-01' })).toEqual({
+        beginDate: '2026-03-01',
+      })
+      expect(ledgerUsersRequest('甲')).toEqual({
+        method: 'get',
+        url: '/admin/attendance/ledger/users',
+        params: { name: '甲' },
+      })
+      expect(
+        presentLedgerListPage({
+          records: [
+            {
+              id: 1,
+              name: '甲',
+              leaveTypeName: '年假',
+              entryType: 1,
+              changeHours: -2.25,
+              remark: '',
+            },
+            {
+              id: 2,
+              name: '乙',
+              leaveTypeName: '调休',
+              entryType: 3,
+              changeHours: 8,
+              remark: '',
+            },
+          ],
+          total: 2,
+          pages: 1,
+        }).records,
+      ).toEqual([
+        expect.objectContaining({
+          id: 1,
+          entryTypeLabel: '发放',
+          changeHoursText: '-2.25',
+          negative: true,
+        }),
+        expect.objectContaining({
+          id: 2,
+          entryTypeLabel: '加班入账',
+          changeHoursText: '+8',
+          negative: false,
+        }),
+      ])
+    })
+
+    it('builds multi-user grant payloads with signed hours', () => {
+      expect(emptyGrantForm()).toEqual({
+        leaveTypeId: '',
+        userIds: [],
+        changeHours: 0,
+        remark: '',
+      })
+      expect(
+        ledgerGrantRequest({
+          leaveTypeId: 1,
+          userIds: [11, 12],
+          changeHours: -2.5,
+          remark: ' 冲抵 ',
+        }),
+      ).toEqual({
+        method: 'post',
+        url: '/admin/attendance/ledger/grant',
+        data: { leaveTypeId: 1, userIds: [11, 12], changeHours: -2.5, remark: '冲抵' },
+      })
+    })
+
+    it('projects personal balances with pending and negative states', () => {
+      expect(balancesRequest()).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/balances',
+      })
+      expect(
+        presentBalances([
+          { leaveTypeId: 1, leaveTypeName: '年假', availableHours: 5.5, pendingHours: 2 },
+        ]),
+      ).toEqual([
+        expect.objectContaining({
+          leaveTypeId: 1,
+          leaveTypeName: '年假',
+          availableHoursText: '5.5',
+          pendingText: '在途 2',
+          negative: false,
+        }),
+      ])
+      expect(
+        presentBalances([{ leaveTypeId: 3, leaveTypeName: '调休', availableHours: -1 }])[0],
+      ).toEqual(
+        expect.objectContaining({ availableHoursText: '-1', negative: true, pendingText: '' }),
+      )
+      expect(attendanceHoursText(8)).toBe('8')
+      expect(attendanceHoursText(5.5)).toBe('5.5')
+      expect(attendanceHoursText(-2.25)).toBe('-2.25')
     })
   })
 })

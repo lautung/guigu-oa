@@ -115,11 +115,17 @@ const month = {
   ],
 }
 
+const balances = [
+  { leaveTypeId: 1, leaveTypeName: '年假', status: 1, availableHours: 5.5, pendingHours: 2 },
+  { leaveTypeId: 3, leaveTypeName: '调休', status: 1, availableHours: -1, pendingHours: 0 },
+]
+
 let pinia
 let http
 beforeEach(() => {
   http = installHttp((config) => {
     if (config.url === '/admin/attendance/my/records') return ok(month)
+    if (config.url === '/admin/attendance/my/balances') return ok(balances)
     return ok(null)
   })
   ;({ pinia } = setupSession())
@@ -152,6 +158,25 @@ describe('办事考勤记录页', () => {
     }
     expect(wrapper.vm.monthView.days).toHaveLength(11)
     expect(wrapper.vm.monthView.days[10].statusLabel).toBe('—')
+
+    // 余额区：可用小时、在途与负余额同屏。
+    expect(wrapper.vm.balances).toEqual([
+      expect.objectContaining({
+        leaveTypeName: '年假',
+        availableHoursText: '5.5',
+        pendingText: '在途 2',
+        negative: false,
+      }),
+      expect.objectContaining({
+        leaveTypeName: '调休',
+        availableHoursText: '-1',
+        negative: true,
+      }),
+    ])
+    expect(wrapper.text()).toContain('假期余额')
+    expect(wrapper.text()).toContain('5.5 小时')
+    expect(wrapper.text()).toContain('在途 2')
+    expect(http.calls.map((call) => call.url)).toContain('/admin/attendance/my/balances')
   })
 
   it('loads the month picked in the picker', async () => {

@@ -77,6 +77,11 @@ const month = {
   ],
 }
 
+const balances = [
+  { leaveTypeId: 1, leaveTypeName: '年假', status: 1, availableHours: 5.5, pendingHours: 2 },
+  { leaveTypeId: 3, leaveTypeName: '调休', status: 1, availableHours: -1, pendingHours: 0 },
+]
+
 interface State {
   errors: string[]
 }
@@ -107,6 +112,7 @@ async function setup(page: Page): Promise<State> {
       return json(route, { records: [], total: 0, pages: 0 })
     }
     if (path === '/admin/attendance/my/records') return json(route, month)
+    if (path === '/admin/attendance/my/balances') return json(route, balances)
     if (await fulfillNoticeUnread(route, path)) return
     throw new Error(`Unexpected request ${request.method()} ${path}`)
   })
@@ -125,6 +131,14 @@ test('手机宽度下考勤记录展示当月逐日状态与未打卡', async ({
   await expect(statusTags.filter({ hasText: '请假·年假' }).first()).toBeVisible()
   await expect(statusTags.filter({ hasText: '补班日' }).first()).toBeVisible()
   await expect(statusTags.filter({ hasText: '未打卡' }).first()).toBeVisible()
+
+  // 余额区：可用小时、在途与负余额在手机宽度下也可读。
+  await expect(page.getByRole('heading', { name: '假期余额', exact: true })).toBeVisible()
+  await expect(page.locator('.balance-item', { hasText: '年假' })).toContainText('5.5 小时')
+  await expect(page.locator('.balance-item', { hasText: '年假' })).toContainText('在途 2')
+  await expect(page.locator('.balance-item.is-negative', { hasText: '调休' })).toContainText(
+    '-1 小时',
+  )
 
   expect(state.errors).toEqual([])
 })

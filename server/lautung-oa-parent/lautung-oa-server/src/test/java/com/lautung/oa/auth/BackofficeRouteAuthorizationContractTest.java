@@ -2,6 +2,8 @@ package com.lautung.oa.auth;
 
 import com.lautung.oa.attendance.controller.AttendanceGroupController;
 import com.lautung.oa.attendance.controller.AttendanceHolidayController;
+import com.lautung.oa.attendance.controller.AttendanceLeaveTypeController;
+import com.lautung.oa.attendance.controller.AttendanceLedgerController;
 import com.lautung.oa.attendance.controller.AttendancePunchController;
 import com.lautung.oa.attendance.controller.AttendanceRepairController;
 import com.lautung.oa.attendance.controller.AttendanceShiftController;
@@ -107,7 +109,9 @@ class BackofficeRouteAuthorizationContractTest {
             AttendanceGroupController.class,
             AttendanceHolidayController.class,
             AttendancePunchController.class,
-            AttendanceRepairController.class);
+            AttendanceRepairController.class,
+            AttendanceLeaveTypeController.class,
+            AttendanceLedgerController.class);
 
     static {
         expect(AttendanceShiftController.class, "/business/attendance/group", null,
@@ -131,6 +135,20 @@ class BackofficeRouteAuthorizationContractTest {
                 "pageQuery", "users", "day");
         expect(AttendanceRepairController.class, "/business/attendance/repair",
                 "attendance:record:repair", "save");
+        // 假期类型（#280）：类型 CRUD 各要按钮点，读（分页/选项）只判页面。
+        expect(AttendanceLeaveTypeController.class, "/business/attendance/leave", null,
+                "pageQuery", "options");
+        expect(AttendanceLeaveTypeController.class, "/business/attendance/leave",
+                "attendance:type:add", "save");
+        expect(AttendanceLeaveTypeController.class, "/business/attendance/leave",
+                "attendance:type:edit", "update");
+        expect(AttendanceLeaveTypeController.class, "/business/attendance/leave",
+                "attendance:type:remove", "remove");
+        // 发放流水（#280）：列表与成员候选只判页面，发放再判独立按钮点。
+        expect(AttendanceLedgerController.class, "/business/attendance/leave", null,
+                "pageQuery", "users");
+        expect(AttendanceLedgerController.class, "/business/attendance/leave",
+                "attendance:ledger:grant", "grant");
         expect(SysUserController.class, "/system/sysUser", null,
                 "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
                 "depts", "posts", "importTemplate");

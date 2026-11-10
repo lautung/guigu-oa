@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceLeaveLedgerMapper">
+
+    <!--
+      后台发放流水（#280，ADR 0073）：join 姓名/当前部门/类型/操作人。
+      存活过滤：手写 XML 不吃实体的 @TableLogic，流水行本体显式带 is_deleted = 0。
+      类型 join 不按 status 过滤：停用类型的历史流水照读不消失。
+      数据范围（ADR 0053/0057）：部门列 = sys_user.dept_id（当前），
+      本人列 = attendance_leave_ledger.user_id；查询侧只接受 #{} + <foreach>。
+      部门集为空且无本人行时 1 = 0 得零行，不是全部。排序：发放时间倒序、id 决胜。
+    -->
+    <select id="selectLedgerPage" resultType="com.lautung.oa.vo.attendance.AttendanceLedgerVo">
+        select l.id,
+               l.user_id,
+               u.username,
+               u.name,
+               u.dept_id as deptId,
+               d.name as deptName,
+               l.leave_type_id,
+               t.name as leaveTypeName,
+               l.entry_type,
+               l.change_hours,
+               l.business_type,
+               l.business_id,
+               l.operator_user_id,
+               o.name as operatorName,
+               l.remark,
+               l.create_time
+        from attendance_leave_ledger l
+            left join sys_user u on u.id = l.user_id
+            left join sys_dept d on d.id = u.dept_id
+            left join attendance_leave_type t on t.id = l.leave_type_id
+            left join sys_user o on o.id = l.operator_user_id
+        <where>
+            and l.is_deleted = 0
+            <if test="query != null and query.leaveTypeId != null">
+                and l.leave_type_id = #{query.leaveTypeId}
+            </if>
+            <if test="beginTime != null">
+                and l.create_time &gt;= #{beginTime}
+            </if>
+            <if test="endExclusive != null">
+                and l.create_time &lt; #{endExclusive}
+            </if>
+            <if test="scope != null and !scope.unrestricted">
+                <choose>
+                    <when test="scope.deptIds.size() > 0">
+                        and (u.dept_id in
+                        <foreach collection="scope.deptIds" item="deptId" open="(" separator="," close=")">
+                            #{deptId}
+                        </foreach>
+                        <if test="scope.selfUserId != null">
+                            or l.user_id = #{scope.selfUserId}
+                        </if>
+                        )
+                    </when>
+                    <when test="scope.selfUserId != null">
+                        and l.user_id = #{scope.selfUserId}
+                    </when>
+                    <otherwise>
+                        and 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        order by l.create_time desc, l.id desc
+    </select>
+
+    <!--
+      本人各类型余额（#280，ADR 0073）：可用 = 发放 + 入账 − 扣减 − 在途。
+      - 发放 = entry_type 1 的签好求和（含负数调整），入账 = entry_type 3 求和；
+      - 扣减 = entry_type 2 求和取正的展示值（扣减行按 ADR 恒负）；
+      - 在途 = 审批中（status=1）请假单 hours；通过后已有扣减流水，不重复扣。
+      需要余额的类型全列出（无流水得 0），按 sort_no 排序，停用类型也保留余额视图。
+    -->
+    <select id="selectBalances" resultType="com.lautung.oa.vo.attendance.AttendanceLeaveBalanceVo">
+        select t.id as leaveTypeId,
+               t.name as leaveTypeName,
+               t.status as status,
+               coalesce(sum(case when l.entry_type = 1 then l.change_hours else 0 end), 0) as grantedHours,
+               coalesce(sum(case when l.entry_type = 3 then l.change_hours else 0 end), 0) as creditedHours,
+               coalesce(-sum(case when l.entry_type = 2 then l.change_hours else 0 end), 0) as deductedHours,
+               coalesce((select sum(v.hours)
+                         from attendance_leave v
+                         where v.applicant_id = #{userId}
+                           and v.leave_type_id = t.id
+                           and v.status = 1
+                           and v.is_deleted = 0), 0) as pendingHours
+        from attendance_leave_type t
+            left join attendance_leave_ledger l
+                   on l.leave_type_id = t.id
+                  and l.user_id = #{userId}
+                  and l.is_deleted = 0
+        where t.is_deleted = 0
+          and t.balance_required = 1
+        group by t.id, t.name, t.status, t.sort_no
+        order by t.sort_no asc, t.id asc
+    </select>
+</mapper>

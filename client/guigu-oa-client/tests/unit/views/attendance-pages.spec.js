@@ -27,6 +27,11 @@ const attendanceApi = vi.hoisted(() => ({
   removeGroup: vi.fn(),
   saveOrUpdateHoliday: vi.fn(),
   removeHoliday: vi.fn(),
+  fetchLeaveTypeOptions: vi.fn(),
+  fetchLedgerUsers: vi.fn(),
+  saveOrUpdateLeaveType: vi.fn(),
+  removeLeaveType: vi.fn(),
+  grantAttendanceLeave: vi.fn(),
 }))
 
 vi.mock('@/api/attendance', () => attendanceApi)
@@ -85,6 +90,51 @@ const members = [
   { id: 2, userId: 12, username: 't278-bob', name: '乙' },
 ]
 
+const leaveTypes = [
+  {
+    id: 1,
+    name: '年假',
+    balanceRequired: 1,
+    overtimeCredit: 0,
+    status: 1,
+    sortNo: 1,
+    remark: '',
+  },
+  {
+    id: 2,
+    name: '事假',
+    balanceRequired: 0,
+    overtimeCredit: 0,
+    status: 1,
+    sortNo: 2,
+    remark: '',
+  },
+  {
+    id: 3,
+    name: '调休',
+    balanceRequired: 1,
+    overtimeCredit: 1,
+    status: 0,
+    sortNo: 3,
+    remark: '',
+  },
+]
+
+const ledger = {
+  id: 21,
+  userId: 11,
+  username: 't280-alice',
+  name: '甲',
+  deptName: '研发部',
+  leaveTypeId: 1,
+  leaveTypeName: '年假',
+  entryType: 1,
+  changeHours: -2.25,
+  operatorName: '乙',
+  remark: '冲抵错发',
+  createTime: '2026-11-10 09:00:00',
+}
+
 const users = [
   { id: 11, username: 't278-alice', name: '甲' },
   { id: 12, username: 't278-bob', name: '乙' },
@@ -100,6 +150,8 @@ function responder(config) {
   if (/\/attendance\/group\/\d+\/members$/.test(url)) return ok(members)
   if (/\/attendance\/holiday\/\d+\/\d+$/.test(url)) return paged([holiday])
   if (/\/attendance\/punch\/\d+\/\d+$/.test(url)) return paged([punch])
+  if (/\/attendance\/leave-type\/\d+\/\d+$/.test(url)) return paged(leaveTypes)
+  if (/\/attendance\/ledger\/\d+\/\d+$/.test(url)) return paged([ledger])
   return ok(null)
 }
 
@@ -123,6 +175,16 @@ beforeEach(() => {
   attendanceApi.removeGroup.mockReset().mockResolvedValue(ok(null))
   attendanceApi.saveOrUpdateHoliday.mockReset().mockResolvedValue(ok(null))
   attendanceApi.removeHoliday.mockReset().mockResolvedValue(ok(null))
+  attendanceApi.fetchLeaveTypeOptions.mockReset().mockResolvedValue(ok(leaveTypes))
+  attendanceApi.fetchLedgerUsers.mockReset().mockResolvedValue(
+    ok([
+      { id: 11, username: 't280-alice', name: '甲', deptName: '研发部' },
+      { id: 12, username: 't280-bob', name: '乙', deptName: '研发部' },
+    ]),
+  )
+  attendanceApi.saveOrUpdateLeaveType.mockReset().mockResolvedValue(ok(null))
+  attendanceApi.removeLeaveType.mockReset().mockResolvedValue(ok(null))
+  attendanceApi.grantAttendanceLeave.mockReset().mockResolvedValue(ok(2))
   http = installHttp(responder)
 })
 
@@ -272,10 +334,7 @@ describe('AttendanceGroupPage', () => {
 })
 
 describe('考勤占位壳页', () => {
-  const cases = [
-    [AttendanceLeavePage, '假期类型与发放'],
-    [AttendanceStatPage, '月度统计'],
-  ]
+  const cases = [[AttendanceStatPage, '月度统计']]
 
   it.each(cases)('renders %s as an empty placeholder', async (component, title) => {
     const { pinia } = setupSession()
@@ -328,6 +387,163 @@ describe('AttendanceRecordPage', () => {
     })
 
     wrapper.vm.reset()
+    await flushPromises()
+    expect(http.calls.at(-1).params).toEqual({})
+  })
+})
+
+describe('AttendanceLeavePage', () => {
+  it('loads type rows, type options and ledger rows with joined labels', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceLeavePage, realOptions(pinia))
+    await flushPromises()
+
+    expect(wrapper.vm.typeRows).toEqual([
+      expect.objectContaining({ name: '年假', balanceRequired: 1, overtimeCredit: 0 }),
+      expect.objectContaining({ name: '事假', balanceRequired: 0 }),
+      expect.objectContaining({ name: '调休', overtimeCredit: 1, status: 0 }),
+    ])
+    expect(wrapper.vm.typeOptions).toHaveLength(3)
+    // 发放下拉只留启用且需要余额的类型。
+    expect(wrapper.vm.grantableOptions.map((type) => type.name)).toEqual(['年假'])
+    expect(wrapper.vm.ledgerRows).toEqual([
+      expect.objectContaining({
+        name: '甲',
+        username: 't280-alice',
+        deptName: '研发部',
+        leaveTypeName: '年假',
+        entryTypeLabel: '发放',
+        changeHoursText: '-2.25',
+        negative: true,
+        operatorName: '乙',
+      }),
+    ])
+    expect(wrapper.text()).toContain('发放流水')
+    expect(wrapper.text()).toContain('冲抵错发')
+
+    const urls = http.calls.map((call) => call.url)
+    expect(urls).toContain('/admin/attendance/leave-type/1/10')
+    expect(urls).toContain('/admin/attendance/ledger/1/10')
+  })
+
+  it('creates a type, blocks an empty name, and saves disable edits as full-form updates', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceLeavePage, realOptions(pinia))
+    await flushPromises()
+
+    wrapper.vm.openTypeCreate()
+    await flushPromises()
+    expect(wrapper.vm.typeDialogTitle).toBe('新建假期类型')
+    await wrapper.vm.saveType()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await flushPromises()
+    expect(attendanceApi.saveOrUpdateLeaveType).not.toHaveBeenCalled()
+
+    wrapper.vm.typeForm = {
+      ...wrapper.vm.typeForm,
+      name: '育儿假',
+      balanceRequired: 0,
+      sortNo: 9,
+    }
+    await flushPromises()
+    await wrapper.vm.saveType()
+    await flushPromises()
+    expect(attendanceApi.saveOrUpdateLeaveType).toHaveBeenCalledTimes(1)
+    expect(attendanceApi.saveOrUpdateLeaveType.mock.calls[0][0]).toEqual({
+      id: '',
+      name: '育儿假',
+      balanceRequired: 0,
+      overtimeCredit: 0,
+      status: 1,
+      sortNo: 9,
+      remark: '',
+    })
+    expect(wrapper.vm.typeDialogVisible).toBe(false)
+
+    // 停用走编辑表单的 status=0，服务端完整覆盖。
+    wrapper.vm.openTypeEdit(leaveTypes[2])
+    expect(wrapper.vm.typeDialogTitle).toBe('编辑假期类型')
+    expect(wrapper.vm.typeForm).toEqual(
+      expect.objectContaining({ id: 3, name: '调休', overtimeCredit: 1, status: 0 }),
+    )
+    await flushPromises()
+    await wrapper.vm.saveType()
+    await flushPromises()
+    expect(attendanceApi.saveOrUpdateLeaveType.mock.calls.at(-1)[0]).toEqual(
+      expect.objectContaining({ id: 3, name: '调休', status: 0 }),
+    )
+  })
+
+  it('grants multi-user adjustments and validates required fields locally', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceLeavePage, realOptions(pinia))
+    await flushPromises()
+
+    await wrapper.vm.openGrant()
+    await flushPromises()
+    expect(wrapper.vm.grantDialogVisible).toBe(true)
+    expect(wrapper.vm.userOptions).toHaveLength(2)
+    expect(attendanceApi.fetchLedgerUsers).toHaveBeenCalledWith('')
+
+    await wrapper.vm.saveGrant()
+    expect(messageMock.warning).toHaveBeenCalledWith('假期类型不能为空')
+
+    wrapper.vm.grantForm = {
+      leaveTypeId: 1,
+      userIds: [],
+      changeHours: -2.5,
+      remark: '',
+    }
+    await wrapper.vm.saveGrant()
+    expect(messageMock.warning).toHaveBeenCalledWith('发放成员不能为空')
+
+    wrapper.vm.grantForm = {
+      leaveTypeId: 1,
+      userIds: [11, 12],
+      changeHours: 0,
+      remark: '',
+    }
+    await wrapper.vm.saveGrant()
+    expect(messageMock.warning).toHaveBeenCalledWith('调整小时数不能为 0')
+
+    wrapper.vm.grantForm = {
+      leaveTypeId: 1,
+      userIds: [11, 12],
+      changeHours: -2.5,
+      remark: '冲抵错发',
+    }
+    await flushPromises()
+    await wrapper.vm.saveGrant()
+    await flushPromises()
+    expect(attendanceApi.grantAttendanceLeave).toHaveBeenCalledTimes(1)
+    expect(attendanceApi.grantAttendanceLeave.mock.calls[0][0]).toEqual({
+      leaveTypeId: 1,
+      userIds: [11, 12],
+      changeHours: -2.5,
+      remark: '冲抵错发',
+    })
+    expect(wrapper.vm.grantDialogVisible).toBe(false)
+    expect(messageMock.success).toHaveBeenCalledWith('已写入 2 条发放流水')
+  })
+
+  it('filters the ledger by type and date, then resets', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceLeavePage, realOptions(pinia))
+    await flushPromises()
+
+    wrapper.vm.ledgerTypeId = 1
+    wrapper.vm.ledgerDateRange = ['2026-11-01', '2026-11-10']
+    wrapper.vm.searchLedger()
+    await flushPromises()
+    const last = http.calls.at(-1)
+    expect(last.url).toBe('/admin/attendance/ledger/1/10')
+    expect(last.params).toEqual({
+      leaveTypeId: 1,
+      beginDate: '2026-11-01',
+      endDate: '2026-11-10',
+    })
+
+    wrapper.vm.resetLedgerSearch()
     await flushPromises()
     expect(http.calls.at(-1).params).toEqual({})
   })

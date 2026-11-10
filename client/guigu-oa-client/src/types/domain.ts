@@ -1152,3 +1152,92 @@ export interface AttendanceRepairForm {
   clockInTime: string
   clockOutTime: string
 }
+
+/** 假期类型（#280，ADR 0073）：独立配置，被流水引用后只停用不删。 */
+export interface AttendanceLeaveTypeRecord {
+  id?: EntityId | ''
+  name?: string
+  balanceRequired?: number
+  overtimeCredit?: number
+  status?: number
+  sortNo?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceLeaveTypeListItem extends AttendanceLeaveTypeRecord {
+  id: EntityId
+}
+
+export interface AttendanceLeaveTypeForm {
+  id: EntityId | ''
+  name: string
+  balanceRequired: number
+  overtimeCredit: number
+  status: number
+  sortNo: number
+  remark: string
+}
+
+/** 发放流水行（#280）：姓名/部门/类型/操作人由服务端 join。 */
+export interface AttendanceLedgerRecord {
+  id?: EntityId | ''
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  entryType?: number
+  changeHours?: number
+  businessType?: string
+  businessId?: EntityId
+  operatorUserId?: EntityId
+  operatorName?: string
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceLedgerListItem extends AttendanceLedgerRecord {
+  id: EntityId
+  entryTypeLabel: string
+  changeHoursText: string
+  negative: boolean
+}
+
+export interface AttendanceLedgerQuery {
+  leaveTypeId?: EntityId | ''
+  beginDate?: string
+  endDate?: string
+}
+
+export interface AttendanceLedgerGrantForm {
+  leaveTypeId: EntityId | ''
+  userIds: EntityId[]
+  changeHours: number
+  remark: string
+}
+
+/** 本人某类型余额（#280）：可用 = 发放 + 入账 − 扣减 − 在途。 */
+export interface AttendanceBalanceRecord {
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  status?: number
+  grantedHours?: number
+  creditedHours?: number
+  deductedHours?: number
+  pendingHours?: number
+  availableHours?: number
+}
+
+export interface AttendanceBalanceView {
+  leaveTypeId: EntityId
+  leaveTypeName: string
+  status: number
+  availableHours: number
+  availableHoursText: string
+  pendingHours: number
+  pendingText: string
+  negative: boolean
+}

@@ -1,9 +1,18 @@
 import request from '@/request/request'
 import {
+  balancesRequest,
   groupRemoveRequest,
   groupWriteRequest,
   holidayRemoveRequest,
   holidayWriteRequest,
+  ledgerGrantRequest,
+  ledgerListRequest,
+  ledgerQueryOf,
+  ledgerUsersRequest,
+  leaveTypeListRequest,
+  leaveTypeOptionsRequest,
+  leaveTypeRemoveRequest,
+  leaveTypeWriteRequest,
   monthRecordsRequest,
   punchListRequest,
   punchQueryOf,
@@ -18,9 +27,15 @@ import {
 } from '@/config/attendance'
 import type {
   ApiResponse,
+  AttendanceBalanceRecord,
   AttendanceDayStatusRecord,
   AttendanceGroupForm,
   AttendanceHolidayForm,
+  AttendanceLeaveTypeForm,
+  AttendanceLeaveTypeRecord,
+  AttendanceLedgerGrantForm,
+  AttendanceLedgerQuery,
+  AttendanceLedgerRecord,
   AttendanceMonthRecord,
   AttendancePunchQuery,
   AttendancePunchRecord,
@@ -104,4 +119,53 @@ export function saveAttendanceRepair(
   form: AttendanceRepairForm,
 ): Promise<ApiResponse<AttendanceDayStatusRecord>> {
   return request(repairSaveRequest(form))
+}
+
+// ---------------- 假期类型与发放（#280） ----------------
+
+export function fetchLeaveTypePage(
+  page: number,
+  limit: number,
+  query: Record<string, string | number> = {},
+): Promise<ApiResponse<{ records?: AttendanceLeaveTypeRecord[]; total?: number; pages?: number }>> {
+  return request(leaveTypeListRequest(page, limit, query))
+}
+
+/** 类型选项（含停用类型，供流水筛选）；发放下拉再按余额/启用过滤。 */
+export function fetchLeaveTypeOptions(): Promise<ApiResponse<AttendanceLeaveTypeRecord[]>> {
+  return request(leaveTypeOptionsRequest())
+}
+
+export function saveOrUpdateLeaveType(form: AttendanceLeaveTypeForm): Promise<ApiResponse<void>> {
+  return request(leaveTypeWriteRequest(form))
+}
+
+export function removeLeaveType(id: EntityId): Promise<ApiResponse<void>> {
+  return request(leaveTypeRemoveRequest(id))
+}
+
+/** 发放流水分页（数据范围五档由服务端过滤）。 */
+export function fetchLedgerPage(
+  page: number,
+  limit: number,
+  query: AttendanceLedgerQuery = {},
+): Promise<ApiResponse<{ records?: AttendanceLedgerRecord[]; total?: number; pages?: number }>> {
+  return request(ledgerListRequest(page, limit, ledgerQueryOf(query)))
+}
+
+/** 发放成员候选（按数据范围，姓名/用户名包含匹配）。 */
+export function fetchLedgerUsers(name = ''): Promise<ApiResponse<AttendanceRepairUserRecord[]>> {
+  return request(ledgerUsersRequest(name))
+}
+
+/** 发放/调整：一次多人，每人一行；负数即冲抵。 */
+export function grantAttendanceLeave(
+  form: AttendanceLedgerGrantForm,
+): Promise<ApiResponse<number>> {
+  return request(ledgerGrantRequest(form))
+}
+
+/** 本人各类型可用余额（登录即有，只读本人）。 */
+export function fetchMyBalances(): Promise<ApiResponse<AttendanceBalanceRecord[]>> {
+  return request(balancesRequest())
 }

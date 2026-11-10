@@ -207,20 +207,14 @@ test('新建考勤组：选班次、勾工作日、选成员，保存落 POST �
   expect(state.errors).toEqual([])
 })
 
-test('三个占位壳页渲染标题与空态', async ({ page }) => {
+test('月度统计占位壳页渲染标题与空态', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   await setup(page)
 
-  const cases = [
-    ['/business/attendance/repair', '补卡处理'],
-    ['/business/attendance/leave', '假期类型与发放'],
-    ['/business/attendance/stat', '月度统计'],
-  ]
-  for (const [path, title] of cases) {
-    await page.goto(path)
-    await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
-    await expect(page.locator('.el-empty').first()).toBeVisible()
-  }
+  // 补卡处理（#281）与假期类型与发放（#280）已交付真实页面，占位壳只剩月度统计。
+  await page.goto('/business/attendance/stat')
+  await expect(page.getByRole('heading', { name: '月度统计', exact: true })).toBeVisible()
+  await expect(page.locator('.el-empty').first()).toBeVisible()
 })
 
 test('打卡记录页展示 join 姓名/部门并按人筛选重查', async ({ page }) => {

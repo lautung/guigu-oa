@@ -1,5 +1,7 @@
 import type {
   ApiRequestConfig,
+  AttendanceBalanceRecord,
+  AttendanceBalanceView,
   AttendanceDayStatusRecord,
   AttendanceDayStatusView,
   AttendanceGroupForm,
@@ -8,6 +10,13 @@ import type {
   AttendanceHolidayForm,
   AttendanceHolidayListItem,
   AttendanceHolidayRecord,
+  AttendanceLeaveTypeForm,
+  AttendanceLeaveTypeListItem,
+  AttendanceLeaveTypeRecord,
+  AttendanceLedgerGrantForm,
+  AttendanceLedgerListItem,
+  AttendanceLedgerQuery,
+  AttendanceLedgerRecord,
   AttendanceMemberRecord,
   AttendanceMonthRecord,
   AttendanceMonthView,
@@ -31,6 +40,8 @@ import { requiredRule, type RequiredRule } from './form-rules'
  * 考勤组与班次页（#278，ADR 0073）的投影与请求构造：
  * 班次、考勤组（含成员）与全局节假日三个区块共用一个页面、
  * 一套页面授予（读端点只判页面）与三个按钮点（attendance:group:add|edit|remove）。
+ * #280 增「假期类型与发放」页：类型 CRUD（attendance:type:add|edit|remove）、
+ * 多人发放/调整（attendance:ledger:grant）、流水列表与本人余额。
  * 必填文案逐字镜像服务端 vo/attendance 的请求 DTO。
  */
 
@@ -40,6 +51,10 @@ export const ATTENDANCE_PERMISSIONS = {
   edit: 'attendance:group:edit',
   remove: 'attendance:group:remove',
   repair: 'attendance:record:repair',
+  typeAdd: 'attendance:type:add',
+  typeEdit: 'attendance:type:edit',
+  typeRemove: 'attendance:type:remove',
+  grant: 'attendance:ledger:grant',
 } as const
 
 export const ATTENDANCE_API = '/admin/attendance'
@@ -602,6 +617,232 @@ export function repairSaveRequest(form: AttendanceRepairForm): ApiRequestConfig 
   if (form.clockInTime) data.clockInTime = form.clockInTime
   if (form.clockOutTime) data.clockOutTime = form.clockOutTime
   return { method: 'post', url: `${REPAIR_API}/save`, data }
+}
+
+// ---------------- 假期类型与发放 ----------------
+
+export const LEAVE_TYPE_API = `${ATTENDANCE_API}/leave-type`
+export const LEDGER_API = `${ATTENDANCE_API}/ledger`
+
+/** 类型状态（ADR 0073）：1 启用 / 0 停用；停用后历史流水照读。 */
+export const LEAVE_TYPE_STATUS_OPTIONS = [
+  { value: 1, label: '启用' },
+  { value: 0, label: '停用' },
+] as const
+
+export function leaveTypeStatusLabel(status: number | null | undefined): string {
+  return LEAVE_TYPE_STATUS_OPTIONS.find((option) => option.value === status)?.label || '停用'
+}
+
+/** 流水条目（ADR 0073）：1 发放（可负调整）/ 2 扣减（恒负）/ 3 加班入账（恒正）。 */
+export const LEDGER_ENTRY_TYPE_OPTIONS = [
+  { value: 1, label: '发放' },
+  { value: 2, label: '扣减' },
+  { value: 3, label: '加班入账' },
+] as const
+
+export function ledgerEntryTypeLabel(entryType: number | null | undefined): string {
+  return LEDGER_ENTRY_TYPE_OPTIONS.find((option) => option.value === entryType)?.label || ''
+}
+
+/** 小时数展示：整数不带小数，半分保留一位、其他两位；页面与流水共用。 */
+export function attendanceHoursText(value: number | null | undefined): string {
+  const hours = Number(value == null ? 0 : value)
+  if (!Number.isFinite(hours)) return '0'
+  if (Number.isInteger(hours)) return String(hours)
+  return hours.toFixed(2).replace(/0$/, '')
+}
+
+export function leaveTypeListRequest(
+  page: number,
+  limit: number,
+  searchObj: Record<string, string | number> = {},
+): ApiRequestConfig {
+  return { method: 'get', url: `${LEAVE_TYPE_API}/${page}/${limit}`, params: searchObj }
+}
+
+/** 类型选项：停用类型也返回，供流水筛选与历史展示；发放下拉再按余额/启用过滤。 */
+export function leaveTypeOptionsRequest(): ApiRequestConfig {
+  return { method: 'get', url: `${LEAVE_TYPE_API}/options` }
+}
+
+export function presentLeaveTypeRecord(
+  record: AttendanceLeaveTypeRecord = {},
+): AttendanceLeaveTypeListItem {
+  return {
+    id: record.id || '',
+    name: record.name || '',
+    balanceRequired: record.balanceRequired == null ? 0 : record.balanceRequired,
+    overtimeCredit: record.overtimeCredit == null ? 0 : record.overtimeCredit,
+    status: record.status == null ? 1 : record.status,
+    sortNo: record.sortNo == null ? 0 : record.sortNo,
+    remark: record.remark || '',
+    createTime: record.createTime,
+  }
+}
+
+export function presentLeaveTypeListPage(
+  page: { records?: AttendanceLeaveTypeRecord[]; total?: number; pages?: number } = {},
+) {
+  return {
+    records: (page.records || []).map(presentLeaveTypeRecord),
+    total: page.total || 0,
+    pages: page.pages || 0,
+  }
+}
+
+/** 发放下拉只列启用且需要余额的类型（ADR 0073：事假/病假不限量不用发放）。 */
+export function grantableLeaveTypes(
+  records: AttendanceLeaveTypeRecord[] = [],
+): AttendanceLeaveTypeListItem[] {
+  return records
+    .map(presentLeaveTypeRecord)
+    .filter((type) => type.status === 1 && type.balanceRequired === 1)
+}
+
+export function emptyLeaveTypeForm(): AttendanceLeaveTypeForm {
+  return {
+    id: '',
+    name: '',
+    balanceRequired: 1,
+    overtimeCredit: 0,
+    status: 1,
+    sortNo: 0,
+    remark: '',
+  }
+}
+
+export function presentLeaveTypeForm(
+  record: AttendanceLeaveTypeRecord = {},
+): AttendanceLeaveTypeForm {
+  return {
+    id: record.id || '',
+    name: record.name || '',
+    balanceRequired: record.balanceRequired == null ? 0 : record.balanceRequired,
+    overtimeCredit: record.overtimeCredit == null ? 0 : record.overtimeCredit,
+    status: record.status == null ? 1 : record.status,
+    sortNo: record.sortNo == null ? 0 : record.sortNo,
+    remark: record.remark || '',
+  }
+}
+
+/** 完整表单覆盖：启停用也走这里（status=0 即停用），服务端同语义。 */
+export function leaveTypeWriteRequest(form: AttendanceLeaveTypeForm): ApiRequestConfig {
+  const data = {
+    name: form.name.trim(),
+    balanceRequired: form.balanceRequired,
+    overtimeCredit: form.overtimeCredit,
+    status: form.status,
+    sortNo: form.sortNo == null ? 0 : form.sortNo,
+    remark: form.remark == null ? '' : form.remark.trim(),
+  }
+  if (form.id) {
+    return { method: 'put', url: `${LEAVE_TYPE_API}/update`, data: { ...data, id: form.id } }
+  }
+  return { method: 'post', url: `${LEAVE_TYPE_API}/save`, data }
+}
+
+export function leaveTypeRemoveRequest(id: EntityId): ApiRequestConfig {
+  return { method: 'delete', url: `${LEAVE_TYPE_API}/remove/${id}` }
+}
+
+export function ledgerListRequest(
+  page: number,
+  limit: number,
+  searchObj: Record<string, string | number> = {},
+): ApiRequestConfig {
+  return { method: 'get', url: `${LEDGER_API}/${page}/${limit}`, params: searchObj }
+}
+
+/** 发放成员候选：与补卡页同一五档过滤的只读端点。 */
+export function ledgerUsersRequest(name = ''): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${LEDGER_API}/users`,
+    params: name ? { name: name.trim() } : {},
+  }
+}
+
+export function ledgerQueryOf(query: AttendanceLedgerQuery): Record<string, string | number> {
+  const params: Record<string, string | number> = {}
+  if (query.leaveTypeId !== undefined && query.leaveTypeId !== '')
+    params.leaveTypeId = query.leaveTypeId
+  if (query.beginDate) params.beginDate = query.beginDate
+  if (query.endDate) params.endDate = query.endDate
+  return params
+}
+
+export function presentLedgerRecord(record: AttendanceLedgerRecord = {}): AttendanceLedgerListItem {
+  const hours = Number(record.changeHours == null ? 0 : record.changeHours)
+  return {
+    ...record,
+    id: record.id || '',
+    username: record.username || '',
+    name: record.name || '',
+    deptName: record.deptName || '',
+    leaveTypeName: record.leaveTypeName || '',
+    entryTypeLabel: ledgerEntryTypeLabel(record.entryType),
+    changeHoursText: `${hours > 0 ? '+' : ''}${attendanceHoursText(hours)}`,
+    negative: hours < 0,
+    operatorName: record.operatorName || '',
+    remark: record.remark || '',
+  }
+}
+
+export function presentLedgerListPage(
+  page: { records?: AttendanceLedgerRecord[]; total?: number; pages?: number } = {},
+) {
+  return {
+    records: (page.records || []).map(presentLedgerRecord),
+    total: page.total || 0,
+    pages: page.pages || 0,
+  }
+}
+
+export function emptyGrantForm(): AttendanceLedgerGrantForm {
+  return { leaveTypeId: '', userIds: [], changeHours: 0, remark: '' }
+}
+
+/** 发放/调整载荷：一次多人，changeHours 正发放、负冲抵。 */
+export function ledgerGrantRequest(form: AttendanceLedgerGrantForm): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${LEDGER_API}/grant`,
+    data: {
+      leaveTypeId: form.leaveTypeId,
+      userIds: [...form.userIds],
+      changeHours: form.changeHours,
+      remark: form.remark == null ? '' : form.remark.trim(),
+    },
+  }
+}
+
+export function leaveTypeFormRules(): Record<'name', RequiredRule[]> {
+  return { name: [requiredRule('假期类型名称不能为空')] }
+}
+
+/** 本人各类型余额（#280）：登录即有，服务端只读当前会话用户。 */
+export function balancesRequest(): ApiRequestConfig {
+  return { method: 'get', url: `${MY_ATTENDANCE_API}/balances` }
+}
+
+export function presentBalance(record: AttendanceBalanceRecord = {}): AttendanceBalanceView {
+  const available = Number(record.availableHours == null ? 0 : record.availableHours)
+  const pending = Number(record.pendingHours == null ? 0 : record.pendingHours)
+  return {
+    leaveTypeId: record.leaveTypeId || '',
+    leaveTypeName: record.leaveTypeName || '',
+    status: record.status == null ? 1 : record.status,
+    availableHours: available,
+    availableHoursText: attendanceHoursText(available),
+    pendingHours: pending,
+    pendingText: pending > 0 ? `在途 ${attendanceHoursText(pending)}` : '',
+    negative: available < 0,
+  }
+}
+
+export function presentBalances(records: AttendanceBalanceRecord[] = []): AttendanceBalanceView[] {
+  return records.map(presentBalance)
 }
 
 // ---------------- 表单规则 ----------------
