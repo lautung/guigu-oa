@@ -938,3 +938,441 @@ export interface DictDataForm {
   status: number
   remark: string
 }
+
+export interface AttendanceShiftRecord {
+  id?: EntityId | ''
+  name?: string
+  startTime?: string
+  endTime?: string
+  lunchStart?: string | null
+  lunchEnd?: string | null
+  graceMinutes?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceShiftListItem extends AttendanceShiftRecord {
+  id: EntityId
+}
+
+export interface AttendanceShiftForm {
+  id: EntityId | ''
+  name: string
+  startTime: string
+  endTime: string
+  lunchStart: string
+  lunchEnd: string
+  graceMinutes: number
+  remark: string
+}
+
+export interface AttendanceGroupRecord {
+  id?: EntityId | ''
+  name?: string
+  shiftId?: EntityId
+  shiftName?: string
+  workdays?: string
+  memberCount?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceGroupListItem extends AttendanceGroupRecord {
+  id: EntityId
+}
+
+export interface AttendanceMemberRecord {
+  id?: EntityId
+  userId?: EntityId
+  username?: string
+  name?: string
+}
+
+export interface AttendanceGroupForm {
+  id: EntityId | ''
+  name: string
+  shiftId: EntityId | ''
+  workdays: number[]
+  memberUserIds: EntityId[]
+  remark: string
+}
+
+export interface AttendanceHolidayRecord {
+  id?: EntityId | ''
+  holidayDate?: string
+  name?: string
+  dayType?: number
+  createTime?: string
+}
+
+export interface AttendanceHolidayListItem extends AttendanceHolidayRecord {
+  id: EntityId
+}
+
+export interface AttendanceHolidayForm {
+  id: EntityId | ''
+  holidayDate: string
+  name: string
+  dayType: number
+}
+
+/** 今日打卡状态（#279）：班次摘要、日类型与两张卡的有效时刻（服务器时间）。 */
+export interface AttendanceShiftSummaryRecord {
+  id?: EntityId
+  name?: string
+  startTime?: string
+  endTime?: string
+  lunchStart?: string | null
+  lunchEnd?: string | null
+  graceMinutes?: number
+}
+
+export interface AttendanceTodayRecord {
+  date?: string
+  weekday?: number
+  dayType?: number
+  workday?: boolean
+  hasGroup?: boolean
+  groupId?: EntityId
+  groupName?: string
+  shift?: AttendanceShiftSummaryRecord | null
+  clockInTime?: string | null
+  clockOutTime?: string | null
+}
+
+export interface AttendanceShiftSummaryView {
+  name: string
+  timeRange: string
+  lunchText: string
+  graceMinutes: number
+}
+
+export interface AttendanceTodayView {
+  date: string
+  weekdayLabel: string
+  dayType: number
+  dayTypeLabel: string
+  workday: boolean
+  hasGroup: boolean
+  groupName: string
+  shift: AttendanceShiftSummaryView | null
+  clockInTime: string
+  clockOutTime: string
+}
+
+/** 后台打卡记录行（#279）：姓名/部门/补卡操作人由服务端 join。 */
+export interface AttendancePunchRecord {
+  id?: EntityId | ''
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  punchDate?: string
+  slot?: number
+  punchTime?: string
+  source?: number
+  operatorName?: string
+}
+
+export interface AttendancePunchListItem extends AttendancePunchRecord {
+  id: EntityId
+  slotLabel: string
+  sourceLabel: string
+}
+
+export interface AttendancePunchQuery {
+  name?: string
+  beginDate?: string
+  endDate?: string
+  source?: number | ''
+}
+
+/** 逐日推导结果（#281，ADR 0073）：九枚举状态 + 槽位有效时刻。 */
+export interface AttendanceDayStatusRecord {
+  date?: string
+  weekday?: number
+  dayType?: number
+  workday?: boolean
+  hasGroup?: boolean
+  groupId?: EntityId
+  groupName?: string
+  shift?: AttendanceShiftSummaryRecord | null
+  status?: number | null
+  leaveTypeName?: string
+  pending?: boolean
+  late?: boolean
+  early?: boolean
+  clockInTime?: string | null
+  clockOutTime?: string | null
+}
+
+export interface AttendanceDayStatusView {
+  date: string
+  weekdayLabel: string
+  dayType: number
+  dayTypeLabel: string
+  workday: boolean
+  status: number | null
+  statusLabel: string
+  leaveTypeName: string
+  pending: boolean
+  clockInText: string
+  clockOutText: string
+}
+
+export interface AttendanceMonthRecord {
+  month?: string
+  days?: AttendanceDayStatusRecord[]
+}
+
+export interface AttendanceMonthView {
+  month: string
+  days: AttendanceDayStatusView[]
+}
+
+/** 月度统计的请假分列（#283）：一个类型一行。 */
+export interface AttendanceLeaveStatRecord {
+  leaveTypeName?: string
+  days?: number
+}
+
+/** 月度统计行（#283）：按人汇总当月，实出勤 = 应出勤 − 请假 − 缺卡。 */
+export interface AttendanceStatRecord {
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  requiredDays?: number
+  actualDays?: number
+  lateCount?: number
+  earlyCount?: number
+  missingDays?: number
+  leaveDays?: AttendanceLeaveStatRecord[]
+  overtimeHours?: number
+}
+
+export interface AttendanceLeaveStatView {
+  leaveTypeName: string
+  days: number
+}
+
+export interface AttendanceStatView {
+  userId: EntityId
+  username: string
+  name: string
+  deptName: string
+  requiredDays: number
+  actualDays: number
+  lateCount: number
+  earlyCount: number
+  missingDays: number
+  leaveDays: AttendanceLeaveStatView[]
+  overtimeHoursText: string
+}
+
+/** 补卡页成员候选（#281）：数据范围由服务端过滤。 */
+export interface AttendanceRepairUserRecord {
+  id?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+}
+
+export interface AttendanceRepairUserOption {
+  id: EntityId
+  username: string
+  name: string
+  deptName: string
+  label: string
+}
+
+export interface AttendanceRepairForm {
+  userId: EntityId | ''
+  repairDate: string
+  clockInTime: string
+  clockOutTime: string
+}
+
+/** 假期类型（#280，ADR 0073）：独立配置，被流水引用后只停用不删。 */
+export interface AttendanceLeaveTypeRecord {
+  id?: EntityId | ''
+  name?: string
+  balanceRequired?: number
+  overtimeCredit?: number
+  status?: number
+  sortNo?: number
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceLeaveTypeListItem extends AttendanceLeaveTypeRecord {
+  id: EntityId
+}
+
+export interface AttendanceLeaveTypeForm {
+  id: EntityId | ''
+  name: string
+  balanceRequired: number
+  overtimeCredit: number
+  status: number
+  sortNo: number
+  remark: string
+}
+
+/** 发放流水行（#280）：姓名/部门/类型/操作人由服务端 join。 */
+export interface AttendanceLedgerRecord {
+  id?: EntityId | ''
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  entryType?: number
+  changeHours?: number
+  businessType?: string
+  businessId?: EntityId
+  operatorUserId?: EntityId
+  operatorName?: string
+  remark?: string
+  createTime?: string
+}
+
+export interface AttendanceLedgerListItem extends AttendanceLedgerRecord {
+  id: EntityId
+  entryTypeLabel: string
+  changeHoursText: string
+  negative: boolean
+}
+
+export interface AttendanceLedgerQuery {
+  leaveTypeId?: EntityId | ''
+  beginDate?: string
+  endDate?: string
+}
+
+export interface AttendanceLedgerGrantForm {
+  leaveTypeId: EntityId | ''
+  userIds: EntityId[]
+  changeHours: number
+  remark: string
+}
+
+/** 本人某类型余额（#280）：可用 = 发放 + 入账 − 扣减 − 在途。 */
+export interface AttendanceBalanceRecord {
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  status?: number
+  grantedHours?: number
+  creditedHours?: number
+  deductedHours?: number
+  pendingHours?: number
+  availableHours?: number
+}
+
+export interface AttendanceBalanceView {
+  leaveTypeId: EntityId
+  leaveTypeName: string
+  status: number
+  availableHours: number
+  availableHoursText: string
+  pendingHours: number
+  pendingText: string
+  negative: boolean
+}
+
+// ---------------- 我的申请（请假 / 加班，#282） ----------------
+
+/** 最近一条审批摘要（ADR 0067 读模型）：单据详情只拼摘要，不嵌完整审批载荷。 */
+export interface AttendanceApplyApprovalRecord {
+  processId?: EntityId
+  status?: number
+  currentApprover?: string | null
+  description?: string | null
+  startTime?: string | null
+  endTime?: string | null
+}
+
+export interface AttendanceLeaveApplicationRecord {
+  id?: EntityId | ''
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  startDate?: string
+  endDate?: string
+  days?: number
+  hours?: number
+  reason?: string
+  status?: number
+  submitTime?: string | null
+  finishTime?: string | null
+  createTime?: string
+  approval?: AttendanceApplyApprovalRecord | null
+}
+
+export interface AttendanceOvertimeApplicationRecord {
+  id?: EntityId | ''
+  overtimeDate?: string
+  startTime?: string
+  endTime?: string
+  hours?: number
+  reason?: string
+  status?: number
+  submitTime?: string | null
+  finishTime?: string | null
+  createTime?: string
+  approval?: AttendanceApplyApprovalRecord | null
+}
+
+export interface AttendanceMyLeaveTypeRecord {
+  id?: EntityId
+  name?: string
+  balanceRequired?: number
+  availableHours?: number | null
+}
+
+export interface AttendanceMyLeaveTypeView {
+  id: EntityId
+  name: string
+  balanceRequired: number
+  availableHoursText: string
+}
+
+export interface AttendanceLeaveApplyForm {
+  id: EntityId | ''
+  leaveTypeId: EntityId | ''
+  startDate: string
+  endDate: string
+  reason: string
+}
+
+export interface AttendanceOvertimeApplyForm {
+  id: EntityId | ''
+  overtimeDate: string
+  startTime: string
+  endTime: string
+  reason: string
+}
+
+/** 两页签共用的行投影：状态文案/颜色与可编辑可提交判定只在一处。 */
+export interface AttendanceApplyListItem {
+  id: EntityId
+  kind: 'leave' | 'overtime'
+  typeName: string
+  dateText: string
+  durationText: string
+  reason: string
+  status: number
+  statusLabel: string
+  statusTagType: 'success' | 'warning' | 'danger' | 'info' | 'primary'
+  submitTimeText: string
+  finishTimeText: string
+  editable: boolean
+  submittable: boolean
+  approval: AttendanceApplyApprovalRecord | null
+  leave?: AttendanceLeaveApplicationRecord
+  overtime?: AttendanceOvertimeApplicationRecord
+}

@@ -1,6 +1,8 @@
 package com.lautung.oa.process.business;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lautung.oa.auth.service.SysUserService;
+import com.lautung.oa.model.process.Process;
 import com.lautung.oa.model.system.SysUser;
 import com.lautung.oa.process.approval.ApprovalEngine;
 import com.lautung.oa.process.approval.ApproverNames;
@@ -51,6 +53,26 @@ public class BusinessApprovalReader {
 				row.getDescription(),
 				row.getCreateTime(),
 				endTime(row));
+	}
+
+	/**
+	 * 同一张业务单、同一提交键对应的审批 id（#282，ADR 0067/0032）：业务域的
+	 * 「同键重放」判定读缝——单据状态已是审批中时，只有能在这里认出同键才按重放
+	 * 返回同一条审批；认不出就是不同键的并发提交，由域按 201 拒绝。
+	 * 没有对应审批返回 {@code null}。
+	 */
+	public Long processIdOfSubmission(String businessType, Long businessId,
+									  Long applicantId, String idempotencyKey) {
+		if (!StringUtils.hasText(businessType) || businessId == null
+				|| applicantId == null || !StringUtils.hasText(idempotencyKey)) {
+			return null;
+		}
+		List<Process> rows = processMapper.selectList(new LambdaQueryWrapper<Process>()
+				.eq(Process::getBusinessType, businessType)
+				.eq(Process::getBusinessId, businessId)
+				.eq(Process::getUserId, applicantId)
+				.eq(Process::getIdempotencyKey, idempotencyKey));
+		return rows.isEmpty() ? null : rows.get(0).getId();
 	}
 
 	/** 当前审批人：仅审批中读引擎当前任务（处理人/候选名单，与等待文案同口径），终态为 null。 */

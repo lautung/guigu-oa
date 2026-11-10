@@ -6,7 +6,7 @@ import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
  * 不认按钮，不认用户 id，不再维护产品目录。
  */
 
-export type MenuGroup = 'work' | 'config'
+export type MenuGroup = 'work' | 'config' | 'business'
 
 function normalizePath(path: string | undefined): string {
   if (!path) return ''

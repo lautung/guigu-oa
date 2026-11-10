@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceStatMapper">
+
+    <!--
+      月度统计行集合（#283，ADR 0073）：组内启用账号 ∪ 当月有考勤流水的账号。
+      停用账号（status=0）只在当月有流水时出现；组内启用账号即使当月无流水也出现，
+      保证「在组就有考勤义务」。软删流水不算流水（显式 is_deleted = 0，ADR 0050）。
+      数据范围（ADR 0053/0057）：部门列 = sys_user.dept_id（当前），本人列 = sys_user.id；
+      只接受 #{} + <foreach>，禁止 ${}；部门集为空且无本人行时 1 = 0 得零行，不是全部。
+      排序用户名 + id 决胜，分页稳定。
+    -->
+    <sql id="statRowSet">
+        select u.id as userId,
+               u.username as username,
+               u.name as name,
+               u.dept_id as deptId,
+               d.name as deptName
+        from sys_user u
+            left join sys_dept d on d.id = u.dept_id
+        <where>
+            and u.is_deleted = 0
+            and (
+                (u.status = 1 and exists (
+                    select 1 from attendance_group_member m where m.user_id = u.id
+                ))
+                or exists (
+                    select 1 from attendance_punch p
+                    where p.user_id = u.id
+                      and p.is_deleted = 0
+                      and p.punch_date &gt;= #{beginDate}
+                      and p.punch_date &lt;= #{endDate}
+                )
+            )
+            <if test="scope != null and !scope.unrestricted">
+                <choose>
+                    <when test="scope.deptIds.size() > 0">
+                        and (u.dept_id in
+                        <foreach collection="scope.deptIds" item="deptId" open="(" separator="," close=")">
+                            #{deptId}
+                        </foreach>
+                        <if test="scope.selfUserId != null">
+                            or u.id = #{scope.selfUserId}
+                        </if>
+                        )
+                    </when>
+                    <when test="scope.selfUserId != null">
+                        and u.id = #{scope.selfUserId}
+                    </when>
+                    <otherwise>
+                        and 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectStatPage" resultType="com.lautung.oa.vo.attendance.AttendanceStatVo">
+        <include refid="statRowSet"/>
+        order by u.username asc, u.id asc
+    </select>
+
+    <select id="selectScopedStatUser" resultType="com.lautung.oa.vo.attendance.AttendanceStatVo">
+        <include refid="statRowSet"/>
+        and u.id = #{userId}
+    </select>
+</mapper>

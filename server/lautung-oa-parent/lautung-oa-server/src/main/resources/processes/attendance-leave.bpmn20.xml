@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://guigu-oa.com/attendance">
+  <process id="attendanceLeave" name="考勤请假审批" isExecutable="true">
+    <startEvent id="start" />
+    <userTask id="deptLeaderReview" name="部门负责人审批" />
+    <endEvent id="end" />
+    <sequenceFlow id="startToReview" sourceRef="start" targetRef="deptLeaderReview" />
+    <sequenceFlow id="reviewToEnd" sourceRef="deptLeaderReview" targetRef="end" />
+  </process>
+</definitions>

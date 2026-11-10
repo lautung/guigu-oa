@@ -24,6 +24,7 @@ const en = {
     modules: {
       workbench: 'Workbench',
       work: 'Work',
+      business: 'Business',
       system: 'System',
       monitor: 'Monitor',
       tool: 'Tools',
@@ -38,11 +39,15 @@ const en = {
       processed: 'Processed',
       started: 'Started',
       copied: 'Copied to me',
+      myAttendance: 'Punch',
+      myAttendanceRecord: 'Attendance records',
+      myApplications: 'My applications',
     },
     groups: {
       logs: 'Logs',
       processSettings: 'Approval settings',
       processManagement: 'Approval management',
+      attendance: 'Attendance',
     },
     empty: {
       noPages: 'No available pages',

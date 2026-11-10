@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceOvertimeMapper">
+
+    <!--
+      我的加班单（#282，ADR 0073/0067）：构造上只读本人（applicant_id 由会话取，
+      不接受请求参数）；存活过滤显式写（ADR 0050）；排序 id 倒序。
+      审批摘要不在本 SQL：由 service 经 BusinessApprovalReader 按业务键回查最近一条。
+    -->
+    <sql id="myOvertimeColumns">
+        select o.id,
+               o.overtime_date,
+               o.start_time,
+               o.end_time,
+               o.hours,
+               o.reason,
+               o.status,
+               o.submit_time,
+               o.finish_time,
+               o.create_time
+        from attendance_overtime o
+    </sql>
+
+    <select id="selectMyOvertimePage" resultType="com.lautung.oa.vo.attendance.AttendanceOvertimeVo">
+        <include refid="myOvertimeColumns"/>
+        <where>
+            and o.is_deleted = 0
+            and o.applicant_id = #{applicantId}
+            <if test="query != null and query.status != null">
+                and o.status = #{query.status}
+            </if>
+        </where>
+        order by o.id desc
+    </select>
+
+    <select id="selectMyOvertimeDetail" resultType="com.lautung.oa.vo.attendance.AttendanceOvertimeVo">
+        <include refid="myOvertimeColumns"/>
+        where o.is_deleted = 0
+          and o.id = #{id}
+          and o.applicant_id = #{applicantId}
+    </select>
+</mapper>

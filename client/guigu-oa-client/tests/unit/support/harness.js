@@ -129,6 +129,7 @@ export const elementStubs = {
   'el-tab-pane': true,
   'el-tabs': true,
   'el-tag': { template: '<span class="el-tag-stub"><slot /></span>' },
+  'el-time-picker': true,
   'el-timeline': true,
   'el-timeline-item': true,
   'el-tooltip': true,

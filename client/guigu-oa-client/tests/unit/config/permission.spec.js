@@ -330,6 +330,24 @@ describe('配置权限', () => {
       })
     })
 
+    it('returns declared 业务 routes and directories as business entries (#278)', () => {
+      const permission = configPermission([])
+
+      expect(permission.entryOf('/business')).toEqual({ path: '/business', group: 'business' })
+      expect(permission.entryOf('/business/attendance')).toEqual({
+        path: '/business/attendance',
+        group: 'business',
+      })
+      expect(permission.entryOf('/business/attendance/group')).toEqual({
+        path: '/business/attendance/group',
+        group: 'business',
+      })
+      expect(permission.entryOf('/business/attendance/group/9')).toEqual({
+        path: '/business/attendance/group',
+        group: 'business',
+      })
+    })
+
     it('returns a custom granted page as a 配置 entry', () => {
       const permission = configPermission(CUSTOM_PAGE)
 

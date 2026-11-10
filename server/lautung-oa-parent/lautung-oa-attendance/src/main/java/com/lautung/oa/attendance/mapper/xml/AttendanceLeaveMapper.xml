@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceLeaveMapper">
+
+    <!--
+      我的请假单（#282，ADR 0073/0067）：构造上只读本人（applicant_id 由会话取，
+      不接受请求参数）；join 假期类型名，类型停用后历史单据照读。
+      存活过滤显式写（ADR 0050）。排序 id 倒序（单号即 id，最新在前）。
+      审批摘要不在本 SQL：由 service 经 BusinessApprovalReader 按业务键回查最近一条。
+    -->
+    <sql id="myLeaveColumns">
+        select l.id,
+               l.leave_type_id,
+               t.name as leaveTypeName,
+               l.start_date,
+               l.end_date,
+               l.days,
+               l.hours,
+               l.reason,
+               l.status,
+               l.submit_time,
+               l.finish_time,
+               l.create_time
+        from attendance_leave l
+            left join attendance_leave_type t on t.id = l.leave_type_id
+    </sql>
+
+    <select id="selectMyLeavePage" resultType="com.lautung.oa.vo.attendance.AttendanceLeaveVo">
+        <include refid="myLeaveColumns"/>
+        <where>
+            and l.is_deleted = 0
+            and l.applicant_id = #{applicantId}
+            <if test="query != null and query.status != null">
+                and l.status = #{query.status}
+            </if>
+        </where>
+        order by l.id desc
+    </select>
+
+    <select id="selectMyLeaveDetail" resultType="com.lautung.oa.vo.attendance.AttendanceLeaveVo">
+        <include refid="myLeaveColumns"/>
+        where l.is_deleted = 0
+          and l.id = #{id}
+          and l.applicant_id = #{applicantId}
+    </select>
+</mapper>

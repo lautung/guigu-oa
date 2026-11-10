@@ -4,6 +4,7 @@ import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.common.result.ResultCodeEnum;
 import com.lautung.oa.common.validation.ValidationMessages;
+import com.lautung.oa.model.process.OaBusinessTemplate;
 import com.lautung.oa.model.process.Process;
 import com.lautung.oa.model.process.ProcessAddSignTask;
 import com.lautung.oa.model.process.ProcessRecord;
@@ -18,6 +19,7 @@ import com.lautung.oa.process.business.BusinessApprovalCallbackRegistry;
 import com.lautung.oa.process.business.BusinessApprovalOutcome;
 import com.lautung.oa.process.attachment.AttachmentService;
 import com.lautung.oa.process.cc.CarbonCopyWriter;
+import com.lautung.oa.process.mapper.OaBusinessTemplateMapper;
 import com.lautung.oa.process.mapper.OaProcessAddSignTaskMapper;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.membership.ApprovalMembership;
@@ -75,6 +77,7 @@ public class ApprovalWriter {
     private final OaProcessRecordService processRecordService;
     private final SysUserService sysUserService;
     private final BusinessApprovalCallbackRegistry businessCallbackRegistry;
+    private final OaBusinessTemplateMapper businessTemplateMapper;
 
     public ApprovalWriter(
             ApprovalTemplate approvalTemplate,
@@ -86,7 +89,8 @@ public class ApprovalWriter {
             OaProcessAddSignTaskMapper addSignTaskMapper,
             OaProcessRecordService processRecordService,
             SysUserService sysUserService,
-            BusinessApprovalCallbackRegistry businessCallbackRegistry) {
+            BusinessApprovalCallbackRegistry businessCallbackRegistry,
+            OaBusinessTemplateMapper businessTemplateMapper) {
         this.approvalTemplate = approvalTemplate;
         this.approvalEngine = approvalEngine;
         this.attachmentService = attachmentService;
@@ -97,6 +101,16 @@ public class ApprovalWriter {
         this.processRecordService = processRecordService;
         this.sysUserService = sysUserService;
         this.businessCallbackRegistry = businessCallbackRegistry;
+        this.businessTemplateMapper = businessTemplateMapper;
+    }
+
+    /** 通用发起只接受无专用单据的模板（ADR 0066）：业务模板从域内发起页走 business key。 */
+    private void requireNotBusinessTemplate(Long processTemplateId) {
+        if (processTemplateId != null && businessTemplateMapper.selectCount(
+                new LambdaQueryWrapper<OaBusinessTemplate>()
+                        .eq(OaBusinessTemplate::getProcessTemplateId, processTemplateId)) > 0) {
+            throw new BusinessException(201, "业务单据请从业务页发起");
+        }
     }
 
     @Transactional
@@ -113,6 +127,7 @@ public class ApprovalWriter {
         ApprovalTemplate.PublishedApproval publication =
                 approvalTemplate.resolveForInitiation(processFormVo.getProcessTemplateId());
         ProcessTemplate processTemplate = publication.template();
+        requireNotBusinessTemplate(processTemplate.getId());
 
         // 已发布模板的动态必填（ADR 0035）：结构校验只保证 JSON 形状，这里才拿得到模板约束。
         // 仍在任何写入之前，201 的含义是「什么都没发生」。

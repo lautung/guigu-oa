@@ -24,6 +24,7 @@ const zhCN = {
     modules: {
       workbench: '工作台',
       work: '办事',
+      business: '业务',
       system: '系统管理',
       monitor: '系统监控',
       tool: '系统工具',
@@ -38,11 +39,15 @@ const zhCN = {
       processed: '已处理',
       started: '已发起',
       copied: '抄送我的',
+      myAttendance: '打卡',
+      myAttendanceRecord: '考勤记录',
+      myApplications: '我的申请',
     },
     groups: {
       logs: '日志管理',
       processSettings: '审批设置',
       processManagement: '审批管理',
+      attendance: '考勤管理',
     },
     empty: {
       noPages: '暂无可用页面',

@@ -1,0 +1,404 @@
+{
+  "stats": {
+    "startTime": "2026-11-10T07:22:22.362Z",
+    "duration": 25835.725000000002,
+    "expected": 98,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "A1 登录：正例 / 错密码 / 不存在用户 / 停用用户",
+      "ok": true
+    },
+    {
+      "title": "A2 刷新：正例 / access 当 refresh / 篡改 refresh / 停用用户",
+      "ok": true
+    },
+    {
+      "title": "A3 info：admin 有配置菜单 / user 为空 / 无 token 208",
+      "ok": true
+    },
+    {
+      "title": "A4 登出：有 token 作废会话 / 无 token 幂等 200",
+      "ok": true
+    },
+    {
+      "title": "单页授予只开 sysUser，其余配置页仍 205",
+      "ok": true
+    },
+    {
+      "title": "删除角色后成员授予即时回收（#146 修复）",
+      "ok": true
+    },
+    {
+      "title": "B16 toAssign：可授树 + 已勾选 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B17 doAssign：合法授予生效 / 新非法 id 201",
+      "ok": true
+    },
+    {
+      "title": "B18 findNodes：配置树 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B19 save：正例 / 受保护 path 201 / 非配置菜单 201",
+      "ok": true
+    },
+    {
+      "title": "B20 update：正例 / 受保护 type 与 status 变更 201",
+      "ok": true
+    },
+    {
+      "title": "B21 remove：正例 / 有子节点 201 / 受保护入口 201",
+      "ok": true
+    },
+    {
+      "title": "B22 顺序契约：未授予 + 空体是字段文案 201（校验先于配置 gate）",
+      "ok": true
+    },
+    {
+      "title": "B25 越界与缺组件：字段文案 201（不落兜底，ADR 0036）",
+      "ok": true
+    },
+    {
+      "title": "B7 toAssign：正例（全量 + 已授）/ 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B8 doAssign：全量覆写生效；不存在/已删除的 roleId 返回 201 且不写行（#144）",
+      "ok": true
+    },
+    {
+      "title": "B9 findAll：有授予 200 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B10 分页：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B11 save：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B12 get：正例 / 无授予 205 / 不存在的 id 返回 200 null",
+      "ok": true
+    },
+    {
+      "title": "B13 update：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B14 remove：正例（get 返回 null）/ 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B15 batchRemove：正例（List<Long> 体）/ 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B24 save：角色名称/编码越界 201 字段文案（不落兜底，ADR 0036）",
+      "ok": true
+    },
+    {
+      "title": "B26 batchRemove：空列表 201 命名文案 / 无授予空列表 205（#156，ADR 0040）",
+      "ok": true
+    },
+    {
+      "title": "B1 updateStatus：停用后下一次请求 209 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B2 分页：正例 / 无授予 205 / limit 超上限 201 / 不返回密码",
+      "ok": true
+    },
+    {
+      "title": "B3 get：正例 / 无授予 205 / 不存在的 id 返回 200 null",
+      "ok": true
+    },
+    {
+      "title": "B4 save：正例（BCrypt 落库）/ 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B5 update：空密码保留原 hash / 改密生效且旧会话立即失效（#143）",
+      "ok": true
+    },
+    {
+      "title": "B6 remove：逻辑删除后列表不含 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "B23 save：用户名/姓名越界 201 字段文案（不落兜底，ADR 0036）",
+      "ok": true
+    },
+    {
+      "title": "B24 save：重名 201 命名拒绝 / 无授予 205（ADR 0042）",
+      "ok": true
+    },
+    {
+      "title": "B25 update：改名撞他人 201 命名拒绝 / 改回自身 200（ADR 0042）",
+      "ok": true
+    },
+    {
+      "title": "B26 remove：删除让位，同名可重建（ADR 0042）",
+      "ok": true
+    },
+    {
+      "title": "C1 审批列表：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C2 模板分页：含未发布 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C3 模板详情：正例 / 无授予 205 / 不存在 200 null",
+      "ok": true
+    },
+    {
+      "title": "C4 save：新建即未发布 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C5 update：未发布正例 / 已发布 201",
+      "ok": true
+    },
+    {
+      "title": "C6 remove：未发布正例 / 已发布 201",
+      "ok": true
+    },
+    {
+      "title": "C7 uploadProcessDefinition：zip 正例 / 非 zip 201 / 空文件 201",
+      "ok": true
+    },
+    {
+      "title": "C8 publish：未发布正例 / 再发布 201",
+      "ok": true
+    },
+    {
+      "title": "C9 processType findAll：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C10 processType 分页：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C11 processType get：正例 / 无授予 205 / 不存在 200 null",
+      "ok": true
+    },
+    {
+      "title": "C12 processType save：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C13 processType update：正例 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "C14 processType remove：逻辑删除后 get 返回 null",
+      "ok": true
+    },
+    {
+      "title": "C15 名称越界：字段文案 201（不落兜底，ADR 0036）",
+      "ok": true
+    },
+    {
+      "title": "D1 findPending：bob 有记录 / alice 空",
+      "ok": true
+    },
+    {
+      "title": "D2 startUp：正例已发起 / 未发布模板 201 / 必填为空 201 / 抄送人无效 201",
+      "ok": true
+    },
+    {
+      "title": "D2b startUp：同一提交标识重复送达只产生一条审批",
+      "ok": true
+    },
+    {
+      "title": "D3 getProcessTemplate：已发布可读 / 未发布返回 null",
+      "ok": true
+    },
+    {
+      "title": "D4 findStartable：只含已发布且可用",
+      "ok": true
+    },
+    {
+      "title": "D5 show：申请人/处理人/抄送人可读，非成员 403",
+      "ok": true
+    },
+    {
+      "title": "D6 approve：当前处理人通过 / 非当前处理人 403",
+      "ok": true
+    },
+    {
+      "title": "D7 findProcessed：bob 正例",
+      "ok": true
+    },
+    {
+      "title": "D8 findCarbonCopied：carol 正例",
+      "ok": true
+    },
+    {
+      "title": "D9 carbonCopyRecipients：普通用户可读，只含 id 与 name",
+      "ok": true
+    },
+    {
+      "title": "D10 findStarted：alice 只看到本人，userId 参数被忽略",
+      "ok": true
+    },
+    {
+      "title": "D11 getCurrentUser：只含 name 与 phone",
+      "ok": true
+    },
+    {
+      "title": "E1 uploads：草稿正例 / 超过 50 MiB 201 / 非成员 205",
+      "ok": true
+    },
+    {
+      "title": "E2 complete：正例 / 对象缺失 201 / 大小不符 201 / 非 owner 205",
+      "ok": true
+    },
+    {
+      "title": "E3 drafts：owner 正例 / 他人空 / 非法 draftId 201",
+      "ok": true
+    },
+    {
+      "title": "E4 deletePending：PENDING 正例 / 已绑定 205 / 非 owner 205",
+      "ok": true
+    },
+    {
+      "title": "E5 processes：成员可读（canUpload）/ 非成员 205",
+      "ok": true
+    },
+    {
+      "title": "E6 download-url：成员正例 / 非成员 205 / 附件不属于该 process 205",
+      "ok": true
+    },
+    {
+      "title": "E 附：附件生命周期正例（登记→PUT→complete→删除）",
+      "ok": true
+    },
+    {
+      "title": "F1 登录失败返回 HTTP 401 + code 208",
+      "ok": true
+    },
+    {
+      "title": "F2 未知路径返回 HTTP 404 + code 201",
+      "ok": true
+    },
+    {
+      "title": "F3 方法不匹配（GET doAssign）返回 HTTP 405 + code 201",
+      "ok": true
+    },
+    {
+      "title": "F4 方法不匹配（GET updateStatus）返回 HTTP 405 + code 201",
+      "ok": true
+    },
+    {
+      "title": "F7 参数类型不匹配仍是业务信封（HTTP 200 + code 201，非容器级错误）",
+      "ok": true
+    },
+    {
+      "title": "F5 无 token 受保护请求：HTTP 401 + code 208",
+      "ok": true
+    },
+    {
+      "title": "F6 匿名路径上的错误方法：HTTP 401 + code 208（不再 403 空体）",
+      "ok": true
+    },
+    {
+      "title": "G1 列表/详情/删除：页面授予开读、按钮点缺失 205、空列表 201",
+      "ok": true
+    },
+    {
+      "title": "G2 clean：物理清空且清空行存活",
+      "ok": true
+    },
+    {
+      "title": "G3 列表/过滤/删除/清空：页面授予开读、按钮点缺失 205、空列表 201",
+      "ok": true
+    },
+    {
+      "title": "G4 解锁：登录日志 status=3 与操作日志各一行",
+      "ok": true
+    },
+    {
+      "title": "H1 审批人规则：未发布可读可改，保存整体替换，目标校验逐条 201",
+      "ok": true
+    },
+    {
+      "title": "H2 审批人规则：已发布冻结（读 200 / 改 201），无授予 205",
+      "ok": true
+    },
+    {
+      "title": "H3 upload 返回 userTasks（BPMN 节点清单）",
+      "ok": true
+    },
+    {
+      "title": "H4 userOptions：admin 可读、启用过滤、无授予 205",
+      "ok": true
+    },
+    {
+      "title": "H5 转办：目标合法性逐条 201，非当前处理人 201，转办后目标成为处理人",
+      "ok": true
+    },
+    {
+      "title": "H6 加签：目标校验逐条 201，前加签挂起原任务，加签人处理后回到原处理人",
+      "ok": true
+    },
+    {
+      "title": "H7 撤回：非申请人 201、申请人审批中可撤、重复撤回 201、已通过不可撤",
+      "ok": true
+    },
+    {
+      "title": "H8 催办：非申请人 201、申请人可催、24 小时频控 201",
+      "ok": true
+    },
+    {
+      "title": "H9 匿名访问新动作端点：208 续期信封",
+      "ok": true
+    },
+    {
+      "title": "I1 认证与容器语义：401 / 404 / 405 / 无授予 205",
+      "ok": true
+    },
+    {
+      "title": "I2 今日打卡：班次摘要 / 上下班打卡 / 重复打卡追加流水",
+      "ok": true
+    },
+    {
+      "title": "I3 我的请假：草稿/修改/提交幂等/不同键拒绝/审批通过扣减",
+      "ok": true
+    },
+    {
+      "title": "I4 我的加班：提交即发起 / 审批通过写入调休",
+      "ok": true
+    },
+    {
+      "title": "I5 余额与发放：正发放 / 零调整 201 / 不限余额类型 201 / 空成员 201",
+      "ok": true
+    },
+    {
+      "title": "I6 假期类型：分页/选项/新建/改名/删除与校验 201",
+      "ok": true
+    },
+    {
+      "title": "I7 打卡记录与补卡：来源筛选 / 补卡流水 / 校验 201 / 未入组 201",
+      "ok": true
+    },
+    {
+      "title": "I8 数据范围：自定部门外的成员不可读不可写（201），列表空集",
+      "ok": true
+    },
+    {
+      "title": "I9 我的申请边界：他人单据 201 / 我的申请只读本人",
+      "ok": true
+    }
+  ]
+}

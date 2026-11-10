@@ -157,6 +157,44 @@ describe('后台页面授予守卫', () => {
     ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
   })
 
+  it('checks 业务 pages against the same page-grant projection (#278)', () => {
+    const attendancePage = [
+      { path: '/business', title: '业务', type: 0, sort: 3 },
+      {
+        path: '/business/attendance',
+        parentPath: '/business',
+        title: '考勤管理',
+        type: 0,
+        sort: 1,
+      },
+      {
+        path: '/business/attendance/group',
+        parentPath: '/business/attendance',
+        title: '考勤组与班次',
+        type: 1,
+        sort: 1,
+      },
+    ]
+
+    expect(
+      resolveAuthGuard({
+        path: '/business/attendance/group',
+        hasToken: true,
+        menus: attendancePage,
+      }),
+    ).toEqual({ action: 'allow' })
+    expect(
+      resolveAuthGuard({
+        path: '/business/attendance/record',
+        hasToken: true,
+        menus: attendancePage,
+      }),
+    ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
+    expect(
+      resolveAuthGuard({ path: '/business/attendance/group', hasToken: true, menus: [] }),
+    ).toEqual({ action: 'redirect', to: PATHS.WORKBENCH })
+  })
+
   it('checks the monitor online page against the same grant projection (#239)', () => {
     const onlinePage = [
       { path: '/monitor', title: '系统监控', type: 0, sort: 4 },

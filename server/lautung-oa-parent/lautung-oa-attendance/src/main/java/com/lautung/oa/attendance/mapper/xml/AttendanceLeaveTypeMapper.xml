@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceLeaveTypeMapper">
+
+    <!--
+      删除前的引用历史（#280，ADR 0073）：流水与请假单任一非空即只能停用。
+      存活过滤显式写（ADR 0050）；只读计数，参数走 #{}。
+    -->
+    <select id="countLedgerReferences" resultType="long">
+        select count(*)
+        from attendance_leave_ledger l
+        where l.leave_type_id = #{leaveTypeId}
+          and l.is_deleted = 0
+    </select>
+
+    <select id="countLeaveReferences" resultType="long">
+        select count(*)
+        from attendance_leave v
+        where v.leave_type_id = #{leaveTypeId}
+          and v.is_deleted = 0
+    </select>
+</mapper>

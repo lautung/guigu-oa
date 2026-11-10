@@ -1,0 +1,164 @@
+<testsuites id="" name="" tests="53" failures="0" skipped="0" errors="0" time="111.487477">
+<testsuite name="guard-work-list-initial-load.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="2.778" errors="0">
+<testcase name="慢列表加载下首轮扫描仍能找到目标行" classname="guard-work-list-initial-load.spec.ts" time="2.778">
+</testcase>
+</testsuite>
+<testsuite name="p0-1-auth.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="6" failures="0" skipped="0" time="3.774" errors="0">
+<testcase name="登录成功落到工作台" classname="p0-1-auth.spec.ts" time="0.502">
+</testcase>
+<testcase name="密码错误与用户不存在都提示认证失败（不区分）" classname="p0-1-auth.spec.ts" time="0.532">
+</testcase>
+<testcase name="停用的用户不能登录，恢复后可以" classname="p0-1-auth.spec.ts" time="0.995">
+</testcase>
+<testcase name="退出后回到登录页" classname="p0-1-auth.spec.ts" time="0.695">
+</testcase>
+<testcase name="未登录直达办事 URL 被拦回登录页" classname="p0-1-auth.spec.ts" time="0.237">
+</testcase>
+<testcase name="退出后直达办事 URL 同样被拦" classname="p0-1-auth.spec.ts" time="0.813">
+</testcase>
+</testsuite>
+<testsuite name="p0-10-approval-actions.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="7.448" errors="0">
+<testcase name="转办 → 前加签 → 加签人通过 → 原处理人通过" classname="p0-10-approval-actions.spec.ts" time="2.819">
+</testcase>
+<testcase name="后加签：处理人通过先记账，加签人通过后流程收口" classname="p0-10-approval-actions.spec.ts" time="1.687">
+</testcase>
+<testcase name="发起 → 撤回：状态翻已撤回且不可恢复" classname="p0-10-approval-actions.spec.ts" time="1.492">
+</testcase>
+<testcase name="发起 → 催办：待处理行出现已催办标记，24 小时频控 201" classname="p0-10-approval-actions.spec.ts" time="1.45">
+</testcase>
+</testsuite>
+<testsuite name="p0-11-attendance-main.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="4.997" errors="0">
+<testcase name="桌面主路径：打卡 → 请假审批 → 余额扣减 → 月统计" classname="p0-11-attendance-main.spec.ts" time="4.997">
+</testcase>
+</testsuite>
+<testsuite name="p0-12-attendance-mobile.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="2.849" errors="0">
+<testcase name="手机视口完成打卡与请假提交" classname="p0-12-attendance-mobile.spec.ts" time="2.849">
+</testcase>
+</testsuite>
+<testsuite name="p0-2-sidebar-occupancy.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="2.667" errors="0">
+<testcase name="admin 顶部固定六项，系统管理侧栏可见" classname="p0-2-sidebar-occupancy.spec.ts" time="0.672">
+</testcase>
+<testcase name="user 顶部仍固定六项，系统管理置灰" classname="p0-2-sidebar-occupancy.spec.ts" time="0.564">
+</testcase>
+<testcase name="user 直达配置 URL 落到工作台" classname="p0-2-sidebar-occupancy.spec.ts" time="0.694">
+</testcase>
+<testcase name="admin 可以进入用户管理" classname="p0-2-sidebar-occupancy.spec.ts" time="0.737">
+</testcase>
+</testsuite>
+<testsuite name="p0-3-start-with-attachment.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.059" errors="0">
+<testcase name="alice 发起含附件的审批并出现在已发起" classname="p0-3-start-with-attachment.spec.ts" time="1.059">
+</testcase>
+</testsuite>
+<testsuite name="p0-4-approve.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="2.329" errors="0">
+<testcase name="bob 通过一条审批，双视角状态一致" classname="p0-4-approve.spec.ts" time="1.445">
+</testcase>
+<testcase name="bob 已处理列表出现刚通过的审批" classname="p0-4-approve.spec.ts" time="0.884">
+</testcase>
+</testsuite>
+<testsuite name="p0-5-reject.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.499" errors="0">
+<testcase name="bob 拒绝一条审批，双视角状态一致" classname="p0-5-reject.spec.ts" time="1.499">
+</testcase>
+</testsuite>
+<testsuite name="p0-6-carbon-copy.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.092" errors="0">
+<testcase name="carol 能看到抄送的完整内容并下载附件，但不能处理与补传" classname="p0-6-carbon-copy.spec.ts" time="1.092">
+</testcase>
+</testsuite>
+<testsuite name="p0-7-mobile-approval.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.426" errors="0">
+<testcase name="手机视口完成登录到通过的全链路" classname="p0-7-mobile-approval.spec.ts" time="1.426">
+</testcase>
+</testsuite>
+<testsuite name="p0-8-start-again.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="18.222" errors="0">
+<testcase name="发起结果不明后核实并重新发起，两条审批都真实存在" classname="p0-8-start-again.spec.ts" time="18.222">
+</testcase>
+</testsuite>
+<testsuite name="p0-9-dept-leader-approval.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="2.471" errors="0">
+<testcase name="alice 发起后由其部门负责人（而非 BPMN assignee）审批" classname="p0-9-dept-leader-approval.spec.ts" time="2.471">
+</testcase>
+</testsuite>
+<testsuite name="p1-1-template-publish.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.743" errors="0">
+<testcase name="未发布模板可改可删，发布后冻结" classname="p1-1-template-publish.spec.ts" time="3.743">
+</testcase>
+</testsuite>
+<testsuite name="p1-10-shell-search.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="0.731" errors="0">
+<testcase name="菜单搜索打开全部公告并落到真实页面" classname="p1-10-shell-search.spec.ts" time="0.731">
+</testcase>
+</testsuite>
+<testsuite name="p1-11-online-users.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="1.494" errors="0">
+<testcase name="登录后在线列表出现当前会话并标 current" classname="p1-11-online-users.spec.ts" time="0.804">
+</testcase>
+<testcase name="没有监控授予的 user 直达 /monitor/online 回落工作台" classname="p1-11-online-users.spec.ts" time="0.69">
+</testcase>
+</testsuite>
+<testsuite name="p1-12-monitor-pages.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="1.449" errors="0">
+<testcase name="授予后服务监控页打开并渲染真实快照" classname="p1-12-monitor-pages.spec.ts" time="0.722">
+</testcase>
+<testcase name="授予后数据监控页打开并渲染连接池与慢 SQL 环" classname="p1-12-monitor-pages.spec.ts" time="0.727">
+</testcase>
+</testsuite>
+<testsuite name="p1-13-cache-monitor-pages.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="5.141" errors="0">
+<testcase name="授予后缓存监控页打开并渲染真实 INFO 卡片" classname="p1-13-cache-monitor-pages.spec.ts" time="0.746">
+</testcase>
+<testcase name="缓存列表 perm: 键可见且删除 user 的键生效" classname="p1-13-cache-monitor-pages.spec.ts" time="2.392">
+</testcase>
+<testcase name="缓存列表非 perm 前缀只读：键可见但无删除入口" classname="p1-13-cache-monitor-pages.spec.ts" time="1.184">
+</testcase>
+<testcase name="没有监控授予的 user 直达缓存两页回落工作台" classname="p1-13-cache-monitor-pages.spec.ts" time="0.819">
+</testcase>
+</testsuite>
+<testsuite name="p1-14-job-monitor-page.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="7.494" errors="0">
+<testcase name="授予后定时任务页打开并渲染启动登记的任务行" classname="p1-14-job-monitor-page.spec.ts" time="0.736">
+</testcase>
+<testcase name="disabled 的 demo 任务手动执行一次后记录出现在抽屉" classname="p1-14-job-monitor-page.spec.ts" time="4.762">
+</testcase>
+<testcase name="编辑弹窗：非法 cron 吃服务端 201 文案，合法保存后行上刷新" classname="p1-14-job-monitor-page.spec.ts" time="1.307">
+</testcase>
+<testcase name="没有监控授予的 user 直达定时任务页回落工作台" classname="p1-14-job-monitor-page.spec.ts" time="0.689">
+</testcase>
+</testsuite>
+<testsuite name="p1-2-assign-roles.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="3.737" errors="0">
+<testcase name="分配配置角色后 user 的配置菜单生效，撤销后消失" classname="p1-2-assign-roles.spec.ts" time="3.737">
+</testcase>
+</testsuite>
+<testsuite name="p1-3-config-crud.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="4" failures="0" skipped="0" time="11.557" errors="0">
+<testcase name="审批类型：建、改、删" classname="p1-3-config-crud.spec.ts" time="3.789">
+</testcase>
+<testcase name="角色：建、删" classname="p1-3-config-crud.spec.ts" time="2.574">
+</testcase>
+<testcase name="用户：建、删" classname="p1-3-config-crud.spec.ts" time="2.66">
+</testcase>
+<testcase name="菜单：建（停用）、删" classname="p1-3-config-crud.spec.ts" time="2.534">
+</testcase>
+</testsuite>
+<testsuite name="p1-4-pagination.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="2.135" errors="0">
+<testcase name="25 条真实数据翻页：末页不满、下一页禁用、越界为空" classname="p1-4-pagination.spec.ts" time="2.135">
+</testcase>
+</testsuite>
+<testsuite name="p1-5-attachment-lifecycle.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="1.973" errors="0">
+<testcase name="附件发起前可在发起页删除" classname="p1-5-attachment-lifecycle.spec.ts" time="0.954">
+</testcase>
+<testcase name="附件发起后不可删、审批结束保留且可下载" classname="p1-5-attachment-lifecycle.spec.ts" time="1.019">
+</testcase>
+</testsuite>
+<testsuite name="p1-6-audit-logs.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="2" failures="0" skipped="0" time="6.799" errors="0">
+<testcase name="后台写动作在操作日志页留下可查的行与参数" classname="p1-6-audit-logs.spec.ts" time="4.635">
+</testcase>
+<testcase name="登录失败写入失败行，解锁后出现解锁行并在操作日志留下解锁动作" classname="p1-6-audit-logs.spec.ts" time="2.164">
+</testcase>
+</testsuite>
+<testsuite name="p1-7-notice.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="1.58" errors="0">
+<testcase name="公告发布后铃铛出现，打开详情已读，撤回后消失" classname="p1-7-notice.spec.ts" time="1.58">
+</testcase>
+</testsuite>
+<testsuite name="p1-8-notice-admin.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="6.943" errors="0">
+<testcase name="管理页草稿→发布→铃铛→撤回→删除，含图片上传与渲染" classname="p1-8-notice-admin.spec.ts" time="6.943">
+</testcase>
+</testsuite>
+<testsuite name="p1-9-workbench.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-chromium" tests="1" failures="0" skipped="0" time="0.596" errors="0">
+<testcase name="登录落到工作台：KPI 可用并进入待处理" classname="p1-9-workbench.spec.ts" time="0.596">
+</testcase>
+</testsuite>
+<testsuite name="p0-7-mobile-approval.spec.ts" timestamp="2026-11-10T07:22:51.211Z" hostname="stack-webkit-mobile" tests="1" failures="0" skipped="0" time="1.957" errors="0">
+<testcase name="手机视口完成登录到通过的全链路" classname="p0-7-mobile-approval.spec.ts" time="1.957">
+</testcase>
+</testsuite>
+</testsuites>

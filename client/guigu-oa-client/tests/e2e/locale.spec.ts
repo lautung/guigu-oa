@@ -49,6 +49,7 @@ test('顶栏切到 English 后外壳与登录页显示英文', async ({ page }, 
   await expect(page.locator('.top-nav-item')).toHaveText([
     'Workbench',
     'Work',
+    'Business',
     'System',
     'Monitor',
     'Tools',

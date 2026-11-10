@@ -90,6 +90,13 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 已结束场景由 Bob 处理。演示数据包含一条 Bob 待处理的审批、一条已结束审批、Carol 的节点抄送，
 以及一条保存在 MinIO 的附件和对应元数据。
 
+考勤演示数据由 demo 迁移 `V141` 种下（#284，ADR 0073 §种子草案）：`演示部门`（负责人 Bob，
+Alice/Bob/Carol 划入）、`演示班次`（9:00–18:00、午休 12:00–13:00）与 `演示考勤组`（周一至周五，
+Alice 入组）、当年节假日（休假日与补班日各若干）、Alice 与 Admin 各 40 小时年假，以及
+`attendance.leave` / `attendance.overtime` 两份业务审批模板（单节点部门负责人）与
+`oa_business_template` 映射。于是演示栈可走通「Alice 打卡 → 提交请假 → 部门负责人 Bob 审批 →
+余额扣减 → 月度统计」整条链路。
+
 ### 接口文档
 
 演示栈以 `dev,demo` 启动，后加载的 `application-demo.yml` 覆盖了 `dev` 的接口文档开关：
@@ -103,10 +110,13 @@ MinIO 的官方镜像 `minio/minio`、`minio/mc` 已从 Docker Hub 与 quay.io �
 
 ### 演示审批的发布
 
-演示迁移只把「演示请假申请」种成**未发布**（`status=0`）。`lautung-oa-server` 以 `dev,demo` 启动时，
-`DemoApprovalPublisher` 先读 classpath 的 `processes/demo-approval.bpmn20.xml` 现打一个流程 zip
-写入 `process-definitions`，再走正常发布流程，把发布记录、Flowable 部署和 `status=1` 一次性补齐；
-随后 `DemoScenarioSeeder` 才生成待处理、已结束、抄送和附件场景。整个过程没有手工步骤。
+演示迁移只把三份演示模板种成**未发布**（`status=0`）：「演示请假申请」（`demoApproval`）、
+「演示考勤请假审批」（`attendanceLeave`）与「演示考勤加班审批」（`attendanceOvertime`）。
+`lautung-oa-server` 以 `dev,demo` 启动时，`DemoApprovalPublisher` 先读 classpath 的
+`processes/*.bpmn20.xml` 现打流程 zip 写入 `process-definitions`，再走正常发布流程，把发布记录、
+Flowable 部署和 `status=1` 一次性补齐；考勤两份模板的部门负责人规则随发布冻结成
+`oa-approvers.json` sidecar。随后 `DemoScenarioSeeder` 才生成待处理、已结束、抄送和附件场景。
+整个过程没有手工步骤。
 
 重复启动只读不写：模板已发布且发布证据可用时直接复用，不会再次部署或改状态。
 日志出现 `Compose 演示数据就绪 pending=1 processed=1 carolCopied=2` 即为就绪。

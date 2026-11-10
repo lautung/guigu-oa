@@ -6,9 +6,16 @@ import { topModules, uiLoginExpectWork, uiSwitchModule } from './helpers/ui'
  * admin 可进配置页。对应 GLOSSARY「后台」「后台页」「页面授予」。
  */
 
-test('admin 顶部固定五项，系统管理侧栏可见', async ({ page }) => {
+test('admin 顶部固定六项，系统管理侧栏可见', async ({ page }) => {
   await uiLoginExpectWork(page, 'admin')
-  await expect(topModules(page)).toHaveText(['工作台', '办事', '系统管理', '系统监控', '系统工具'])
+  await expect(topModules(page)).toHaveText([
+    '工作台',
+    '办事',
+    '业务',
+    '系统管理',
+    '系统监控',
+    '系统工具',
+  ])
   await uiSwitchModule(page, '系统管理')
   await expect(page).toHaveURL(/\/system\/sysUser$/)
   const sidebar = page.locator('.app-sidebar')
@@ -17,9 +24,16 @@ test('admin 顶部固定五项，系统管理侧栏可见', async ({ page }) => 
   await expect(sidebar.getByText('菜单管理')).toBeVisible()
 })
 
-test('user 顶部仍固定五项，系统管理置灰', async ({ page }) => {
+test('user 顶部仍固定六项，系统管理置灰', async ({ page }) => {
   await uiLoginExpectWork(page, 'user')
-  await expect(topModules(page)).toHaveText(['工作台', '办事', '系统管理', '系统监控', '系统工具'])
+  await expect(topModules(page)).toHaveText([
+    '工作台',
+    '办事',
+    '业务',
+    '系统管理',
+    '系统监控',
+    '系统工具',
+  ])
   const system = page.locator('.top-nav-item', { hasText: '系统管理' })
   await expect(system).toHaveClass(/disabled/)
   await expect(system).toBeDisabled()

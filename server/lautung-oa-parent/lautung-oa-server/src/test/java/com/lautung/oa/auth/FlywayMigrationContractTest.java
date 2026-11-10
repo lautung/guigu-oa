@@ -85,7 +85,16 @@ class FlywayMigrationContractTest {
             "sys_oper_log",
             "sys_login_log",
             "sys_job",
-            "sys_job_log");
+            "sys_job_log",
+            "attendance_shift",
+            "attendance_group",
+            "attendance_group_member",
+            "attendance_holiday",
+            "attendance_punch",
+            "attendance_leave_type",
+            "attendance_leave_ledger",
+            "attendance_leave",
+            "attendance_overtime");
     private static final List<String> BUTTON_PERMS = List.of(
             "system:user:add", "system:user:edit", "system:user:remove", "system:user:assignRole",
             "system:user:resetPwd", "system:user:export", "system:user:import",
@@ -103,7 +112,11 @@ class FlywayMigrationContractTest {
             "system:loginLog:remove", "system:loginLog:clean", "system:loginLog:unlock",
             "system:notice:add", "system:notice:edit", "system:notice:remove", "system:notice:publish",
             "monitor:online:forceLogout", "monitor:cache:clean",
-            "monitor:job:edit", "monitor:job:run");
+            "monitor:job:edit", "monitor:job:run",
+            "attendance:group:add", "attendance:group:edit", "attendance:group:remove",
+            "attendance:record:repair",
+            "attendance:type:add", "attendance:type:edit", "attendance:type:remove",
+            "attendance:ledger:grant");
     private static final String UNPUBLISHED_LEAVE_FORM_PROPS =
             "[{\"type\":\"input\",\"field\":\"reason\",\"title\":\"请假原因\",\"$required\":true,\"props\":{\"placeholder\":\"请输入请假原因\"}},"
                     + "{\"type\":\"input\",\"field\":\"days\",\"title\":\"请假天数\",\"$required\":true,\"props\":{\"type\":\"number\",\"placeholder\":\"请输入请假天数\"}}]";
@@ -675,12 +688,15 @@ class FlywayMigrationContractTest {
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (102, '用户页权限', 0)");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (103, '菜单页权限', 0)");
+        // 固定 id 先把自序列拨到高位：种子授予行数会随迁移增长，不再保证落在低位
+        // （V139 考勤菜单补授后越过 100 行，原 101 起的固定 id 与种子行相撞）。
+        jdbcTemplate.execute("ALTER TABLE sys_role_menu ALTER COLUMN id RESTART WITH 2000");
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (101, 101, ?, 0)", roleMenuId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1001, 101, ?, 0)", roleMenuId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (102, 102, ?, 0)", userMenuId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1002, 102, ?, 0)", userMenuId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (103, 103, ?, 0)", menuAdminMenuId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1003, 103, ?, 0)", menuAdminMenuId);
         jdbcTemplate.update(
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, status, is_deleted) VALUES (1000, ?, '角色新增按钮', 2, '', 1, 0)",
                 roleMenuId);
@@ -690,14 +706,13 @@ class FlywayMigrationContractTest {
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, component, status, is_deleted) VALUES (901, 900, '办事设置', 1, 'settings', 'system/settings/list', 1, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_menu (id, parent_id, name, type, path, status, is_deleted) VALUES (902, 0, '坏类型', 3, 'badType', 1, 0)");
-        jdbcTemplate.execute("ALTER TABLE sys_role_menu ALTER COLUMN id RESTART WITH 1000");
+        jdbcTemplate.execute("ALTER TABLE sys_user_role ALTER COLUMN id RESTART WITH 2000");
         jdbcTemplate.update(
-                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (101, 101, 2, 0)");
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (1001, 101, 2, 0)");
         jdbcTemplate.update(
-                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (102, 102, 3, 0)");
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (1002, 102, 3, 0)");
         jdbcTemplate.update(
-                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (103, 103, 6, 0)");
-        jdbcTemplate.execute("ALTER TABLE sys_user_role ALTER COLUMN id RESTART WITH 1000");
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (1003, 103, 6, 0)");
         jdbcTemplate.update(
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (3, 'user-manager', '', '用户管理员', 1, 0)");
         jdbcTemplate.update(
@@ -707,17 +722,17 @@ class FlywayMigrationContractTest {
         jdbcTemplate.update(
                 "INSERT INTO sys_user (id, username, password, name, status, is_deleted) VALUES (6, 'menu-manager', '', '菜单管理员', 1, 0)");
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (104, 101, 1000, 0)");
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1004, 101, 1000, 0)");
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (105, 101, ?, 0)", roleAssignAuthId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1005, 101, ?, 0)", roleAssignAuthId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (106, 102, ?, 0)", userAssignRoleId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1006, 102, ?, 0)", userAssignRoleId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (107, 103, ?, 0)", menuAddId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1007, 103, ?, 0)", menuAddId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (108, 103, ?, 0)", menuEditId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1008, 103, ?, 0)", menuEditId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (109, 103, ?, 0)", menuRemoveId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1009, 103, ?, 0)", menuRemoveId);
 
         mockMvc.perform(get("/admin/system/sysRole/1/10")
                         .header("token", jwtHelper.createTokenPair(1L, "admin", 0L).token()))
@@ -952,13 +967,17 @@ class FlywayMigrationContractTest {
         int roleMenuId = jdbcTemplate.queryForObject(
                 "SELECT id FROM sys_menu WHERE path = '/system/sysRole'", Integer.class);
         int roleRemoveId = buttonId("system:role:remove");
+        // 固定 id 先把自序列拨到高位：种子授予行数会随迁移增长（V139 后越过 100 行），
+        // 低位固定 id 会与种子行相撞。
+        jdbcTemplate.execute("ALTER TABLE sys_role_menu ALTER COLUMN id RESTART WITH 2000");
+        jdbcTemplate.execute("ALTER TABLE sys_user_role ALTER COLUMN id RESTART WITH 2000");
         jdbcTemplate.update("INSERT INTO sys_role (id, role_name, is_deleted) VALUES (101, '角色页权限', 0)");
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (101, 101, ?, 0)", roleMenuId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1001, 101, ?, 0)", roleMenuId);
         jdbcTemplate.update(
-                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (102, 101, ?, 0)", roleRemoveId);
+                "INSERT INTO sys_role_menu (id, role_id, menu_id, is_deleted) VALUES (1002, 101, ?, 0)", roleRemoveId);
         jdbcTemplate.update(
-                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (101, 101, 2, 0)");
+                "INSERT INTO sys_user_role (id, role_id, user_id, is_deleted) VALUES (1001, 101, 2, 0)");
 
         // 授予用户：空列表不是幂等无操作，由 service 明确拒绝并给出命名文案（#156，ADR 0040）。
         mockMvc.perform(delete("/admin/system/sysRole/batchRemove")

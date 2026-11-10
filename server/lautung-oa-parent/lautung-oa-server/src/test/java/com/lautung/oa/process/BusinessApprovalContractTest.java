@@ -138,6 +138,7 @@ public class BusinessApprovalContractTest {
 	public void resetStubState() {
 		jdbcTemplate.update("DELETE FROM business_approval_stub_doc");
 		jdbcTemplate.update("DELETE FROM business_approval_stub_callback_log");
+		jdbcTemplate.update("DELETE FROM oa_business_template");
 	}
 
 	@Test
@@ -182,6 +183,17 @@ public class BusinessApprovalContractTest {
 		ProcessVo queried = instanceQueryRows().get(0);
 		assertNull(queried.getBusinessType());
 		assertNull(queried.getBusinessId());
+	}
+
+	@Test
+	public void genericStartRefusesBusinessMappedTemplate() {
+		// 通用发起只接受无专用单据的模板（ADR 0066）：业务模板只能从域内发起页走。
+		seedMapping(STUB_TYPE, 1L);
+
+		BusinessException rejected = assertThrows(BusinessException.class,
+				() -> approval.startUp(user(2L, "alice", "小艾"), publishedLeaveForm()));
+		assertEquals(201, rejected.getCode());
+		assertEquals("业务单据请从业务页发起", rejected.getMessage());
 	}
 
 	@Test

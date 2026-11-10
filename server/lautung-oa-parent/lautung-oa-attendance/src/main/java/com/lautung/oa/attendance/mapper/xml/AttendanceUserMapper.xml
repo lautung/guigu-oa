@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendanceUserMapper">
+
+    <!--
+      补卡页成员候选与写权限校验（#281，ADR 0073）。数据范围（ADR 0053/0057）：
+      部门列 = sys_user.dept_id（当前），本人列 = sys_user.id；查询侧只接受
+      #{} + <foreach>，禁止 ${}。部门集为空且无本人行时 1 = 0 得零行，不是全部。
+      只列启用账号；姓名/用户名包含匹配。排序用户名 + id 决胜，分页/远程搜索稳定。
+    -->
+    <select id="selectScopedUsers" resultType="com.lautung.oa.vo.attendance.AttendanceRepairUserVo">
+        select u.id,
+               u.username,
+               u.name,
+               u.dept_id as deptId,
+               d.name as deptName
+        from sys_user u
+            left join sys_dept d on d.id = u.dept_id
+        <where>
+            and u.is_deleted = 0
+            and u.status = 1
+            <if test="name != null and name != ''">
+                and (u.name like CONCAT('%', #{name}, '%')
+                     or u.username like CONCAT('%', #{name}, '%'))
+            </if>
+            <if test="userId != null">
+                and u.id = #{userId}
+            </if>
+            <if test="scope != null and !scope.unrestricted">
+                <choose>
+                    <when test="scope.deptIds.size() > 0">
+                        and (u.dept_id in
+                        <foreach collection="scope.deptIds" item="deptId" open="(" separator="," close=")">
+                            #{deptId}
+                        </foreach>
+                        <if test="scope.selfUserId != null">
+                            or u.id = #{scope.selfUserId}
+                        </if>
+                        )
+                    </when>
+                    <when test="scope.selfUserId != null">
+                        and u.id = #{scope.selfUserId}
+                    </when>
+                    <otherwise>
+                        and 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        order by u.username asc, u.id asc
+    </select>
+</mapper>

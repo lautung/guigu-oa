@@ -28,6 +28,12 @@ export const PATHS = {
   WORK_STARTED_DETAIL: '/work/started/:id',
   WORK_COPIED: '/work/copied',
   WORK_COPIED_DETAIL: '/work/copied/:id',
+  /** 办事打卡（#279，ADR 0073）：登录即有，不套后台授权，窄屏可用。 */
+  WORK_MY_ATTENDANCE: '/work/my-attendance',
+  /** 办事考勤记录（#281）：本人当月逐日状态，登录即有。 */
+  WORK_MY_ATTENDANCE_RECORD: '/work/my-attendance-record',
+  /** 办事「我的申请」（#282）：请假/加班两页签，登录即有、只读本人。 */
+  WORK_MY_APPLICATIONS: '/work/my-applications',
   /** 个人中心（#254）：登录即有，不进后台菜单、不设页面授予。 */
   PROFILE: '/profile',
   SYSTEM: '/system',
@@ -48,6 +54,15 @@ export const PATHS = {
   PROCESS_MGR: '/system/processMgr',
   PROCESS_MGR_PROCESS: '/system/processMgr/process',
   PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
+  /** 业务一级模块（蓝图 §6 一级六项，ADR 0059 修订）：W3 起承载考勤，W2/W4 接人事/报销。 */
+  BUSINESS: '/business',
+  /** 考勤（#278，ADR 0073）：后台五页挂在 /business/attendance 目录下。 */
+  BUSINESS_ATTENDANCE: '/business/attendance',
+  BUSINESS_ATTENDANCE_GROUP: '/business/attendance/group',
+  BUSINESS_ATTENDANCE_RECORD: '/business/attendance/record',
+  BUSINESS_ATTENDANCE_REPAIR: '/business/attendance/repair',
+  BUSINESS_ATTENDANCE_LEAVE: '/business/attendance/leave',
+  BUSINESS_ATTENDANCE_STAT: '/business/attendance/stat',
   NOTICE: '/notice',
   NOTICE_DETAIL: '/notice/:id',
   SYSTEM_NOTICE: '/system/notice',
@@ -63,6 +78,9 @@ export const ROUTES = {
   PROCESSED: PATHS.WORK_PROCESSED,
   STARTED: PATHS.WORK_STARTED,
   COPIED: PATHS.WORK_COPIED,
+  MY_ATTENDANCE: PATHS.WORK_MY_ATTENDANCE,
+  MY_ATTENDANCE_RECORD: PATHS.WORK_MY_ATTENDANCE_RECORD,
+  MY_APPLICATIONS: PATHS.WORK_MY_APPLICATIONS,
 } as const
 
 export const WORK_LIST_KINDS = {
@@ -155,6 +173,9 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.WORK_PROCESSED]: PATHS.WORK_PROCESSED,
   [PATHS.WORK_STARTED]: PATHS.WORK_STARTED,
   [PATHS.WORK_COPIED]: PATHS.WORK_COPIED,
+  [PATHS.WORK_MY_ATTENDANCE]: PATHS.WORK_MY_ATTENDANCE,
+  [PATHS.WORK_MY_ATTENDANCE_RECORD]: PATHS.WORK_MY_ATTENDANCE_RECORD,
+  [PATHS.WORK_MY_APPLICATIONS]: PATHS.WORK_MY_APPLICATIONS,
   [PATHS.PROFILE]: PATHS.PROFILE,
   [PATHS.SYSTEM_SYS_USER]: PATHS.SYSTEM_SYS_USER,
   [PATHS.SYSTEM_SYS_ROLE]: PATHS.SYSTEM_SYS_ROLE,
@@ -172,6 +193,11 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.PROCESS_MGR_PROCESS]: PATHS.PROCESS_MGR_PROCESS,
   [PATHS.NOTICE]: PATHS.NOTICE,
   [PATHS.SYSTEM_NOTICE]: PATHS.SYSTEM_NOTICE,
+  [PATHS.BUSINESS_ATTENDANCE_GROUP]: PATHS.BUSINESS_ATTENDANCE_GROUP,
+  [PATHS.BUSINESS_ATTENDANCE_RECORD]: PATHS.BUSINESS_ATTENDANCE_RECORD,
+  [PATHS.BUSINESS_ATTENDANCE_REPAIR]: PATHS.BUSINESS_ATTENDANCE_REPAIR,
+  [PATHS.BUSINESS_ATTENDANCE_LEAVE]: PATHS.BUSINESS_ATTENDANCE_LEAVE,
+  [PATHS.BUSINESS_ATTENDANCE_STAT]: PATHS.BUSINESS_ATTENDANCE_STAT,
 }
 
 const RETURN_PATH_PREFIXES: readonly { prefix: string; returnPath: string }[] = [

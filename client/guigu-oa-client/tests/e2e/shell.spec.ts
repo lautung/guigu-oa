@@ -78,6 +78,7 @@ test('顶部一级切换、标签打开/关闭与面包屑', async ({ page }) =>
   await expect(page.locator('.top-nav-item')).toHaveText([
     '工作台',
     '办事',
+    '业务',
     '系统管理',
     '系统监控',
     '系统工具',
@@ -164,12 +165,12 @@ test('窄屏隐藏标签条，侧栏改抽屉，配置页提示建议桌面', as
   await expect(page.getByRole('heading', { name: '操作日志', exact: true })).toBeVisible()
 })
 
-test('系统监控与系统工具无授予时都置灰（#239/#246）', async ({ page }) => {
+test('业务、系统监控与系统工具无授予时都置灰（#239/#246/#278）', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) < 900, '窄屏隐藏标签条')
   await openShell(page)
 
   // 与系统管理同款语义：无授予的一级置灰，不落到占位页。
-  for (const title of ['系统监控', '系统工具']) {
+  for (const title of ['业务', '系统监控', '系统工具']) {
     const module = topModule(page, title)
     await expect(module).toHaveClass(/disabled/)
     await expect(module).toBeDisabled()
@@ -276,6 +277,7 @@ test('没有配置授予时系统管理置灰，仍是五项之一', async ({ pa
   await expect(page.locator('.top-nav-item')).toHaveText([
     '工作台',
     '办事',
+    '业务',
     '系统管理',
     '系统监控',
     '系统工具',

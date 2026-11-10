@@ -1,0 +1,29 @@
+time	step	seconds
+2026-11-10T15:20:59	clean: down --volumes --remove-orphans	2
+2026-11-10T15:21:45	clean: up --build --wait	46
+2026-11-10T15:21:47	clean: baseline-check	2
+2026-11-10T15:21:48	clean: demo-smoke	1
+2026-11-10T15:21:49	clean: snapshot	1
+2026-11-10T15:21:52	stack: up --build --wait lautung-oa-server client	3
+2026-11-10T15:22:21	api: round 1	29
+2026-11-10T15:22:48	api: round 2	27
+2026-11-10T15:22:50	stack: up --build --wait lautung-oa-server client	2
+2026-11-10T15:24:42	functional: e2e-stack	112
+2026-11-10T15:25:13	perf: restore base	31
+2026-11-10T15:33:02	perf: restore base	31
+2026-11-10T15:33:40	perf: seed 10000/4000	38
+2026-11-10T15:33:44	perf: snapshot	4
+2026-11-10T15:35:22	perf: smoke	98
+2026-11-10T15:43:00	perf: baseline-1	458
+2026-11-10T15:50:40	perf: baseline-2	460
+2026-11-10T15:58:19	perf: baseline-3	459
+2026-11-10T16:03:59	perf: mid-1	340
+2026-11-10T16:13:38	perf: stress-1	579
+2026-11-10T16:23:13	stack: up --build --wait lautung-oa-server client	3
+2026-11-10T16:23:50	security: restore base	37
+2026-11-10T16:39:00	stack: up --build --wait lautung-oa-server client	14
+2026-11-10T16:42:51	stack: up --build --wait lautung-oa-server client	13
+2026-11-10T16:44:27	compat: mock matrix	96
+2026-11-10T16:48:44	stack: up --build --wait lautung-oa-server client	15
+2026-11-10T16:50:51	stack: up --build --wait lautung-oa-server client	2
+2026-11-10T16:52:38	compat: mock matrix	107

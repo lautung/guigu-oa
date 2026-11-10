@@ -1,7 +1,7 @@
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { PATHS, WORK_LIST_KINDS } from './paths'
 
-export type RouteMenuGroup = 'work' | 'config'
+export type RouteMenuGroup = 'work' | 'config' | 'business'
 
 export interface RouteGroupEntry {
   path: string
@@ -93,6 +93,63 @@ const workChildren: AppRoute[] = [
     name: 'CopiedDetail',
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
+  },
+  {
+    // 办事打卡（#279，ADR 0073）：登录即有，work 组不套后台页面授予；窄屏可用。
+    path: childPath(PATHS.WORK, PATHS.WORK_MY_ATTENDANCE),
+    name: 'WorkMyAttendance',
+    component: () => import('@/views/work/my-attendance/index.vue'),
+    meta: { title: '打卡', menuGroup: 'work' },
+  },
+  {
+    // 办事考勤记录（#281）：本人当月逐日状态，登录即有；窄屏可用。
+    path: childPath(PATHS.WORK, PATHS.WORK_MY_ATTENDANCE_RECORD),
+    name: 'WorkMyAttendanceRecord',
+    component: () => import('@/views/work/my-attendance-record/index.vue'),
+    meta: { title: '考勤记录', menuGroup: 'work' },
+  },
+  {
+    // 办事「我的申请」（#282）：请假/加班两页签，登录即有、只读本人；窄屏可用。
+    path: childPath(PATHS.WORK, PATHS.WORK_MY_APPLICATIONS),
+    name: 'WorkMyApplications',
+    component: () => import('@/views/work/my-applications/index.vue'),
+    meta: { title: '我的申请', menuGroup: 'work' },
+  },
+]
+
+// 考勤五页（#278，ADR 0073）：考勤组与班次完整交付，其余四页是占位壳，
+// 后续票填肉。路径挂在 /business/attendance 目录下，组归属走 business 组
+// 同一条 coversPage 页面授予路径（守卫分组看 navigation/index.ts）。
+const attendanceChildren: AppRoute[] = [
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_GROUP),
+    name: 'AttendanceGroup',
+    component: () => import('@/views/business/attendance/group/index.vue'),
+    meta: { title: '考勤组与班次', menuGroup: 'business' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_RECORD),
+    name: 'AttendanceRecord',
+    component: () => import('@/views/business/attendance/record/index.vue'),
+    meta: { title: '打卡记录', menuGroup: 'business' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_REPAIR),
+    name: 'AttendanceRepair',
+    component: () => import('@/views/business/attendance/repair/index.vue'),
+    meta: { title: '补卡处理', menuGroup: 'business' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_LEAVE),
+    name: 'AttendanceLeave',
+    component: () => import('@/views/business/attendance/leave/index.vue'),
+    meta: { title: '假期类型与发放', menuGroup: 'business' },
+  },
+  {
+    path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_STAT),
+    name: 'AttendanceStat',
+    component: () => import('@/views/business/attendance/stat/index.vue'),
+    meta: { title: '月度统计', menuGroup: 'business' },
   },
 ]
 
@@ -357,6 +414,22 @@ export const constantRoutes: AppRoute[] = [
             component: () => import('@/views/work/pending/detail.vue'),
             meta: { title: '审批详情', menuGroup: 'config' },
             hidden: true,
+          },
+        ],
+      },
+      {
+        // 业务一级模块（蓝图 §6 一级六项，ADR 0059 修订）：后台授予的管理面。
+        // W3 只挂考勤管理；W2 人事、W4 报销在同一目录下追加。
+        path: PATHS.BUSINESS,
+        redirect: PATHS.BUSINESS_ATTENDANCE_GROUP,
+        meta: { menuGroup: 'business' },
+        children: [
+          {
+            // 考勤目录（#278）：页面授予走 business 组同一条 coversPage 路径。
+            path: childPath(PATHS.BUSINESS, PATHS.BUSINESS_ATTENDANCE),
+            redirect: PATHS.BUSINESS_ATTENDANCE_GROUP,
+            meta: { menuGroup: 'business' },
+            children: attendanceChildren,
           },
         ],
       },
