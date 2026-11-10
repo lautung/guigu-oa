@@ -1,12 +1,14 @@
 package com.lautung.oa.process.service.impl;
 
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.process.OaBusinessTemplate;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.process.ProcessTemplatePublication;
 import com.lautung.oa.model.process.ProcessType;
 import com.lautung.oa.process.ApprovalTemplateSupport;
 import com.lautung.oa.process.ProcessDefinitionStorage;
 import com.lautung.oa.process.deployment.ProcessDeploymentEngine;
+import com.lautung.oa.process.mapper.OaBusinessTemplateMapper;
 import com.lautung.oa.process.mapper.OaProcessTemplateMapper;
 import com.lautung.oa.process.publication.PublicationVerifier;
 import com.lautung.oa.process.service.OaProcessApproverRuleService;
@@ -53,6 +55,7 @@ class OaProcessTemplateServiceImplTest {
     private final ProcessDefinitionStorage storage = mock(ProcessDefinitionStorage.class);
     private final ProcessDeploymentEngine deploymentEngine = mock(ProcessDeploymentEngine.class);
     private final OaProcessApproverRuleService approverRuleService = mock(OaProcessApproverRuleService.class);
+    private final OaBusinessTemplateMapper businessTemplateMapper = mock(OaBusinessTemplateMapper.class);
 
     private final OaProcessTemplateServiceImpl service = new OaProcessTemplateServiceImpl();
 
@@ -73,6 +76,8 @@ class OaProcessTemplateServiceImplTest {
         ReflectionTestUtils.setField(service, "publicationVerifier",
                 new PublicationVerifier(storage, deploymentEngine));
         ReflectionTestUtils.setField(service, "approverRuleService", approverRuleService);
+        ReflectionTestUtils.setField(service, "businessTemplateMapper", businessTemplateMapper);
+        when(businessTemplateMapper.selectList(isNull())).thenReturn(List.of());
         // 发布/上传路径会解析上传 zip 里的 BPMN：默认给一个 start→end 的最小流程（无节点可校验）。
         when(storage.open(anyString())).thenReturn(
                 new java.io.ByteArrayInputStream(minimalBpmnZip()));
@@ -237,6 +242,20 @@ class OaProcessTemplateServiceImplTest {
 
         assertEquals(1, groups.size());
         assertEquals(1, groups.get(0).getProcessTemplateList().size());
+    }
+
+    @Test
+    void findStartableExcludesTemplatesMappedToBusinessTypes() {
+        ProcessTemplate business = publishable(3L);
+        business.setStatus(ApprovalTemplateSupport.已发布);
+        when(templateMapper.selectList(any())).thenReturn(List.of(business));
+        when(publicationMapper.selectOne(any())).thenReturn(publication(3L));
+        OaBusinessTemplate mapping = new OaBusinessTemplate();
+        mapping.setProcessTemplateId(3L);
+        when(businessTemplateMapper.selectList(isNull())).thenReturn(List.of(mapping));
+
+        // 通用发起只保留无专用单据的模板（ADR 0066）；业务模板从域内发起页走。
+        assertTrue(service.findStartable().isEmpty());
     }
 
     @Test

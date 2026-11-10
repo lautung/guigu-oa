@@ -1,5 +1,6 @@
 package com.lautung.oa.process.approval;
 
+import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.process.ProcessEngineApproval;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
@@ -7,8 +8,11 @@ import org.flowable.engine.TaskService;
 import org.flowable.task.api.Task;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -75,9 +79,19 @@ public class FlowableApprovalEngine implements ApprovalEngine {
     public List<PendingTask> pendingTasks(String username, int firstResult, int maxResults) {
         List<Task> tasks = ProcessEngineApproval.pendingTasks(taskService, username, firstResult, maxResults);
         // businessKey 按实例 id 集合一次取回（#181）：端口签名不变，批量化收在实现内部。
-        Map<String, String> businessKeys = ProcessEngineApproval.businessKeys(
-                runtimeService,
-                tasks.stream().map(Task::getProcessInstanceId).collect(Collectors.toSet()));
+        // 深页窗口（firstResult + size）可能超过 Flowable 集合查询上限（PageWindow.MAX_LIMIT），
+        // 按上限分片回查；分片只影响查询次数，不影响行集合与顺序。
+        Set<String> instanceIds = tasks.stream()
+                .map(Task::getProcessInstanceId)
+                .collect(Collectors.toSet());
+        List<String> idList = new ArrayList<>(instanceIds);
+        Map<String, String> businessKeys = new HashMap<>();
+        int batchSize = (int) PageWindow.MAX_LIMIT;
+        for (int start = 0; start < idList.size(); start += batchSize) {
+            int end = Math.min(idList.size(), start + batchSize);
+            businessKeys.putAll(ProcessEngineApproval.businessKeys(
+                    runtimeService, Set.copyOf(idList.subList(start, end))));
+        }
         return tasks.stream()
                 .map(task -> new PendingTask(
                         task.getId(),

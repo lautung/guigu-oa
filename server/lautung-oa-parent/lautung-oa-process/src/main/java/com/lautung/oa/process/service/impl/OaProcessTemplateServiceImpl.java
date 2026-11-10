@@ -1,6 +1,7 @@
 package com.lautung.oa.process.service.impl;
 
 import com.lautung.oa.framework.config.exception.BusinessException;
+import com.lautung.oa.model.process.OaBusinessTemplate;
 import com.lautung.oa.model.process.ProcessApproverRule;
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.process.ProcessTemplatePublication;
@@ -8,6 +9,7 @@ import com.lautung.oa.model.process.ProcessType;
 import com.lautung.oa.process.ApprovalTemplateSupport;
 import com.lautung.oa.process.ProcessDefinitionStorage;
 import com.lautung.oa.process.deployment.ProcessDeploymentEngine;
+import com.lautung.oa.process.mapper.OaBusinessTemplateMapper;
 import com.lautung.oa.process.mapper.OaProcessTemplateMapper;
 import com.lautung.oa.process.mapper.OaProcessTemplatePublicationMapper;
 import com.lautung.oa.process.publication.ApproverSidecar;
@@ -32,6 +34,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,6 +61,9 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     @Autowired
     private OaProcessApproverRuleService approverRuleService;
+
+    @Autowired
+    private OaBusinessTemplateMapper businessTemplateMapper;
 
     @Override
     public IPage<ProcessTemplate> findPage(Page<ProcessTemplate> pageParam) {
@@ -232,10 +239,17 @@ public class OaProcessTemplateServiceImpl extends ServiceImpl<OaProcessTemplateM
 
     @Override
     public List<ProcessType> findStartable() {
+        // 通用「发起审批」只保留无专用单据的模板（ADR 0066）：业务单据从域内发起页走
+        // business key，不出现在这里。映射表是小表，一次取回模板 id 集合。
+        Set<Long> businessTemplateIds = businessTemplateMapper.selectList(null).stream()
+                .map(OaBusinessTemplate::getProcessTemplateId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         LambdaQueryWrapper<ProcessTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ProcessTemplate::getStatus, ApprovalTemplateSupport.已发布);
         List<ProcessTemplate> available = list(wrapper).stream()
                 .filter(this::startable)
+                .filter(template -> !businessTemplateIds.contains(template.getId()))
                 .filter(template -> template.getProcessTypeId() != null)
                 .collect(Collectors.toList());
         Map<Long, List<ProcessTemplate>> publishedByType = available.stream()
