@@ -1,5 +1,6 @@
 package com.lautung.oa.attendance;
 
+import com.lautung.oa.attendance.service.AttendanceClock;
 import com.lautung.oa.auth.LoginAuthContractTest;
 import com.lautung.oa.common.jwt.JwtHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -7,14 +8,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,18 +43,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 本人列 sys_user.id）与姓名/日期/来源筛选。
  *
  * <p>夹具统一 t279 前缀，日期一律相对 {@link LocalDate#now()} 构造，避免固定日期让
- * 工作日判定在周末翻红。拒绝用例都先钉 {@code $.message}（ADR 0034）。
+ * 工作日判定在周末翻红；真实打卡的业务时刻由注入时钟钉在今天 10:00（夹具极值
+ * 07:00/23:00 之间），断言不随套件运行时刻漂移。拒绝用例都先钉 {@code $.message}
+ * （ADR 0034）。
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_attendance_punch;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(LoginAuthContractTest.InMemoryRedisConfig.class)
+@Import({LoginAuthContractTest.InMemoryRedisConfig.class,
+        AttendancePunchContractTest.PinnedAttendanceClockConfig.class})
 class AttendancePunchContractTest {
 
     private static final long RECORD_PAGE_ROLE_BASE = 2791L;
     private static final long GROUP_WORKDAY_ID = 2791L;
     private static final long GROUP_REST_ID = 2792L;
     private static final long SHIFT_ID = 2791L;
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class PinnedAttendanceClockConfig {
+
+        @Bean
+        @Primary
+        MutablePunchClock attendanceTestClock() {
+            return new MutablePunchClock();
+        }
+    }
+
+    /** 可重置时钟：每次播种把业务时刻钉回今天 10:00，与夹具日期保持同一天。 */
+    static final class MutablePunchClock implements AttendanceClock {
+
+        private volatile LocalDateTime now;
+
+        void set(LocalDateTime dateTime) {
+            this.now = dateTime;
+        }
+
+        @Override
+        public LocalDateTime now() {
+            return now;
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,11 +93,15 @@ class AttendancePunchContractTest {
     @Autowired
     private JwtHelper jwtHelper;
 
+    @Autowired
+    private MutablePunchClock punchClock;
+
     private final LocalDate today = LocalDate.now();
 
     @BeforeEach
     void seedFixtures() {
         resetFixtures();
+        punchClock.set(today.atTime(10, 0));
         insertDept(2790, 0, ",0,2790,", "t279本部");
         insertDept(2791, 2790, ",0,2790,2791,", "t279子部");
         insertDept(2792, 2791, ",0,2790,2791,2792,", "t279孙部");
