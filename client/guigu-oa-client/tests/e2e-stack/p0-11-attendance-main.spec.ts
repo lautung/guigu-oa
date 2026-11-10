@@ -48,7 +48,9 @@ test('桌面主路径：打卡 → 请假审批 → 余额扣减 → 月统计',
   const leaves = await oracle.attendanceLeaves('alice')
   const leave = leaves.records.find((record) => record.reason === reason)
   expect(leave, '提交后我的申请里应有这张请假单').toBeTruthy()
-  const processId = leave!.approval?.processId
+  // 列表行不带审批摘要（只有详情拼装 approval），同键重放的 processId 从详情取。
+  const submitted = await oracle.attendanceLeave('alice', leave!.id)
+  const processId = submitted.approval?.processId
   expect(processId, '提交应发起业务审批').toBeTruthy()
 
   await uiLogout(page)

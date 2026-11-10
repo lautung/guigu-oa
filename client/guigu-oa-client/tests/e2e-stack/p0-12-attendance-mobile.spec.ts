@@ -31,7 +31,11 @@ test('手机视口完成打卡与请假提交', async ({ page, oracle }) => {
 
   const started = await poll(20_000, 500, async () => {
     const leaves = await oracle.attendanceLeaves('alice')
-    return leaves.records.find((record) => record.reason === reason)
+    const record = leaves.records.find((candidate) => candidate.reason === reason)
+    if (!record) return undefined
+    // 列表行不带审批摘要（只有详情拼装 approval），提交是否真的发起审批看详情。
+    const detail = await oracle.attendanceLeave('alice', record.id)
+    return detail.approval?.processId ? detail : undefined
   })
   expect(started?.approval?.processId, '手机提交应发起业务审批').toBeTruthy()
 
