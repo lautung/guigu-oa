@@ -8,6 +8,7 @@ import com.lautung.oa.attendance.mapper.AttendancePunchMapper;
 import com.lautung.oa.attendance.mapper.AttendanceShiftMapper;
 import com.lautung.oa.attendance.service.AttendanceClock;
 import com.lautung.oa.attendance.service.AttendanceDayStatusService;
+import com.lautung.oa.attendance.service.AttendanceWorkCalendar;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.attendance.AttendanceDayStatus;
 import com.lautung.oa.model.attendance.AttendanceDayType;
@@ -215,9 +216,8 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
         if (!pastEnd) {
             if (clockIn != null && clockOut != null) {
                 vo.setStatus(attendanceStatus(shift, clockIn, clockOut));
-            } else if (dayType == AttendanceDayType.MAKEUP && clockIn == null && clockOut == null) {
-                vo.setStatus(AttendanceDayStatus.MAKEUP);
             } else {
+                // 补班日也是工作日：未到下班时刻缺槽位同样只是「未打卡」（#281 AC）。
                 vo.setPending(true);
             }
             return vo;
@@ -345,25 +345,9 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
                 return AttendanceDayType.MAKEUP;
             }
         }
-        return containsWorkday(group.getWorkdays(), date.getDayOfWeek().getValue())
+        return AttendanceWorkCalendar.containsWorkday(group.getWorkdays(), date.getDayOfWeek().getValue())
                 ? AttendanceDayType.WORKDAY
                 : AttendanceDayType.REST;
-    }
-
-    private boolean containsWorkday(String workdays, int weekday) {
-        if (workdays == null || workdays.isEmpty()) {
-            return false;
-        }
-        for (String part : workdays.split(",")) {
-            try {
-                if (Integer.parseInt(part.trim()) == weekday) {
-                    return true;
-                }
-            } catch (NumberFormatException ignored) {
-                // 配置行由 service 规范化；脏值当作不包含，不让一条坏配置拦住推导。
-            }
-        }
-        return false;
     }
 
     private LocalDateTime now() {

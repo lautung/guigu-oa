@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
+import java.util.Date;
 
 /**
  * 班次 CRUD 实现（#278，ADR 0073）：下班晚于上班（同一天内）、午休成对且有序、
@@ -54,7 +55,8 @@ public class AttendanceShiftServiceImpl extends ServiceImpl<AttendanceShiftMappe
                 .set(AttendanceShift::getLunchStart, request.getLunchStart())
                 .set(AttendanceShift::getLunchEnd, request.getLunchEnd())
                 .set(AttendanceShift::getGraceMinutes, request.getGraceMinutes())
-                .set(AttendanceShift::getRemark, request.getRemark()));
+                .set(AttendanceShift::getRemark, request.getRemark())
+                .set(AttendanceShift::getUpdateTime, new Date()));
     }
 
     @Override

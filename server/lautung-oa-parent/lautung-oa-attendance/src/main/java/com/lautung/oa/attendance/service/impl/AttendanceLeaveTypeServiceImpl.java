@@ -11,6 +11,8 @@ import com.lautung.oa.vo.attendance.AttendanceLeaveTypeSaveRequest;
 import com.lautung.oa.vo.attendance.AttendanceLeaveTypeUpdateRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 /**
  * 假期类型 CRUD 实现（#280，ADR 0073）。
  *
@@ -45,7 +47,8 @@ public class AttendanceLeaveTypeServiceImpl
                 .set(AttendanceLeaveType::getOvertimeCredit, type.getOvertimeCredit())
                 .set(AttendanceLeaveType::getStatus, type.getStatus())
                 .set(AttendanceLeaveType::getSortNo, type.getSortNo())
-                .set(AttendanceLeaveType::getRemark, type.getRemark()));
+                .set(AttendanceLeaveType::getRemark, type.getRemark())
+                .set(AttendanceLeaveType::getUpdateTime, new Date()));
     }
 
     @Override

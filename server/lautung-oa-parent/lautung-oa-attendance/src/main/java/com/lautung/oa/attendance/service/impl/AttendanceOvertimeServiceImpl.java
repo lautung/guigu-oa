@@ -15,7 +15,6 @@ import com.lautung.oa.model.attendance.AttendanceBusinessTypes;
 import com.lautung.oa.model.attendance.AttendanceLeaveType;
 import com.lautung.oa.model.attendance.AttendanceOvertime;
 import com.lautung.oa.model.system.SysUser;
-import com.lautung.oa.process.approval.ApproverNames;
 import com.lautung.oa.process.business.BusinessApprovalReader;
 import com.lautung.oa.process.business.BusinessApprovalStarter;
 import com.lautung.oa.vo.attendance.AttendanceApplyQueryVo;
@@ -239,11 +238,9 @@ public class AttendanceOvertimeServiceImpl
         if (rawIdempotencyKey == null || rawIdempotencyKey.trim().isEmpty()) {
             throw new BusinessException(201, "提交标识不能为空");
         }
-        String key = rawIdempotencyKey.trim();
-        if (key.length() > ApproverNames.MAX_IDEMPOTENCY_KEY_LENGTH) {
-            throw new BusinessException(201, "提交标识过长");
-        }
-        return key;
+        // 长度上限由 BusinessApprovalStarter 校验（W1 端口唯一 owner）；超长在发起时
+        // 201 回滚整笔提交，单据保持草稿。
+        return rawIdempotencyKey.trim();
     }
 
     private SysUser applicantOf(Long applicantId) {

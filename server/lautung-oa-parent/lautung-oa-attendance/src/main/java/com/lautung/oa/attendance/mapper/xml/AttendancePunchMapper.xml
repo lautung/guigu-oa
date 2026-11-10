@@ -5,6 +5,8 @@
     <!--
       后台打卡记录（#279，ADR 0073）：行形状 join 用户姓名/当前部门与补卡操作人。
       存活过滤：手写 XML 不吃实体的 @TableLogic，流水行本体显式带 is_deleted = 0（ADR 0050）。
+      无组账号不出现在打卡记录列表（ADR 0073 §打卡）：按当前组成员关系过滤；
+      成员表是硬删关系表，移出考勤组的人不再出现在记录页（历史月统计行集合另算）。
       数据范围（ADR 0053/0057）：部门列 = sys_user.dept_id（当前），本人列 = attendance_punch.user_id；
       查询侧只接受参数 #{} + <foreach>，禁止 ${}。部门集为空且无本人行时 1 = 0 得零行，不是全部。
       排序：打卡时间倒序、id 决胜（稳定分页）。
@@ -27,6 +29,7 @@
             left join sys_user o on o.id = p.operator_user_id
         <where>
             and p.is_deleted = 0
+            and exists (select 1 from attendance_group_member m where m.user_id = p.user_id)
             <if test="query.name != null and query.name != ''">
                 and (u.name like CONCAT('%', #{query.name}, '%')
                      or u.username like CONCAT('%', #{query.name}, '%'))

@@ -268,39 +268,45 @@ class AttendancePunchContractTest {
 
     @Test
     void punchRecordPageAppliesDataScopeFiveTiers() throws Exception {
-        // 1 全部：所有夹具流水（10 人 11 行 + 今日状态夹具 27916 的 4 行，共 15 行）。
+        // 1 全部：有组夹具的流水（10 人 11 行里 3 个无组账号被过滤 → 8 行，加今日状态
+        // 夹具 27916 的 4 行，共 12 行）；无组账号不出现在打卡记录列表（ADR 0073 §打卡）。
         mockMvc.perform(punchPage(27906L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(15))
+                .andExpect(jsonPath("$.data.total").value(12))
                 .andExpect(jsonPath("$.data.records[*].username", hasItems(
                         "t279-own", "t279-below", "t279-self", "t279-custom", "t279-union",
-                        "t279-all", "t279-nogroup", "t279-puncher", "t279-nodept", "t279-other",
-                        "t279-status")));
+                        "t279-all", "t279-puncher", "t279-status")))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-nogroup"))))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-nodept"))))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-other"))));
 
-        // 2 自定部门（2792）：只看孙部的人。
+        // 2 自定部门（2792）：只看孙部的人；27914 无组被过滤。
         mockMvc.perform(punchPage(27904L))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(2))
-                .andExpect(jsonPath("$.data.records[*].username", hasItems("t279-self", "t279-other")))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[*].username", hasItems("t279-self")))
                 .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-own"))));
 
-        // 3 本部门（2790）：只看本部的人，27901 两条流水、27916 四条今日状态流水。
+        // 3 本部门（2790）：只看本部的人，27901 两条流水、27916 四条今日状态流水；
+        // 无组账号 27907/27909 同时被过滤。
         mockMvc.perform(punchPage(27901L))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(10))
+                .andExpect(jsonPath("$.data.total").value(9))
                 .andExpect(jsonPath("$.data.records[*].username",
-                        hasItems("t279-own", "t279-custom", "t279-all", "t279-nogroup",
+                        hasItems("t279-own", "t279-custom", "t279-all",
                                 "t279-puncher", "t279-status")))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-nogroup"))))
                 .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-below"))));
 
-        // 4 本部门及以下（2791 → 2791/2792）。
+        // 4 本部门及以下（2791 → 2791/2792）；27914 无组被过滤。
         mockMvc.perform(punchPage(27902L))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(4))
+                .andExpect(jsonPath("$.data.total").value(3))
                 .andExpect(jsonPath("$.data.records[*].username",
-                        hasItems("t279-below", "t279-self", "t279-union", "t279-other")))
-                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-own"))));
+                        hasItems("t279-below", "t279-self", "t279-union")))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-own"))))
+                .andExpect(jsonPath("$.data.records[*].username", not(hasItem("t279-other"))));
 
         // 5 仅本人。
         mockMvc.perform(punchPage(27903L))
@@ -308,12 +314,12 @@ class AttendancePunchContractTest {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].username").value("t279-self"));
 
-        // 多角色并集：自定部门 2792 ∪ 仅本人（27905 在 2791）。
+        // 多角色并集：自定部门 2792 ∪ 仅本人（27905 在 2791）；27914 无组被过滤。
         mockMvc.perform(punchPage(27905L))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.records[*].username",
-                        hasItems("t279-self", "t279-other", "t279-union")));
+                        hasItems("t279-self", "t279-union")));
 
         // 本部门档但本人无部门：零行，不是全部。
         mockMvc.perform(punchPage(27909L))
@@ -342,7 +348,7 @@ class AttendancePunchContractTest {
                         .param("beginDate", today.toString())
                         .param("endDate", today.toString()))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.total").value(15));
+                .andExpect(jsonPath("$.data.total").value(12));
         mockMvc.perform(punchPage(27906L)
                         .param("beginDate", today.minusDays(1).toString())
                         .param("endDate", today.minusDays(1).toString()))

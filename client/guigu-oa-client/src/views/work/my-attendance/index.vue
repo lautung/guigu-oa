@@ -66,7 +66,7 @@ import { computed, defineComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { punchAttendance } from '@/api/attendance'
 import ListLoadError from '@/components/ListLoadError.vue'
-import { PUNCH_SLOT_IN, PUNCH_SLOT_OUT, presentToday } from '@/config/attendance'
+import { PUNCH_SLOT_IN, PUNCH_SLOT_OUT, presentToday, todayRequest } from '@/config/attendance'
 import { createSnapshotRead } from '@/request/snapshot-read'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
@@ -91,10 +91,7 @@ export default defineComponent({
 
     async function load(): Promise<void> {
       await opening.load(async (requestScope) => {
-        const response = await requestScope.request<AttendanceTodayRecord>({
-          method: 'get',
-          url: '/admin/attendance/my/today',
-        })
+        const response = await requestScope.request<AttendanceTodayRecord>(todayRequest())
         return presentToday(response.data || {})
       })
     }

@@ -97,7 +97,8 @@ public class AttendanceWorkCalendar {
         return containsWorkday(workdays, date.getDayOfWeek().getValue());
     }
 
-    private boolean containsWorkday(String workdays, int weekday) {
+    /** 组工作日多选（如 "1,2,3,4,5"）是否包含该星期；请假折算与日状态推导共用这一份公式。 */
+    public static boolean containsWorkday(String workdays, int weekday) {
         if (workdays == null || workdays.isEmpty()) {
             return false;
         }
