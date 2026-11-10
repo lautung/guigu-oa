@@ -51,7 +51,8 @@ const users = [
 const attendanceMenus = [
   { path: '/system', title: '系统管理', type: 0, sort: 1 },
   { path: '/system/sysUser', parentPath: '/system', title: '用户管理', type: 1, sort: 1 },
-  { path: '/business/attendance', title: '考勤管理', type: 0, sort: 6 },
+  { path: '/business', title: '业务', type: 0, sort: 3 },
+  { path: '/business/attendance', parentPath: '/business', title: '考勤管理', type: 0, sort: 1 },
   ...['group', 'record', 'repair', 'leave', 'stat'].map((key, index) => ({
     path: `/business/attendance/${key}`,
     parentPath: '/business/attendance',
@@ -89,7 +90,10 @@ async function setup(page: Page, granted = true): Promise<State> {
           : [],
         menus: granted
           ? attendanceMenus
-          : [{ path: '/system', title: '系统管理', type: 0, sort: 1 }],
+          : [
+              { path: '/system', title: '系统管理', type: 0, sort: 1 },
+              { path: '/business', title: '业务', type: 0, sort: 3 },
+            ],
       })
     }
     if (
@@ -133,7 +137,7 @@ async function setup(page: Page, granted = true): Promise<State> {
 async function openAttendancePage(page: Page): Promise<void> {
   const link = page.locator('.app-sidebar').getByRole('link', { name: '考勤组与班次', exact: true })
   if ((await link.count()) === 0) {
-    await page.locator('.top-nav-item', { hasText: '系统管理' }).click()
+    await page.locator('.top-nav-item', { hasText: '业务' }).click()
   }
   await link.click()
   await expect(page.getByRole('heading', { name: '考勤组与班次', exact: true })).toBeVisible()

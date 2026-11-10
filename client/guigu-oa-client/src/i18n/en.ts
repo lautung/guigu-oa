@@ -24,6 +24,7 @@ const en = {
     modules: {
       workbench: 'Workbench',
       work: 'Work',
+      business: 'Business',
       system: 'System',
       monitor: 'Monitor',
       tool: 'Tools',
@@ -43,6 +44,7 @@ const en = {
       logs: 'Logs',
       processSettings: 'Approval settings',
       processManagement: 'Approval management',
+      attendance: 'Attendance',
     },
     empty: {
       noPages: 'No available pages',

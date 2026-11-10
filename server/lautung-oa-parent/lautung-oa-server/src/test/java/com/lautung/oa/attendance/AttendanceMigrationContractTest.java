@@ -22,7 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * #278 的迁移合同：V139 在 H2 上跑真迁移建出九表与全部索引、菜单（目录/五页/九按钮）
+ * #278 的迁移合同：V139 在 H2 上跑真迁移建出九表与全部索引、菜单（/business 与考勤管理两级目录/五页/八按钮）
  * 与 super_admin 补授、假期类型五项预置；迁移重复执行幂等。
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_attendance_migration;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
@@ -105,7 +105,10 @@ class AttendanceMigrationContractTest {
         }
 
         assertEquals(1, count("SELECT COUNT(*) FROM sys_menu "
-                + "WHERE path='/business/attendance' AND parent_id=0 AND type=0 AND is_deleted=0"));
+                + "WHERE path='/business' AND parent_id=0 AND type=0 AND is_deleted=0"));
+        assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu d ON d.id=c.parent_id "
+                + "WHERE c.path='/business/attendance' AND c.type=0 AND c.is_deleted=0 "
+                + "AND d.path='/business' AND d.type=0"));
         for (String page : ATTENDANCE_PAGES) {
             assertEquals(1, count("SELECT COUNT(*) FROM sys_menu c JOIN sys_menu d ON d.id=c.parent_id "
                     + "WHERE c.path='" + page + "' AND c.type=1 AND c.is_deleted=0 "
@@ -120,6 +123,9 @@ class AttendanceMigrationContractTest {
                     + "' AND b.type=2 AND b.is_deleted=0"), "缺按钮点: " + button);
         }
 
+        assertEquals(2, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id=rm.role_id "
+                + "JOIN sys_menu m ON m.id=rm.menu_id WHERE r.role_code='super_admin' AND rm.is_deleted=0 "
+                + "AND m.type=0 AND m.path IN ('/business','/business/attendance')"));
         assertEquals(5, count("SELECT COUNT(*) FROM sys_role_menu rm JOIN sys_role r ON r.id=rm.role_id "
                 + "JOIN sys_menu m ON m.id=rm.menu_id WHERE r.role_code='super_admin' AND rm.is_deleted=0 "
                 + "AND m.type=1 AND m.path IN ('/business/attendance/group','/business/attendance/record',"

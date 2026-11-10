@@ -31,7 +31,7 @@ describe('route table', () => {
       PATHS.SYSTEM,
       PATHS.PROCESS_SET,
       PATHS.PROCESS_MGR,
-      PATHS.BUSINESS_ATTENDANCE,
+      PATHS.BUSINESS,
     ])
   })
 
@@ -122,6 +122,7 @@ describe('route table', () => {
         PATHS.WORK_COPIED,
         PATHS.WORK_COPIED_DETAIL,
         PATHS.SYSTEM,
+        PATHS.BUSINESS,
         PATHS.BUSINESS_ATTENDANCE,
         PATHS.BUSINESS_ATTENDANCE_GROUP,
         PATHS.BUSINESS_ATTENDANCE_RECORD,
@@ -171,6 +172,24 @@ describe('route table', () => {
 
     expect(assignAuth.hiddenParentPath).toBe(PATHS.SYSTEM_SYS_ROLE)
     expect(templateSet.hiddenParentPath).toBe(PATHS.PROCESS_SET_PROCESS_TEMPLATE)
+  })
+
+  it('marks 业务 directories and pages with the business group (#278)', () => {
+    const business = ROUTE_GROUP_ENTRIES.filter((entry) => entry.group === 'business').map(
+      (entry) => entry.path,
+    )
+
+    expect(new Set(business)).toEqual(
+      new Set([
+        PATHS.BUSINESS,
+        PATHS.BUSINESS_ATTENDANCE,
+        PATHS.BUSINESS_ATTENDANCE_GROUP,
+        PATHS.BUSINESS_ATTENDANCE_RECORD,
+        PATHS.BUSINESS_ATTENDANCE_REPAIR,
+        PATHS.BUSINESS_ATTENDANCE_LEAVE,
+        PATHS.BUSINESS_ATTENDANCE_STAT,
+      ]),
+    )
   })
 
   it('installs the constant routes on the singleton router', () => {

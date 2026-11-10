@@ -5,7 +5,7 @@ import { PATHS, returnPathOfRoute } from '@/router/paths'
 import { ROUTE_GROUP_ENTRIES } from '@/router/routes'
 import type { BackofficeMenuEntry, SidebarItem } from '@/types/domain'
 
-export type ShellModuleKey = 'workbench' | 'work' | 'system' | 'monitor' | 'tool'
+export type ShellModuleKey = 'workbench' | 'work' | 'business' | 'system' | 'monitor' | 'tool'
 
 export interface ShellNavLeaf {
   path: string
@@ -38,7 +38,7 @@ export interface ShellModuleDefinition {
   prefix: string
 }
 
-/** 五个一级模块定义（ADR 0059）：顶部固定五项，不随权限增减。 */
+/** 六个一级模块定义（ADR 0059，蓝图 §6）：顶部固定六项，不随权限增减。 */
 const MODULE_DEFINITIONS = [
   {
     key: 'workbench',
@@ -47,6 +47,12 @@ const MODULE_DEFINITIONS = [
     prefix: PATHS.WORKBENCH,
   },
   { key: 'work', titleKey: 'shell.modules.work', icon: 'Tickets', prefix: PATHS.WORK },
+  {
+    key: 'business',
+    titleKey: 'shell.modules.business',
+    icon: 'Folder',
+    prefix: PATHS.BUSINESS,
+  },
   { key: 'system', titleKey: 'shell.modules.system', icon: 'Setting', prefix: PATHS.SYSTEM },
   { key: 'monitor', titleKey: 'shell.modules.monitor', icon: 'Monitor', prefix: PATHS.MONITOR },
   { key: 'tool', titleKey: 'shell.modules.tool', icon: 'Tools', prefix: PATHS.TOOL },
@@ -97,13 +103,24 @@ const SYSTEM_GROUP_DEFINITIONS = [
   },
 ] as const
 
+/** 业务页按真实菜单形态分组：W3 只有考勤管理，W2 人事 / W4 报销在同一目录追加。 */
+const BUSINESS_GROUP_DEFINITIONS = [
+  {
+    titleKey: 'shell.groups.attendance',
+    prefix: `${PATHS.BUSINESS_ATTENDANCE}/`,
+    icon: 'AlarmClock',
+  },
+] as const
+
+/** 目录本身不是页面：/business 与 /business/attendance 只做侧栏分组，不渲染成可点项。 */
+const BUSINESS_DIRECTORY_ROOTS = new Set<string>([PATHS.BUSINESS, PATHS.BUSINESS_ATTENDANCE])
+
 /** 目录本身不是页面：即使菜单授予里带目录行，也不在侧栏渲染成可点项。 */
 const SYSTEM_DIRECTORY_ROOTS = new Set([
   PATHS.SYSTEM,
   `${PATHS.SYSTEM}/log`,
   PATHS.PROCESS_SET,
   PATHS.PROCESS_MGR,
-  PATHS.BUSINESS_ATTENDANCE,
 ])
 
 function normalizePath(path: string | undefined): string {
@@ -162,12 +179,7 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
   const permission = configPermission([...menus])
   const leaves = permission.grantedMenus
     .flatMap((root) => leavesOf(root))
-    // 考勤（#278）挂在 /business/attendance 目录下，与 /system/* 同属系统管理侧栏。
-    .filter(
-      (leaf) =>
-        leaf.path.startsWith(`${PATHS.SYSTEM}/`) ||
-        leaf.path.startsWith(`${PATHS.BUSINESS_ATTENDANCE}/`),
-    )
+    .filter((leaf) => leaf.path.startsWith(`${PATHS.SYSTEM}/`))
     .filter((leaf) => !SYSTEM_DIRECTORY_ROOTS.has(leaf.path))
 
   const items = leaves.filter(
@@ -197,12 +209,47 @@ function systemModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
  * 服务端菜单先行（监控 V117+ 全部页面都已授予），客户端页面随各自票落地；
  * 还没有客户端路由的授予页不渲染成死链。
  */
-function routedPagesUnder(prefix: string): Set<string> {
+function routedPagesUnder(prefix: string, group: 'config' | 'business' = 'config'): Set<string> {
   return new Set(
     ROUTE_GROUP_ENTRIES.filter(
-      (entry) => entry.group === 'config' && entry.path.startsWith(`${prefix}/`),
+      (entry) => entry.group === group && entry.path.startsWith(`${prefix}/`),
     ).map((entry) => entry.path),
   )
+}
+
+/**
+ * 业务一级模块（蓝图 §6）：已授予且已落路由的页面按二级目录分组。
+ * 与系统管理同款：目录行不渲染成可点项，firstPath 取第一个可进入的页面。
+ */
+function businessModule(menus: readonly BackofficeMenuEntry[]): ShellModule {
+  const routed = routedPagesUnder(PATHS.BUSINESS, 'business')
+  const permission = configPermission([...menus])
+  const leaves = permission.grantedMenus
+    .flatMap((root) => leavesOf(root))
+    .filter((leaf) => leaf.path.startsWith(`${PATHS.BUSINESS}/`))
+    .filter((leaf) => !BUSINESS_DIRECTORY_ROOTS.has(leaf.path))
+    .filter((leaf) => routed.has(leaf.path))
+
+  const items = leaves.filter(
+    (leaf) => !BUSINESS_GROUP_DEFINITIONS.some((group) => leaf.path.startsWith(group.prefix)),
+  )
+  const groups: ShellNavGroup[] = BUSINESS_GROUP_DEFINITIONS.flatMap((definition) => {
+    const groupItems = leaves.filter((leaf) => leaf.path.startsWith(definition.prefix))
+    return groupItems.length
+      ? [{ title: t(definition.titleKey), icon: definition.icon, items: groupItems }]
+      : []
+  })
+
+  const firstPath = items[0]?.path || groups[0]?.items[0]?.path || ''
+  return {
+    key: 'business',
+    title: t('shell.modules.business'),
+    icon: 'Folder',
+    items,
+    groups,
+    firstPath,
+    emptyHint: firstPath ? '' : t('shell.empty.noPages'),
+  }
 }
 
 /** 平铺二级项的目录模块（系统监控 ADR 0060、系统工具 ADR 0061）：firstPath 取第一个已授予且有客户端路由的页面。 */
@@ -229,11 +276,12 @@ function flatDirectoryModule(
   }
 }
 
-/** 五个一级模块固定返回；系统管理、系统监控与系统工具只由已授予且已落路由的页面填充。 */
+/** 六个一级模块固定返回；业务、系统管理、系统监控与系统工具只由已授予且已落路由的页面填充。 */
 export function buildShellNav(menus: BackofficeMenuEntry[] = []): ShellModule[] {
   return SHELL_MODULE_DEFINITIONS.map((definition) => {
     if (definition.key === 'workbench') return workbenchModule()
     if (definition.key === 'work') return workModule()
+    if (definition.key === 'business') return businessModule(menus)
     if (definition.key === 'system') return systemModule(menus)
     return flatDirectoryModule(definition, menus)
   })
@@ -245,8 +293,10 @@ export function activeModuleKey(path: string): ShellModuleKey | null {
   if (normalized === PATHS.WORKBENCH || normalized === PATHS.NOTICE) return 'workbench'
   if (normalized.startsWith(`${PATHS.NOTICE}/`)) return 'workbench'
   if (normalized === PATHS.WORK || normalized.startsWith(`${PATHS.WORK}/`)) return 'work'
+  if (normalized === PATHS.BUSINESS || normalized.startsWith(`${PATHS.BUSINESS}/`)) {
+    return 'business'
+  }
   if (normalized === PATHS.SYSTEM || normalized.startsWith(`${PATHS.SYSTEM}/`)) return 'system'
-  if (normalized.startsWith(`${PATHS.BUSINESS_ATTENDANCE}/`)) return 'system'
   if (normalized === PATHS.MONITOR || normalized.startsWith(`${PATHS.MONITOR}/`)) return 'monitor'
   if (normalized === PATHS.TOOL || normalized.startsWith(`${PATHS.TOOL}/`)) return 'tool'
   return null

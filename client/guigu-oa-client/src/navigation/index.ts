@@ -27,7 +27,9 @@ export function resolveAuthGuard({
     }
     const permission = configPermission(menus)
     const entry = permission.entryOf(path)
-    if (entry?.group === 'config' && !permission.coversPage(path)) {
+    // 后台页面授予守卫：config（系统管理/监控/工具）与 business（业务）同档，
+    // 未授予回落工作台；work 组是登录即有的办事面，不套页面授予（蓝图 §2）。
+    if (entry && entry.group !== 'work' && !permission.coversPage(path)) {
       return { action: 'redirect', to: getDefaultPostLoginRoute() }
     }
     return { action: 'allow' }

@@ -48,6 +48,8 @@ export const PATHS = {
   PROCESS_MGR: '/system/processMgr',
   PROCESS_MGR_PROCESS: '/system/processMgr/process',
   PROCESS_MGR_PROCESS_DETAIL: '/system/processMgr/process/:id',
+  /** 业务一级模块（蓝图 §6 一级六项，ADR 0059 修订）：W3 起承载考勤，W2/W4 接人事/报销。 */
+  BUSINESS: '/business',
   /** 考勤（#278，ADR 0073）：后台五页挂在 /business/attendance 目录下。 */
   BUSINESS_ATTENDANCE: '/business/attendance',
   BUSINESS_ATTENDANCE_GROUP: '/business/attendance/group',

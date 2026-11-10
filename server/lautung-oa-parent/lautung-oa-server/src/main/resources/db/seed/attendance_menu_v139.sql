@@ -1,21 +1,31 @@
 -- 考勤底座菜单与假期类型种子（#278，ADR 0073）。
 --
--- 由 V139 Java 迁移执行：新增 /business/attendance 目录、五页（考勤组与班次/打卡记录/
--- 补卡处理/假期类型与发放/月度统计）与八个按钮点（attendance:group:add|edit|remove、
--- attendance:record:repair、attendance:type:add|edit|remove、attendance:ledger:grant），
--- 显式补授 super_admin，并种入假期类型五项预置（年假/事假/病假/调休/婚丧产假）。
+-- 由 V139 Java 迁移执行：新增业务一级目录 /business、考勤管理目录 /business/attendance、
+-- 五页（考勤组与班次/打卡记录/补卡处理/假期类型与发放/月度统计）与八个按钮点
+-- （attendance:group:add|edit|remove、attendance:record:repair、attendance:type:add|edit|remove、
+-- attendance:ledger:grant），显式补授 super_admin，并种入假期类型五项预置（年假/事假/病假/调休/婚丧产假）。
 -- 页面路径是绝对路径（V111 规则）；按钮行 path/component 为空，perms 必填且唯一。
 -- 所有插入都以 NOT EXISTS 守住，空库与既有库重复执行都不会多出行。
--- super_admin 只补授页面与按钮点：目录祖先在读取时由 BackofficeGrant 自动补齐
+-- super_admin 补授页面、按钮点与两级目录：目录祖先读取时也会由 BackofficeGrant 自动补齐
 -- （与 V117 的 /monitor 同一写法）。
 
 -- ----------------------------
--- 目录：/business/attendance（考勤管理）
+-- 目录：/business（业务，蓝图 §6 一级六项，ADR 0059 修订）
 -- ----------------------------
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
-SELECT 0,'考勤管理',0,'/business/attendance','Layout','','',6,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
+SELECT 0,'业务',0,'/business','Layout','','',3,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu m
-                  WHERE m.path='/business/attendance' AND m.parent_id=0 AND m.type=0 AND m.is_deleted=0);
+                  WHERE m.path='/business' AND m.parent_id=0 AND m.type=0 AND m.is_deleted=0);
+
+-- ----------------------------
+-- 目录：/business/attendance（考勤管理，挂业务下）
+-- ----------------------------
+INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
+SELECT b.id,'考勤管理',0,'/business/attendance','Layout','','',1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
+FROM sys_menu b
+WHERE b.path='/business' AND b.parent_id=0 AND b.type=0 AND b.is_deleted=0
+  AND NOT EXISTS (SELECT 1 FROM sys_menu m
+                  WHERE m.path='/business/attendance' AND m.type=0 AND m.is_deleted=0);
 
 -- ----------------------------
 -- 页面：/business/attendance/group（考勤组与班次，组件 business/attendance/group/index）
@@ -23,7 +33,7 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu m
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
 SELECT d.id,'考勤组与班次',1,'/business/attendance/group','business/attendance/group/index','','',1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_menu d
-WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_deleted=0
+WHERE d.path='/business/attendance' AND d.type=0 AND d.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM sys_menu p
                   WHERE p.path='/business/attendance/group' AND p.type=1 AND p.is_deleted=0);
 
@@ -33,7 +43,7 @@ WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_dele
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
 SELECT d.id,'打卡记录',1,'/business/attendance/record','business/attendance/record/index','','',2,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_menu d
-WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_deleted=0
+WHERE d.path='/business/attendance' AND d.type=0 AND d.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM sys_menu p
                   WHERE p.path='/business/attendance/record' AND p.type=1 AND p.is_deleted=0);
 
@@ -43,7 +53,7 @@ WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_dele
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
 SELECT d.id,'补卡处理',1,'/business/attendance/repair','business/attendance/repair/index','','',3,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_menu d
-WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_deleted=0
+WHERE d.path='/business/attendance' AND d.type=0 AND d.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM sys_menu p
                   WHERE p.path='/business/attendance/repair' AND p.type=1 AND p.is_deleted=0);
 
@@ -53,7 +63,7 @@ WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_dele
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
 SELECT d.id,'假期类型与发放',1,'/business/attendance/leave','business/attendance/leave/index','','',4,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_menu d
-WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_deleted=0
+WHERE d.path='/business/attendance' AND d.type=0 AND d.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM sys_menu p
                   WHERE p.path='/business/attendance/leave' AND p.type=1 AND p.is_deleted=0);
 
@@ -63,7 +73,7 @@ WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_dele
 INSERT INTO sys_menu (parent_id,name,type,path,component,perms,icon,sort_value,status,create_time,update_time,is_deleted)
 SELECT d.id,'月度统计',1,'/business/attendance/stat','business/attendance/stat/index','','',5,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_menu d
-WHERE d.path='/business/attendance' AND d.parent_id=0 AND d.type=0 AND d.is_deleted=0
+WHERE d.path='/business/attendance' AND d.type=0 AND d.is_deleted=0
   AND NOT EXISTS (SELECT 1 FROM sys_menu p
                   WHERE p.path='/business/attendance/stat' AND p.type=1 AND p.is_deleted=0);
 
@@ -148,13 +158,14 @@ WHERE p.path='/business/attendance/leave' AND p.type=1 AND p.is_deleted=0
                   WHERE b.perms='attendance:ledger:grant' AND b.is_deleted=0);
 
 -- ----------------------------
--- 显式补授 super_admin：只授本次新增的页面/按钮，不重授全量。
+-- 显式补授 super_admin：授本次新增的页面/按钮与两级目录，不重授全量。
 -- ----------------------------
 INSERT INTO sys_role_menu (role_id,menu_id,create_time,update_time,is_deleted)
 SELECT r.id,m.id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0
 FROM sys_role r
 JOIN sys_menu m ON m.is_deleted=0 AND (
-       (m.type=1 AND m.path IN ('/business/attendance/group','/business/attendance/record',
+       (m.type=0 AND m.path IN ('/business','/business/attendance'))
+    OR (m.type=1 AND m.path IN ('/business/attendance/group','/business/attendance/record',
                                 '/business/attendance/repair','/business/attendance/leave',
                                 '/business/attendance/stat'))
     OR (m.type=2 AND m.perms IN ('attendance:group:add','attendance:group:edit','attendance:group:remove',

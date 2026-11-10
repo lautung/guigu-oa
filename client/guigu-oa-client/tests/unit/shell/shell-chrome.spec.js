@@ -97,6 +97,7 @@ describe('AppShell', () => {
     expect(wrapper.findAll('.top-nav-item').map((item) => item.text())).toEqual([
       '工作台',
       '办事',
+      '业务',
       '系统管理',
       '系统监控',
       '系统工具',
@@ -127,6 +128,7 @@ describe('AppShell', () => {
     expect(wrapper.findAll('.top-nav-item').map((item) => item.text())).toEqual([
       '工作台',
       '办事',
+      '业务',
       '系统管理',
       '系统监控',
       '系统工具',

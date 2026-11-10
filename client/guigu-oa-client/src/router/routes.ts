@@ -1,7 +1,7 @@
 import { getDefaultPostLoginRoute } from '@/navigation/constants'
 import { PATHS, WORK_LIST_KINDS } from './paths'
 
-export type RouteMenuGroup = 'work' | 'config'
+export type RouteMenuGroup = 'work' | 'config' | 'business'
 
 export interface RouteGroupEntry {
   path: string
@@ -97,38 +97,38 @@ const workChildren: AppRoute[] = [
 ]
 
 // 考勤五页（#278，ADR 0073）：考勤组与班次完整交付，其余四页是占位壳，
-// 后续票填肉。路径挂在 /business/attendance 目录下，组归属与配置页同一条
-// config 组 coversPage 路径（守卫分组看 navigation/index.ts）。
+// 后续票填肉。路径挂在 /business/attendance 目录下，组归属走 business 组
+// 同一条 coversPage 页面授予路径（守卫分组看 navigation/index.ts）。
 const attendanceChildren: AppRoute[] = [
   {
     path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_GROUP),
     name: 'AttendanceGroup',
     component: () => import('@/views/business/attendance/group/index.vue'),
-    meta: { title: '考勤组与班次', menuGroup: 'config' },
+    meta: { title: '考勤组与班次', menuGroup: 'business' },
   },
   {
     path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_RECORD),
     name: 'AttendanceRecord',
     component: () => import('@/views/business/attendance/record/index.vue'),
-    meta: { title: '打卡记录', menuGroup: 'config' },
+    meta: { title: '打卡记录', menuGroup: 'business' },
   },
   {
     path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_REPAIR),
     name: 'AttendanceRepair',
     component: () => import('@/views/business/attendance/repair/index.vue'),
-    meta: { title: '补卡处理', menuGroup: 'config' },
+    meta: { title: '补卡处理', menuGroup: 'business' },
   },
   {
     path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_LEAVE),
     name: 'AttendanceLeave',
     component: () => import('@/views/business/attendance/leave/index.vue'),
-    meta: { title: '假期类型与发放', menuGroup: 'config' },
+    meta: { title: '假期类型与发放', menuGroup: 'business' },
   },
   {
     path: childPath(PATHS.BUSINESS_ATTENDANCE, PATHS.BUSINESS_ATTENDANCE_STAT),
     name: 'AttendanceStat',
     component: () => import('@/views/business/attendance/stat/index.vue'),
-    meta: { title: '月度统计', menuGroup: 'config' },
+    meta: { title: '月度统计', menuGroup: 'business' },
   },
 ]
 
@@ -397,11 +397,20 @@ export const constantRoutes: AppRoute[] = [
         ],
       },
       {
-        // 考勤目录（#278）：页面授予走 config 组同一条 coversPage 路径。
-        path: PATHS.BUSINESS_ATTENDANCE,
+        // 业务一级模块（蓝图 §6 一级六项，ADR 0059 修订）：后台授予的管理面。
+        // W3 只挂考勤管理；W2 人事、W4 报销在同一目录下追加。
+        path: PATHS.BUSINESS,
         redirect: PATHS.BUSINESS_ATTENDANCE_GROUP,
-        meta: { menuGroup: 'config' },
-        children: attendanceChildren,
+        meta: { menuGroup: 'business' },
+        children: [
+          {
+            // 考勤目录（#278）：页面授予走 business 组同一条 coversPage 路径。
+            path: childPath(PATHS.BUSINESS, PATHS.BUSINESS_ATTENDANCE),
+            redirect: PATHS.BUSINESS_ATTENDANCE_GROUP,
+            meta: { menuGroup: 'business' },
+            children: attendanceChildren,
+          },
+        ],
       },
     ],
   },
