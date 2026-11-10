@@ -5,12 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.lautung.oa.attendance.calendar.AttendanceCalendar;
+import com.lautung.oa.attendance.calendar.AttendanceCalendarView;
 import com.lautung.oa.attendance.mapper.AttendanceLeaveMapper;
 import com.lautung.oa.attendance.mapper.AttendanceLeaveTypeMapper;
 import com.lautung.oa.attendance.mapper.AttendanceUserMapper;
 import com.lautung.oa.attendance.service.AttendanceLeaveService;
 import com.lautung.oa.attendance.service.AttendanceLedgerService;
-import com.lautung.oa.attendance.service.AttendanceWorkCalendar;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.attendance.AttendanceApplyStatus;
 import com.lautung.oa.model.attendance.AttendanceBusinessTypes;
@@ -31,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -40,11 +43,13 @@ import java.util.Set;
 /**
  * 请假单实现（#282，ADR 0073/0067）。
  *
- * <p>提交顺序固定：身份与状态 → 类型/事由 → 服务端定稿天数小时（休假日剔除、
- * 补班日照算）→ 区间重叠 → 余额（含在途）→ 状态 CAS → {@link BusinessApprovalStarter}
- * 起审批，全程同一事务；模板映射缺失/未发布/证据失效时 starter 抛出，CAS 随事务回滚，
- * 单据保持草稿。同幂等键重放：单据已审批中且业务键能认出同键时返回同一条审批，
- * 不同键的第二次提交按 201「单据已在审批中」拒绝（状态 CAS 是唯一仲裁）。
+ * <p>提交顺序固定：身份与状态 → 类型/事由 → 服务端定稿天数小时（经考勤日历：
+ * 休假日剔除、补班日照算，#293 ADR 0074；未入组/无班次/区间无工作日按现有
+ * 201 命名拒绝，日历只给事实）→ 区间重叠 → 余额（含在途）→ 状态 CAS →
+ * {@link BusinessApprovalStarter} 起审批，全程同一事务；模板映射缺失/未发布/
+ * 证据失效时 starter 抛出，CAS 随事务回滚，单据保持草稿。同幂等键重放：单据
+ * 已审批中且业务键能认出同键时返回同一条审批，不同键的第二次提交按 201
+ * 「单据已在审批中」拒绝（状态 CAS 是唯一仲裁）。
  */
 @Service
 public class AttendanceLeaveServiceImpl
@@ -62,7 +67,7 @@ public class AttendanceLeaveServiceImpl
 
     private final AttendanceUserMapper userMapper;
 
-    private final AttendanceWorkCalendar workCalendar;
+    private final AttendanceCalendar calendar;
 
     private final BusinessApprovalStarter approvalStarter;
 
@@ -71,13 +76,13 @@ public class AttendanceLeaveServiceImpl
     public AttendanceLeaveServiceImpl(AttendanceLeaveTypeMapper leaveTypeMapper,
                                       AttendanceLedgerService ledgerService,
                                       AttendanceUserMapper userMapper,
-                                      AttendanceWorkCalendar workCalendar,
+                                      AttendanceCalendar calendar,
                                       BusinessApprovalStarter approvalStarter,
                                       BusinessApprovalReader approvalReader) {
         this.leaveTypeMapper = leaveTypeMapper;
         this.ledgerService = ledgerService;
         this.userMapper = userMapper;
-        this.workCalendar = workCalendar;
+        this.calendar = calendar;
         this.approvalStarter = approvalStarter;
         this.approvalReader = approvalReader;
     }
@@ -160,8 +165,7 @@ public class AttendanceLeaveServiceImpl
         if (reason == null) {
             throw new BusinessException(201, "请假事由不能为空");
         }
-        AttendanceWorkCalendar.WorkdaySpan span =
-                workCalendar.calculate(applicantId, leave.getStartDate(), leave.getEndDate());
+        FinalizedSpan span = finalizeDaysAndHours(applicantId, leave.getStartDate(), leave.getEndDate());
         requireNoOverlap(applicantId, id, leave.getStartDate(), leave.getEndDate());
         if (Integer.valueOf(1).equals(type.getBalanceRequired())) {
             requireBalance(applicantId, type, span.hours());
@@ -189,6 +193,38 @@ public class AttendanceLeaveServiceImpl
                 leaveSummary(type, leave, span),
                 List.of()));
         return detailOrThrow(applicantId, id);
+    }
+
+    /**
+     * 提交时定稿的天数与小时数：打开考勤日历视图取区间事实（休假日剔除、补班日照算），
+     * 未入组/无班次/区间无工作日按现有 201 命名拒绝——日历只给可判定的空形状，
+     * 拒绝时机与文案留在请假 adapter（#293，ADR 0074）。
+     */
+    private FinalizedSpan finalizeDaysAndHours(Long applicantId, LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new BusinessException(201, "请假日期不能为空");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new BusinessException(201, "开始日期不能晚于结束日期");
+        }
+        AttendanceCalendarView view = calendar.open(applicantId, startDate, endDate);
+        if (!view.hasMember()) {
+            throw new BusinessException(201, "未加入考勤组，不能提交请假");
+        }
+        if (view.shift() == null) {
+            throw new BusinessException(201, "考勤组未绑定有效班次");
+        }
+        int days = view.workdayCount();
+        if (days == 0) {
+            throw new BusinessException(201, "请假区间没有工作日");
+        }
+        BigDecimal hours = view.dailyHours().multiply(BigDecimal.valueOf(days))
+                .setScale(2, RoundingMode.HALF_UP);
+        return new FinalizedSpan(days, hours);
+    }
+
+    /** 提交时定稿的天数与小时数。 */
+    private record FinalizedSpan(int days, BigDecimal hours) {
     }
 
     @Override
@@ -242,14 +278,14 @@ public class AttendanceLeaveServiceImpl
         return type;
     }
 
-    private void requireDateOrder(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private void requireDateOrder(LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new BusinessException(201, "开始日期不能晚于结束日期");
         }
     }
 
     private void requireNoOverlap(Long applicantId, Long id,
-                                  java.time.LocalDate startDate, java.time.LocalDate endDate) {
+                                  LocalDate startDate, LocalDate endDate) {
         Long overlaps = baseMapper.selectCount(new LambdaQueryWrapper<AttendanceLeave>()
                 .eq(AttendanceLeave::getApplicantId, applicantId)
                 .in(AttendanceLeave::getStatus, AttendanceApplyStatus.SUBMITTED,
@@ -309,7 +345,7 @@ public class AttendanceLeaveServiceImpl
     }
 
     private static String leaveSummary(AttendanceLeaveType type, AttendanceLeave leave,
-                                       AttendanceWorkCalendar.WorkdaySpan span) {
+                                       FinalizedSpan span) {
         return type.getName() + " " + span.days() + " 天（" + span.hours().toPlainString()
                 + " 小时），" + leave.getStartDate() + " 至 " + leave.getEndDate();
     }
