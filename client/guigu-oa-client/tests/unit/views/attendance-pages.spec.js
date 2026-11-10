@@ -34,7 +34,6 @@ vi.mock('@/api/attendance', () => attendanceApi)
 import ElementPlus from 'element-plus'
 import AttendanceGroupPage from '@/views/business/attendance/group/index.vue'
 import AttendanceRecordPage from '@/views/business/attendance/record/index.vue'
-import AttendanceRepairPage from '@/views/business/attendance/repair/index.vue'
 import AttendanceLeavePage from '@/views/business/attendance/leave/index.vue'
 import AttendanceStatPage from '@/views/business/attendance/stat/index.vue'
 import { hasPermi } from '@/permission'
@@ -274,7 +273,6 @@ describe('AttendanceGroupPage', () => {
 
 describe('考勤占位壳页', () => {
   const cases = [
-    [AttendanceRepairPage, '补卡处理'],
     [AttendanceLeavePage, '假期类型与发放'],
     [AttendanceStatPage, '月度统计'],
   ]

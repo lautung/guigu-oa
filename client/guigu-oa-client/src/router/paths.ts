@@ -30,6 +30,8 @@ export const PATHS = {
   WORK_COPIED_DETAIL: '/work/copied/:id',
   /** 办事打卡（#279，ADR 0073）：登录即有，不套后台授权，窄屏可用。 */
   WORK_MY_ATTENDANCE: '/work/my-attendance',
+  /** 办事考勤记录（#281）：本人当月逐日状态，登录即有。 */
+  WORK_MY_ATTENDANCE_RECORD: '/work/my-attendance-record',
   /** 个人中心（#254）：登录即有，不进后台菜单、不设页面授予。 */
   PROFILE: '/profile',
   SYSTEM: '/system',
@@ -75,6 +77,7 @@ export const ROUTES = {
   STARTED: PATHS.WORK_STARTED,
   COPIED: PATHS.WORK_COPIED,
   MY_ATTENDANCE: PATHS.WORK_MY_ATTENDANCE,
+  MY_ATTENDANCE_RECORD: PATHS.WORK_MY_ATTENDANCE_RECORD,
 } as const
 
 export const WORK_LIST_KINDS = {
@@ -168,6 +171,7 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.WORK_STARTED]: PATHS.WORK_STARTED,
   [PATHS.WORK_COPIED]: PATHS.WORK_COPIED,
   [PATHS.WORK_MY_ATTENDANCE]: PATHS.WORK_MY_ATTENDANCE,
+  [PATHS.WORK_MY_ATTENDANCE_RECORD]: PATHS.WORK_MY_ATTENDANCE_RECORD,
   [PATHS.PROFILE]: PATHS.PROFILE,
   [PATHS.SYSTEM_SYS_USER]: PATHS.SYSTEM_SYS_USER,
   [PATHS.SYSTEM_SYS_ROLE]: PATHS.SYSTEM_SYS_ROLE,

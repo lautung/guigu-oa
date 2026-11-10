@@ -11,6 +11,7 @@ export const WORK_BUILTIN_ITEMS = [
   { path: ROUTES.STARTED, title: '已发起' },
   { path: ROUTES.COPIED, title: '抄送我的' },
   { path: ROUTES.MY_ATTENDANCE, title: '打卡' },
+  { path: ROUTES.MY_ATTENDANCE_RECORD, title: '考勤记录' },
 ] as const
 
 /** 登录落点统一为工作台（ADR 0051/0059）：不按权限分流，也不落介绍页。 */

@@ -40,6 +40,7 @@ const en = {
       started: 'Started',
       copied: 'Copied to me',
       myAttendance: 'Punch',
+      myAttendanceRecord: 'Attendance records',
     },
     groups: {
       logs: 'Logs',

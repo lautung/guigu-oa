@@ -1,5 +1,7 @@
 import type {
   ApiRequestConfig,
+  AttendanceDayStatusRecord,
+  AttendanceDayStatusView,
   AttendanceGroupForm,
   AttendanceGroupListItem,
   AttendanceGroupRecord,
@@ -7,9 +9,14 @@ import type {
   AttendanceHolidayListItem,
   AttendanceHolidayRecord,
   AttendanceMemberRecord,
+  AttendanceMonthRecord,
+  AttendanceMonthView,
   AttendancePunchListItem,
   AttendancePunchQuery,
   AttendancePunchRecord,
+  AttendanceRepairForm,
+  AttendanceRepairUserOption,
+  AttendanceRepairUserRecord,
   AttendanceShiftForm,
   AttendanceShiftListItem,
   AttendanceShiftRecord,
@@ -32,6 +39,7 @@ export const ATTENDANCE_PERMISSIONS = {
   add: 'attendance:group:add',
   edit: 'attendance:group:edit',
   remove: 'attendance:group:remove',
+  repair: 'attendance:record:repair',
 } as const
 
 export const ATTENDANCE_API = '/admin/attendance'
@@ -467,6 +475,133 @@ export function punchQueryOf(query: AttendancePunchQuery): Record<string, string
   if (query.endDate) params.endDate = query.endDate
   if (query.source !== undefined && query.source !== '') params.source = query.source
   return params
+}
+
+// ---------------- 逐日状态 / 办事考勤记录 ----------------
+
+/** 九枚举日状态（#281，ADR 0073 §统计口径）：与 AttendanceDayStatus 常量一一对应。 */
+export const ATTENDANCE_DAY_STATUS_OPTIONS = [
+  { value: 1, label: '正常' },
+  { value: 2, label: '迟到' },
+  { value: 3, label: '早退' },
+  { value: 4, label: '迟到且早退' },
+  { value: 5, label: '缺卡' },
+  { value: 6, label: '请假' },
+  { value: 7, label: '休息日' },
+  { value: 8, label: '休假日' },
+  { value: 9, label: '补班日' },
+] as const
+
+/**
+ * 日状态文案：未到下班时刻且缺槽位显示「未打卡」（pending），未来日期/未分组显示
+ * 「—」；请假拼接类型名（请假·年假）。
+ */
+export function attendanceDayStatusLabel(
+  status: number | null | undefined,
+  pending?: boolean,
+  leaveTypeName?: string,
+): string {
+  if (pending) return '未打卡'
+  if (status == null) return '—'
+  if (status === 6) return leaveTypeName ? `请假·${leaveTypeName}` : '请假'
+  return ATTENDANCE_DAY_STATUS_OPTIONS.find((option) => option.value === status)?.label || '—'
+}
+
+/** 日状态标签颜色：正常绿、异常黄、缺卡红、请假蓝、非工作日灰。 */
+export function attendanceDayStatusTagType(
+  status: number | null | undefined,
+  pending?: boolean,
+): 'success' | 'warning' | 'danger' | 'primary' | 'info' {
+  if (pending) return 'info'
+  if (status === 1) return 'success'
+  if (status === 5) return 'danger'
+  if (status === 6) return 'primary'
+  if (status === 2 || status === 3 || status === 4) return 'warning'
+  return 'info'
+}
+
+export function presentDayStatus(record: AttendanceDayStatusRecord = {}): AttendanceDayStatusView {
+  const status = record.status == null ? null : record.status
+  return {
+    date: record.date || '',
+    weekdayLabel: weekdayLabel(record.weekday),
+    dayType: record.dayType == null ? 0 : record.dayType,
+    dayTypeLabel: attendanceDayTypeLabel(record.dayType),
+    workday: Boolean(record.workday),
+    status,
+    statusLabel: attendanceDayStatusLabel(status, record.pending, record.leaveTypeName),
+    leaveTypeName: record.leaveTypeName || '',
+    pending: Boolean(record.pending),
+    clockInText: clockText(record.clockInTime),
+    clockOutText: clockText(record.clockOutTime),
+  }
+}
+
+/** 办事考勤记录页的请求：month 为空时由服务端取注入时钟的当前月。 */
+export function monthRecordsRequest(month = ''): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${MY_ATTENDANCE_API}/records`,
+    params: month ? { month } : {},
+  }
+}
+
+export function presentMonth(record: AttendanceMonthRecord = {}): AttendanceMonthView {
+  return {
+    month: record.month || '',
+    days: (record.days || []).map(presentDayStatus),
+  }
+}
+
+// ---------------- 补卡处理 ----------------
+
+export const REPAIR_API = `${ATTENDANCE_API}/repair`
+
+export function repairListRequest(
+  page: number,
+  limit: number,
+  searchObj: Record<string, string | number> = {},
+): ApiRequestConfig {
+  return { method: 'get', url: `${REPAIR_API}/${page}/${limit}`, params: searchObj }
+}
+
+export function repairUsersRequest(name = ''): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${REPAIR_API}/users`,
+    params: name ? { name: name.trim() } : {},
+  }
+}
+
+export function presentRepairUserOptions(
+  records: Array<Partial<AttendanceRepairUserRecord>> = [],
+): AttendanceRepairUserOption[] {
+  return records
+    .filter((record) => record.id != null)
+    .map((record) => ({
+      id: record.id as EntityId,
+      username: record.username || '',
+      name: record.name || '',
+      deptName: record.deptName || '',
+      label: `${record.deptName ? `${record.deptName} / ` : ''}${
+        record.name ? `${record.name}（${record.username || ''}）` : record.username || ''
+      }`,
+    }))
+}
+
+export function repairDayRequest(userId: EntityId, date: string): ApiRequestConfig {
+  return { method: 'get', url: `${REPAIR_API}/day`, params: { userId, date } }
+}
+
+/** 补卡载荷：空槽位不带键（服务端按「只补一槽」处理）。 */
+export function repairSaveRequest(form: AttendanceRepairForm): ApiRequestConfig {
+  const data: Record<string, unknown> = {
+    userId: form.userId,
+    repairDate: form.repairDate,
+  }
+  if (form.clockInTime) data.clockInTime = form.clockInTime
+  if (form.clockOutTime) data.clockOutTime = form.clockOutTime
+  return { method: 'post', url: `${REPAIR_API}/save`, data }
 }
 
 // ---------------- 表单规则 ----------------

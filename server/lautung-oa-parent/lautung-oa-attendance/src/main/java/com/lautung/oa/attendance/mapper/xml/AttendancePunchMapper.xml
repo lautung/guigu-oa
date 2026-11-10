@@ -63,4 +63,26 @@
         </where>
         order by p.punch_time desc, p.id desc
     </select>
+
+    <!--
+      推导用请假区间（#281，ADR 0073）：只认审批通过（status=2）。
+      请假单在 #282 落地；本票用夹具行验证「请假(类型) > 缺卡 > ...」的优先级。
+      存活过滤显式写（ADR 0050）；类型被引用只停用不删除，这里仍带 is_deleted=0。
+      同一人同一天最多一条通过/在途单据（重叠提交会被拒），多行时按 id 取最早。
+    -->
+    <select id="selectApprovedLeaves" resultType="com.lautung.oa.vo.attendance.AttendanceLeaveSpanVo">
+        select l.id,
+               l.start_date,
+               l.end_date,
+               t.name as leaveTypeName
+        from attendance_leave l
+            join attendance_leave_type t on t.id = l.leave_type_id
+        where l.is_deleted = 0
+          and t.is_deleted = 0
+          and l.status = 2
+          and l.applicant_id = #{userId}
+          and l.start_date &lt;= #{endDate}
+          and l.end_date &gt;= #{beginDate}
+        order by l.id asc
+    </select>
 </mapper>

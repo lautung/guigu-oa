@@ -40,6 +40,7 @@ const zhCN = {
       started: '已发起',
       copied: '抄送我的',
       myAttendance: '打卡',
+      myAttendanceRecord: '考勤记录',
     },
     groups: {
       logs: '日志管理',

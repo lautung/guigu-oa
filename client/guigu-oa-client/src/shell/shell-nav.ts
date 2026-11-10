@@ -77,6 +77,7 @@ const WORK_ICONS: Record<string, string> = {
   [PATHS.WORK_STARTED]: 'Promotion',
   [PATHS.WORK_COPIED]: 'Share',
   [PATHS.WORK_MY_ATTENDANCE]: 'Clock',
+  [PATHS.WORK_MY_ATTENDANCE_RECORD]: 'Calendar',
 }
 
 const WORK_PAGE_TITLE_KEYS: Record<string, string> = {
@@ -86,6 +87,7 @@ const WORK_PAGE_TITLE_KEYS: Record<string, string> = {
   [PATHS.WORK_STARTED]: 'shell.workPages.started',
   [PATHS.WORK_COPIED]: 'shell.workPages.copied',
   [PATHS.WORK_MY_ATTENDANCE]: 'shell.workPages.myAttendance',
+  [PATHS.WORK_MY_ATTENDANCE_RECORD]: 'shell.workPages.myAttendanceRecord',
 }
 
 /** 内置办事页的标签由客户端拥有；面包屑与侧栏共用这一处投影。 */

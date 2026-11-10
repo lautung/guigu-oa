@@ -55,6 +55,7 @@ describe('菜单搜索索引', () => {
       '/work/started',
       '/work/copied',
       '/work/my-attendance',
+      '/work/my-attendance-record',
       '/system/sysUser',
       '/system/sysRole',
       '/system/log/operLog',

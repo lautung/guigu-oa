@@ -30,6 +30,13 @@ import {
   punchRequest,
   punchSlotLabel,
   punchSourceLabel,
+  attendanceDayStatusLabel,
+  attendanceDayStatusTagType,
+  monthRecordsRequest,
+  presentMonth,
+  repairDayRequest,
+  repairSaveRequest,
+  repairUsersRequest,
   shiftFormRules,
   shiftListRequest,
   shiftWriteRequest,
@@ -42,11 +49,12 @@ import {
 } from '@/config/attendance'
 
 describe('config/attendance', () => {
-  it('declares the three group-page button points without query points', () => {
+  it('declares the group-page and repair button points without query points', () => {
     expect(ATTENDANCE_PERMISSIONS).toEqual({
       add: 'attendance:group:add',
       edit: 'attendance:group:edit',
       remove: 'attendance:group:remove',
+      repair: 'attendance:record:repair',
     })
   })
 
@@ -518,6 +526,64 @@ describe('config/attendance', () => {
         ],
         total: 1,
         pages: 1,
+      })
+    })
+  })
+
+  describe('逐日状态与补卡（#281）', () => {
+    it('labels the nine statuses, pending and leave type', () => {
+      expect(attendanceDayStatusLabel(1)).toBe('正常')
+      expect(attendanceDayStatusLabel(4)).toBe('迟到且早退')
+      expect(attendanceDayStatusLabel(6, false, '年假')).toBe('请假·年假')
+      expect(attendanceDayStatusLabel(null, true)).toBe('未打卡')
+      expect(attendanceDayStatusLabel(null, false)).toBe('—')
+      expect(attendanceDayStatusTagType(1)).toBe('success')
+      expect(attendanceDayStatusTagType(5)).toBe('danger')
+      expect(attendanceDayStatusTagType(null, true)).toBe('info')
+    })
+
+    it('projects the month and omits an empty month parameter', () => {
+      expect(monthRecordsRequest()).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/records',
+        params: {},
+      })
+      expect(presentMonth({ month: '2026-03', days: [{ date: '2026-03-02', status: 1 }] })).toEqual(
+        {
+          month: '2026-03',
+          days: [
+            expect.objectContaining({
+              date: '2026-03-02',
+              status: 1,
+              statusLabel: '正常',
+            }),
+          ],
+        },
+      )
+    })
+
+    it('builds repair requests with only the filled slots', () => {
+      expect(repairUsersRequest(' 甲 ')).toEqual({
+        method: 'get',
+        url: '/admin/attendance/repair/users',
+        params: { name: '甲' },
+      })
+      expect(repairDayRequest(11, '2026-03-09')).toEqual({
+        method: 'get',
+        url: '/admin/attendance/repair/day',
+        params: { userId: 11, date: '2026-03-09' },
+      })
+      expect(
+        repairSaveRequest({
+          userId: 11,
+          repairDate: '2026-03-09',
+          clockInTime: '',
+          clockOutTime: '18:30:00',
+        }),
+      ).toEqual({
+        method: 'post',
+        url: '/admin/attendance/repair/save',
+        data: { userId: 11, repairDate: '2026-03-09', clockOutTime: '18:30:00' },
       })
     })
   })

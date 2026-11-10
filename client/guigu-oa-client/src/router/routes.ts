@@ -101,6 +101,13 @@ const workChildren: AppRoute[] = [
     component: () => import('@/views/work/my-attendance/index.vue'),
     meta: { title: '打卡', menuGroup: 'work' },
   },
+  {
+    // 办事考勤记录（#281）：本人当月逐日状态，登录即有；窄屏可用。
+    path: childPath(PATHS.WORK, PATHS.WORK_MY_ATTENDANCE_RECORD),
+    name: 'WorkMyAttendanceRecord',
+    component: () => import('@/views/work/my-attendance-record/index.vue'),
+    meta: { title: '考勤记录', menuGroup: 'work' },
+  },
 ]
 
 // 考勤五页（#278，ADR 0073）：考勤组与班次完整交付，其余四页是占位壳，

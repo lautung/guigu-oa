@@ -3,6 +3,7 @@ package com.lautung.oa.auth;
 import com.lautung.oa.attendance.controller.AttendanceGroupController;
 import com.lautung.oa.attendance.controller.AttendanceHolidayController;
 import com.lautung.oa.attendance.controller.AttendancePunchController;
+import com.lautung.oa.attendance.controller.AttendanceRepairController;
 import com.lautung.oa.attendance.controller.AttendanceShiftController;
 import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
@@ -105,7 +106,8 @@ class BackofficeRouteAuthorizationContractTest {
             AttendanceShiftController.class,
             AttendanceGroupController.class,
             AttendanceHolidayController.class,
-            AttendancePunchController.class);
+            AttendancePunchController.class,
+            AttendanceRepairController.class);
 
     static {
         expect(AttendanceShiftController.class, "/business/attendance/group", null,
@@ -124,6 +126,11 @@ class BackofficeRouteAuthorizationContractTest {
         expect(AttendanceHolidayController.class, "/business/attendance/group", "attendance:group:remove", "remove");
         // 打卡记录（#279）：读只判页面，数据范围由 DataScopeProvider 按参数应用；无按钮点。
         expect(AttendancePunchController.class, "/business/attendance/record", null, "pageQuery");
+        // 补卡处理（#281）：列表/成员候选/当日下钻都只判页面；写再判补卡按钮点。
+        expect(AttendanceRepairController.class, "/business/attendance/repair", null,
+                "pageQuery", "users", "day");
+        expect(AttendanceRepairController.class, "/business/attendance/repair",
+                "attendance:record:repair", "save");
         expect(SysUserController.class, "/system/sysUser", null,
                 "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
                 "depts", "posts", "importTemplate");

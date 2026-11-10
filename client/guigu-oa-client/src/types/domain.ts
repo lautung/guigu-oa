@@ -1087,3 +1087,68 @@ export interface AttendancePunchQuery {
   endDate?: string
   source?: number | ''
 }
+
+/** 逐日推导结果（#281，ADR 0073）：九枚举状态 + 槽位有效时刻。 */
+export interface AttendanceDayStatusRecord {
+  date?: string
+  weekday?: number
+  dayType?: number
+  workday?: boolean
+  hasGroup?: boolean
+  groupId?: EntityId
+  groupName?: string
+  shift?: AttendanceShiftSummaryRecord | null
+  status?: number | null
+  leaveTypeName?: string
+  pending?: boolean
+  clockInTime?: string | null
+  clockOutTime?: string | null
+}
+
+export interface AttendanceDayStatusView {
+  date: string
+  weekdayLabel: string
+  dayType: number
+  dayTypeLabel: string
+  workday: boolean
+  status: number | null
+  statusLabel: string
+  leaveTypeName: string
+  pending: boolean
+  clockInText: string
+  clockOutText: string
+}
+
+export interface AttendanceMonthRecord {
+  month?: string
+  days?: AttendanceDayStatusRecord[]
+}
+
+export interface AttendanceMonthView {
+  month: string
+  days: AttendanceDayStatusView[]
+}
+
+/** 补卡页成员候选（#281）：数据范围由服务端过滤。 */
+export interface AttendanceRepairUserRecord {
+  id?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+}
+
+export interface AttendanceRepairUserOption {
+  id: EntityId
+  username: string
+  name: string
+  deptName: string
+  label: string
+}
+
+export interface AttendanceRepairForm {
+  userId: EntityId | ''
+  repairDate: string
+  clockInTime: string
+  clockOutTime: string
+}
