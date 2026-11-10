@@ -1,0 +1,78 @@
+<testsuites id="" name="" tests="21" failures="0" skipped="0" errors="0" time="16.728959">
+<testsuite name="security-headers.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="4.877" errors="0">
+<testcase name="CSP 生效时主要页面无安全策略违规" classname="security-headers.spec.ts" time="4.877">
+</testcase>
+</testsuite>
+<testsuite name="security-notice-xss.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="4.685" errors="0">
+<testcase name="公告正文的存储型 XSS 不执行且载荷文本保留" classname="security-notice-xss.spec.ts" time="4.685">
+</testcase>
+</testsuite>
+<testsuite name="security-profile-avatar.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="3" failures="0" skipped="0" time="0.281" errors="0">
+<testcase name="未认证的头像上传被拒" classname="security-profile-avatar.spec.ts" time="0.009">
+</testcase>
+<testcase name="头像类型不支持被拒" classname="security-profile-avatar.spec.ts" time="0.129">
+</testcase>
+<testcase name="超过 2MB 的头像被拒" classname="security-profile-avatar.spec.ts" time="0.143">
+</testcase>
+</testsuite>
+<testsuite name="security-register.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="5" failures="0" skipped="0" time="0.708" errors="0">
+<testcase name="SEC-REGISTER 匿名注册 › 探测端点匿名可读且只回布尔" classname="security-register.spec.ts" time="0.01">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="SEC-REGISTER 匿名注册 › 关闭时注册端点仍是匿名（201 注册未开放，不是 401）" classname="security-register.spec.ts" time="0.153">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="SEC-REGISTER 匿名注册 › 注册只接受 POST" classname="security-register.spec.ts" time="0.009">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="SEC-REGISTER 匿名注册 › 直连后端换伪造头也不能新建注册限流桶" classname="security-register.spec.ts" time="0.229">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+<testcase name="SEC-REGISTER 匿名注册 › 经 nginx 的登录仍记录真实来源，伪造 XFF 不生效" classname="security-register.spec.ts" time="0.307">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+</testcase>
+</testsuite>
+<testsuite name="security-server-version.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="0.009" errors="0">
+<testcase name="客户端响应头不暴露 nginx 精确版本" classname="security-server-version.spec.ts" time="0.009">
+</testcase>
+</testsuite>
+<testsuite name="security-user-import.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="9" failures="0" skipped="0" time="1.393" errors="0">
+<testcase name="未认证的用户导入被拒" classname="security-user-import.spec.ts" time="0.007">
+</testcase>
+<testcase name="非 xlsx 扩展名的导入被拒" classname="security-user-import.spec.ts" time="0.112">
+</testcase>
+<testcase name="超过 2MB 的导入被拒" classname="security-user-import.spec.ts" time="0.139">
+</testcase>
+<testcase name="畸形 xlsx 在解析前被拒" classname="security-user-import.spec.ts" time="0.111">
+</testcase>
+<testcase name="缺少 multipart 字段的导入被拒" classname="security-user-import.spec.ts" time="0.11">
+</testcase>
+<testcase name="缺少初始密码的用户导入被拒" classname="security-user-import.spec.ts" time="0.11">
+</testcase>
+<testcase name="过短的初始密码被拒" classname="security-user-import.spec.ts" time="0.111">
+</testcase>
+<testcase name="稀疏远单元格在解析阶段被拒" classname="security-user-import.spec.ts" time="0.494">
+</testcase>
+<testcase name="列数超过上限的用户导入被拒" classname="security-user-import.spec.ts" time="0.199">
+</testcase>
+</testsuite>
+<testsuite name="security-xss.spec.ts" timestamp="2026-11-10T08:28:09.196Z" hostname="security-chromium" tests="1" failures="0" skipped="0" time="4.059" errors="0">
+<testcase name="审批表单字段的存储型 XSS 不执行" classname="security-xss.spec.ts" time="4.059">
+</testcase>
+</testsuite>
+</testsuites>

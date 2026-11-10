@@ -1,0 +1,1025 @@
+{
+  "config": {
+    "argv": [
+      "/Users/lautung/development/tools/node-v24.18.1-darwin-arm64/bin/node",
+      "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "tests/security/playwright.security.config.ts"
+    ],
+    "configFile": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/playwright.security.config.ts",
+    "rootDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "security-chromium",
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "security-chromium",
+        "testDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "snapshotDir": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://localhost:9530",
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "actionTimeout": 15000,
+          "navigationTimeout": 20000,
+          "browserName": "chromium",
+          "viewport": {
+            "width": 1280,
+            "height": 900
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "security-chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/xss-report.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/xss-report.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "security-headers.spec.ts",
+      "file": "security-headers.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "CSP 生效时主要页面无安全策略违规",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4877,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:09.415Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "csp-violations",
+                      "contentType": "application/json",
+                      "body": "eyJ0b3RhbCI6NCwidW5leHBlY3RlZCI6W119"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e3ea47c3dd308804f1b-c033a6ffb1129d995f5a",
+          "file": "security-headers.spec.ts",
+          "line": 25,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-notice-xss.spec.ts",
+      "file": "security-notice-xss.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "公告正文的存储型 XSS 不执行且载荷文本保留",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4685,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:14.514Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "notice-bell-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWNub3RpY2UtbXdhZmgwZjAiLCJiZWxsRmxhZyI6bnVsbH0="
+                    },
+                    {
+                      "name": "notice-list-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWNub3RpY2UtbXdhZmgwZjAiLCJsaXN0RmxhZyI6bnVsbH0="
+                    },
+                    {
+                      "name": "notice-detail-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWNub3RpY2UtbXdhZmgwZjAiLCJkZXRhaWxGbGFnIjpudWxsfQ=="
+                    },
+                    {
+                      "name": "notice-csp-violations",
+                      "contentType": "application/json",
+                      "body": "eyJ0b3RhbCI6MSwidW5leHBlY3RlZCI6W119"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ec1a4576e4791fe60127-fd8d86dd5eb9e7624ab3",
+          "file": "security-notice-xss.spec.ts",
+          "line": 77,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-profile-avatar.spec.ts",
+      "file": "security-profile-avatar.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "未认证的头像上传被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:19.210Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf4d14ebb34893810530-607dd7a8f9bda60624ba",
+          "file": "security-profile-avatar.spec.ts",
+          "line": 28,
+          "column": 1
+        },
+        {
+          "title": "头像类型不支持被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 129,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:19.225Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf4d14ebb34893810530-8d78c7acdde0d90df554",
+          "file": "security-profile-avatar.spec.ts",
+          "line": 38,
+          "column": 1
+        },
+        {
+          "title": "超过 2MB 的头像被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 143,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:19.359Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bf4d14ebb34893810530-eb45bae70ebde5d14ac5",
+          "file": "security-profile-avatar.spec.ts",
+          "line": 52,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-register.spec.ts",
+      "file": "security-register.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "SEC-REGISTER 匿名注册",
+          "file": "security-register.spec.ts",
+          "line": 121,
+          "column": 15,
+          "specs": [
+            {
+              "title": "探测端点匿名可读且只回布尔",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                        "line": 121,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "security-chromium",
+                  "projectName": "security-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-10T08:28:19.514Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                            "line": 121,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e0d14cc791c8a55e772-97a3d361a3b16e9edd12",
+              "file": "security-register.spec.ts",
+              "line": 126,
+              "column": 3
+            },
+            {
+              "title": "关闭时注册端点仍是匿名（201 注册未开放，不是 401）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                        "line": 121,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "security-chromium",
+                  "projectName": "security-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 153,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-10T08:28:19.529Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                            "line": 121,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e0d14cc791c8a55e772-ca8bfd819cc079e8d2f6",
+              "file": "security-register.spec.ts",
+              "line": 134,
+              "column": 3
+            },
+            {
+              "title": "注册只接受 POST",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                        "line": 121,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "security-chromium",
+                  "projectName": "security-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-10T08:28:19.688Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                            "line": 121,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e0d14cc791c8a55e772-f6bc5c5b4cf170ba35ea",
+              "file": "security-register.spec.ts",
+              "line": 144,
+              "column": 3
+            },
+            {
+              "title": "直连后端换伪造头也不能新建注册限流桶",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                        "line": 121,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "security-chromium",
+                  "projectName": "security-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 229,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-10T08:28:19.701Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                            "line": 121,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e0d14cc791c8a55e772-fe255293291ebaa7ed14",
+              "file": "security-register.spec.ts",
+              "line": 149,
+              "column": 3
+            },
+            {
+              "title": "经 nginx 的登录仍记录真实来源，伪造 XFF 不生效",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [
+                    {
+                      "type": "serial",
+                      "location": {
+                        "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                        "line": 121,
+                        "column": 15
+                      }
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "security-chromium",
+                  "projectName": "security-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 307,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-10T08:28:19.934Z",
+                      "annotations": [
+                        {
+                          "type": "serial",
+                          "location": {
+                            "file": "/Users/lautung/Documents/projects/guigu-oa/client/guigu-oa-client/tests/security/security-register.spec.ts",
+                            "line": 121,
+                            "column": 15
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e0d14cc791c8a55e772-416edf2915addca214a2",
+              "file": "security-register.spec.ts",
+              "line": 180,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "security-server-version.spec.ts",
+      "file": "security-server-version.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "客户端响应头不暴露 nginx 精确版本",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.248Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "7010dfb1d867e97c8111-10b788641706130399d3",
+          "file": "security-server-version.spec.ts",
+          "line": 12,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-user-import.spec.ts",
+      "file": "security-user-import.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "未认证的用户导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.266Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-763f0c4e123987d8065a",
+          "file": "security-user-import.spec.ts",
+          "line": 33,
+          "column": 1
+        },
+        {
+          "title": "非 xlsx 扩展名的导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 112,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.277Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-048b936617292fd0b139",
+          "file": "security-user-import.spec.ts",
+          "line": 43,
+          "column": 1
+        },
+        {
+          "title": "超过 2MB 的导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 139,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.393Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-6e2f6c76e28416f603ba",
+          "file": "security-user-import.spec.ts",
+          "line": 57,
+          "column": 1
+        },
+        {
+          "title": "畸形 xlsx 在解析前被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 111,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.537Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-ae9b0f3188fcb9805244",
+          "file": "security-user-import.spec.ts",
+          "line": 75,
+          "column": 1
+        },
+        {
+          "title": "缺少 multipart 字段的导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 110,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.652Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-7e2f0388aa47fabb871d",
+          "file": "security-user-import.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "缺少初始密码的用户导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 110,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.766Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-b734cdeda55bca31dbe8",
+          "file": "security-user-import.spec.ts",
+          "line": 102,
+          "column": 1
+        },
+        {
+          "title": "过短的初始密码被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 111,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.881Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-5176152a4be4acea8422",
+          "file": "security-user-import.spec.ts",
+          "line": 116,
+          "column": 1
+        },
+        {
+          "title": "稀疏远单元格在解析阶段被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 494,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:20.996Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-5800a5f23c8d2a3d6f2a",
+          "file": "security-user-import.spec.ts",
+          "line": 131,
+          "column": 1
+        },
+        {
+          "title": "列数超过上限的用户导入被拒",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 199,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:21.494Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "bbe644a8836a21fb11a2-3e4b059a4b9be16ae50b",
+          "file": "security-user-import.spec.ts",
+          "line": 146,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "security-xss.spec.ts",
+      "file": "security-xss.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "审批表单字段的存储型 XSS 不执行",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "security-chromium",
+              "projectName": "security-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4059,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T08:28:21.700Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "list-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3MtbXdhZmg1eXEiLCJsaXN0RmxhZyI6bnVsbH0="
+                    },
+                    {
+                      "name": "detail-xss-flag",
+                      "contentType": "application/json",
+                      "body": "eyJtYXJrZXIiOiJzZWN4c3MtbXdhZmg1eXEiLCJkZXRhaWxGbGFnIjpudWxsfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9a593d2aa7f1749c988b-f061ed552312aea4979a",
+          "file": "security-xss.spec.ts",
+          "line": 74,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-10T08:28:09.083Z",
+    "duration": 16728.959,
+    "expected": 21,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
