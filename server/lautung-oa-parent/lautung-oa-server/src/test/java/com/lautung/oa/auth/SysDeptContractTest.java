@@ -25,6 +25,7 @@ import java.util.Map;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -101,6 +102,36 @@ class SysDeptContractTest {
                 "SELECT status FROM sys_dept WHERE id = ?", Integer.class, root));
     }
 
+    /**
+     * 清空负责人显式置 null（#286）：updateById 的默认 NOT_NULL 策略会吞掉 null，
+     * leader_user_id 走专用更新语句按提交值写——置空后重读为空，其余字段不被波及。
+     */
+    @Test
+    void clearingTheLeaderWritesNullThroughTheUpdatePath() throws Exception {
+        insertUser(9010, "t247-leader-clear", 0);
+        long dept = createDept(0, "T247负责人", 1);
+
+        // 先设上负责人。
+        updateDept(dept, "{\"id\":" + dept + ",\"leaderUserId\":9010}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        assertEquals(9010L, jdbcTemplate.queryForObject(
+                "SELECT leader_user_id FROM sys_dept WHERE id = ?", Long.class, dept).longValue());
+
+        // 再清空：null 必须落库，而不是被字段策略吞掉。
+        updateDept(dept, "{\"id\":" + dept + ",\"leaderUserId\":null}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+        assertNull(jdbcTemplate.queryForObject(
+                "SELECT leader_user_id FROM sys_dept WHERE id = ?", Long.class, dept));
+
+        // 同一次更新不波及其他字段：名称与状态原样。
+        assertEquals("T247负责人", jdbcTemplate.queryForObject(
+                "SELECT name FROM sys_dept WHERE id = ?", String.class, dept));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT status FROM sys_dept WHERE id = ?", Integer.class, dept).intValue());
+    }
+
     @Test
     void movingADepartmentRecalculatesTheWholeSubtree() throws Exception {
         long a = createDept(0, "T247A", 1);
@@ -132,7 +163,6 @@ class SysDeptContractTest {
         long a = createDept(0, "T247根", 1);
         long b = createDept(a, "T247子", 1);
         long c = createDept(b, "T247孙", 1);
-
         saveDept(999999, "T247孤儿", 1)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
@@ -267,6 +297,46 @@ class SysDeptContractTest {
         mockMvc.perform(put("/admin/system/sysDept/update").header("token", addToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":" + created + ",\"name\":\"T247改\"}"))
+                .andExpect(jsonPath("$.code").value(205));
+    }
+
+    /**
+     * 部门负责人选择器的启用用户选项（#286，ADR 0069）：只判部门页授予、不要求用户管理页；
+     * 只列启用且未删用户，响应不带 password 列。
+     */
+    @Test
+    void userOptionsListsEnabledUsersForTheDeptPageOnly() throws Exception {
+        insertUser(9001, "t247-leader-a", 0);
+        insertUser(9002, "t247-leader-b", 0);
+        insertUser(9003, "t247-leader-c", 0);
+        jdbcTemplate.update("UPDATE sys_user SET status = 0 WHERE id = 9002");
+        jdbcTemplate.update("UPDATE sys_user SET is_deleted = 1 WHERE id = 9003");
+
+        String body = mockMvc.perform(get("/admin/system/sysDept/userOptions").header("token", adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn().getResponse().getContentAsString();
+
+        List<Map<String, Object>> options = JsonPath.read(body, "$.data");
+        List<String> usernames = options.stream().map(row -> (String) row.get("username")).toList();
+        assertTrue(usernames.contains("t247-leader-a"));
+        // 停用与已删用户都不进选项；种子账号（admin/user）不碍事。
+        assertTrue(!usernames.contains("t247-leader-b"));
+        assertTrue(!usernames.contains("t247-leader-c"));
+        Map<String, Object> first = options.stream()
+                .filter(row -> "t247-leader-a".equals(row.get("username")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(9001, ((Number) first.get("id")).intValue());
+        assertEquals("t247-leader-a", first.get("name"));
+        assertTrue(!first.containsKey("password"));
+
+        // 没有部门页授予的用户读不到选项：页面 gate 是唯一强制点。
+        insertRole(9004, "t247-nooption");
+        insertUser(9004, "t247-nooption", 0);
+        assignRole(9004, 9004);
+        mockMvc.perform(get("/admin/system/sysDept/userOptions").header("token", token(9004, "t247-nooption")))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(205));
     }
 

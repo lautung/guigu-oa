@@ -129,7 +129,8 @@ class BackofficeRouteAuthorizationContractTest {
         // 角色侧分配用户（#256）：读成员走页面授予，写成员要独立按钮点。
         expect(SysRoleController.class, "/system/sysRole", "system:role:assignUser", "doAssignUsers");
         // 部门管理（#247）：树读只走页面授予；新增/修改/删除各要自己的按钮点。
-        expect(SysDeptController.class, "/system/sysDept", null, "findTree");
+        // 负责人选择器的启用用户选项（#286）：只读，同走部门页授予。
+        expect(SysDeptController.class, "/system/sysDept", null, "findTree", "userOptions");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:add", "save");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:edit", "update");
         expect(SysDeptController.class, "/system/sysDept", "system:dept:remove", "remove");
@@ -156,9 +157,12 @@ class BackofficeRouteAuthorizationContractTest {
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:add", "save");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:edit", "updateById");
         expect(OaProcessTypeController.class, "/system/processSet/processType", "process:type:remove", "remove");
-        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", null, "index", "get");
+        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", null, "index", "get",
+                "approverRules", "ruleTargets");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:add", "save");
-        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:edit", "updateById");
+        // 审批人规则（#285）：读走页面授予，保存是模板编辑的一部分（复用 edit 按钮点）。
+        expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:edit", "updateById",
+                "replaceApproverRules");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:remove", "remove");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:upload", "uploadProcessDefinition");
         expect(OaProcessTemplateController.class, "/system/processSet/processTemplate", "process:template:publish", "publish");

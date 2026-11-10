@@ -7,6 +7,7 @@ import {
 } from '@/work/work-list'
 import type {
   EntityId,
+  PendingRowState,
   ProcessDetailPayload,
   ProcessInstanceRecord,
   WorkRecordEntry,
@@ -25,6 +26,8 @@ export interface ProcessDetailViewModel {
   formFields: WorkSummaryField[]
   records: WorkRecordEntry[]
   canApprove: boolean
+  /** 查看者的待处理行状态（#288）：挂起/候选人/催办标记在详情头部呈现。 */
+  pendingRow: PendingRowState | null
   perspective: Partial<WorkListPerspective>
 }
 
@@ -54,6 +57,7 @@ export function presentDetail(
       createTime: record.createTime,
     })),
     canApprove: !readOnly && !!payload.isApprove,
+    pendingRow: payload.pendingRow || null,
     perspective,
   }
 }

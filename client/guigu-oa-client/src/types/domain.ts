@@ -175,13 +175,13 @@ export interface DeptOption {
   parentId?: EntityId
 }
 
-/** 部门维护行（#247）：ancestors 是服务端算好的含自身包裹逗号路径，客户端只展示。 */
+/** 部门维护行（#247/#286）：ancestors 是服务端算好的含自身包裹逗号路径，负责人是启用用户的引用。 */
 export interface DeptRecord {
   id?: EntityId | ''
   parentId?: EntityId
   ancestors?: string
   name?: string
-  leader?: string
+  leaderUserId?: EntityId | null
   sortValue?: number
   status?: number
   createTime?: string
@@ -201,7 +201,7 @@ export interface DeptForm {
   id: EntityId | ''
   parentId: EntityId
   name: string
-  leader: string
+  leaderUserId: EntityId | ''
   sortValue: number
   status: number
 }
@@ -263,6 +263,14 @@ export interface DeptParentOption {
   id: EntityId
   name: string
   depth: number
+}
+
+/** 启用用户选项（#286，ADR 0069）：部门负责人选择器只可选启用用户，label 供下拉展示。 */
+export interface UserOption {
+  id: EntityId
+  username: string
+  name: string
+  label: string
 }
 
 export interface UserRecord {
@@ -616,6 +624,19 @@ export interface ProcessInstanceRecord {
   updateTime?: string
   formValues?: string | ProcessFormValues
   taskId?: EntityId
+  /** 待处理行状态（#288，ADR 0068）：APPROVE 通过/拒绝、CANDIDATE 候选人之一、ADD_SIGN 加签处理。 */
+  actionKind?: string
+  /** 前加签挂起标记：true 表示等待加签人处理、不能动作。 */
+  suspended?: boolean
+  /** 催办标记：最近 24 小时内该审批存在催办记录。 */
+  urged?: boolean
+}
+
+/** 详情头部与待处理行共用的行状态（#288）：服务端按查看者合成，无待处理行时为 null。 */
+export interface PendingRowState {
+  actionKind?: string
+  suspended?: boolean
+  urged?: boolean
 }
 
 export interface ProcessInstanceListItem extends ProcessInstanceRecord {
@@ -657,6 +678,10 @@ export interface PresentedWorkListRecord {
   relationLabel: string
   progressLabel: string
   rowKey: string
+  /** 待处理行状态呈现（#288）：挂起/候选人行的行内文案；空串表示无特殊状态。 */
+  pendingRowLabel?: string
+  /** 催办标记（#288）：行内「已催办」小标。 */
+  urged?: boolean
 }
 
 export interface WorkRecordEntry {
@@ -669,6 +694,8 @@ export interface ProcessDetailPayload {
   process?: ProcessInstanceRecord
   processRecordList?: WorkRecordEntry[]
   isApprove?: boolean
+  /** 查看者的待处理行状态（#288）：挂起/候选人/催办标记在详情头部呈现；无待处理行时为 null。 */
+  pendingRow?: PendingRowState | null
 }
 
 export interface AttachmentRecord {

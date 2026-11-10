@@ -4,7 +4,9 @@ package com.lautung.oa.process.controller;
 import com.lautung.oa.framework.page.PageWindow;
 import com.lautung.oa.common.result.Result;
 import com.lautung.oa.model.process.ProcessTemplate;
+import com.lautung.oa.process.service.OaProcessApproverRuleService;
 import com.lautung.oa.process.service.OaProcessTemplateService;
+import com.lautung.oa.vo.process.ApproverRuleRequest;
 import com.lautung.oa.vo.process.ProcessTemplateSaveRequest;
 import com.lautung.oa.vo.process.ProcessTemplateUpdateRequest;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +37,9 @@ public class OaProcessTemplateController {
 
     @Autowired
     private OaProcessTemplateService processTemplateService;
+
+    @Autowired
+    private OaProcessApproverRuleService approverRuleService;
 
     //分页查询审批模板
     @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
@@ -91,12 +97,40 @@ public class OaProcessTemplateController {
             Map<String, Object> map = new HashMap<>();
             map.put("processDefinitionPath", uploaded.processDefinitionPath());
             map.put("processDefinitionKey", uploaded.processDefinitionKey());
+            map.put("userTasks", uploaded.userTasks());
             return Result.ok(map);
         } catch (IllegalArgumentException e) {
             return Result.fail().message(e.getMessage());
         } catch (IOException e) {
             return Result.fail();
         }
+    }
+
+    // 审批人规则（ADR 0069，#285）：节点清单 + 当前规则一次读取；保存是未发布模板的整体替换。
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
+    @Operation(summary = "读取审批人规则配置")
+    @GetMapping("/approverRules/{templateId}")
+    public Result approverRules(@PathVariable Long templateId) {
+        return Result.ok(approverRuleService.readConfig(templateId));
+    }
+
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate','process:template:edit')")
+    @Operation(summary = "保存审批人规则（整体替换）")
+    @PutMapping("/approverRules/{templateId}")
+    public Result replaceApproverRules(
+            @PathVariable Long templateId,
+            @RequestBody @Valid List<@Valid ApproverRuleRequest> requests) {
+        approverRuleService.replaceRules(templateId, requests);
+        return Result.ok();
+    }
+
+    // 规则目标选项（#286）：模板设置页审批人配置的目标下拉专用只读端点（启用角色 + 启用岗位），
+    // 挂审批模板页授予，不借道 /admin/system/sysRole/findAll 与 /admin/system/sysUser/posts。
+    @PreAuthorize("@backofficeGate.isAllowed('/system/processSet/processTemplate')")
+    @Operation(summary = "审批人规则目标选项")
+    @GetMapping("/ruleTargets")
+    public Result ruleTargets() {
+        return Result.ok(approverRuleService.findRuleTargets());
     }
 
     //部署流程定义（发布）

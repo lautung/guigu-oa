@@ -1,6 +1,7 @@
 package com.lautung.oa.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.lautung.oa.auth.mapper.SysDeptMapper;
 import com.lautung.oa.auth.mapper.SysUserMapper;
@@ -8,6 +9,7 @@ import com.lautung.oa.auth.service.SysDeptService;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.system.SysDept;
 import com.lautung.oa.model.system.SysUser;
+import com.lautung.oa.vo.system.SysUserOptionVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,6 +89,12 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         if (!updateById(dept)) {
             throw new BusinessException(201, "部门更新失败");
         }
+        // #286：清空负责人必须显式落库为 null——updateById 的默认 NOT_NULL 字段策略会吞掉 null，
+        // leader_user_id 用专用语句按提交值原样写（编辑表单总是提交该字段）。置空与解析侧
+        // 「负责人停用/删除视为无负责人」同口径（ADR 0065/0069）；只此一处写路径，不波及其他字段语义。
+        baseMapper.update(null, new LambdaUpdateWrapper<SysDept>()
+                .eq(SysDept::getId, dept.getId())
+                .set(SysDept::getLeaderUserId, dept.getLeaderUserId()));
     }
 
     @Override
@@ -109,6 +117,17 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         if (!removeById(id)) {
             throw new BusinessException(201, "部门删除失败");
         }
+    }
+
+    @Override
+    public List<SysUserOptionVo> findEnabledUserOptions() {
+        List<SysUser> users = sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getStatus, 1)
+                .orderByAsc(SysUser::getUsername)
+                .orderByAsc(SysUser::getId));
+        return users.stream()
+                .map(user -> new SysUserOptionVo(user.getId(), user.getUsername(), user.getName()))
+                .toList();
     }
 
     /**

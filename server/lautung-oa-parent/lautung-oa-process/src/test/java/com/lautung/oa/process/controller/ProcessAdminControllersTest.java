@@ -82,14 +82,14 @@ class ProcessAdminControllersTest {
         MultipartFile file = new MockMultipartFile("file", "leave.zip", "application/zip", new byte[] {1});
         when(templateService.uploadProcessDefinition(file))
                 .thenReturn(new OaProcessTemplateService.UploadedProcessDefinition(
-                        "processes/sha256/abc.zip", "leave"));
+                        "processes/sha256/abc.zip", "leave", java.util.List.of()));
 
         Result result = templateController.uploadProcessDefinition(file);
 
         assertEquals(200, result.getCode());
         assertEquals(
                 java.util.Map.of("processDefinitionPath", "processes/sha256/abc.zip",
-                        "processDefinitionKey", "leave"),
+                        "processDefinitionKey", "leave", "userTasks", java.util.List.of()),
                 result.getData());
     }
 

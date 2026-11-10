@@ -135,6 +135,102 @@
       >
       <el-button v-if="state.canRestoreZip" @click="edit.restoreZip()">恢复旧 zip</el-button>
       <p>上传成功仅表示流程 zip 已存储。提交保存后模板仍为未发布，另行发布成功后才可发起审批。</p>
+
+      <div class="approver-section">
+        <h3>节点审批人配置</h3>
+        <p>此处规则将覆盖流程 zip 中的 assignee：未配置规则的节点沿用 BPMN 写死的 assignee。</p>
+        <template v-if="!state.form.id">
+          <p>新建模板先提交保存，再从模板列表打开编辑后配置审批人。</p>
+        </template>
+        <template v-else>
+          <p v-if="state.approverStatus === 'loading'" role="status">正在读取审批人配置…</p>
+          <div v-else-if="state.approverStatus === 'error'" role="alert">
+            <p>{{ state.approverError }}</p>
+            <el-button :disabled="state.capturing" @click="edit.retryApprovers()"
+              >重试读取</el-button
+            >
+          </div>
+          <template v-else>
+            <p v-if="state.zipStatus !== 'ready'">上传流程 zip 后可配置各节点审批人。</p>
+            <p v-else-if="state.zipUnparsable" role="alert">
+              流程 zip 解析不出 BPMN 节点，保存后模板不可发布。
+            </p>
+            <p v-else-if="state.staleApproverKeys.length" role="alert">
+              已保存的审批人规则包含新流程 zip 里不存在的节点（{{
+                state.staleApproverKeys.join('、')
+              }}），保存审批人配置后将清除。
+            </p>
+            <div
+              v-for="row in state.approvers"
+              v-show="state.zipStatus === 'ready'"
+              :key="row.key"
+              class="approver-row"
+            >
+              <span class="approver-node">{{ row.name }}</span>
+              <el-select
+                :model-value="row.sourceType"
+                :disabled="!state.canEdit"
+                placeholder="请选择审批人来源"
+                aria-label="审批人来源"
+                @update:model-value="edit.updateApprover(row.key, { sourceType: $event })"
+              >
+                <el-option
+                  v-for="option in approverSourceOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                  :disabled="option.value === 'BPMN_ASSIGNEE' && !row.assignee"
+                />
+              </el-select>
+              <span v-if="row.sourceType === 'BPMN_ASSIGNEE'" class="approver-target">
+                写死审批人：{{ row.assignee || '（无）' }}
+              </span>
+              <el-select
+                v-else-if="row.sourceType === 'ROLE'"
+                :model-value="row.targetId"
+                :disabled="!state.canEdit"
+                placeholder="请选择角色"
+                aria-label="角色目标"
+                @update:model-value="edit.updateApprover(row.key, { targetId: $event })"
+              >
+                <el-option
+                  v-for="option in state.approverRoles"
+                  :key="option.id"
+                  :label="option.name || String(option.id)"
+                  :value="option.id"
+                />
+              </el-select>
+              <el-select
+                v-else-if="row.sourceType === 'POST'"
+                :model-value="row.targetId"
+                :disabled="!state.canEdit"
+                placeholder="请选择岗位"
+                aria-label="岗位目标"
+                @update:model-value="edit.updateApprover(row.key, { targetId: $event })"
+              >
+                <el-option
+                  v-for="option in state.approverPosts"
+                  :key="option.id"
+                  :label="option.name || String(option.id)"
+                  :value="option.id"
+                />
+              </el-select>
+              <span v-else-if="row.sourceType === 'DEPT_LEADER'" class="approver-target">
+                按发起人所在部门的负责人解析
+              </span>
+              <span v-else class="approver-missing">缺少审批人来源，不可发布</span>
+            </div>
+            <p v-if="state.approverOptionsError" role="alert">{{ state.approverOptionsError }}</p>
+            <el-button :disabled="!state.canSaveApprovers" @click="edit.saveApprovers()"
+              >保存审批人配置</el-button
+            >
+            <p v-if="state.approverSaving" role="status">正在保存审批人配置…</p>
+            <p v-if="state.approverSaveError" role="alert">
+              审批人配置保存失败：{{ state.approverSaveError }}
+            </p>
+          </template>
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -144,6 +240,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  APPROVER_SOURCE_OPTIONS,
   createTemplateEditor,
   formRules,
   type TemplateEditorOpening,
@@ -163,6 +260,7 @@ const inspectionDesign = computed(() => edit.value?.state.inspectionDesign)
 const wizardSteps = ['基本设置', '表单设置', '流程设置']
 const iconList = TEMPLATE_ICONS
 const templateRules = formRules()
+const approverSourceOptions = APPROVER_SOURCE_OPTIONS
 const recognition = userStore.recognition
 if (!recognition) throw new Error('认出 module 尚未接入')
 const editor = createTemplateEditor({
@@ -264,6 +362,30 @@ onBeforeUnmount(() => {
 .zip-label {
   display: block;
   margin-bottom: 8px;
+}
+.approver-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+.approver-section h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.approver-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+.approver-node {
+  min-width: 140px;
+}
+.approver-target {
+  color: #606266;
+}
+.approver-missing {
+  color: #e6a23c;
 }
 .template-icon {
   width: 30px;

@@ -86,6 +86,7 @@ export function statusLabel(status: number | undefined): string {
   if (status === 1) return '审批中'
   if (status === 2) return '审批通过'
   if (status === -1) return '审批拒绝'
+  if (status === -2) return '已撤回'
   return ''
 }
 
@@ -95,6 +96,7 @@ export function statusTagType(status: number | undefined): StatusTagType {
   if (status === 1) return 'warning'
   if (status === 2) return 'success'
   if (status === -1) return 'danger'
+  if (status === -2) return 'info'
   return 'info'
 }
 
@@ -120,6 +122,18 @@ export function parseFormValues(formValues: unknown): ProcessFormValues {
 
 export function summaryFields(formShowData: FormDataRecord = {}) {
   return formFields(formShowData).filter((field) => !LIST_HIDDEN_FIELD_KEYS.includes(field.key))
+}
+
+/**
+ * 待处理行状态文案（#288，ADR 0068）：挂起行「等待加签人处理」、候选人行「候选人之一，
+ * 处理即认领」；其余（含加签行）维持默认关系文案。与服务端下发的行标记一一对应。
+ */
+export function pendingRowLabel(
+  record: Pick<ProcessInstanceRecord, 'actionKind' | 'suspended'>,
+): string {
+  if (record.suspended) return '等待加签人处理'
+  if (record.actionKind === 'CANDIDATE') return '候选人之一，处理即认领'
+  return ''
 }
 
 export function workListDefinition(kind: WorkListKind): WorkListDefinition {
@@ -158,6 +172,8 @@ function presentWorkListItem(
     relationLabel: page.relationLabel,
     progressLabel: kind === WORK_LIST_KINDS.STARTED ? record.description || '' : '',
     rowKey: record.taskId ? `${record.id}-${record.taskId}` : String(record.id),
+    pendingRowLabel: kind === WORK_LIST_KINDS.PENDING ? pendingRowLabel(record) : '',
+    urged: kind === WORK_LIST_KINDS.PENDING && record.urged === true,
   }
 }
 

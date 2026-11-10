@@ -12,9 +12,11 @@ import com.lautung.oa.process.service.OaProcessService;
 import com.lautung.oa.process.service.OaProcessTemplateService;
 import com.lautung.oa.process.cc.CarbonCopyService;
 import com.lautung.oa.process.cc.CarbonCopyRecipient;
+import com.lautung.oa.vo.process.AddSignVo;
 import com.lautung.oa.vo.process.ApprovalVo;
 import com.lautung.oa.vo.process.ProcessFormVo;
 import com.lautung.oa.vo.process.ProcessVo;
+import com.lautung.oa.vo.process.TransferVo;
 import com.lautung.oa.security.custom.LoginUserInfoHelper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -97,6 +99,46 @@ public class ProcessController {
     public Result approve(@Valid @RequestBody ApprovalVo approvalVo) {
         processService.approve(currentUser(), approvalVo);
         return Result.ok();
+    }
+
+    //撤回（办事动作，不挂页面 gate：资格由申请人 + 审批中校验兜底，ADR 0068）
+    @Operation(summary = "撤回")
+    @PostMapping("withdraw/{processId}")
+    public Result withdraw(@PathVariable Long processId) {
+        processService.withdraw(currentUser(), processId);
+        return Result.ok();
+    }
+
+    //催办（办事动作，不挂页面 gate：资格由申请人 + 审批中校验兜底，ADR 0068）
+    @Operation(summary = "催办")
+    @PostMapping("urge/{processId}")
+    public Result urge(@PathVariable Long processId) {
+        processService.urge(currentUser(), processId);
+        return Result.ok();
+    }
+
+    //转办（办事动作，不挂页面 gate：资格由当前处理人 + 目标合法性写前校验兜底，ADR 0068）
+    @Operation(summary = "转办")
+    @PostMapping("transfer/{processId}")
+    public Result transfer(
+            @PathVariable Long processId, @Valid @RequestBody TransferVo transferVo) {
+        processService.transfer(currentUser(), processId, transferVo);
+        return Result.ok();
+    }
+
+    //加签（办事动作，不挂页面 gate：资格由当前处理人 + 加签人合法性写前校验兜底，ADR 0068）
+    @Operation(summary = "加签")
+    @PostMapping("addSign/{processId}")
+    public Result addSign(@PathVariable Long processId, @Valid @RequestBody AddSignVo addSignVo) {
+        processService.addSign(currentUser(), processId, addSignVo);
+        return Result.ok();
+    }
+
+    //转办/加签候选目标（办事读，登录即可、可见性由写前校验兜底；排除申请人，排除本人由客户端过滤）
+    @Operation(summary = "转办/加签候选目标")
+    @GetMapping("actionTargets/{processId}")
+    public Result actionTargets(@PathVariable Long processId) {
+        return Result.ok(processService.actionTargets(processId));
     }
 
     @Operation(summary = "已处理")

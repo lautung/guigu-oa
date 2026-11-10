@@ -11,6 +11,7 @@ import {
   workListPerspectiveFromRoute,
   workListRequest,
 } from '@/work/work-list'
+import { pendingRowLabel } from '@/work/work-list'
 
 const FORM_VALUES = JSON.stringify({
   formShowData: {
@@ -158,6 +159,8 @@ describe('work/work-list', () => {
             relationLabel: '等待我处理',
             progressLabel: '',
             rowKey: '12-task-9',
+            pendingRowLabel: '',
+            urged: false,
           },
         ],
       })
@@ -475,5 +478,39 @@ describe('work/work-list', () => {
         emphasis: '',
       })
     })
+  })
+})
+
+describe('pendingRowLabel（#288 待处理行状态呈现）', () => {
+  it('挂起行显示等待加签人处理，候选人行显示处理即认领，其余为空', () => {
+    expect(pendingRowLabel({ suspended: true, actionKind: 'APPROVE' })).toBe('等待加签人处理')
+    expect(pendingRowLabel({ suspended: false, actionKind: 'CANDIDATE' })).toBe(
+      '候选人之一，处理即认领',
+    )
+    expect(pendingRowLabel({ suspended: false, actionKind: 'ADD_SIGN' })).toBe('')
+    expect(pendingRowLabel({ suspended: false, actionKind: 'APPROVE' })).toBe('')
+    expect(pendingRowLabel({})).toBe('')
+  })
+
+  it('待处理行装填 pendingRowLabel 与催办标记，其余视角恒为空', () => {
+    const page = presentWorkList(WORK_LIST_KINDS.PENDING, {
+      records: [
+        { id: 20, taskId: 'task-20', status: 1, suspended: true, urged: true },
+        { id: 21, taskId: 'task-21', status: 1, actionKind: 'CANDIDATE' },
+      ],
+      total: 2,
+      pages: 1,
+    })
+    expect(page.records[0].pendingRowLabel).toBe('等待加签人处理')
+    expect(page.records[0].urged).toBe(true)
+    expect(page.records[1].pendingRowLabel).toBe('候选人之一，处理即认领')
+    expect(page.records[1].urged).toBe(false)
+    const started = presentWorkList(WORK_LIST_KINDS.STARTED, {
+      records: [{ id: 20, status: 1, suspended: true, urged: true }],
+      total: 1,
+      pages: 1,
+    })
+    expect(started.records[0].pendingRowLabel).toBe('')
+    expect(started.records[0].urged).toBe(false)
   })
 })

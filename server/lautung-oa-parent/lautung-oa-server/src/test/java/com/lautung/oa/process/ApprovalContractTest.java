@@ -1044,8 +1044,11 @@ public class ApprovalContractTest {
                 assertEquals(1, successes, "同一任务只能有一个审批请求提交成功");
                 assertEquals(1, (firstFailure == null ? 0 : 1) + (secondFailure == null ? 0 : 1));
                 Throwable losingFailure = firstFailure == null ? secondFailure : firstFailure;
-                assertTrue(losingFailure instanceof FlowableException,
-                        "失败请求应由 Flowable 对同一任务的并发提交拒绝");
+                // ADR 0069（#285）：并发后到者按「已被其他人处理」命名拒绝——写侧把
+                // Flowable 的乐观锁/认领冲突翻译成业务失败，引擎原始异常不再外漏。
+                assertTrue(losingFailure instanceof BusinessException,
+                        "并发后到者应被业务失败拒绝");
+                assertEquals("该审批已被其他人处理", ((BusinessException) losingFailure).getMessage());
 
                 ProcessVo persistedProcess = started(alice).getRecords().stream()
                         .filter(process -> startedProcess.getId().equals(process.getId()))

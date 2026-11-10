@@ -16,6 +16,7 @@ import db.migration.V130__SysDictSchemaAndMenu;
 import db.migration.V131__SysLoginLogEvent;
 import db.migration.V132__SysUserExportMenu;
 import db.migration.V133__SysUserImportMenu;
+import db.migration.V134__DeptLeaderUserRef;
 import org.flywaydb.core.api.migration.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +43,7 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -75,6 +77,7 @@ class FlywayMigrationContractTest {
             "oa_process_template",
             "oa_process",
             "oa_process_record",
+            "oa_process_approver_rule",
             "oa_attachment",
             "oa_notice",
             "oa_notice_read",
@@ -292,6 +295,18 @@ class FlywayMigrationContractTest {
         assertEquals(UNPUBLISHED_LEAVE_FORM_OPTIONS, jdbcTemplate.queryForObject(
                 "SELECT form_options FROM oa_process_template WHERE name = '未发布病假'", String.class));
         assertEquals(0, count("SELECT COUNT(*) FROM oa_process_template WHERE name LIKE '%草稿%'"));
+
+        // 部门负责人升级为用户引用（ADR 0065/0069，#285）：leader 姓名列删除、leader_user_id 就位。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '134' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE LOWER(TABLE_NAME) = 'sys_dept' AND LOWER(COLUMN_NAME) = 'leader_user_id'"));
+        assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE LOWER(TABLE_NAME) = 'sys_dept' AND LOWER(COLUMN_NAME) = 'leader'"));
+        // 审批人规则子表（#285）：模板 + BPMN userTask 唯一定节点，未发布可改。
+        assertEquals(1, count("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '135' AND success = TRUE"));
+        assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.INDEXES "
+                + "WHERE LOWER(TABLE_NAME) = 'oa_process_approver_rule' "
+                + "AND LOWER(INDEX_NAME) = 'uk_approver_rule_node'"));
 
         List<String> tableNames = tableNames();
         BUSINESS_TABLES.forEach(table -> assertTrue(
@@ -516,6 +531,8 @@ class FlywayMigrationContractTest {
             // 用户导出与导入按钮（#259）同样可重复执行。
             new V132__SysUserExportMenu().migrate(context);
             new V133__SysUserImportMenu().migrate(context);
+            // 部门负责人用户引用迁移（#285）：重放不得重复加列或重复回填。
+            new V134__DeptLeaderUserRef().migrate(context);
         }
 
         assertEquals(menus, count("SELECT COUNT(*) FROM sys_menu"));
@@ -550,6 +567,54 @@ class FlywayMigrationContractTest {
             jdbcTemplate.execute("ALTER TABLE sys_user DROP COLUMN IF EXISTS post_id");
             jdbcTemplate.update("DELETE FROM sys_user_post WHERE user_id = 981");
             jdbcTemplate.update("DELETE FROM sys_user WHERE id = 981");
+        }
+    }
+
+    @Test
+    void v134BackfillsDeptLeaderByUniqueEnabledNameThenDropsTheColumnAndReplaysIdempotently() throws Exception {
+        // 模拟 V134 之前的库：leader 姓名列还在；迁移必须按姓名唯一匹配「启用」用户回填，
+        // 重名/无匹配/仅停用同名一律置空并记日志，最后删除 leader 列；重放时列已不存在整段跳过。
+        jdbcTemplate.execute("ALTER TABLE sys_dept ADD COLUMN leader VARCHAR(50) DEFAULT NULL");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password, name, status, is_deleted) "
+                + "VALUES (971, 'unique-leader', '', '王唯一', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password, name, status, is_deleted) "
+                + "VALUES (972, 'dup-one', '', '李重名', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password, name, status, is_deleted) "
+                + "VALUES (973, 'dup-two', '', '李重名', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password, name, status, is_deleted) "
+                + "VALUES (974, 'disabled-leader', '', '赵停用', 0, 0)");
+        jdbcTemplate.update("INSERT INTO sys_dept (id, name, leader, status, is_deleted) "
+                + "VALUES (951, '研发部', '王唯一', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_dept (id, name, leader, status, is_deleted) "
+                + "VALUES (952, '市场部', '李重名', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_dept (id, name, leader, status, is_deleted) "
+                + "VALUES (953, '财务部', '查无此人', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_dept (id, name, leader, status, is_deleted) "
+                + "VALUES (954, '人事部', '赵停用', 1, 0)");
+        jdbcTemplate.update("INSERT INTO sys_dept (id, name, leader, status, is_deleted) "
+                + "VALUES (955, '已删部门', '王唯一', 1, 1)");
+
+        try {
+            try (Connection connection = dataSource.getConnection()) {
+                Context context = mock(Context.class);
+                when(context.getConnection()).thenReturn(connection);
+                new V134__DeptLeaderUserRef().migrate(context);
+                new V134__DeptLeaderUserRef().migrate(context);
+            }
+
+            assertEquals(971L, jdbcTemplate.queryForObject(
+                    "SELECT leader_user_id FROM sys_dept WHERE id = 951", Long.class));
+            assertNull(jdbcTemplate.queryForObject("SELECT leader_user_id FROM sys_dept WHERE id = 952", Long.class),
+                    "重名不得猜测回填");
+            assertNull(jdbcTemplate.queryForObject("SELECT leader_user_id FROM sys_dept WHERE id = 953", Long.class),
+                    "无匹配置空");
+            assertNull(jdbcTemplate.queryForObject("SELECT leader_user_id FROM sys_dept WHERE id = 954", Long.class),
+                    "仅停用同名视为无负责人");
+            assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE LOWER(TABLE_NAME) = 'sys_dept' AND LOWER(COLUMN_NAME) = 'leader'"));
+        } finally {
+            jdbcTemplate.update("DELETE FROM sys_dept WHERE id IN (951, 952, 953, 954, 955)");
+            jdbcTemplate.update("DELETE FROM sys_user WHERE id IN (971, 972, 973, 974)");
         }
     }
 

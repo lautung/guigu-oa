@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -63,6 +64,35 @@ public class OaProcessMapperXmlLivenessTest {
         assertTrue(offenders.isEmpty(),
                 "这些读没有过滤审批行本体存活，补 <include refid=\"" + LIVENESS_FRAGMENT + "\"/>: "
                         + offenders);
+    }
+
+    /**
+     * 已处理谓词是动作类型白名单（#287，ADR 0049 修订）：count 与行读两处都必须按
+     * {@code action_type IN (APPROVE, REJECT)} 过滤，且不得回到 description 负匹配——
+     * 新动作（转办/催办/加签发起/撤回）一旦被负匹配全量误收，白名单合同就失效了。
+     */
+    @Test
+    public void processedPredicatesAreTheActionTypeWhitelist() throws Exception {
+        for (String id : List.of("countProcessedRows", "selectProcessedRows")) {
+            Element select = selectById(id);
+            assertNotNull(select, "已处理读 " + id + " 缺失");
+            String sql = normalize(sqlText(select)).toLowerCase();
+            assertTrue(sql.contains("r.action_type in ('approve', 'reject')"),
+                    "已处理读 " + id + " 必须用动作类型白名单 action_type IN (APPROVE, REJECT)");
+            assertFalse(sql.contains("description !="),
+                    "已处理读 " + id + " 不得回到 description 负匹配（ADR 0049 修订）");
+        }
+    }
+
+    private Element selectById(String id) throws Exception {
+        NodeList selects = document().getElementsByTagName("select");
+        for (int i = 0; i < selects.getLength(); i++) {
+            Element select = (Element) selects.item(i);
+            if (id.equals(select.getAttribute("id"))) {
+                return select;
+            }
+        }
+        return null;
     }
 
     private static boolean includesLiveness(Element statement) {

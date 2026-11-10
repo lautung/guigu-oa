@@ -2,6 +2,7 @@ package com.lautung.oa.auth.service;
 
 import com.baomidou.mybatisplus.spring.service.IService;
 import com.lautung.oa.model.system.SysDept;
+import com.lautung.oa.vo.system.SysUserOptionVo;
 
 import java.util.List;
 
@@ -33,4 +34,10 @@ public interface SysDeptService extends IService<SysDept> {
 
     /** 删除部门：有下级部门或有用户归属时拒绝，不级联（201 命名文案）。 */
     void removeDept(Long id);
+
+    /**
+     * 部门负责人选择器的启用用户选项（#286，ADR 0069）：部门管理员未必有用户管理页
+     * 授予，选项读挂在部门页；只列启用且未删用户，用户名升序稳定展示。
+     */
+    List<SysUserOptionVo> findEnabledUserOptions();
 }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.process.mapper.OaProcessAddSignTaskMapper">
+
+    <!-- 加签任务只有本表自己的存活过滤（s.is_deleted）：不 join 审批行，审批行的存活过滤
+         由后续的 OaProcessMapper.selectRowsByIds 统一 include approvalRowLiveness（ADR 0050/#198）。 -->
+    <sql id="addSignLiveness">s.is_deleted = 0</sql>
+
+    <!-- 待处理第三源（ADR 0068 修订 ADR 0045）：该用户的未决加签任务，最新在前，
+         同刻由 id 决胜；原生 LIMIT/OFFSET 分页（#122 口径）。 -->
+    <select id="selectPendingForUser" resultType="com.lautung.oa.model.process.ProcessAddSignTask">
+        select s.id,s.process_id,s.engine_task_id,s.batch_no,s.sign_type,s.assignee_id,s.status,s.create_time,s.update_time
+        from oa_process_add_sign_task s
+        where s.assignee_id = #{assigneeId} and s.status = 'PENDING' and <include refid="addSignLiveness"/>
+        order by s.create_time desc, s.id desc
+        limit #{limit} offset #{offset}
+    </select>
+
+    <select id="countPendingForUser" resultType="long">
+        select count(*)
+        from oa_process_add_sign_task s
+        where s.assignee_id = #{assigneeId} and s.status = 'PENDING' and <include refid="addSignLiveness"/>
+    </select>
+
+    <!-- 挂起/批次判定：引擎任务 id 集合上的未决加签任务；空集合直接返回空（in () 非法）。 -->
+    <select id="selectPendingByEngineTaskIds" resultType="com.lautung.oa.model.process.ProcessAddSignTask">
+        select s.id,s.process_id,s.engine_task_id,s.batch_no,s.sign_type,s.assignee_id,s.status,s.create_time,s.update_time
+        from oa_process_add_sign_task s
+        where s.status = 'PENDING' and <include refid="addSignLiveness"/>
+        and s.engine_task_id in
+        <foreach collection="engineTaskIds" item="engineTaskId" open="(" separator="," close=")">
+            #{engineTaskId}
+        </foreach>
+    </select>
+
+    <!-- total 收口例外（#288）：后加签批次进行中，原处理人的引擎行既不进待处理行也不进 total。
+         活跃 AFTER 批次全局是少量行，取回其引擎任务 id 供与本人待处理任务求交。 -->
+    <select id="selectPendingByType" resultType="com.lautung.oa.model.process.ProcessAddSignTask">
+        select s.id,s.process_id,s.engine_task_id,s.batch_no,s.sign_type,s.assignee_id,s.status,s.create_time,s.update_time
+        from oa_process_add_sign_task s
+        where s.status = 'PENDING' and s.sign_type = #{signType} and <include refid="addSignLiveness"/>
+    </select>
+</mapper>

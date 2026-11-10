@@ -10,7 +10,8 @@
       行本体存活过滤另有一份 owner：approvalRowLiveness（#198）。
     -->
     <sql id="approvalRowColumns">
-        a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.current_auditor,a.status,a.create_time,a.update_time,
+        a.id,a.process_code,a.user_id,a.process_template_id,a.process_type_id,a.title,a.description,a.form_values,a.process_instance_id,a.status,a.create_time,a.update_time,
+        a.business_type,a.business_id,
         d.name as name,
         b.name as processTemplateName,
         c.name as processTypeName
@@ -103,14 +104,14 @@
     </select>
 
     <!-- 已处理计数：total=去重审批数（同一审批处理过多个节点只计一次，#186），原生 SQL 不走分页插件（#122 口径）。
-         「发起申请」流转记录与审批动作记录共享 status=1，只按文案排除（与 ApprovalWriter 共享同一常量；
-         record 表值域见 V107 订正注释）。 -->
+         已处理谓词是动作类型白名单（#287，ADR 0049 修订）：action_type IN (APPROVE, REJECT) 才算处理，
+         取代「除发起申请外全算处理」的负匹配——转办/催办/加签发起/撤回都不算处理。 -->
     <select id="countProcessedRows" resultType="long">
         select count(distinct r.process_id)
         from oa_process_record r
                  join oa_process a on a.id = r.process_id
         where r.operate_user_id = #{userId} and r.is_deleted = 0 and <include refid="approvalRowLiveness"/>
-          and r.description != #{excludeDescription}
+          and r.action_type in ('APPROVE', 'REJECT')
     </select>
 
     <!-- 已处理行：处理动作记录按审批去重（最近一次处理时间倒序、同刻由审批 id 决胜，#186），
@@ -119,7 +120,7 @@
          形状纪律（EXPLAIN ANALYZE 取证，#186）：窗口必须收在派生表内、先只聚合 id，
          载荷 join 只碰当页行——否则 17k 分组全体做 oa_process/sys_user 等四表 PK 回表后再排序
          （实测 p95 150→383ms）；聚合本身（该用户动作记录按审批分组取 max(create_time)）
-         约 17ms 不可再省（is_deleted/description 过滤需读行，V109 索引供扫描与分组键）。
+         约 17ms 不可再省（is_deleted/action_type 过滤需读行，V109 索引供扫描与分组键）。
          极端情况（当页含已删审批行）页会缩一行，与回查跳过已删行的旧边界一致。 -->
     <select id="selectProcessedRows" resultType="com.lautung.oa.vo.process.ProcessVo">
         select
@@ -127,7 +128,7 @@
         from (select r.process_id, max(r.create_time) as last_time
               from oa_process_record r
               where r.operate_user_id = #{userId} and r.is_deleted = 0
-                and r.description != #{excludeDescription}
+                and r.action_type in ('APPROVE', 'REJECT')
               group by r.process_id
               order by last_time desc, r.process_id desc
               limit #{limit} offset #{offset}) p
@@ -156,5 +157,22 @@
         where g.user_id = #{userId} and g.is_deleted = 0 and <include refid="approvalRowLiveness"/>
         order by a.create_time desc, a.id desc
         limit #{limit} offset #{offset}
+    </select>
+
+    <!-- 业务键回查最近一条审批（#289，ADR 0067）：单据表不存 process_id，域详情按
+         (business_type, business_id) 等值 + id 倒序取一条拼审批摘要；一张单据可积累多次
+         审批（重提起新审批），最近一条即当前真相。索引形状见 V138 头注释（EXPLAIN ANALYZE
+         取证：idx_oa_process_business 等值反向扫描，无排序步骤）；is_deleted 是残余谓词
+         （#198 同一取舍，等值列里插 is_deleted 会破坏排序匹配）。 -->
+    <select id="selectLatestBusinessRow" resultType="com.lautung.oa.vo.process.ProcessVo">
+        select
+            <include refid="approvalRowColumns"/>
+        from oa_process a
+            <include refid="approvalRowJoins"/>
+        where <include refid="approvalRowLiveness"/>
+          and a.business_type = #{businessType}
+          and a.business_id = #{businessId}
+        order by a.id desc
+        limit 1
     </select>
 </mapper>

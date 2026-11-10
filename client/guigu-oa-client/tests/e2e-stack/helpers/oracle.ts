@@ -1,5 +1,7 @@
 import type { APIRequestContext } from '@playwright/test'
 
+import { bpmnXml, buildZip } from './stack'
+
 /**
  * 真实 API oracle（#121 §6）：直接调用 Compose 里的 lautung-oa-server（经 nginx 的 /dev-api），
  * 用另一个账号的视角核对 UI 操作产生的持久化结果。不读 MySQL，不打 mock。
@@ -41,6 +43,10 @@ export interface ProcessRecord {
   status: number
   formValues?: string
   createTime?: string
+  /** 待处理三源合成标记（#288）：行来源（APPROVE/CANDIDATE/ADD_SIGN）与挂起/催办位。 */
+  actionKind?: string
+  suspended?: boolean
+  urged?: boolean
 }
 
 export interface AttachmentRecord {
@@ -331,6 +337,129 @@ export class Oracle {
     const found = result.records.find((item) => item.name === fields.name)
     if (!found) throw new Error(`创建后列表里找不到模板 ${fields.name}`)
     return found.id
+  }
+
+  // ---------------------------------------------------------------------
+  // W1 动作与动态审批人（#290）：转办/加签/撤回/催办直发 API 做对照，
+  // 以及「模板 + 审批人规则 + 部门负责人」的 API 造数链（ADR 0069）。
+  // ---------------------------------------------------------------------
+
+  /** 上传流程 zip（multipart，字段名 file），返回路径 / key / BPMN userTasks。 */
+  async uploadProcessZip(
+    admin: string,
+    file: { name: string; buffer: Buffer },
+  ): Promise<{
+    processDefinitionPath: string
+    processDefinitionKey: string
+    userTasks: { key: string; name?: string; assignee?: string }[]
+  }> {
+    const response = await this.request.fetch(
+      '/dev-api/admin/process/processTemplate/uploadProcessDefinition',
+      {
+        method: 'post',
+        headers: { token: await this.token(admin) },
+        multipart: {
+          file: { name: file.name, mimeType: 'application/zip', buffer: file.buffer },
+        },
+      },
+    )
+    const body = (await response.json()) as {
+      code: number
+      message?: string
+      data?: { processDefinitionPath: string; processDefinitionKey: string; userTasks: [] }
+    }
+    if (body.code !== 200 || !body.data) {
+      throw new Error(`上传流程 zip 失败 code=${body.code} ${body.message ?? ''}`)
+    }
+    return body.data
+  }
+
+  /** 造一条带流程 zip 的已发布模板，发布前整体替换审批人规则（#285 链路）。 */
+  async publishTemplateWithRules(
+    admin: string,
+    name: string,
+    processKey: string,
+    rules: { taskDefinitionKey: string; sourceType: string; targetId?: number }[],
+  ): Promise<number> {
+    const typeId = await this.processTypeId(admin, '演示审批')
+    const id = await this.createUnpublishedTemplate(admin, {
+      name,
+      processTypeId: typeId,
+      description: '栈测试动态审批人用',
+    })
+    const zip = buildZip([{ name: 'process.bpmn20.xml', data: bpmnXml(processKey) }])
+    const uploaded = await this.uploadProcessZip(admin, { name: `${processKey}.zip`, buffer: zip })
+    await this.call(admin, 'put', '/admin/process/processTemplate/update', {
+      ...(await this.getTemplate(admin, id)),
+      processDefinitionPath: uploaded.processDefinitionPath,
+      processDefinitionKey: uploaded.processDefinitionKey,
+    })
+    if (rules.length > 0) {
+      await this.call(admin, 'put', `/admin/process/processTemplate/approverRules/${id}`, rules)
+    }
+    await this.call(admin, 'post', `/admin/process/processTemplate/publish/${id}`)
+    return id
+  }
+
+  /** 造一个顶层部门并返回 id（名称带 runId 标记，跨轮不撞；负责人只认启用用户）。 */
+  async createDeptWithLeader(admin: string, name: string, leaderUserId: number): Promise<number> {
+    await this.call(admin, 'post', '/admin/system/sysDept/save', {
+      parentId: 0,
+      name,
+      leaderUserId,
+      status: 1,
+      sortValue: 0,
+    })
+    const tree = await this.call<
+      { id: number; name: string; children?: { id: number; name: string }[] }[]
+    >(admin, 'get', '/admin/system/sysDept/findTree')
+    const found: { id: number }[] = []
+    const walk = (nodes: { id: number; name: string; children?: unknown[] }[]): void => {
+      for (const node of nodes) {
+        if (node.name === name) found.push(node)
+        if (Array.isArray(node.children)) walk(node.children as typeof nodes)
+      }
+    }
+    walk(tree)
+    if (found.length === 0) throw new Error(`创建后部门树里找不到 ${name}`)
+    return found[0].id
+  }
+
+  /** 把用户划入部门（update 只送 id + deptId：其余字段为空即不覆盖，ADR 0034）。 */
+  async setUserDept(admin: string, userId: number, deptId: number): Promise<void> {
+    await this.call(admin, 'put', '/admin/system/sysUser/update', { id: userId, deptId })
+  }
+
+  /** 待处理列表里按审批 id 找行（带 taskId 与三源标记），找不到返回 undefined。 */
+  async pendingRow(user: string, processId: number): Promise<ProcessRecord | undefined> {
+    for (let page = 1; page <= 20; page++) {
+      const result = await this.workList(user, 'pending', page, 100)
+      const found = result.records.find((record) => record.id === processId)
+      if (found) return found
+      if (page * 100 >= result.total) break
+    }
+    return undefined
+  }
+
+  async transfer(user: string, processId: number, targetUserId: number): Promise<void> {
+    await this.call(user, 'post', `/admin/process/transfer/${processId}`, { targetUserId })
+  }
+
+  async addSign(
+    user: string,
+    processId: number,
+    signType: 1 | 2,
+    assigneeIds: number[],
+  ): Promise<void> {
+    await this.call(user, 'post', `/admin/process/addSign/${processId}`, { signType, assigneeIds })
+  }
+
+  async withdraw(user: string, processId: number): Promise<void> {
+    await this.call(user, 'post', `/admin/process/withdraw/${processId}`)
+  }
+
+  async urge(user: string, processId: number): Promise<void> {
+    await this.call(user, 'post', `/admin/process/urge/${processId}`)
   }
 }
 

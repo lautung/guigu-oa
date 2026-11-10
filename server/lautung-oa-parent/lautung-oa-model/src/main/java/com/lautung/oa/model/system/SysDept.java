@@ -31,9 +31,9 @@ public class SysDept extends BaseEntity {
     @TableField("name")
     private String name;
 
-    @Schema(description = "负责人")
-    @TableField("leader")
-    private String leader;
+    @Schema(description = "负责人用户id（ADR 0065：姓名不是身份，负责人是对启用用户的引用）")
+    @TableField("leader_user_id")
+    private Long leaderUserId;
 
     @Schema(description = "排序")
     @TableField("sort_value")

@@ -2,6 +2,7 @@ package com.lautung.oa.process.service;
 
 import com.lautung.oa.model.process.ProcessTemplate;
 import com.lautung.oa.model.process.ProcessType;
+import com.lautung.oa.process.publication.BpmnUserTasks;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
@@ -38,7 +39,8 @@ public interface ApprovalTemplate {
     /** Restores every published template as one transaction; missing evidence fails the whole batch. */
     int restorePublished();
 
-    record UploadedProcessDefinition(String processDefinitionPath, String processDefinitionKey) { }
+    record UploadedProcessDefinition(
+            String processDefinitionPath, String processDefinitionKey, List<BpmnUserTasks.UserTaskRef> userTasks) { }
 
     record PublishedApproval(ProcessTemplate template, String processDefinitionId) { }
 }

@@ -134,7 +134,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     private Process findScenario(Long userId, Long templateId, String scenario) {
         return jdbcTemplate.query(
                 "SELECT id, process_code, user_id, process_template_id, process_type_id, title, description, "
-                        + "form_values, process_instance_id, current_auditor, status, create_time, update_time, is_deleted "
+                        + "form_values, process_instance_id, status, create_time, update_time, is_deleted "
                         + "FROM oa_process WHERE user_id = ? AND process_template_id = ? AND form_values LIKE ? "
                         + "AND is_deleted = 0 ORDER BY id LIMIT 1",
                 (result, row) -> {
@@ -148,7 +148,6 @@ public class DemoScenarioSeeder implements ApplicationRunner {
                     process.setDescription(result.getString("description"));
                     process.setFormValues(result.getString("form_values"));
                     process.setProcessInstanceId(result.getString("process_instance_id"));
-                    process.setCurrentAuditor(result.getString("current_auditor"));
                     process.setStatus(result.getInt("status"));
                     process.setCreateTime(result.getTimestamp("create_time"));
                     process.setUpdateTime(result.getTimestamp("update_time"));

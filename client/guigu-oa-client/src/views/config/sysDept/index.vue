@@ -24,7 +24,9 @@
       :tree-props="{ children: 'children' }"
     >
       <el-table-column prop="name" label="部门名称" min-width="200" />
-      <el-table-column prop="leader" label="负责人" width="140" />
+      <el-table-column label="负责人" width="140">
+        <template #default="scope">{{ leaderLabel(scope.row) || '—' }}</template>
+      </el-table-column>
       <el-table-column prop="sortValue" label="排序" width="80" align="center" />
       <el-table-column label="状态" width="90" align="center">
         <template #default="scope">
@@ -65,7 +67,19 @@
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="负责人">
-          <el-input v-model="form.leader" />
+          <el-select
+            v-model="form.leaderUserId"
+            filterable
+            clearable
+            placeholder="请选择负责人（仅启用用户）"
+          >
+            <el-option
+              v-for="option in leaderChoices"
+              :key="option.id"
+              :label="option.label"
+              :value="option.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sortValue" :min="0" controls-position="right" />
@@ -91,7 +105,7 @@
 <script lang="ts">
 import { defineComponent, onBeforeUnmount } from 'vue'
 
-import { removeById, saveOrUpdate } from '@/api/sysDept'
+import { fetchUserOptions, removeById, saveOrUpdate } from '@/api/sysDept'
 import ListLoadError from '@/components/ListLoadError.vue'
 import {
   DEPT_PERMISSIONS,
@@ -99,15 +113,24 @@ import {
   emptyForm,
   findTreeRequest,
   formRules,
+  leaderOptions,
   parentOptions,
   presentDeptNode,
   presentForm,
+  presentUserOptions,
 } from '@/config/sys-dept'
 import { createListPage } from '@/list/list-page'
 import { listPageEffects } from '@/list/list-page-browser'
 import { openRequestScope } from '@/request/request-scope'
 import { useUserStore } from '@/store/modules/user'
-import type { DeptForm, DeptParentOption, DeptRecord, DeptTreeNode, EntityId } from '@/types/domain'
+import type {
+  DeptForm,
+  DeptParentOption,
+  DeptRecord,
+  DeptTreeNode,
+  EntityId,
+  UserOption,
+} from '@/types/domain'
 import type { FormInstance } from 'element-plus'
 
 const effects = listPageEffects()
@@ -116,7 +139,8 @@ const effects = listPageEffects()
  * 系统管理 > 部门管理（#247）：树表格、新增/编辑弹窗与删除确认。
  * 读是整表读（`fetchAll`）——服务端直接给根节点数组；写后刷新、失败策略与
  * 删除确认仍走 `createListPage`。写失败由请求层统一提示一次（含删除保护 201），
- * 本页不再二次回显。
+ * 本页不再二次回显。负责人是启用用户的引用（#286，ADR 0069）：选项挂在部门页
+ * 自己的只读端点上，列表姓名由选项 join 出来，负责人不在选项里视为无负责人。
  */
 export default defineComponent({
   name: 'SysDeptList',
@@ -147,6 +171,7 @@ export default defineComponent({
       saving: false,
       form: emptyForm(),
       statusOptions: DEPT_STATUS_OPTIONS,
+      userOptions: [] as UserOption[],
     }
   },
   computed: {
@@ -159,10 +184,27 @@ export default defineComponent({
     parentChoices(): DeptParentOption[] {
       return parentOptions(this.rows, this.form.id || undefined)
     },
+    leaderChoices(): UserOption[] {
+      return leaderOptions(this.userOptions, this.form.leaderUserId)
+    },
+  },
+  mounted() {
+    void this.loadUserOptions()
   },
   methods: {
+    /** 选项读失败不阻塞部门树：请求层已提示，空选项只影响负责人的可选范围。 */
+    async loadUserOptions() {
+      const response = await this.list.settle(fetchUserOptions())
+      if (response) this.userOptions = presentUserOptions(response.data || [])
+    },
     statusLabel(status?: number): string {
       return DEPT_STATUS_OPTIONS.find((option) => option.value === status)?.label || ''
+    },
+    leaderLabel(row: DeptRecord): string {
+      const found = this.userOptions.find(
+        (option) => String(option.id) === String(row.leaderUserId),
+      )
+      return found ? found.name : ''
     },
     optionLabel(option: DeptParentOption): string {
       return `${'　'.repeat(option.depth)}${option.name}`

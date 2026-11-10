@@ -34,4 +34,16 @@ public class ProcessRecord extends BaseEntity {
 	@TableField("operate_user")
 	private String operateUser;
 
+	@Schema(description = "动作类型（INITIATE/APPROVE/REJECT/TRANSFER/ADD_SIGN/URGE/WITHDRAW/OTHER，V136 起回填）")
+	@TableField("action_type")
+	private String actionType;
+
+	@Schema(description = "动作对象用户id（单目标动作；催办等多人集合为空）")
+	@TableField("target_user_id")
+	private Long targetUserId;
+
+	@Schema(description = "动作对象用户姓名（多人集合顿号连接）")
+	@TableField("target_user_name")
+	private String targetUserName;
+
 }

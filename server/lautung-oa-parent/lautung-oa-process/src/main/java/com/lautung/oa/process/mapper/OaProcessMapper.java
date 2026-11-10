@@ -28,13 +28,11 @@ public interface OaProcessMapper extends BaseMapper<Process> {
     //待处理回查：按 businessKey 集合批量取行，服务层按引擎顺序重排
     List<ProcessVo> selectRowsByIds(@Param("ids") List<Long> ids);
 
-    //已处理计数：total=去重审批数（同一审批处理过多个节点只计一次，「发起申请」流转记录不算处理）
-    long countProcessedRows(@Param("userId") Long userId,
-                            @Param("excludeDescription") String excludeDescription);
+    //已处理计数：total=去重审批数（同一审批处理过多个节点只计一次；白名单 action_type IN (APPROVE,REJECT)，#287）
+    long countProcessedRows(@Param("userId") Long userId);
 
     //已处理行：处理动作记录按审批去重，原生 LIMIT/OFFSET 分页（#122 口径），最近一次处理在前
     List<ProcessVo> selectProcessedRows(@Param("userId") Long userId,
-                                        @Param("excludeDescription") String excludeDescription,
                                         @Param("offset") long offset,
                                         @Param("limit") long limit);
 
@@ -45,4 +43,8 @@ public interface OaProcessMapper extends BaseMapper<Process> {
     List<ProcessVo> selectCarbonCopiedRows(@Param("userId") Long userId,
                                            @Param("offset") long offset,
                                            @Param("limit") long limit);
+
+    //业务键回查最近一条审批（#289，ADR 0067）：(business_type, business_id) 等值 + id 倒序取一条
+    ProcessVo selectLatestBusinessRow(@Param("businessType") String businessType,
+                                      @Param("businessId") Long businessId);
 }

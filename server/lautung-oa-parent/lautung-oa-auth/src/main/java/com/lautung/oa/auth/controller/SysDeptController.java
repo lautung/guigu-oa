@@ -43,6 +43,17 @@ public class SysDeptController {
         return Result.ok(tree);
     }
 
+    /**
+     * 部门负责人选择器的启用用户选项（#286，ADR 0069）：只读，只判部门页授予——
+     * 部门管理员未必有用户管理页，不能再借用 {@code /admin/system/sysUser} 的读端点。
+     */
+    @PreAuthorize("@backofficeGate.isAllowed('/system/sysDept')")
+    @Operation(summary = "部门负责人选择器用户选项（只读）")
+    @GetMapping("userOptions")
+    public Result userOptions() {
+        return Result.ok(sysDeptService.findEnabledUserOptions());
+    }
+
     @PreAuthorize("@backofficeGate.isAllowed('/system/sysDept','system:dept:add')")
     @Operation(summary = "新增部门")
     @OperLog(title = "部门·新增", businessType = BusinessType.CREATE)

@@ -116,6 +116,11 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void claim(String taskId, String username) {
+        delegate.claim(taskId, username);
+    }
+
+    @Override
     public void complete(String taskId) {
         if (failNextComplete) {
             failNextComplete = false;
@@ -156,6 +161,11 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
+    public void cancel(String processInstanceId, String reason) {
+        delegate.cancel(processInstanceId, reason);
+    }
+
+    @Override
     public List<CurrentTask> currentTasks(String processInstanceId) {
         if (checkDecisionRecordBeforeCurrentTasks) {
             if (skipNextCurrentTasksCheck) {
@@ -186,7 +196,7 @@ public class TestApprovalEngine implements ApprovalEngine {
     }
 
     @Override
-    public boolean hasHistoricAssignee(String processInstanceId, String username) {
-        return delegate.hasHistoricAssignee(processInstanceId, username);
+    public void reassign(String taskId, String fromUsername, String toUsername) {
+        delegate.reassign(taskId, fromUsername, toUsername);
     }
 }

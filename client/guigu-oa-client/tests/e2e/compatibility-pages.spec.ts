@@ -196,6 +196,17 @@ async function mockApi(page: Page) {
         processDefinitionPath: 'opaque/old.zip',
         processDefinitionKey: 'old',
       })
+    // 节点审批人配置的只读依赖（#286）：配置页打开即读。
+    if (path.startsWith('/admin/process/processTemplate/approverRules/'))
+      return json(route, {
+        userTasks: [{ key: 'dept-approve', name: '部门审批', assignee: 'lisi' }],
+        rules: [],
+      })
+    if (path === '/admin/process/processTemplate/ruleTargets')
+      return json(route, {
+        roles: [{ id: 7, name: '审批主管' }],
+        posts: [{ id: 5, name: '部门经理' }],
+      })
     if (path === '/admin/system/sysUser/depts') return json(route, [])
     if (path === '/admin/system/sysUser/posts') return json(route, [])
     if (/^\/admin\/system\/sysUser\/\d+\/\d+$/.test(path))
