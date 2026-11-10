@@ -61,7 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 转办与加签合同（#288，ADR 0068）：前/后加签全流程（多人全通过、任一拒绝整条拒绝、
  * 前签回原处理人、后签通过记录保留、批次后再加签、加签人不能再加签）、转办可见性与
- * 再转办、成员资格五关系读/补传/动作三档矩阵、待处理三源合成与 total、候选认领并发
+ * 再转办、成员资格六关系读/补传/动作三档矩阵、待处理三源合成与 total、候选认领并发
  * 后到者拒绝、挂起行与候选人行呈现。201 拒绝一律钉 $.message。
  */
 @SpringBootTest
@@ -281,14 +281,22 @@ public class ApprovalTransferAddSignContractTest {
         assertEquals(已拒绝, processStatus(secondProcessId));
         assertEquals(0, pending(lisi).getTotal());
         assertEquals(0, pending(zhangsan).getTotal());
-        // 时间线（从留下拒绝记录的加签人读）：最后一行是 REJECT，加签记录仍在；
-        // 未留通过/拒绝记录的原处理人按五关系严格口径不再可读（账本无他的动作行）。
+        // 时间线（从留下拒绝记录的加签人读）：最后一行是 REJECT，加签记录仍在。
         List<String> timeline = recordDescriptions(eve, secondProcessId);
         assertEquals("已拒绝", timeline.get(timeline.size() - 1));
         assertTrue(timeline.contains("已加签"));
-        BusinessException initiatorLosesRead = assertThrows(BusinessException.class,
-                () -> approval.show(zhangsan, secondProcessId));
-        assertEquals(403, initiatorLosesRead.getCode());
+        // 加签发起人（账本 ADD_SIGN）保留只读：能看详情与附件、不能补传不能动作（ADR 0011 修订）。
+        assertNotNull(show(zhangsan, secondProcessId).get("process"), "加签发起人能看详情");
+        assertFalse(attachmentService.listForProcess(zhangsan, secondProcessId).canUpload(),
+                "加签发起人不能补传");
+        ApprovalMembership initiator = membership(zhangsan, secondProcessId);
+        assertTrue(initiator.isAddSignInitiator());
+        assertTrue(initiator.canRead());
+        assertFalse(initiator.canUpload());
+        assertFalse(initiator.canAct(second.getTaskId()));
+        BusinessException initiatorReadOnly = assertThrows(BusinessException.class,
+                () -> approval.approve(zhangsan, decision(second, -1)));
+        assertEquals(403, initiatorReadOnly.getCode());
     }
 
     @Test
@@ -381,7 +389,7 @@ public class ApprovalTransferAddSignContractTest {
     }
 
     @Test
-    public void membershipFiveRelationMatrixCoversReadUploadAct() {
+    public void membershipRelationMatrixCoversReadUploadAct() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser zhangsan = user(3L, "zhangsan", "张三");
         SysUser lisi = user(4L, "lisi", "李四");
@@ -614,7 +622,7 @@ public class ApprovalTransferAddSignContractTest {
     }
 
     private void assertMatrix(ApprovalMembership membership, boolean canUpload, boolean hasActionable) {
-        assertTrue(membership.canRead(), "五种关系皆可读");
+        assertTrue(membership.canRead(), "六种关系皆可读");
         assertEquals(canUpload, membership.canUpload());
         assertEquals(hasActionable, membership.hasActionableTask());
     }

@@ -79,12 +79,13 @@ public class ApprovalMembershipResolver {
 
         boolean historicApprover = ledgerEvidence.hasDecisionBy(process.getId(), user.getId());
         boolean transferHandler = ledgerEvidence.hasTransferBy(process.getId(), user.getId());
+        boolean addSignInitiator = ledgerEvidence.hasAddSignBy(process.getId(), user.getId());
         boolean ccMember = extensions.stream()
                 .filter(Objects::nonNull)
                 .anyMatch(extension -> extension.isMember(user, process));
 
         return new ApprovalMembership(
                 applicant, engineTaskIds, suspendedTaskIds, signTaskIds,
-                historicApprover, ccMember, transferHandler);
+                historicApprover, ccMember, transferHandler, addSignInitiator);
     }
 }

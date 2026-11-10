@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 成员资格五关系矩阵（#288，ADR 0068 修订 ADR 0011）的单测面：
+ * 成员资格六关系矩阵（#288，ADR 0068 修订 ADR 0011）的单测面：
  * 申请人/当前处理人（引擎 assignee、候选人、加签任务 assignee，挂起带不可动作标记）/
- * 历史处理人（账本通过或拒绝）/抄送人/转办经手人 × 读/补传/动作三档。
+ * 历史处理人（账本通过或拒绝）/抄送人/转办经手人/加签发起人 × 读/补传/动作三档。
  */
 class ApprovalMembershipTest {
 
@@ -129,6 +129,20 @@ class ApprovalMembershipTest {
     }
 
     @Test
+    void addSignInitiatorKeepsReadOnlyAfterRejection() {
+        // 前加签被拒后引擎任务与加签任务都收场：ADD_SIGN 账本行让发起人保留只读（ADR 0011 修订）。
+        ApprovalMembership membership = resolver(
+                evidence(List.of(), false, false, true, List.of()))
+                .resolve(user(3L, "zhangsan"), process(2L, "instance-1"));
+
+        assertTrue(membership.isAddSignInitiator());
+        assertTrue(membership.canRead(), "加签发起人只读可见");
+        assertFalse(membership.canUpload(), "加签发起人不能补传");
+        assertFalse(membership.canAct("task-a"));
+        assertFalse(membership.hasActionableTask());
+    }
+
+    @Test
     void ccRecipientCanReadOnly() {
         ApprovalMembership membership = resolver(
                 evidence(List.of(), false, false, List.of()), CC_READER)
@@ -166,6 +180,7 @@ class ApprovalMembershipTest {
         assertFalse(membership.isPastApprover());
         assertFalse(membership.isCc());
         assertFalse(membership.isTransferHandler());
+        assertFalse(membership.isAddSignInitiator());
     }
 
     @Test
@@ -230,6 +245,7 @@ class ApprovalMembershipTest {
         assertEquals(1, evidence.currentTaskCalls);
         assertEquals(1, evidence.decisionCalls);
         assertEquals(1, evidence.transferCalls);
+        assertEquals(1, evidence.addSignCalls);
         assertEquals(1, evidence.pendingSignTaskCalls);
         assertEquals(Set.of("task-a"), membership.engineTaskIds());
     }
@@ -272,7 +288,13 @@ class ApprovalMembershipTest {
     private static FakeEvidence evidence(
             List<CurrentTask> tasks, boolean decided, boolean transferred,
             List<SignTaskSnapshot> signTasks) {
-        return new FakeEvidence(tasks, decided, transferred, signTasks);
+        return new FakeEvidence(tasks, decided, transferred, false, signTasks);
+    }
+
+    private static FakeEvidence evidence(
+            List<CurrentTask> tasks, boolean decided, boolean transferred, boolean addSigned,
+            List<SignTaskSnapshot> signTasks) {
+        return new FakeEvidence(tasks, decided, transferred, addSigned, signTasks);
     }
 
     private static final class FakeEvidence implements MembershipEvidence, MembershipLedgerEvidence {
@@ -280,18 +302,21 @@ class ApprovalMembershipTest {
         private final List<CurrentTask> tasks;
         private final boolean decided;
         private final boolean transferred;
+        private final boolean addSigned;
         private final List<SignTaskSnapshot> signTasks;
         private int currentTaskCalls;
         private int decisionCalls;
         private int transferCalls;
+        private int addSignCalls;
         private int pendingSignTaskCalls;
 
         private FakeEvidence(
-                List<CurrentTask> tasks, boolean decided, boolean transferred,
+                List<CurrentTask> tasks, boolean decided, boolean transferred, boolean addSigned,
                 List<SignTaskSnapshot> signTasks) {
             this.tasks = tasks;
             this.decided = decided;
             this.transferred = transferred;
+            this.addSigned = addSigned;
             this.signTasks = signTasks;
         }
 
@@ -311,6 +336,12 @@ class ApprovalMembershipTest {
         public boolean hasTransferBy(Long processId, Long userId) {
             transferCalls++;
             return transferred && processId != null && userId != null;
+        }
+
+        @Override
+        public boolean hasAddSignBy(Long processId, Long userId) {
+            addSignCalls++;
+            return addSigned && processId != null && userId != null;
         }
 
         @Override

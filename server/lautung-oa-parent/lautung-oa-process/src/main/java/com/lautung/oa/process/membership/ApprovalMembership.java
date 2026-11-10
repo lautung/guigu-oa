@@ -6,9 +6,10 @@ import java.util.Set;
 
 /**
  * 某用户与某一次审批的关系，以及由关系派生的能力（ADR 0068 修订 ADR 0011，#288）。
- * 五种关系：申请人；当前处理人（引擎 assignee/候选人 {@code engineTaskIds}、加签任务
+ * 六种关系：申请人；当前处理人（引擎 assignee/候选人 {@code engineTaskIds}、加签任务
  * assignee {@code signTaskIds}；前加签挂起的引擎任务同时出现在 {@code suspendedTaskIds}，
- * 带「不可动作」标记）；历史处理人（账本里留下通过/拒绝的人）；抄送人；转办经手人。
+ * 带「不可动作」标记）；历史处理人（账本里留下通过/拒绝的人）；抄送人；转办经手人；
+ * 加签发起人（账本里留下 ADD_SIGN 的人，只读——前加签被拒后仍可回看）。
  * 能力由关系派生，调用方不再各自解释。
  */
 public record ApprovalMembership(
@@ -18,7 +19,8 @@ public record ApprovalMembership(
         Set<String> signTaskIds,
         boolean historicApprover,
         boolean ccMember,
-        boolean transferHandler) {
+        boolean transferHandler,
+        boolean addSignInitiator) {
 
     public ApprovalMembership {
         engineTaskIds = engineTaskIds == null ? Set.of() : Set.copyOf(engineTaskIds);
@@ -27,7 +29,7 @@ public record ApprovalMembership(
     }
 
     public static ApprovalMembership empty() {
-        return new ApprovalMembership(false, Set.of(), Set.of(), Set.of(), false, false, false);
+        return new ApprovalMembership(false, Set.of(), Set.of(), Set.of(), false, false, false, false);
     }
 
     public boolean isApplicant() {
@@ -51,14 +53,20 @@ public record ApprovalMembership(
         return transferHandler;
     }
 
+    /** 加签发起人：只读；前加签被拒、引擎任务与加签任务都收场后仍可回看（ADR 0011 修订）。 */
+    public boolean isAddSignInitiator() {
+        return addSignInitiator;
+    }
+
     /** 前加签挂起中的原处理人（或候选人）：仍是当前处理人，但不可动作。 */
     public boolean isSuspended() {
         return !suspendedTaskIds.isEmpty();
     }
 
-    /** 五种关系皆可读（canRead，ADR 0068）。 */
+    /** 六种关系皆可读（canRead，ADR 0068，ADR 0011 修订）。 */
     public boolean canRead() {
-        return applicant || isCurrentApprover() || isPastApprover() || ccMember || transferHandler;
+        return applicant || isCurrentApprover() || isPastApprover() || ccMember || transferHandler
+                || addSignInitiator;
     }
 
     /** 只有申请人或当前处理人可补传（挂起中的原处理人仍是当前处理人）。 */

@@ -53,6 +53,17 @@ public class LedgerMembershipEvidence implements MembershipLedgerEvidence {
     }
 
     @Override
+    public boolean hasAddSignBy(Long processId, Long userId) {
+        if (processId == null || userId == null) {
+            return false;
+        }
+        return processRecordService.count(new LambdaQueryWrapper<ProcessRecord>()
+                .eq(ProcessRecord::getProcessId, processId)
+                .eq(ProcessRecord::getOperateUserId, userId)
+                .eq(ProcessRecord::getActionType, ApprovalActionType.ADD_SIGN.name())) > 0;
+    }
+
+    @Override
     public List<SignTaskSnapshot> pendingSignTasks(Long processId) {
         if (processId == null) {
             return List.of();
