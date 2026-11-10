@@ -7,6 +7,7 @@ import com.lautung.oa.attendance.controller.AttendanceLedgerController;
 import com.lautung.oa.attendance.controller.AttendancePunchController;
 import com.lautung.oa.attendance.controller.AttendanceRepairController;
 import com.lautung.oa.attendance.controller.AttendanceShiftController;
+import com.lautung.oa.attendance.controller.AttendanceStatController;
 import com.lautung.oa.audit.controller.SysLoginLogController;
 import com.lautung.oa.audit.controller.SysOperLogController;
 import com.lautung.oa.auth.controller.IndexController;
@@ -111,7 +112,8 @@ class BackofficeRouteAuthorizationContractTest {
             AttendancePunchController.class,
             AttendanceRepairController.class,
             AttendanceLeaveTypeController.class,
-            AttendanceLedgerController.class);
+            AttendanceLedgerController.class,
+            AttendanceStatController.class);
 
     static {
         expect(AttendanceShiftController.class, "/business/attendance/group", null,
@@ -149,6 +151,9 @@ class BackofficeRouteAuthorizationContractTest {
                 "pageQuery", "users");
         expect(AttendanceLedgerController.class, "/business/attendance/leave",
                 "attendance:ledger:grant", "grant");
+        // 月度统计（#283）：列表与下钻都只判页面授予，无新增按钮点。
+        expect(AttendanceStatController.class, "/business/attendance/stat", null,
+                "pageQuery", "daily");
         expect(SysUserController.class, "/system/sysUser", null,
                 "updateStatus", "index", "get", "save", "updateById", "remove", "resetPassword",
                 "depts", "posts", "importTemplate");

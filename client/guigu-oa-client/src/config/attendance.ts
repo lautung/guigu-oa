@@ -13,6 +13,8 @@ import type {
   AttendanceHolidayRecord,
   AttendanceLeaveApplicationRecord,
   AttendanceLeaveApplyForm,
+  AttendanceLeaveStatRecord,
+  AttendanceLeaveStatView,
   AttendanceLeaveTypeForm,
   AttendanceLeaveTypeListItem,
   AttendanceLeaveTypeRecord,
@@ -36,6 +38,8 @@ import type {
   AttendanceShiftForm,
   AttendanceShiftListItem,
   AttendanceShiftRecord,
+  AttendanceStatRecord,
+  AttendanceStatView,
   AttendanceTodayRecord,
   AttendanceTodayView,
   EntityId,
@@ -1157,5 +1161,58 @@ export function holidayFormRules(): Record<'holidayDate' | 'name', RequiredRule[
   return {
     holidayDate: [requiredRule('节假日日期不能为空')],
     name: [requiredRule('节假日名称不能为空')],
+  }
+}
+
+// ---------------- 月度统计（#283） ----------------
+
+export const STAT_API = `${ATTENDANCE_API}/stat`
+
+/** 月份选择默认值：本地当前月（服务端缺省也取注入时钟当前月）。 */
+export function currentMonthText(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function statListRequest(page: number, limit: number, month = ''): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${STAT_API}/${page}/${limit}`,
+    params: month ? { month } : {},
+  }
+}
+
+/** 点人下钻：服务端先按列表同一行集合与数据范围校验，再复用逐日推导。 */
+export function statDailyRequest(userId: EntityId, month = ''): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${STAT_API}/daily`,
+    params: month ? { userId, month } : { userId },
+  }
+}
+
+export function presentAttendanceLeaveStat(
+  record: AttendanceLeaveStatRecord = {},
+): AttendanceLeaveStatView {
+  return {
+    leaveTypeName: record.leaveTypeName || '请假',
+    days: record.days == null ? 0 : record.days,
+  }
+}
+
+/** 汇总行投影：请假分列保留服务端顺序，加班时长按既有小时文案规则。 */
+export function presentAttendanceStat(record: AttendanceStatRecord = {}): AttendanceStatView {
+  return {
+    userId: record.userId == null ? '' : record.userId,
+    username: record.username || '',
+    name: record.name || '',
+    deptName: record.deptName || '',
+    requiredDays: record.requiredDays == null ? 0 : record.requiredDays,
+    actualDays: record.actualDays == null ? 0 : record.actualDays,
+    lateCount: record.lateCount == null ? 0 : record.lateCount,
+    earlyCount: record.earlyCount == null ? 0 : record.earlyCount,
+    missingDays: record.missingDays == null ? 0 : record.missingDays,
+    leaveDays: (record.leaveDays || []).map(presentAttendanceLeaveStat),
+    overtimeHoursText: attendanceHoursText(record.overtimeHours),
   }
 }

@@ -24,10 +24,16 @@ public interface AttendanceDayStatusService {
     List<AttendanceDayStatusVo> days(Long userId, LocalDate beginDate, LocalDate endDate);
 
     /**
-     * 当月逐日推导（办事考勤记录页）。{@code month} 为 {@code yyyy-MM}，
+     * 当月逐日推导（办事考勤记录页与后台下钻）。{@code month} 为 {@code yyyy-MM}，
      * 缺省取注入时钟的当前月，格式不合法 201「月份格式不正确」。
      */
     AttendanceMonthVo month(Long userId, String month);
+
+    /**
+     * 解析 {@code yyyy-MM} 月份（缺省取注入时钟的当前月，非法 201「月份格式不正确」）。
+     * 月统计与推导共用同一个解析口径。
+     */
+    YearMonth resolveMonth(String month);
 
     /** 注入时钟的当前业务月，供页面默认值复用。 */
     YearMonth currentMonth();

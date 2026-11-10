@@ -57,6 +57,66 @@ const members = [
   { id: 2, userId: 12, username: 't278-bob', name: '乙' },
 ]
 
+const statRows = [
+  {
+    userId: 11,
+    username: 't283-normal',
+    name: '甲',
+    deptId: 2,
+    deptName: '研发部',
+    requiredDays: 20,
+    actualDays: 19,
+    lateCount: 3,
+    earlyCount: 2,
+    missingDays: 1,
+    leaveDays: [
+      { leaveTypeName: '年假', days: 2 },
+      { leaveTypeName: '事假', days: 1 },
+    ],
+    overtimeHours: 4.5,
+  },
+  {
+    userId: 12,
+    username: 't283-leave',
+    name: '乙',
+    deptId: 2,
+    deptName: '研发部',
+    requiredDays: 20,
+    actualDays: 17,
+    lateCount: 0,
+    earlyCount: 0,
+    missingDays: 0,
+    leaveDays: [{ leaveTypeName: '年假', days: 3 }],
+    overtimeHours: 0,
+  },
+]
+
+const statMonth = {
+  month: '2026-02',
+  days: [
+    {
+      date: '2026-02-05',
+      weekday: 4,
+      dayType: 1,
+      workday: true,
+      hasGroup: true,
+      status: 4,
+      pending: false,
+      clockInTime: '09:15:00',
+      clockOutTime: '17:40:00',
+    },
+    {
+      date: '2026-02-12',
+      weekday: 4,
+      dayType: 3,
+      workday: false,
+      hasGroup: true,
+      status: 8,
+      pending: false,
+    },
+  ],
+}
+
 const users = [
   { id: 11, username: 't278-alice', name: '甲' },
   { id: 12, username: 't278-bob', name: '乙' },
@@ -141,6 +201,12 @@ async function setup(page: Page, granted = true): Promise<State> {
       state.punchQueries.push(Object.fromEntries(new URL(request.url()).searchParams))
       return json(route, { records: [punch], total: 1, pages: 1 })
     }
+    if (/^\/admin\/attendance\/stat\/\d+\/\d+$/.test(path)) {
+      return json(route, { records: statRows, total: statRows.length, pages: 1 })
+    }
+    if (path === '/admin/attendance/stat/daily') {
+      return json(route, statMonth)
+    }
     if (path === '/admin/attendance/group/save') {
       state.groupPosts.push(request.postDataJSON() as Record<string, unknown>)
       return json(route, null)
@@ -207,14 +273,21 @@ test('新建考勤组：选班次、勾工作日、选成员，保存落 POST �
   expect(state.errors).toEqual([])
 })
 
-test('月度统计占位壳页渲染标题与空态', async ({ page }) => {
+test('月度统计页按人汇总并可下钻逐日明细', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
-  await setup(page)
+  const state = await setup(page)
 
-  // 补卡处理（#281）与假期类型与发放（#280）已交付真实页面，占位壳只剩月度统计。
   await page.goto('/business/attendance/stat')
   await expect(page.getByRole('heading', { name: '月度统计', exact: true })).toBeVisible()
-  await expect(page.locator('.el-empty').first()).toBeVisible()
+  await expect(page.getByRole('cell', { name: '甲', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '研发部' }).first()).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: '年假（天）' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '4.5' })).toBeVisible()
+
+  await page.getByRole('button', { name: '明细' }).first().click()
+  await expect(page.locator('.daily-title')).toContainText('逐日明细')
+  await expect(page.getByText('迟到且早退', { exact: true })).toBeVisible()
+  expect(state.errors).toEqual([])
 })
 
 test('打卡记录页展示 join 姓名/部门并按人筛选重查', async ({ page }) => {

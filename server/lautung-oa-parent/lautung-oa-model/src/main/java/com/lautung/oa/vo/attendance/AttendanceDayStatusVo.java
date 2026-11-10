@@ -53,6 +53,12 @@ public class AttendanceDayStatusVo {
     @Schema(description = "是否「未打卡」（工作日未到下班时刻且缺槽位）")
     private Boolean pending;
 
+    @Schema(description = "上班卡是否迟到（按卡计；缺卡日仍可按有效上班卡计）")
+    private Boolean late;
+
+    @Schema(description = "下班卡是否早退（按卡计；缺卡日仍可按有效下班卡计）")
+    private Boolean early;
+
     @Schema(description = "上班卡有效时刻；未打卡为空")
     private LocalTime clockInTime;
 

@@ -120,20 +120,23 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
 
     @Override
     public AttendanceMonthVo month(Long userId, String month) {
-        YearMonth yearMonth;
-        if (month == null || month.isBlank()) {
-            yearMonth = currentMonth();
-        } else {
-            try {
-                yearMonth = YearMonth.parse(month.trim(), MONTH_FORMAT);
-            } catch (DateTimeParseException ignored) {
-                throw new BusinessException(201, "月份格式不正确");
-            }
-        }
+        YearMonth yearMonth = resolveMonth(month);
         AttendanceMonthVo vo = new AttendanceMonthVo();
         vo.setMonth(yearMonth.toString());
         vo.setDays(days(userId, yearMonth.atDay(1), yearMonth.atEndOfMonth()));
         return vo;
+    }
+
+    @Override
+    public YearMonth resolveMonth(String month) {
+        if (month == null || month.isBlank()) {
+            return currentMonth();
+        }
+        try {
+            return YearMonth.parse(month.trim(), MONTH_FORMAT);
+        } catch (DateTimeParseException ignored) {
+            throw new BusinessException(201, "月份格式不正确");
+        }
     }
 
     @Override
@@ -151,6 +154,8 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
         vo.setDate(date);
         vo.setWeekday(date.getDayOfWeek().getValue());
         vo.setPending(false);
+        vo.setLate(false);
+        vo.setEarly(false);
         if (group == null) {
             vo.setHasGroup(false);
             vo.setWorkday(false);
@@ -201,6 +206,10 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
             return vo;
         }
 
+        // 迟到/早退次数按卡计：缺卡日只要该卡存在且超线仍计一次（ADR 0073），
+        // 因此先于缺卡分支标记；请假/非工作日/未来日期不产生迟到早退。
+        markLateAndEarly(vo, shift, clockIn, clockOut);
+
         boolean pastEnd = date.isBefore(today)
                 || !now.toLocalTime().isBefore(shift.getEndTime());
         if (!pastEnd) {
@@ -224,9 +233,8 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
 
     /** 迟到 = 上班卡晚于上班时刻 + 宽限；早退 = 下班卡早于下班时刻 − 宽限。 */
     private int attendanceStatus(AttendanceShift shift, LocalTime clockIn, LocalTime clockOut) {
-        int grace = shift.getGraceMinutes() == null ? 0 : shift.getGraceMinutes();
-        boolean late = clockIn.isAfter(shift.getStartTime().plusMinutes(grace));
-        boolean early = clockOut.isBefore(shift.getEndTime().minusMinutes(grace));
+        boolean late = isLate(shift, clockIn);
+        boolean early = isEarly(shift, clockOut);
         if (late && early) {
             return AttendanceDayStatus.LATE_AND_EARLY;
         }
@@ -237,6 +245,29 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
             return AttendanceDayStatus.EARLY_LEAVE;
         }
         return AttendanceDayStatus.NORMAL;
+    }
+
+    /** 按卡标记迟到/早退；缺卡日仍按存在的卡计，月统计直接消费这两个布尔。 */
+    private void markLateAndEarly(AttendanceDayStatusVo vo, AttendanceShift shift,
+                                  LocalTime clockIn, LocalTime clockOut) {
+        vo.setLate(isLate(shift, clockIn));
+        vo.setEarly(isEarly(shift, clockOut));
+    }
+
+    private boolean isLate(AttendanceShift shift, LocalTime clockIn) {
+        if (clockIn == null || shift.getStartTime() == null) {
+            return false;
+        }
+        int grace = shift.getGraceMinutes() == null ? 0 : shift.getGraceMinutes();
+        return clockIn.isAfter(shift.getStartTime().plusMinutes(grace));
+    }
+
+    private boolean isEarly(AttendanceShift shift, LocalTime clockOut) {
+        if (clockOut == null || shift.getEndTime() == null) {
+            return false;
+        }
+        int grace = shift.getGraceMinutes() == null ? 0 : shift.getGraceMinutes();
+        return clockOut.isBefore(shift.getEndTime().minusMinutes(grace));
     }
 
     private AttendanceLeaveSpanVo leaveOn(List<AttendanceLeaveSpanVo> leaves, LocalDate date) {

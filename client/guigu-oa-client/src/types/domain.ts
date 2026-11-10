@@ -1101,6 +1101,8 @@ export interface AttendanceDayStatusRecord {
   status?: number | null
   leaveTypeName?: string
   pending?: boolean
+  late?: boolean
+  early?: boolean
   clockInTime?: string | null
   clockOutTime?: string | null
 }
@@ -1127,6 +1129,47 @@ export interface AttendanceMonthRecord {
 export interface AttendanceMonthView {
   month: string
   days: AttendanceDayStatusView[]
+}
+
+/** 月度统计的请假分列（#283）：一个类型一行。 */
+export interface AttendanceLeaveStatRecord {
+  leaveTypeName?: string
+  days?: number
+}
+
+/** 月度统计行（#283）：按人汇总当月，实出勤 = 应出勤 − 请假 − 缺卡。 */
+export interface AttendanceStatRecord {
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  requiredDays?: number
+  actualDays?: number
+  lateCount?: number
+  earlyCount?: number
+  missingDays?: number
+  leaveDays?: AttendanceLeaveStatRecord[]
+  overtimeHours?: number
+}
+
+export interface AttendanceLeaveStatView {
+  leaveTypeName: string
+  days: number
+}
+
+export interface AttendanceStatView {
+  userId: EntityId
+  username: string
+  name: string
+  deptName: string
+  requiredDays: number
+  actualDays: number
+  lateCount: number
+  earlyCount: number
+  missingDays: number
+  leaveDays: AttendanceLeaveStatView[]
+  overtimeHoursText: string
 }
 
 /** 补卡页成员候选（#281）：数据范围由服务端过滤。 */

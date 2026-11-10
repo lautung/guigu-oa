@@ -141,6 +141,66 @@ const users = [
   { id: 13, username: 't278-carol', name: '停用丙' },
 ]
 
+const statRows = [
+  {
+    userId: 11,
+    username: 't283-normal',
+    name: '甲',
+    deptId: 2,
+    deptName: '研发部',
+    requiredDays: 20,
+    actualDays: 19,
+    lateCount: 3,
+    earlyCount: 2,
+    missingDays: 1,
+    leaveDays: [],
+    overtimeHours: 4.5,
+  },
+  {
+    userId: 12,
+    username: 't283-leave',
+    name: '乙',
+    deptId: 2,
+    deptName: '研发部',
+    requiredDays: 20,
+    actualDays: 17,
+    lateCount: 0,
+    earlyCount: 0,
+    missingDays: 0,
+    leaveDays: [
+      { leaveTypeName: '年假', days: 2 },
+      { leaveTypeName: '事假', days: 1 },
+    ],
+    overtimeHours: 0,
+  },
+]
+
+const statMonth = {
+  month: '2026-02',
+  days: [
+    {
+      date: '2026-02-05',
+      weekday: 4,
+      dayType: 1,
+      workday: true,
+      hasGroup: true,
+      status: 4,
+      pending: false,
+      clockInTime: '09:15:00',
+      clockOutTime: '17:40:00',
+    },
+    {
+      date: '2026-02-12',
+      weekday: 4,
+      dayType: 3,
+      workday: false,
+      hasGroup: true,
+      status: 8,
+      pending: false,
+    },
+  ],
+}
+
 function responder(config) {
   const url = config.url || ''
   if (/\/attendance\/shift\/\d+\/\d+$/.test(url)) return paged([shift])
@@ -150,6 +210,8 @@ function responder(config) {
   if (/\/attendance\/group\/\d+\/members$/.test(url)) return ok(members)
   if (/\/attendance\/holiday\/\d+\/\d+$/.test(url)) return paged([holiday])
   if (/\/attendance\/punch\/\d+\/\d+$/.test(url)) return paged([punch])
+  if (/\/attendance\/stat\/\d+\/\d+$/.test(url)) return paged(statRows)
+  if (/\/attendance\/stat\/daily$/.test(url)) return ok(statMonth)
   if (/\/attendance\/leave-type\/\d+\/\d+$/.test(url)) return paged(leaveTypes)
   if (/\/attendance\/ledger\/\d+\/\d+$/.test(url)) return paged([ledger])
   return ok(null)
@@ -333,16 +395,55 @@ describe('AttendanceGroupPage', () => {
   })
 })
 
-describe('考勤占位壳页', () => {
-  const cases = [[AttendanceStatPage, '月度统计']]
-
-  it.each(cases)('renders %s as an empty placeholder', async (component, title) => {
+describe('AttendanceStatPage', () => {
+  it('loads the monthly summary with per-type leave columns and overtime text', async () => {
     const { pinia } = setupSession()
-    const wrapper = mount(component, realOptions(pinia))
+    const wrapper = mount(AttendanceStatPage, realOptions(pinia))
     await flushPromises()
-    expect(wrapper.text()).toContain(title)
-    expect(wrapper.find('.el-empty').exists()).toBe(true)
-    expect(http.calls).toHaveLength(0)
+
+    const first = http.calls[0]
+    expect(first.url).toBe('/admin/attendance/stat/1/10')
+    expect(first.params.month).toMatch(/^\d{4}-\d{2}$/)
+    expect(wrapper.vm.rows).toEqual([
+      expect.objectContaining({
+        name: '甲',
+        deptName: '研发部',
+        requiredDays: 20,
+        actualDays: 19,
+        lateCount: 3,
+        earlyCount: 2,
+        missingDays: 1,
+        overtimeHoursText: '4.5',
+      }),
+      expect.objectContaining({ name: '乙', overtimeHoursText: '0' }),
+    ])
+    expect(wrapper.vm.leaveTypeColumns).toEqual(['年假', '事假'])
+    expect(wrapper.text()).toContain('应出勤')
+    expect(wrapper.text()).toContain('年假（天）')
+    expect(wrapper.text()).toContain('事假（天）')
+    expect(wrapper.text()).toContain('研发部')
+  })
+
+  it('drills into the selected person daily detail and reloads on month change', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceStatPage, realOptions(pinia))
+    await flushPromises()
+
+    wrapper.vm.openDaily(wrapper.vm.rows[0])
+    await flushPromises()
+    const dailyCall = http.calls.at(-1)
+    expect(dailyCall.url).toBe('/admin/attendance/stat/daily')
+    expect(dailyCall.params).toEqual({ userId: 11, month: wrapper.vm.monthText })
+    expect(wrapper.vm.dailyView.month).toBe('2026-02')
+    expect(wrapper.text()).toContain('逐日明细')
+    expect(wrapper.text()).toContain('迟到且早退')
+
+    wrapper.vm.loadMonth('2026-01')
+    await flushPromises()
+    expect(wrapper.vm.selectedUser).toBe(null)
+    const listCall = http.calls.at(-1)
+    expect(listCall.url).toBe('/admin/attendance/stat/1/10')
+    expect(listCall.params).toEqual({ month: '2026-01' })
   })
 })
 
