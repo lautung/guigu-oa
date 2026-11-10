@@ -1241,3 +1241,95 @@ export interface AttendanceBalanceView {
   pendingText: string
   negative: boolean
 }
+
+// ---------------- 我的申请（请假 / 加班，#282） ----------------
+
+/** 最近一条审批摘要（ADR 0067 读模型）：单据详情只拼摘要，不嵌完整审批载荷。 */
+export interface AttendanceApplyApprovalRecord {
+  processId?: EntityId
+  status?: number
+  currentApprover?: string | null
+  description?: string | null
+  startTime?: string | null
+  endTime?: string | null
+}
+
+export interface AttendanceLeaveApplicationRecord {
+  id?: EntityId | ''
+  leaveTypeId?: EntityId
+  leaveTypeName?: string
+  startDate?: string
+  endDate?: string
+  days?: number
+  hours?: number
+  reason?: string
+  status?: number
+  submitTime?: string | null
+  finishTime?: string | null
+  createTime?: string
+  approval?: AttendanceApplyApprovalRecord | null
+}
+
+export interface AttendanceOvertimeApplicationRecord {
+  id?: EntityId | ''
+  overtimeDate?: string
+  startTime?: string
+  endTime?: string
+  hours?: number
+  reason?: string
+  status?: number
+  submitTime?: string | null
+  finishTime?: string | null
+  createTime?: string
+  approval?: AttendanceApplyApprovalRecord | null
+}
+
+export interface AttendanceMyLeaveTypeRecord {
+  id?: EntityId
+  name?: string
+  balanceRequired?: number
+  availableHours?: number | null
+}
+
+export interface AttendanceMyLeaveTypeView {
+  id: EntityId
+  name: string
+  balanceRequired: number
+  availableHoursText: string
+}
+
+export interface AttendanceLeaveApplyForm {
+  id: EntityId | ''
+  leaveTypeId: EntityId | ''
+  startDate: string
+  endDate: string
+  reason: string
+}
+
+export interface AttendanceOvertimeApplyForm {
+  id: EntityId | ''
+  overtimeDate: string
+  startTime: string
+  endTime: string
+  reason: string
+}
+
+/** 两页签共用的行投影：状态文案/颜色与可编辑可提交判定只在一处。 */
+export interface AttendanceApplyListItem {
+  id: EntityId
+  kind: 'leave' | 'overtime'
+  typeName: string
+  dateText: string
+  durationText: string
+  reason: string
+  status: number
+  statusLabel: string
+  statusTagType: 'success' | 'warning' | 'danger' | 'info' | 'primary'
+  submitTimeText: string
+  finishTimeText: string
+  editable: boolean
+  submittable: boolean
+  approval: AttendanceApplyApprovalRecord | null
+  leave?: AttendanceLeaveApplicationRecord
+  overtime?: AttendanceOvertimeApplicationRecord
+}

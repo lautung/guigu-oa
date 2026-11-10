@@ -25,7 +25,8 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  * common, framework, security, model ← dict
  * common, framework, security, model ← config
  * common, framework, security, model, config ← auth
- * common, framework, security, model ← attendance（ADR 0073：配置面；process 边归后续票）
+ * common, framework, security, model ← attendance（ADR 0073：配置/打卡/账本）
+ * common, framework, security, model, process ← attendance（#282：请假/加班单经业务审批端口）
  * 全模块 ← server
  * </pre>
  */
@@ -74,6 +75,9 @@ class ArchitectureTest {
             .whereLayer("Monitor").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Dict").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
             .whereLayer("Config").mayOnlyAccessLayers("Common", "Framework", "Security", "Model")
+            // 考勤单据（#282，ADR 0067/0073）：只经 process 的业务审批端口发起与回写。
+            .whereLayer("Attendance").mayOnlyAccessLayers(
+                    "Common", "Framework", "Security", "Model", "Process")
             .whereLayer("Server").mayOnlyAccessLayers(
                     "Common", "Framework", "Security", "Model", "Storage", "Audit", "Auth", "Notice",
                     "Process", "Monitor", "Dict", "Config", "Attendance")
@@ -93,7 +97,7 @@ class ArchitectureTest {
             .whereLayer("Audit").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Auth").mayOnlyBeAccessedByLayers("Process", "Server")
             .whereLayer("Notice").mayOnlyBeAccessedByLayers("Server")
-            .whereLayer("Process").mayOnlyBeAccessedByLayers("Server")
+            .whereLayer("Process").mayOnlyBeAccessedByLayers("Attendance", "Server")
             .whereLayer("Monitor").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Dict").mayOnlyBeAccessedByLayers("Server")
             .whereLayer("Config").mayOnlyBeAccessedByLayers("Auth", "Server")

@@ -1,5 +1,6 @@
 import type {
   ApiRequestConfig,
+  AttendanceApplyListItem,
   AttendanceBalanceRecord,
   AttendanceBalanceView,
   AttendanceDayStatusRecord,
@@ -10,6 +11,8 @@ import type {
   AttendanceHolidayForm,
   AttendanceHolidayListItem,
   AttendanceHolidayRecord,
+  AttendanceLeaveApplicationRecord,
+  AttendanceLeaveApplyForm,
   AttendanceLeaveTypeForm,
   AttendanceLeaveTypeListItem,
   AttendanceLeaveTypeRecord,
@@ -20,6 +23,10 @@ import type {
   AttendanceMemberRecord,
   AttendanceMonthRecord,
   AttendanceMonthView,
+  AttendanceMyLeaveTypeRecord,
+  AttendanceMyLeaveTypeView,
+  AttendanceOvertimeApplicationRecord,
+  AttendanceOvertimeApplyForm,
   AttendancePunchListItem,
   AttendancePunchQuery,
   AttendancePunchRecord,
@@ -843,6 +850,279 @@ export function presentBalance(record: AttendanceBalanceRecord = {}): Attendance
 
 export function presentBalances(records: AttendanceBalanceRecord[] = []): AttendanceBalanceView[] {
   return records.map(presentBalance)
+}
+
+// ---------------- 我的申请（请假 / 加班，#282） ----------------
+
+export const LEAVE_APPLY_API = `${MY_ATTENDANCE_API}/leave`
+export const OVERTIME_APPLY_API = `${MY_ATTENDANCE_API}/overtime`
+
+/** 单据状态档（ADR 0073）：0 草稿 / 1 审批中 / 2 通过 / -1 拒绝 / -2 撤回。 */
+export const APPLICATION_STATUS_OPTIONS = [
+  { value: 0, label: '草稿', tag: 'info' },
+  { value: 1, label: '审批中', tag: 'warning' },
+  { value: 2, label: '已通过', tag: 'success' },
+  { value: -1, label: '已拒绝', tag: 'danger' },
+  { value: -2, label: '已撤回', tag: 'info' },
+] as const
+
+export function applicationStatusLabel(status: number | null | undefined): string {
+  return APPLICATION_STATUS_OPTIONS.find((option) => option.value === status)?.label || '草稿'
+}
+
+export function applicationStatusTagType(
+  status: number | null | undefined,
+): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+  const option = APPLICATION_STATUS_OPTIONS.find((candidate) => candidate.value === status)
+  return (option?.tag || 'info') as 'success' | 'warning' | 'danger' | 'info' | 'primary'
+}
+
+/** 草稿/拒绝/撤回可改可重提；审批中与已通过锁定。 */
+export function applicationEditable(status: number | null | undefined): boolean {
+  return status === 0 || status === -1 || status === -2
+}
+
+export function myLeavePageRequest(
+  page: number,
+  limit: number,
+  status?: number | '',
+): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${LEAVE_APPLY_API}/${page}/${limit}`,
+    params: status === undefined || status === '' ? {} : { status },
+  }
+}
+
+export function myLeaveDetailRequest(id: EntityId): ApiRequestConfig {
+  return { method: 'get', url: `${LEAVE_APPLY_API}/${id}` }
+}
+
+/** 请假类型选项：启用类型，需要余额的带本人可用余额。 */
+export function myLeaveTypesRequest(): ApiRequestConfig {
+  return { method: 'get', url: `${LEAVE_APPLY_API}/types` }
+}
+
+export function leaveSaveRequest(form: AttendanceLeaveApplyForm): ApiRequestConfig {
+  return { method: 'post', url: `${LEAVE_APPLY_API}/save`, data: leavePayload(form) }
+}
+
+export function leaveUpdateRequest(form: AttendanceLeaveApplyForm): ApiRequestConfig {
+  return {
+    method: 'put',
+    url: `${LEAVE_APPLY_API}/update`,
+    data: { ...leavePayload(form), id: form.id },
+  }
+}
+
+export function leaveRemoveRequest(id: EntityId): ApiRequestConfig {
+  return { method: 'delete', url: `${LEAVE_APPLY_API}/remove/${id}` }
+}
+
+/** 提交只带客户端幂等键；天数/小时数由服务端定稿。 */
+export function leaveSubmitRequest(id: EntityId, idempotencyKey: string): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${LEAVE_APPLY_API}/${id}/submit`,
+    data: { idempotencyKey },
+  }
+}
+
+function leavePayload(form: AttendanceLeaveApplyForm): Record<string, unknown> {
+  return {
+    leaveTypeId: form.leaveTypeId,
+    startDate: form.startDate,
+    endDate: form.endDate,
+    reason: form.reason == null ? '' : form.reason.trim(),
+  }
+}
+
+export function myOvertimePageRequest(
+  page: number,
+  limit: number,
+  status?: number | '',
+): ApiRequestConfig {
+  return {
+    method: 'get',
+    url: `${OVERTIME_APPLY_API}/${page}/${limit}`,
+    params: status === undefined || status === '' ? {} : { status },
+  }
+}
+
+export function myOvertimeDetailRequest(id: EntityId): ApiRequestConfig {
+  return { method: 'get', url: `${OVERTIME_APPLY_API}/${id}` }
+}
+
+export function overtimeSaveRequest(form: AttendanceOvertimeApplyForm): ApiRequestConfig {
+  return { method: 'post', url: `${OVERTIME_APPLY_API}/save`, data: overtimePayload(form) }
+}
+
+export function overtimeUpdateRequest(form: AttendanceOvertimeApplyForm): ApiRequestConfig {
+  return {
+    method: 'put',
+    url: `${OVERTIME_APPLY_API}/update`,
+    data: { ...overtimePayload(form), id: form.id },
+  }
+}
+
+export function overtimeRemoveRequest(id: EntityId): ApiRequestConfig {
+  return { method: 'delete', url: `${OVERTIME_APPLY_API}/remove/${id}` }
+}
+
+export function overtimeSubmitRequest(id: EntityId, idempotencyKey: string): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${OVERTIME_APPLY_API}/${id}/submit`,
+    data: { idempotencyKey },
+  }
+}
+
+function overtimePayload(form: AttendanceOvertimeApplyForm): Record<string, unknown> {
+  return {
+    overtimeDate: form.overtimeDate,
+    startTime: form.startTime,
+    endTime: form.endTime,
+    reason: form.reason == null ? '' : form.reason.trim(),
+  }
+}
+
+export function emptyLeaveApplyForm(): AttendanceLeaveApplyForm {
+  return { id: '', leaveTypeId: '', startDate: '', endDate: '', reason: '' }
+}
+
+export function presentLeaveApplyForm(
+  record: AttendanceLeaveApplicationRecord = {},
+): AttendanceLeaveApplyForm {
+  return {
+    id: record.id || '',
+    leaveTypeId: record.leaveTypeId == null ? '' : record.leaveTypeId,
+    startDate: record.startDate || '',
+    endDate: record.endDate || '',
+    reason: record.reason || '',
+  }
+}
+
+export function emptyOvertimeApplyForm(): AttendanceOvertimeApplyForm {
+  return { id: '', overtimeDate: '', startTime: '', endTime: '', reason: '' }
+}
+
+export function presentOvertimeApplyForm(
+  record: AttendanceOvertimeApplicationRecord = {},
+): AttendanceOvertimeApplyForm {
+  return {
+    id: record.id || '',
+    overtimeDate: record.overtimeDate || '',
+    startTime: record.startTime || '',
+    endTime: record.endTime || '',
+    reason: record.reason || '',
+  }
+}
+
+export function presentMyLeaveTypes(
+  records: AttendanceMyLeaveTypeRecord[] = [],
+): AttendanceMyLeaveTypeView[] {
+  return records
+    .filter((record) => record.id != null)
+    .map((record) => ({
+      id: record.id as EntityId,
+      name: record.name || '',
+      balanceRequired: record.balanceRequired == null ? 0 : record.balanceRequired,
+      availableHoursText:
+        record.availableHours == null ? '' : attendanceHoursText(record.availableHours),
+    }))
+}
+
+function applyTimeText(value: string | null | undefined): string {
+  return value ? value.slice(0, 16) : ''
+}
+
+/** 请假行投影：草稿天数/小时数尚未定稿，展示「提交后定稿」。 */
+export function presentLeaveApplication(
+  record: AttendanceLeaveApplicationRecord = {},
+): AttendanceApplyListItem {
+  const status = record.status == null ? 0 : record.status
+  const days = Number(record.days == null ? 0 : record.days)
+  const hours = Number(record.hours == null ? 0 : record.hours)
+  return {
+    id: record.id || '',
+    kind: 'leave',
+    typeName: record.leaveTypeName || '请假',
+    dateText: `${record.startDate || ''} 至 ${record.endDate || ''}`,
+    durationText:
+      days > 0 ? `${days} 天（${attendanceHoursText(hours)} 小时）` : '提交后按班次与日历定稿',
+    reason: record.reason || '',
+    status,
+    statusLabel: applicationStatusLabel(status),
+    statusTagType: applicationStatusTagType(status),
+    submitTimeText: applyTimeText(record.submitTime),
+    finishTimeText: applyTimeText(record.finishTime),
+    editable: applicationEditable(status),
+    submittable: applicationEditable(status),
+    approval: record.approval || null,
+    leave: record,
+  }
+}
+
+export function presentLeaveApplications(
+  records: AttendanceLeaveApplicationRecord[] = [],
+): AttendanceApplyListItem[] {
+  return records.map(presentLeaveApplication)
+}
+
+/** 加班行投影：时间服务端算，草稿显示「提交后计算」。 */
+export function presentOvertimeApplication(
+  record: AttendanceOvertimeApplicationRecord = {},
+): AttendanceApplyListItem {
+  const status = record.status == null ? 0 : record.status
+  const hours = Number(record.hours == null ? 0 : record.hours)
+  return {
+    id: record.id || '',
+    kind: 'overtime',
+    typeName: '加班',
+    dateText: `${record.overtimeDate || ''} ${clockText(record.startTime)}-${clockText(
+      record.endTime,
+    )}`,
+    durationText: hours > 0 ? `${attendanceHoursText(hours)} 小时` : '提交后计算',
+    reason: record.reason || '',
+    status,
+    statusLabel: applicationStatusLabel(status),
+    statusTagType: applicationStatusTagType(status),
+    submitTimeText: applyTimeText(record.submitTime),
+    finishTimeText: applyTimeText(record.finishTime),
+    editable: applicationEditable(status),
+    submittable: applicationEditable(status),
+    approval: record.approval || null,
+    overtime: record,
+  }
+}
+
+export function presentOvertimeApplications(
+  records: AttendanceOvertimeApplicationRecord[] = [],
+): AttendanceApplyListItem[] {
+  return records.map(presentOvertimeApplication)
+}
+
+/** 请假表单必填文案逐字镜像服务端 AttendanceLeaveRequest。 */
+export function leaveApplyFormRules(): Record<
+  'leaveTypeId' | 'startDate' | 'endDate',
+  RequiredRule[]
+> {
+  return {
+    leaveTypeId: [requiredRule('假期类型不能为空')],
+    startDate: [requiredRule('开始日期不能为空')],
+    endDate: [requiredRule('结束日期不能为空')],
+  }
+}
+
+export function overtimeApplyFormRules(): Record<
+  'overtimeDate' | 'startTime' | 'endTime',
+  RequiredRule[]
+> {
+  return {
+    overtimeDate: [requiredRule('加班日期不能为空')],
+    startTime: [requiredRule('开始时刻不能为空')],
+    endTime: [requiredRule('结束时刻不能为空')],
+  }
 }
 
 // ---------------- 表单规则 ----------------

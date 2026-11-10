@@ -52,6 +52,25 @@ import {
   attendanceDayStatusTagType,
   monthRecordsRequest,
   presentMonth,
+  applicationEditable,
+  applicationStatusLabel,
+  applicationStatusTagType,
+  emptyLeaveApplyForm,
+  emptyOvertimeApplyForm,
+  leaveApplyFormRules,
+  leaveRemoveRequest,
+  leaveSaveRequest,
+  leaveSubmitRequest,
+  myLeavePageRequest,
+  myLeaveTypesRequest,
+  myOvertimePageRequest,
+  overtimeApplyFormRules,
+  overtimeRemoveRequest,
+  overtimeSaveRequest,
+  overtimeSubmitRequest,
+  presentLeaveApplication,
+  presentMyLeaveTypes,
+  presentOvertimeApplication,
   repairDayRequest,
   repairSaveRequest,
   repairUsersRequest,
@@ -792,6 +811,183 @@ describe('config/attendance', () => {
       expect(attendanceHoursText(8)).toBe('8')
       expect(attendanceHoursText(5.5)).toBe('5.5')
       expect(attendanceHoursText(-2.25)).toBe('-2.25')
+    })
+  })
+
+  describe('我的申请（#282）', () => {
+    it('labels five application states and only draft/rejected/withdrawn are editable', () => {
+      expect(applicationStatusLabel(0)).toBe('草稿')
+      expect(applicationStatusLabel(1)).toBe('审批中')
+      expect(applicationStatusLabel(2)).toBe('已通过')
+      expect(applicationStatusLabel(-1)).toBe('已拒绝')
+      expect(applicationStatusLabel(-2)).toBe('已撤回')
+      expect(applicationStatusTagType(2)).toBe('success')
+      expect(applicationStatusTagType(-1)).toBe('danger')
+      expect([0, -1, -2].every(applicationEditable)).toBe(true)
+      expect([1, 2].some(applicationEditable)).toBe(false)
+    })
+
+    it('projects leave/overtime rows and keeps draft durations pending until submit', () => {
+      expect(
+        presentLeaveApplication({
+          id: 501,
+          leaveTypeName: '年假',
+          startDate: '2026-12-07',
+          endDate: '2026-12-08',
+          days: 2,
+          hours: 16,
+          reason: '回家',
+          status: 1,
+          submitTime: '2026-11-10 09:00:00',
+        }),
+      ).toEqual(
+        expect.objectContaining({
+          id: 501,
+          kind: 'leave',
+          dateText: '2026-12-07 至 2026-12-08',
+          durationText: '2 天（16 小时）',
+          statusLabel: '审批中',
+          editable: false,
+          submitTimeText: '2026-11-10 09:00',
+        }),
+      )
+      expect(presentLeaveApplication({ id: 502, status: 0, days: 0, hours: 0 })).toEqual(
+        expect.objectContaining({
+          durationText: '提交后按班次与日历定稿',
+          editable: true,
+          submittable: true,
+        }),
+      )
+      expect(
+        presentOvertimeApplication({
+          id: 601,
+          overtimeDate: '2026-12-12',
+          startTime: '18:00:00',
+          endTime: '20:30:00',
+          hours: 2.5,
+          status: -2,
+        }),
+      ).toEqual(
+        expect.objectContaining({
+          kind: 'overtime',
+          dateText: '2026-12-12 18:00-20:30',
+          durationText: '2.5 小时',
+          statusLabel: '已撤回',
+          editable: true,
+          submittable: true,
+        }),
+      )
+      expect(presentOvertimeApplication({ id: 602, status: 0 })).toEqual(
+        expect.objectContaining({ durationText: '提交后计算' }),
+      )
+    })
+
+    it('builds application requests with idempotency keys and trimmed payloads', () => {
+      expect(myLeavePageRequest(2, 10, -1)).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/leave/2/10',
+        params: { status: -1 },
+      })
+      expect(myLeavePageRequest(1, 10)).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/leave/1/10',
+        params: {},
+      })
+      expect(myOvertimePageRequest(1, 10)).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/overtime/1/10',
+        params: {},
+      })
+      expect(myLeaveTypesRequest()).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/leave/types',
+      })
+      expect(emptyLeaveApplyForm()).toEqual({
+        id: '',
+        leaveTypeId: '',
+        startDate: '',
+        endDate: '',
+        reason: '',
+      })
+      expect(emptyOvertimeApplyForm()).toEqual({
+        id: '',
+        overtimeDate: '',
+        startTime: '',
+        endTime: '',
+        reason: '',
+      })
+      expect(
+        leaveSaveRequest({
+          id: '',
+          leaveTypeId: 1,
+          startDate: '2026-12-07',
+          endDate: '2026-12-08',
+          reason: ' 回家 ',
+        }),
+      ).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/leave/save',
+        data: {
+          leaveTypeId: 1,
+          startDate: '2026-12-07',
+          endDate: '2026-12-08',
+          reason: '回家',
+        },
+      })
+      expect(
+        overtimeSaveRequest({
+          id: '',
+          overtimeDate: '2026-12-12',
+          startTime: '18:00:00',
+          endTime: '20:00:00',
+          reason: ' 上线 ',
+        }),
+      ).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/overtime/save',
+        data: {
+          overtimeDate: '2026-12-12',
+          startTime: '18:00:00',
+          endTime: '20:00:00',
+          reason: '上线',
+        },
+      })
+      expect(leaveSubmitRequest(501, 'key-1')).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/leave/501/submit',
+        data: { idempotencyKey: 'key-1' },
+      })
+      expect(overtimeSubmitRequest(601, 'key-2')).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/overtime/601/submit',
+        data: { idempotencyKey: 'key-2' },
+      })
+      expect(leaveRemoveRequest(501)).toEqual({
+        method: 'delete',
+        url: '/admin/attendance/my/leave/remove/501',
+      })
+      expect(overtimeRemoveRequest(601)).toEqual({
+        method: 'delete',
+        url: '/admin/attendance/my/overtime/remove/601',
+      })
+      expect(Object.keys(leaveApplyFormRules())).toEqual(['leaveTypeId', 'startDate', 'endDate'])
+      expect(Object.keys(overtimeApplyFormRules())).toEqual([
+        'overtimeDate',
+        'startTime',
+        'endTime',
+      ])
+    })
+
+    it('projects enabled leave types with available balance only for balance types', () => {
+      expect(
+        presentMyLeaveTypes([
+          { id: 1, name: '年假', balanceRequired: 1, availableHours: 8 },
+          { id: 2, name: '事假', balanceRequired: 0, availableHours: null },
+        ]),
+      ).toEqual([
+        { id: 1, name: '年假', balanceRequired: 1, availableHoursText: '8' },
+        { id: 2, name: '事假', balanceRequired: 0, availableHoursText: '' },
+      ])
     })
   })
 })

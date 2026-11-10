@@ -3,6 +3,19 @@ import {
   balancesRequest,
   groupRemoveRequest,
   groupWriteRequest,
+  leaveRemoveRequest,
+  leaveSaveRequest,
+  leaveSubmitRequest,
+  leaveUpdateRequest,
+  myLeaveDetailRequest,
+  myLeavePageRequest,
+  myLeaveTypesRequest,
+  myOvertimeDetailRequest,
+  myOvertimePageRequest,
+  overtimeRemoveRequest,
+  overtimeSaveRequest,
+  overtimeSubmitRequest,
+  overtimeUpdateRequest,
   holidayRemoveRequest,
   holidayWriteRequest,
   ledgerGrantRequest,
@@ -31,12 +44,17 @@ import type {
   AttendanceDayStatusRecord,
   AttendanceGroupForm,
   AttendanceHolidayForm,
+  AttendanceLeaveApplicationRecord,
+  AttendanceLeaveApplyForm,
   AttendanceLeaveTypeForm,
   AttendanceLeaveTypeRecord,
   AttendanceLedgerGrantForm,
   AttendanceLedgerQuery,
   AttendanceLedgerRecord,
   AttendanceMonthRecord,
+  AttendanceMyLeaveTypeRecord,
+  AttendanceOvertimeApplicationRecord,
+  AttendanceOvertimeApplyForm,
   AttendancePunchQuery,
   AttendancePunchRecord,
   AttendanceRepairForm,
@@ -168,4 +186,93 @@ export function grantAttendanceLeave(
 /** 本人各类型可用余额（登录即有，只读本人）。 */
 export function fetchMyBalances(): Promise<ApiResponse<AttendanceBalanceRecord[]>> {
   return request(balancesRequest())
+}
+
+// ---------------- 我的申请（请假 / 加班，#282） ----------------
+
+type ApplicationPage<TRecord> = ApiResponse<{
+  records?: TRecord[]
+  total?: number
+  pages?: number
+}>
+
+export function fetchMyLeaveApplications(
+  page: number,
+  limit: number,
+  status?: number | '',
+): Promise<ApplicationPage<AttendanceLeaveApplicationRecord>> {
+  return request(myLeavePageRequest(page, limit, status))
+}
+
+export function fetchMyLeaveApplication(
+  id: EntityId,
+): Promise<ApiResponse<AttendanceLeaveApplicationRecord>> {
+  return request(myLeaveDetailRequest(id))
+}
+
+/** 请假类型选项：启用类型，需要余额的带本人可用余额。 */
+export function fetchMyLeaveTypes(): Promise<ApiResponse<AttendanceMyLeaveTypeRecord[]>> {
+  return request(myLeaveTypesRequest())
+}
+
+export function saveMyLeaveApplication(
+  form: AttendanceLeaveApplyForm,
+): Promise<ApiResponse<AttendanceLeaveApplicationRecord>> {
+  return request(leaveSaveRequest(form))
+}
+
+export function updateMyLeaveApplication(
+  form: AttendanceLeaveApplyForm,
+): Promise<ApiResponse<AttendanceLeaveApplicationRecord>> {
+  return request(leaveUpdateRequest(form))
+}
+
+export function removeMyLeaveApplication(id: EntityId): Promise<ApiResponse<void>> {
+  return request(leaveRemoveRequest(id))
+}
+
+/** 提交请假单：幂等键由客户端生成，同键重放返回同一条审批。 */
+export function submitMyLeaveApplication(
+  id: EntityId,
+  idempotencyKey: string,
+): Promise<ApiResponse<AttendanceLeaveApplicationRecord>> {
+  return request(leaveSubmitRequest(id, idempotencyKey))
+}
+
+export function fetchMyOvertimeApplications(
+  page: number,
+  limit: number,
+  status?: number | '',
+): Promise<ApplicationPage<AttendanceOvertimeApplicationRecord>> {
+  return request(myOvertimePageRequest(page, limit, status))
+}
+
+export function fetchMyOvertimeApplication(
+  id: EntityId,
+): Promise<ApiResponse<AttendanceOvertimeApplicationRecord>> {
+  return request(myOvertimeDetailRequest(id))
+}
+
+export function saveMyOvertimeApplication(
+  form: AttendanceOvertimeApplyForm,
+): Promise<ApiResponse<AttendanceOvertimeApplicationRecord>> {
+  return request(overtimeSaveRequest(form))
+}
+
+export function updateMyOvertimeApplication(
+  form: AttendanceOvertimeApplyForm,
+): Promise<ApiResponse<AttendanceOvertimeApplicationRecord>> {
+  return request(overtimeUpdateRequest(form))
+}
+
+export function removeMyOvertimeApplication(id: EntityId): Promise<ApiResponse<void>> {
+  return request(overtimeRemoveRequest(id))
+}
+
+/** 提交加班单：幂等键由客户端生成，同键重放返回同一条审批。 */
+export function submitMyOvertimeApplication(
+  id: EntityId,
+  idempotencyKey: string,
+): Promise<ApiResponse<AttendanceOvertimeApplicationRecord>> {
+  return request(overtimeSubmitRequest(id, idempotencyKey))
 }

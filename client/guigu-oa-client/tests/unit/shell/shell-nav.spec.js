@@ -161,6 +161,7 @@ describe('shell 一级导航', () => {
       '抄送我的',
       '打卡',
       '考勤记录',
+      '我的申请',
     ])
     expect(modules[1].firstPath).toBe('/work/start')
   })

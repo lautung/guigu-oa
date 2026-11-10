@@ -41,6 +41,7 @@ const en = {
       copied: 'Copied to me',
       myAttendance: 'Punch',
       myAttendanceRecord: 'Attendance records',
+      myApplications: 'My applications',
     },
     groups: {
       logs: 'Logs',

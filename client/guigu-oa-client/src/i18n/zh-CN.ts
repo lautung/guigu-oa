@@ -41,6 +41,7 @@ const zhCN = {
       copied: '抄送我的',
       myAttendance: '打卡',
       myAttendanceRecord: '考勤记录',
+      myApplications: '我的申请',
     },
     groups: {
       logs: '日志管理',

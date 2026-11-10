@@ -32,6 +32,13 @@
             <artifactId>lautung-oa-model</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <!-- 请假/加班单提交即发起与终态回写（#282，ADR 0067/0073）：只经 process 的
+             BusinessApprovalStarter/Callback/Reader 端口，process 不反向依赖考勤。 -->
+        <dependency>
+            <groupId>com.lautung</groupId>
+            <artifactId>lautung-oa-process</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
