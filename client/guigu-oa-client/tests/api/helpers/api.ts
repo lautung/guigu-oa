@@ -379,11 +379,16 @@ export async function deleteUser(api: Api, userId: number): Promise<void> {
   await api.call(ADMIN, 'delete', `/admin/system/sysUser/remove/${userId}`)
 }
 
-export async function createRole(api: Api, roleName: string): Promise<RoleRecord> {
+export async function createRole(
+  api: Api,
+  roleName: string,
+  dataScope?: number,
+): Promise<RoleRecord> {
   await api.call(ADMIN, 'post', '/admin/system/sysRole/save', {
     roleName,
     roleCode: unique('code'),
     description: '接口测试临时角色',
+    ...(dataScope === undefined ? {} : { dataScope }),
   })
   const page = await api.call<PageResult<RoleRecord>>(
     ADMIN,

@@ -71,6 +71,7 @@ public class DemoScenarioSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         ensureDemoJobRow();
+        demoApprovalPublisher.ensureAttendancePublished();
         ProcessTemplate template = demoApprovalPublisher.ensurePublished();
         if (template == null) {
             return;

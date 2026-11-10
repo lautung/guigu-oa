@@ -461,6 +461,210 @@ export class Oracle {
   async urge(user: string, processId: number): Promise<void> {
     await this.call(user, 'post', `/admin/process/urge/${processId}`)
   }
+
+  // ---------------------------------------------------------------------
+  // 考勤（#284，ADR 0073）：办事打卡/我的申请/余额与后台月统计的只读对照，
+  // 以及「今天不是工作日时补一条补班日」的确定性造数。
+  // ---------------------------------------------------------------------
+
+  async attendanceToday(user: string): Promise<AttendanceToday> {
+    return this.call<AttendanceToday>(user, 'get', '/admin/attendance/my/today')
+  }
+
+  async attendanceMonth(user: string, month: string): Promise<AttendanceMonth> {
+    return this.call<AttendanceMonth>(user, 'get', `/admin/attendance/my/records?month=${month}`)
+  }
+
+  async attendanceLeaves(user: string): Promise<PageResult<AttendanceLeave>> {
+    return this.call<PageResult<AttendanceLeave>>(user, 'get', '/admin/attendance/my/leave/1/100')
+  }
+
+  async attendanceLeave(user: string, id: number): Promise<AttendanceLeave> {
+    return this.call<AttendanceLeave>(user, 'get', `/admin/attendance/my/leave/${id}`)
+  }
+
+  async attendanceBalances(user: string): Promise<AttendanceBalance[]> {
+    return this.call<AttendanceBalance[]>(user, 'get', '/admin/attendance/my/balances')
+  }
+
+  async attendanceStat(admin: string, month: string): Promise<AttendanceStatRow[]> {
+    const page = await this.call<PageResult<AttendanceStatRow>>(
+      admin,
+      'get',
+      `/admin/attendance/stat/1/200?month=${month}`,
+    )
+    return page.records
+  }
+
+  /** 补卡：把某天做成已出勤（部门负责人审批用；主路径不依赖当天的真实打卡）。 */
+  async repairAttendance(admin: string, userId: number, date: string): Promise<void> {
+    await this.call(admin, 'post', '/admin/attendance/repair/save', {
+      userId,
+      repairDate: date,
+      clockInTime: '09:00:00',
+      clockOutTime: '18:00:00',
+    })
+  }
+
+  /** 发放假期余额（append-only）；主路径每轮先补 16 小时，连跑不耗尽。 */
+  async grantLeave(
+    admin: string,
+    userId: number,
+    leaveTypeId: number,
+    changeHours: number,
+    remark: string,
+  ): Promise<void> {
+    await this.call(admin, 'post', '/admin/attendance/ledger/grant', {
+      leaveTypeId,
+      userIds: [userId],
+      changeHours,
+      remark,
+    })
+  }
+
+  /** 把 alice 放回演示部门：p0-9 会把 alice 划到临时部门且不恢复，主路径先自愈。 */
+  async ensureAliceInDemoDept(admin = 'admin'): Promise<number> {
+    const aliceId = await this.userId(admin, 'alice')
+    const tree = await this.call<
+      { id: number; name: string; children?: { id: number; name: string }[] }[]
+    >(admin, 'get', '/admin/system/sysDept/findTree')
+    const found: { id: number }[] = []
+    const walk = (nodes: { id: number; name: string; children?: unknown[] }[]): void => {
+      for (const node of nodes) {
+        if (node.name === '演示部门') found.push(node)
+        if (Array.isArray(node.children)) walk(node.children as typeof nodes)
+      }
+    }
+    walk(tree)
+    if (found.length === 0) throw new Error('演示种子缺少演示部门')
+    await this.setUserDept(admin, aliceId, found[0].id)
+    return found[0].id
+  }
+
+  /**
+   * 保证指定日期按考勤组公式是工作日：已是工作日则不动；休假日改成补班日；
+   * 没有节假日行则新增一条补班日。返回更新后的今日状态（调用方传 alice 视角）。
+   */
+  async ensureAttendanceWorkday(
+    admin: string,
+    viewer: string,
+    date: string,
+  ): Promise<AttendanceToday> {
+    const today = await this.attendanceToday(viewer)
+    if (today.workday) return today
+    if (today.date !== date) {
+      throw new Error(`考勤日期漂移：页面 ${today.date}，期望 ${date}`)
+    }
+    const holidays = await this.call<PageResult<AttendanceHoliday>>(
+      admin,
+      'get',
+      '/admin/attendance/holiday/1/200',
+    )
+    const existing = holidays.records.find((holiday) => holiday.holidayDate === date)
+    if (existing) {
+      await this.call(admin, 'put', '/admin/attendance/holiday/update', {
+        id: existing.id,
+        holidayDate: existing.holidayDate,
+        name: existing.name,
+        dayType: 2,
+      })
+    } else {
+      await this.call(admin, 'post', '/admin/attendance/holiday/save', {
+        holidayDate: date,
+        name: '演示补班',
+        dayType: 2,
+      })
+    }
+    return this.attendanceToday(viewer)
+  }
+}
+
+export interface AttendanceShift {
+  id: number
+  name: string
+  startTime: string
+  endTime: string
+  lunchStart?: string | null
+  lunchEnd?: string | null
+  graceMinutes: number
+}
+
+export interface AttendanceToday {
+  date: string
+  weekday: number
+  dayType: number
+  workday: boolean
+  hasGroup: boolean
+  groupId?: number | null
+  groupName?: string | null
+  shift?: AttendanceShift | null
+  clockInTime?: string | null
+  clockOutTime?: string | null
+}
+
+export interface AttendanceDayStatus {
+  date: string
+  weekday: number
+  dayType: number
+  workday: boolean
+  status?: number | null
+  leaveTypeName?: string | null
+  pending?: boolean
+}
+
+export interface AttendanceMonth {
+  month: string
+  days: AttendanceDayStatus[]
+}
+
+export interface AttendanceApprovalSummary {
+  processId: number
+  status: number
+  currentApprover?: string | null
+  description?: string | null
+}
+
+export interface AttendanceLeave {
+  id: number
+  leaveTypeId: number
+  leaveTypeName: string
+  startDate: string
+  endDate: string
+  days: number
+  hours: number
+  reason?: string | null
+  status: number
+  approval?: AttendanceApprovalSummary | null
+}
+
+export interface AttendanceBalance {
+  leaveTypeId: number
+  leaveTypeName: string
+  availableHours: number
+  grantedHours: number
+  creditedHours: number
+  deductedHours: number
+  pendingHours: number
+}
+
+export interface AttendanceStatRow {
+  userId: number
+  username: string
+  name: string
+  requiredDays: number
+  actualDays: number
+  lateCount: number
+  earlyCount: number
+  missingDays: number
+  leaveDays: { leaveTypeName: string; days: number }[]
+  overtimeHours: number
+}
+
+export interface AttendanceHoliday {
+  id: number
+  holidayDate: string
+  name: string
+  dayType: number
 }
 
 export async function poll<T>(

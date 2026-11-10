@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,14 +140,49 @@ class DemoApprovalPublisherTest {
         verify(templateService).publish(TEMPLATE_ID);
     }
 
+    @Test
+    void publishesAttendanceTemplatesWithTheirOwnClasspathArtifacts() throws IOException {
+        ProcessTemplate leave = template(ApprovalTemplateSupport.未发布, null);
+        ProcessTemplate overtime = template(ApprovalTemplateSupport.未发布, null);
+        ProcessTemplate published = template(ApprovalTemplateSupport.已发布, true);
+        whenTemplateIds(TEMPLATE_ID);
+        when(templateService.read(TEMPLATE_ID)).thenReturn(leave, overtime);
+        when(templateService.canWrite(TEMPLATE_ID)).thenReturn(true);
+        when(templateService.findUniquePublishedByProcessDefinitionKey(anyString()))
+                .thenReturn(published);
+
+        publisher.ensureAttendancePublished();
+
+        ArgumentCaptor<ProcessTemplate> saved = ArgumentCaptor.forClass(ProcessTemplate.class);
+        verify(templateService, times(2)).saveUnpublished(saved.capture());
+        verify(templateService, times(2)).publish(TEMPLATE_ID);
+        assertEquals(
+                List.of("attendanceLeave", "attendanceOvertime"),
+                saved.getAllValues().stream().map(ProcessTemplate::getProcessDefinitionKey).toList());
+        for (ProcessTemplate template : saved.getAllValues()) {
+            String artifactPath = template.getProcessDefinitionPath();
+            assertTrue(artifactPath.startsWith("processes/sha256/"));
+            assertEquals(artifactPath, "processes/sha256/" + storage.sha256(artifactPath) + ".zip");
+            String bpmn = zipEntry(artifactPath);
+            assertTrue(bpmn.contains("id=\"" + template.getProcessDefinitionKey() + "\""));
+            assertTrue(bpmn.contains("id=\"deptLeaderReview\""));
+        }
+    }
+
+    @Test
+    void attendancePublishingKeepsGoingWhenOneTemplateIsMissing() throws IOException {
+        whenTemplateIds();
+        publisher.ensureAttendancePublished();
+        verify(templateService, never()).publish(any());
+    }
+
     private void whenTemplateIds(Long... ids) {
         when(jdbcTemplate.query(anyString(), ArgumentMatchers.<RowMapper<Long>>any(), any(Object[].class)))
                 .thenReturn(List.of(ids));
     }
 
     private String demoBpmnEntry(String artifactPath) throws IOException {
-        byte[] archive = Files.readAllBytes(storage.resolve(artifactPath));
-        try (ZipInputStream zip = new ZipInputStream(new java.io.ByteArrayInputStream(archive))) {
+        try (ZipInputStream zip = openZip(artifactPath)) {
             ZipEntry entry = zip.getNextEntry();
             assertNotNull(entry);
             assertEquals("demo-approval.bpmn20.xml", entry.getName());
@@ -154,6 +190,19 @@ class DemoApprovalPublisherTest {
             assertFalse(content.isBlank());
             return content;
         }
+    }
+
+    private String zipEntry(String artifactPath) throws IOException {
+        try (ZipInputStream zip = openZip(artifactPath)) {
+            ZipEntry entry = zip.getNextEntry();
+            assertNotNull(entry);
+            return new String(zip.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private ZipInputStream openZip(String artifactPath) throws IOException {
+        byte[] archive = Files.readAllBytes(storage.resolve(artifactPath));
+        return new ZipInputStream(new java.io.ByteArrayInputStream(archive));
     }
 
     private static ProcessTemplate template(int status, Boolean availableForInitiation) {
