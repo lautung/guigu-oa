@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { emptyMessageOf } from '../support/form-rules'
 import {
+  ATTENDANCE_DAY_TYPE_OPTIONS,
   ATTENDANCE_PERMISSIONS,
   DEFAULT_WORKDAYS,
+  PUNCH_SOURCE_OPTIONS,
   WORKDAY_OPTIONS,
+  attendanceDayTypeLabel,
   emptyGroupForm,
   emptyHolidayForm,
   emptyShiftForm,
@@ -19,13 +22,20 @@ import {
   presentGroupListPage,
   presentHolidayListPage,
   presentMemberIds,
+  presentPunchListPage,
   presentShiftListPage,
+  presentToday,
   presentUserOptions,
+  punchListRequest,
+  punchRequest,
+  punchSlotLabel,
+  punchSourceLabel,
   shiftFormRules,
   shiftListRequest,
   shiftWriteRequest,
   shiftOptionsRequest,
   shiftRemoveRequest,
+  todayRequest,
   userOptionsRequest,
   validateShiftLunch,
   workdayLabels,
@@ -365,6 +375,150 @@ describe('config/attendance', () => {
     it('mirrors the holiday required messages', () => {
       expect(emptyMessageOf(holidayFormRules().holidayDate[0])).toBe('节假日日期不能为空')
       expect(emptyMessageOf(holidayFormRules().name[0])).toBe('节假日名称不能为空')
+    })
+  })
+
+  describe('打卡', () => {
+    it('reads today status and posts the two punch slots', () => {
+      expect(todayRequest()).toEqual({
+        method: 'get',
+        url: '/admin/attendance/my/today',
+      })
+      expect(punchRequest(1)).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/punch/in',
+      })
+      expect(punchRequest(2)).toEqual({
+        method: 'post',
+        url: '/admin/attendance/my/punch/out',
+      })
+    })
+
+    it('pages punch records with person/date/source filters', () => {
+      expect(
+        punchListRequest(2, 20, {
+          name: '甲',
+          beginDate: '2026-11-01',
+          endDate: '2026-11-10',
+          source: 1,
+        }),
+      ).toEqual({
+        method: 'get',
+        url: '/admin/attendance/punch/2/20',
+        params: { name: '甲', beginDate: '2026-11-01', endDate: '2026-11-10', source: 1 },
+      })
+    })
+
+    it('projects today status into display labels and HH:mm card times', () => {
+      expect(
+        presentToday({
+          date: '2026-11-10',
+          weekday: 3,
+          dayType: 1,
+          workday: true,
+          hasGroup: true,
+          groupName: '研发组',
+          shift: {
+            id: 1,
+            name: '标准班',
+            startTime: '09:00:00',
+            endTime: '18:00:00',
+            lunchStart: '12:00:00',
+            lunchEnd: '13:00:00',
+            graceMinutes: 10,
+          },
+          clockInTime: '08:30:00',
+          clockOutTime: null,
+        }),
+      ).toEqual({
+        date: '2026-11-10',
+        weekdayLabel: '周三',
+        dayType: 1,
+        dayTypeLabel: '工作日',
+        workday: true,
+        hasGroup: true,
+        groupName: '研发组',
+        shift: {
+          name: '标准班',
+          timeRange: '09:00 - 18:00',
+          lunchText: '12:00 - 13:00',
+          graceMinutes: 10,
+        },
+        clockInTime: '08:30',
+        clockOutTime: '',
+      })
+
+      expect(presentToday({ hasGroup: false, dayType: 0 })).toEqual({
+        date: '',
+        weekdayLabel: '',
+        dayType: 0,
+        dayTypeLabel: '未分组',
+        workday: false,
+        hasGroup: false,
+        groupName: '',
+        shift: null,
+        clockInTime: '',
+        clockOutTime: '',
+      })
+    })
+
+    it('labels day types, slots, and sources', () => {
+      expect(ATTENDANCE_DAY_TYPE_OPTIONS.map((option) => option.label)).toEqual([
+        '未分组',
+        '工作日',
+        '休息日',
+        '休假日',
+        '补班日',
+      ])
+      expect(attendanceDayTypeLabel(2)).toBe('休息日')
+      expect(attendanceDayTypeLabel(undefined)).toBe('未分组')
+      expect(punchSlotLabel(1)).toBe('上班卡')
+      expect(punchSlotLabel(2)).toBe('下班卡')
+      expect(PUNCH_SOURCE_OPTIONS.map((option) => option.label)).toEqual(['网页打卡', '补卡'])
+      expect(punchSourceLabel(2)).toBe('补卡')
+    })
+
+    it('projects punch record rows with joined names and labels', () => {
+      expect(
+        presentPunchListPage({
+          records: [
+            {
+              id: 9,
+              userId: 11,
+              username: 'alice',
+              name: '甲',
+              deptId: 2,
+              deptName: '研发部',
+              punchDate: '2026-11-10',
+              slot: 2,
+              punchTime: '2026-11-10 18:30:00',
+              source: 2,
+              operatorName: '乙',
+            },
+          ],
+          total: 1,
+          pages: 1,
+        }),
+      ).toEqual({
+        records: [
+          {
+            id: 9,
+            userId: 11,
+            username: 'alice',
+            name: '甲',
+            deptName: '研发部',
+            punchDate: '2026-11-10',
+            slot: 2,
+            slotLabel: '下班卡',
+            punchTime: '2026-11-10 18:30:00',
+            source: 2,
+            sourceLabel: '补卡',
+            operatorName: '乙',
+          },
+        ],
+        total: 1,
+        pages: 1,
+      })
     })
   })
 })

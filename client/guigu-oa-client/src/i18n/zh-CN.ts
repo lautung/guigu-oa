@@ -39,6 +39,7 @@ const zhCN = {
       processed: '已处理',
       started: '已发起',
       copied: '抄送我的',
+      myAttendance: '打卡',
     },
     groups: {
       logs: '日志管理',

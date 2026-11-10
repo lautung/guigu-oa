@@ -121,6 +121,7 @@ describe('route table', () => {
         PATHS.WORK_STARTED_DETAIL,
         PATHS.WORK_COPIED,
         PATHS.WORK_COPIED_DETAIL,
+        PATHS.WORK_MY_ATTENDANCE,
         PATHS.SYSTEM,
         PATHS.BUSINESS,
         PATHS.BUSINESS_ATTENDANCE,

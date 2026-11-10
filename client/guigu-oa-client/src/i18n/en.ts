@@ -39,6 +39,7 @@ const en = {
       processed: 'Processed',
       started: 'Started',
       copied: 'Copied to me',
+      myAttendance: 'Punch',
     },
     groups: {
       logs: 'Logs',

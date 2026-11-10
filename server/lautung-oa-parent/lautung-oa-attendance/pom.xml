@@ -39,4 +39,17 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <!-- 本模块 mapper XML 物理在 src/main/java 的包目录内，随包一起打进 jar（与 auth/process 同一约定）。 -->
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+    </build>
 </project>

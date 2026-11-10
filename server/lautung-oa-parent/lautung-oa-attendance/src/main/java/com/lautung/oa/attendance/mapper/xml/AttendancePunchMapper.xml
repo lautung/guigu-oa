@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lautung.oa.attendance.mapper.AttendancePunchMapper">
+
+    <!--
+      后台打卡记录（#279，ADR 0073）：行形状 join 用户姓名/当前部门与补卡操作人。
+      存活过滤：手写 XML 不吃实体的 @TableLogic，流水行本体显式带 is_deleted = 0（ADR 0050）。
+      数据范围（ADR 0053/0057）：部门列 = sys_user.dept_id（当前），本人列 = attendance_punch.user_id；
+      查询侧只接受参数 #{} + <foreach>，禁止 ${}。部门集为空且无本人行时 1 = 0 得零行，不是全部。
+      排序：打卡时间倒序、id 决胜（稳定分页）。
+    -->
+    <select id="selectPunchPage" resultType="com.lautung.oa.vo.attendance.AttendancePunchVo">
+        select p.id,
+               p.user_id,
+               u.username,
+               u.name,
+               u.dept_id as deptId,
+               d.name as deptName,
+               p.punch_date,
+               p.slot,
+               p.punch_time,
+               p.source,
+               o.name as operatorName
+        from attendance_punch p
+            left join sys_user u on u.id = p.user_id
+            left join sys_dept d on d.id = u.dept_id
+            left join sys_user o on o.id = p.operator_user_id
+        <where>
+            and p.is_deleted = 0
+            <if test="query.name != null and query.name != ''">
+                and (u.name like CONCAT('%', #{query.name}, '%')
+                     or u.username like CONCAT('%', #{query.name}, '%'))
+            </if>
+            <if test="query.beginDate != null">
+                and p.punch_date &gt;= #{query.beginDate}
+            </if>
+            <if test="query.endDate != null">
+                and p.punch_date &lt;= #{query.endDate}
+            </if>
+            <if test="query.source != null">
+                and p.source = #{query.source}
+            </if>
+            <if test="scope != null and !scope.unrestricted">
+                <choose>
+                    <when test="scope.deptIds.size() > 0">
+                        and (u.dept_id in
+                        <foreach collection="scope.deptIds" item="deptId" open="(" separator="," close=")">
+                            #{deptId}
+                        </foreach>
+                        <if test="scope.selfUserId != null">
+                            or p.user_id = #{scope.selfUserId}
+                        </if>
+                        )
+                    </when>
+                    <when test="scope.selfUserId != null">
+                        and p.user_id = #{scope.selfUserId}
+                    </when>
+                    <otherwise>
+                        and 1 = 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        order by p.punch_time desc, p.id desc
+    </select>
+</mapper>

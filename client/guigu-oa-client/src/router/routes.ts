@@ -94,6 +94,13 @@ const workChildren: AppRoute[] = [
     component: () => import('@/views/work/pending/detail.vue'),
     meta: { title: '审批详情', menuGroup: 'work', workListKind: WORK_LIST_KINDS.COPIED },
   },
+  {
+    // 办事打卡（#279，ADR 0073）：登录即有，work 组不套后台页面授予；窄屏可用。
+    path: childPath(PATHS.WORK, PATHS.WORK_MY_ATTENDANCE),
+    name: 'WorkMyAttendance',
+    component: () => import('@/views/work/my-attendance/index.vue'),
+    meta: { title: '打卡', menuGroup: 'work' },
+  },
 ]
 
 // 考勤五页（#278，ADR 0073）：考勤组与班次完整交付，其余四页是占位壳，

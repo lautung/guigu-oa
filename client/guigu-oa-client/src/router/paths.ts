@@ -28,6 +28,8 @@ export const PATHS = {
   WORK_STARTED_DETAIL: '/work/started/:id',
   WORK_COPIED: '/work/copied',
   WORK_COPIED_DETAIL: '/work/copied/:id',
+  /** 办事打卡（#279，ADR 0073）：登录即有，不套后台授权，窄屏可用。 */
+  WORK_MY_ATTENDANCE: '/work/my-attendance',
   /** 个人中心（#254）：登录即有，不进后台菜单、不设页面授予。 */
   PROFILE: '/profile',
   SYSTEM: '/system',
@@ -72,6 +74,7 @@ export const ROUTES = {
   PROCESSED: PATHS.WORK_PROCESSED,
   STARTED: PATHS.WORK_STARTED,
   COPIED: PATHS.WORK_COPIED,
+  MY_ATTENDANCE: PATHS.WORK_MY_ATTENDANCE,
 } as const
 
 export const WORK_LIST_KINDS = {
@@ -164,6 +167,7 @@ const RETURN_PATH_BY_PATH: Record<string, string> = {
   [PATHS.WORK_PROCESSED]: PATHS.WORK_PROCESSED,
   [PATHS.WORK_STARTED]: PATHS.WORK_STARTED,
   [PATHS.WORK_COPIED]: PATHS.WORK_COPIED,
+  [PATHS.WORK_MY_ATTENDANCE]: PATHS.WORK_MY_ATTENDANCE,
   [PATHS.PROFILE]: PATHS.PROFILE,
   [PATHS.SYSTEM_SYS_USER]: PATHS.SYSTEM_SYS_USER,
   [PATHS.SYSTEM_SYS_ROLE]: PATHS.SYSTEM_SYS_ROLE,

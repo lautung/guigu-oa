@@ -7,9 +7,14 @@ import type {
   AttendanceHolidayListItem,
   AttendanceHolidayRecord,
   AttendanceMemberRecord,
+  AttendancePunchListItem,
+  AttendancePunchQuery,
+  AttendancePunchRecord,
   AttendanceShiftForm,
   AttendanceShiftListItem,
   AttendanceShiftRecord,
+  AttendanceTodayRecord,
+  AttendanceTodayView,
   EntityId,
   UserOption,
 } from '@/types/domain'
@@ -330,6 +335,138 @@ export function holidayWriteRequest(form: AttendanceHolidayForm): ApiRequestConf
 
 export function holidayRemoveRequest(id: EntityId): ApiRequestConfig {
   return { method: 'delete', url: `${HOLIDAY_API}/remove/${id}` }
+}
+
+// ---------------- 打卡 ----------------
+
+export const MY_ATTENDANCE_API = `${ATTENDANCE_API}/my`
+export const PUNCH_API = `${ATTENDANCE_API}/punch`
+
+/** 日类型（#279，ADR 0073）：0 未分组 / 1 工作日 / 2 休息日 / 3 休假日 / 4 补班日。 */
+export const ATTENDANCE_DAY_TYPE_OPTIONS = [
+  { value: 0, label: '未分组' },
+  { value: 1, label: '工作日' },
+  { value: 2, label: '休息日' },
+  { value: 3, label: '休假日' },
+  { value: 4, label: '补班日' },
+] as const
+
+export function attendanceDayTypeLabel(dayType: number | null | undefined): string {
+  return ATTENDANCE_DAY_TYPE_OPTIONS.find((option) => option.value === dayType)?.label || '未分组'
+}
+
+export const PUNCH_SLOT_IN = 1
+export const PUNCH_SLOT_OUT = 2
+
+export const PUNCH_SLOT_OPTIONS = [
+  { value: PUNCH_SLOT_IN, label: '上班卡' },
+  { value: PUNCH_SLOT_OUT, label: '下班卡' },
+] as const
+
+export function punchSlotLabel(slot: number | null | undefined): string {
+  return PUNCH_SLOT_OPTIONS.find((option) => option.value === slot)?.label || ''
+}
+
+/** 打卡来源（ADR 0073）：1 网页打卡 / 2 补卡。 */
+export const PUNCH_SOURCE_OPTIONS = [
+  { value: 1, label: '网页打卡' },
+  { value: 2, label: '补卡' },
+] as const
+
+export function punchSourceLabel(source: number | null | undefined): string {
+  return PUNCH_SOURCE_OPTIONS.find((option) => option.value === source)?.label || ''
+}
+
+export function todayRequest(): ApiRequestConfig {
+  return { method: 'get', url: `${MY_ATTENDANCE_API}/today` }
+}
+
+/** 上班/下班打卡：两个显式端点，服务器时间为准，可重复打。 */
+export function punchRequest(slot: number): ApiRequestConfig {
+  return {
+    method: 'post',
+    url: `${MY_ATTENDANCE_API}/punch/${slot === PUNCH_SLOT_OUT ? 'out' : 'in'}`,
+  }
+}
+
+export function punchListRequest(
+  page: number,
+  limit: number,
+  searchObj: Record<string, string | number> = {},
+): ApiRequestConfig {
+  return { method: 'get', url: `${PUNCH_API}/${page}/${limit}`, params: searchObj }
+}
+
+/** 时刻只展示到分钟；服务端返回 HH:mm:ss。 */
+function clockText(value: string | null | undefined): string {
+  return value ? value.slice(0, 5) : ''
+}
+
+function weekdayLabel(weekday: number | null | undefined): string {
+  return WORKDAY_OPTIONS.find((option) => option.value === weekday)?.label || ''
+}
+
+export function presentToday(record: AttendanceTodayRecord = {}): AttendanceTodayView {
+  const shift = record.shift
+  return {
+    date: record.date || '',
+    weekdayLabel: weekdayLabel(record.weekday),
+    dayType: record.dayType == null ? 0 : record.dayType,
+    dayTypeLabel: attendanceDayTypeLabel(record.dayType),
+    workday: Boolean(record.workday),
+    hasGroup: Boolean(record.hasGroup),
+    groupName: record.groupName || '',
+    shift: shift
+      ? {
+          name: shift.name || '',
+          timeRange: `${clockText(shift.startTime)} - ${clockText(shift.endTime)}`,
+          lunchText:
+            shift.lunchStart && shift.lunchEnd
+              ? `${clockText(shift.lunchStart)} - ${clockText(shift.lunchEnd)}`
+              : '无',
+          graceMinutes: shift.graceMinutes == null ? 0 : shift.graceMinutes,
+        }
+      : null,
+    clockInTime: clockText(record.clockInTime),
+    clockOutTime: clockText(record.clockOutTime),
+  }
+}
+
+export function presentPunchRecord(record: AttendancePunchRecord = {}): AttendancePunchListItem {
+  return {
+    id: record.id || '',
+    userId: record.userId,
+    username: record.username || '',
+    name: record.name || '',
+    deptName: record.deptName || '',
+    punchDate: record.punchDate || '',
+    slot: record.slot,
+    slotLabel: punchSlotLabel(record.slot),
+    punchTime: record.punchTime || '',
+    source: record.source,
+    sourceLabel: punchSourceLabel(record.source),
+    operatorName: record.operatorName || '',
+  }
+}
+
+export function presentPunchListPage(
+  page: { records?: AttendancePunchRecord[]; total?: number; pages?: number } = {},
+) {
+  return {
+    records: (page.records || []).map(presentPunchRecord),
+    total: page.total || 0,
+    pages: page.pages || 0,
+  }
+}
+
+/** 查询表单投影：空值不进查询参数（服务端按缺省不过滤）。 */
+export function punchQueryOf(query: AttendancePunchQuery): Record<string, string | number> {
+  const params: Record<string, string | number> = {}
+  if (query.name) params.name = query.name.trim()
+  if (query.beginDate) params.beginDate = query.beginDate
+  if (query.endDate) params.endDate = query.endDate
+  if (query.source !== undefined && query.source !== '') params.source = query.source
+  return params
 }
 
 // ---------------- 表单规则 ----------------

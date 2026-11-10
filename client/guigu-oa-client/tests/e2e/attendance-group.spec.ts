@@ -38,6 +38,20 @@ const group = {
 
 const holiday = { id: 2, holidayDate: '2026-10-01', name: '国庆', dayType: 1 }
 
+const punch = {
+  id: 9,
+  userId: 11,
+  username: 't278-alice',
+  name: '甲',
+  deptId: 2,
+  deptName: '研发部',
+  punchDate: '2026-11-10',
+  slot: 2,
+  punchTime: '2026-11-10 18:30:00',
+  source: 2,
+  operatorName: '乙',
+}
+
 const members = [
   { id: 1, userId: 11, username: 't278-alice', name: '甲' },
   { id: 2, userId: 12, username: 't278-bob', name: '乙' },
@@ -64,11 +78,12 @@ const attendanceMenus = [
 
 interface State {
   groupPosts: Record<string, unknown>[]
+  punchQueries: Record<string, string>[]
   errors: string[]
 }
 
 async function setup(page: Page, granted = true): Promise<State> {
-  const state: State = { groupPosts: [], errors: [] }
+  const state: State = { groupPosts: [], punchQueries: [], errors: [] }
   page.on('pageerror', (error) => {
     if (!isKnownBrowserNoise(error.message)) state.errors.push(error.message)
   })
@@ -121,6 +136,10 @@ async function setup(page: Page, granted = true): Promise<State> {
     if (/^\/admin\/attendance\/group\/\d+\/members$/.test(path)) return json(route, members)
     if (/^\/admin\/attendance\/holiday\/\d+\/\d+$/.test(path)) {
       return json(route, { records: [holiday], total: 1, pages: 1 })
+    }
+    if (/^\/admin\/attendance\/punch\/\d+\/\d+$/.test(path)) {
+      state.punchQueries.push(Object.fromEntries(new URL(request.url()).searchParams))
+      return json(route, { records: [punch], total: 1, pages: 1 })
     }
     if (path === '/admin/attendance/group/save') {
       state.groupPosts.push(request.postDataJSON() as Record<string, unknown>)
@@ -188,12 +207,11 @@ test('新建考勤组：选班次、勾工作日、选成员，保存落 POST �
   expect(state.errors).toEqual([])
 })
 
-test('四个占位壳页渲染标题与空态', async ({ page }) => {
+test('三个占位壳页渲染标题与空态', async ({ page }) => {
   test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
   await setup(page)
 
   const cases = [
-    ['/business/attendance/record', '打卡记录'],
     ['/business/attendance/repair', '补卡处理'],
     ['/business/attendance/leave', '假期类型与发放'],
     ['/business/attendance/stat', '月度统计'],
@@ -203,6 +221,24 @@ test('四个占位壳页渲染标题与空态', async ({ page }) => {
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
     await expect(page.locator('.el-empty').first()).toBeVisible()
   }
+})
+
+test('打卡记录页展示 join 姓名/部门并按人筛选重查', async ({ page }) => {
+  test.skip((page.viewportSize()?.width || 0) <= 768, '配置在桌面使用')
+  const state = await setup(page)
+
+  await page.goto('/business/attendance/record')
+  await expect(page.getByRole('heading', { name: '打卡记录', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '甲' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '研发部' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '下班卡' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '补卡' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '乙' })).toBeVisible()
+
+  await page.getByPlaceholder('姓名或用户名').fill('甲')
+  await page.locator('.filter-form').getByRole('button', { name: '搜索' }).click()
+  await expect.poll(() => state.punchQueries.at(-1)?.name).toBe('甲')
+  expect(state.errors).toEqual([])
 })
 
 test('未授予考勤页面的用户被守卫回落工作台', async ({ page }) => {

@@ -31,6 +31,13 @@ class OperLogCoverageTest {
 
     private static final List<String> BACKOFFICE_PREFIXES = List.of("/admin/system", "/admin/monitor", "/admin/attendance");
 
+    /**
+     * 办事面（登录即有、构造上只读本人）的写动作不记操作日志（ADR 0054：办事与审批的
+     * 写动作不重复记）。考勤模块把办事端点收在 {@code /admin/attendance/my} 下，
+     * 与后台记录页共用 {@code /admin/attendance} 前缀，这里按子树豁免。
+     */
+    private static final List<String> PERSONAL_PREFIXES = List.of("/admin/attendance/my");
+
     private static final String EXCLUDED_CONTROLLER = "IndexController";
 
     @Test
@@ -81,6 +88,9 @@ class OperLogCoverageTest {
         }
         return Arrays.stream(mapping.path())
                 .anyMatch(path -> BACKOFFICE_PREFIXES.stream()
+                        .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/")))
+                && Arrays.stream(mapping.path())
+                .noneMatch(path -> PERSONAL_PREFIXES.stream()
                         .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/")));
     }
 

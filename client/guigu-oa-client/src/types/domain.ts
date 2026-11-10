@@ -1015,3 +1015,75 @@ export interface AttendanceHolidayForm {
   name: string
   dayType: number
 }
+
+/** 今日打卡状态（#279）：班次摘要、日类型与两张卡的有效时刻（服务器时间）。 */
+export interface AttendanceShiftSummaryRecord {
+  id?: EntityId
+  name?: string
+  startTime?: string
+  endTime?: string
+  lunchStart?: string | null
+  lunchEnd?: string | null
+  graceMinutes?: number
+}
+
+export interface AttendanceTodayRecord {
+  date?: string
+  weekday?: number
+  dayType?: number
+  workday?: boolean
+  hasGroup?: boolean
+  groupId?: EntityId
+  groupName?: string
+  shift?: AttendanceShiftSummaryRecord | null
+  clockInTime?: string | null
+  clockOutTime?: string | null
+}
+
+export interface AttendanceShiftSummaryView {
+  name: string
+  timeRange: string
+  lunchText: string
+  graceMinutes: number
+}
+
+export interface AttendanceTodayView {
+  date: string
+  weekdayLabel: string
+  dayType: number
+  dayTypeLabel: string
+  workday: boolean
+  hasGroup: boolean
+  groupName: string
+  shift: AttendanceShiftSummaryView | null
+  clockInTime: string
+  clockOutTime: string
+}
+
+/** 后台打卡记录行（#279）：姓名/部门/补卡操作人由服务端 join。 */
+export interface AttendancePunchRecord {
+  id?: EntityId | ''
+  userId?: EntityId
+  username?: string
+  name?: string
+  deptId?: EntityId
+  deptName?: string
+  punchDate?: string
+  slot?: number
+  punchTime?: string
+  source?: number
+  operatorName?: string
+}
+
+export interface AttendancePunchListItem extends AttendancePunchRecord {
+  id: EntityId
+  slotLabel: string
+  sourceLabel: string
+}
+
+export interface AttendancePunchQuery {
+  name?: string
+  beginDate?: string
+  endDate?: string
+  source?: number | ''
+}

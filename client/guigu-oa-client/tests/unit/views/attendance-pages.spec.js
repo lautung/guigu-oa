@@ -67,6 +67,20 @@ const group = {
 
 const holiday = { id: 2, holidayDate: '2026-10-01', name: '国庆', dayType: 1 }
 
+const punch = {
+  id: 9,
+  userId: 11,
+  username: 't278-alice',
+  name: '甲',
+  deptId: 2,
+  deptName: '研发部',
+  punchDate: '2026-11-10',
+  slot: 2,
+  punchTime: '2026-11-10 18:30:00',
+  source: 2,
+  operatorName: '乙',
+}
+
 const members = [
   { id: 1, userId: 11, username: 't278-alice', name: '甲' },
   { id: 2, userId: 12, username: 't278-bob', name: '乙' },
@@ -86,6 +100,7 @@ function responder(config) {
   if (/\/attendance\/group\/userOptions$/.test(url)) return ok(users)
   if (/\/attendance\/group\/\d+\/members$/.test(url)) return ok(members)
   if (/\/attendance\/holiday\/\d+\/\d+$/.test(url)) return paged([holiday])
+  if (/\/attendance\/punch\/\d+\/\d+$/.test(url)) return paged([punch])
   return ok(null)
 }
 
@@ -259,7 +274,6 @@ describe('AttendanceGroupPage', () => {
 
 describe('考勤占位壳页', () => {
   const cases = [
-    [AttendanceRecordPage, '打卡记录'],
     [AttendanceRepairPage, '补卡处理'],
     [AttendanceLeavePage, '假期类型与发放'],
     [AttendanceStatPage, '月度统计'],
@@ -272,5 +286,51 @@ describe('考勤占位壳页', () => {
     expect(wrapper.text()).toContain(title)
     expect(wrapper.find('.el-empty').exists()).toBe(true)
     expect(http.calls).toHaveLength(0)
+  })
+})
+
+describe('AttendanceRecordPage', () => {
+  it('loads punch rows with joined name, department, slot and source labels', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceRecordPage, realOptions(pinia))
+    await flushPromises()
+
+    expect(http.calls[0].url).toBe('/admin/attendance/punch/1/10')
+    expect(wrapper.vm.rows).toEqual([
+      expect.objectContaining({
+        name: '甲',
+        deptName: '研发部',
+        slotLabel: '下班卡',
+        sourceLabel: '补卡',
+        operatorName: '乙',
+      }),
+    ])
+    expect(wrapper.text()).toContain('研发部')
+    expect(wrapper.text()).toContain('下班卡')
+  })
+
+  it('searches by person, date range and source, then resets', async () => {
+    const { pinia } = setupSession()
+    const wrapper = mount(AttendanceRecordPage, realOptions(pinia))
+    await flushPromises()
+
+    wrapper.vm.name = '甲'
+    wrapper.vm.dateRange = ['2026-11-01', '2026-11-10']
+    wrapper.vm.source = 1
+    wrapper.vm.search()
+    await flushPromises()
+
+    const last = http.calls.at(-1)
+    expect(last.url).toBe('/admin/attendance/punch/1/10')
+    expect(last.params).toEqual({
+      name: '甲',
+      beginDate: '2026-11-01',
+      endDate: '2026-11-10',
+      source: 1,
+    })
+
+    wrapper.vm.reset()
+    await flushPromises()
+    expect(http.calls.at(-1).params).toEqual({})
   })
 })
