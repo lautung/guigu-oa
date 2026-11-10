@@ -204,9 +204,7 @@ public class AttendanceLeaveServiceImpl
         if (startDate == null || endDate == null) {
             throw new BusinessException(201, "请假日期不能为空");
         }
-        if (startDate.isAfter(endDate)) {
-            throw new BusinessException(201, "开始日期不能晚于结束日期");
-        }
+        requireDateOrder(startDate, endDate);
         AttendanceCalendarView view = calendar.open(applicantId, startDate, endDate);
         if (!view.hasMember()) {
             throw new BusinessException(201, "未加入考勤组，不能提交请假");
