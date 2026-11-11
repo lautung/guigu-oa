@@ -15,7 +15,7 @@
 ## 决定
 
 - **module 与落点**：新增 `com.lautung.oa.process.pending` 包与 `@Service PendingWorklist`。它拥有三源取数（引擎 `ApprovalEngine.pendingTasks`/`pendingCount`/`currentTasks` + 新加签任务证据 port）、并集与每人每审批一行、AFTER 批次排除、BEFORE 挂起标记、`total` 口径、合并排序与窗口、`pendingRow` 的选择规则、姓名投影与显示顺序。`ApprovalListReader` 的五方法门面与 `ProcessVo` 行类型都不变（ADR 0045），`pending`/`pendingRow` 改为委托；`LedgerApprovalListReader` 只留其余四种列表。
-- **公开面**：`pending(Page<ProcessVo>, SysUser)`、`pendingRow(SysUser, Process)`、`handlers(Process)`、`pendingHandlerNames(Process)`。
+- **公开面**：`pending(Page<ProcessVo>, SysUser)`、`pendingRow(SysUser, Process)`、`handlers(Process)`、`pendingHandlerNames(Process)`。实现注记（#298）：另有窄重载 `pendingHandlerNames(Long processId, String processInstanceId)`，与 `pendingHandlerNames(Process)` 同义，供只持有 `ProcessVo` 的 `BusinessApprovalReader` 使用，避免为投影伪造 `Process` 壳。
 - **处理人条目**：`HandlerEntry(username, userId, source, engineTaskId, signTaskId, suspended, afterExcluded, createTime)`；`source` 为 `ENGINE_ASSIGNEE | ENGINE_CANDIDATE | ADD_SIGN`。`handlers` 只回答事实，不解析姓名；加签条目的 `username` 可空、靠 `userId` 标识。`pendingHandlerNames` 才做「用户名→显示名」的解析，加签人按 `userId` 一次批查取用户名，不逐条查。
 - **姓名与顺序**：显示名的唯一实现收进 module（注入 `SysUserService`；找不到用户或空名退回用户名）。顺序 = 引擎任务序（每任务 assignee 先、候选人后）+ PENDING 加签任务按 id；按 username 去重。连接符留在各消费方（等待文案 `,`，摘要/催办 `、`），不进 module。
 - **待处理名单与催办对象同源**：待处理名单 = 未被 AFTER 批次排除的引擎条目 + 加签任务条目；BEFORE 挂起原处理人保留（行上带挂起标记）。催办对象就是这份名单的显示名——**后加签已记账通过的原处理人不再出现在催办对象里**。等待文案与业务摘要的「当前审批人」也吃同一投影；正常流转下等待文案输出不变（加签批次期间的文案本由 `addSignWaitingDescription` 接管），业务摘要在加签期间会多出加签人。

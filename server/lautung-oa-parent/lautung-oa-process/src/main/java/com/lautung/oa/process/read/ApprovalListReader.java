@@ -9,10 +9,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 /**
- * 五种审批列表的读门面（#181）：行形状、窗口算术、回查批量化、排序在这里一处拥有。
+ * 五种审批列表的读门面（#181）：行形状、窗口算术、回查批量化、排序在这里一处拥有
+ * （待处理与单行读的行合成、窗口与排序已收进 {@code process.pending.PendingWorklist}，
+ * #297，ADR 0076）。
  * 行形状唯一 owner 是 OaProcessMapper.xml 的共享列清单，{@code ProcessVo} 是唯一行类型；
  * 五个方法参数强类型，不设 kind 字符串。本 interface 只读，不写引擎与账本。
- * 待处理与单行读的实现已收进 {@code process.pending.PendingWorklist}（#297，ADR 0076）。
  */
 public interface ApprovalListReader {
 
