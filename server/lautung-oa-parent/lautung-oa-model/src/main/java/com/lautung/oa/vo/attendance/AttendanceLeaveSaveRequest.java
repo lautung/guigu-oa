@@ -26,7 +26,7 @@ public class AttendanceLeaveSaveRequest extends AttendanceLeaveRequest {
         leave.setReason(getReason());
         leave.setDays(0);
         leave.setHours(BigDecimal.ZERO);
-        leave.setStatus(AttendanceApplyStatus.DRAFT);
+        leave.setStatus(AttendanceApplyStatus.DRAFT.code());
         return leave;
     }
 }

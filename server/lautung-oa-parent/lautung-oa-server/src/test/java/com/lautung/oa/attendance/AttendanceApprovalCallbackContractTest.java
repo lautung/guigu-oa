@@ -23,12 +23,12 @@ import static com.lautung.oa.auth.LoginAuthContractTest.InMemoryRedisConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * #282 的审批回调合同（ADR 0067/0073）：APPROVED → 2 + 请假扣减/加班入账流水，
- * REJECTED → -1、WITHDRAWN → -2 不写流水；同值幂等 no-op、异值抛错；回调加入
- * 调用方事务，异常时单据与流水一起回滚（用 TransactionTemplate 模拟审批动作事务）。
+ * #282 的审批回调端到端合同（ADR 0067/0073）：APPROVED → 2 + 请假扣减/加班入账流水，
+ * REJECTED → -1、WITHDRAWN → -2 不写流水；回调加入调用方事务，异常时单据与流水一起回滚
+ * （用 TransactionTemplate 模拟审批动作事务）。同值 no-op、异值冲突与 CAS 0 行重读是
+ * 生命周期 module 的规则，由 #294 的 {@code DocumentLifecycleTest} 断言，本类不再重复。
  */
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:guigu_oa_attendance_callback;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;INIT=CREATE DOMAIN IF NOT EXISTS DATETIME AS TIMESTAMP")
 @ActiveProfiles("test")
@@ -90,11 +90,6 @@ class AttendanceApprovalCallbackContractTest {
         assertEquals(2, ((Number) ledger.get("entry_type")).intValue());
         assertEquals(0, new BigDecimal("-8.00").compareTo((BigDecimal) ledger.get("change_hours")));
         assertEquals("attendance.leave", ledger.get("business_type"));
-
-        // 同值重复送达：no-op 成功，不重复写流水。
-        leaveCallback.onTerminal(id, BusinessApprovalOutcome.APPROVED);
-        assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave_ledger "
-                + "WHERE business_type = 'attendance.leave' AND business_id = " + id));
     }
 
     @Test
@@ -102,31 +97,13 @@ class AttendanceApprovalCallbackContractTest {
         long rejected = insertLeave("4.00");
         leaveCallback.onTerminal(rejected, BusinessApprovalOutcome.REJECTED);
         assertEquals(-1, statusOf("attendance_leave", rejected));
-        leaveCallback.onTerminal(rejected, BusinessApprovalOutcome.REJECTED);
-        assertEquals(-1, statusOf("attendance_leave", rejected));
 
         long withdrawn = insertLeave("4.00");
-        leaveCallback.onTerminal(withdrawn, BusinessApprovalOutcome.WITHDRAWN);
-        assertEquals(-2, statusOf("attendance_leave", withdrawn));
         leaveCallback.onTerminal(withdrawn, BusinessApprovalOutcome.WITHDRAWN);
         assertEquals(-2, statusOf("attendance_leave", withdrawn));
 
         assertEquals(0, count("SELECT COUNT(*) FROM attendance_leave_ledger "
                 + "WHERE business_type = 'attendance.leave'"));
-    }
-
-    @Test
-    void differentTerminalValueThrowsAndKeepsFirstWinner() {
-        long id = insertLeave("8.00");
-        leaveCallback.onTerminal(id, BusinessApprovalOutcome.APPROVED);
-
-        BusinessException conflict = assertThrows(BusinessException.class,
-                () -> leaveCallback.onTerminal(id, BusinessApprovalOutcome.REJECTED));
-        assertEquals(201, conflict.getCode());
-        assertTrue(conflict.getMessage().contains("终态冲突"));
-        assertEquals(2, statusOf("attendance_leave", id));
-        assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave_ledger "
-                + "WHERE business_type = 'attendance.leave' AND business_id = " + id));
     }
 
     @Test
@@ -161,10 +138,6 @@ class AttendanceApprovalCallbackContractTest {
         assertEquals(creditTypeId, ((Number) ledger.get("leave_type_id")).longValue());
         assertEquals(3, ((Number) ledger.get("entry_type")).intValue());
         assertEquals(0, new BigDecimal("2.50").compareTo((BigDecimal) ledger.get("change_hours")));
-
-        overtimeCallback.onTerminal(id, BusinessApprovalOutcome.APPROVED);
-        assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave_ledger "
-                + "WHERE business_type = 'attendance.overtime' AND business_id = " + id));
     }
 
     @Test

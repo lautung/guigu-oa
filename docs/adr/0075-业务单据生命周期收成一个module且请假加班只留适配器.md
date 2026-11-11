@@ -33,6 +33,7 @@ ADR 0066/0067 定了业务单据与审批两态、业务键关联、提交即发
 
 - 请假/加班两份 service 的重复私有辅助、草稿 CAS、提交序列与两个回调主体消失；新增单据只写适配器与一个注册 bean。
 - 新增 `attendance.application` 包；process 的 `BusinessApprovalStarter`/`BusinessApprovalCallback` 端口形状不变，仅移除 starter 内的事务内重读。
+- 业务发起的写入不再在 `ApprovalWriter.startBusiness` 里按 `(user_id, idempotency_key)` 静默重放：静默重放会把「复用已完成的历史提交键」当成本次提交成功，单据被误置为审批中；重放判定完全归生命周期 module（实现时补记）。
 - ADR 0032 的幂等合同在通用发起与业务发起两条路径上一致：冲突重读都在事务外；业务发起的「重复送达返回同一条审批」由生命周期 module 自己拥有，不再依赖调用方的事务姿势。
 - GLOSSARY 增补「业务单据生命周期」。
 - 实现票（C1）阻塞于 C2（ADR 0074）：请假适配器的定稿依赖考勤日历的区间视图。

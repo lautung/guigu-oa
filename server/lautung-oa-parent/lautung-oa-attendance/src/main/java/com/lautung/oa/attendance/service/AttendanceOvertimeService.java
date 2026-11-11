@@ -10,9 +10,9 @@ import com.lautung.oa.vo.attendance.AttendanceOvertimeUpdateRequest;
 import com.lautung.oa.vo.attendance.AttendanceOvertimeVo;
 
 /**
- * 加班单（#282，ADR 0073）：办事侧只读本人——列表/详情/草稿保存修改删除/提交。
- * 结束必须晚于开始且同一天内，小时数服务端计算；允许休息日加班，不与打卡交叉校验。
- * 提交 = 校验 + 状态 CAS + BusinessApprovalStarter 同一事务。
+ * 加班单（#282，ADR 0073；#294 薄壳，ADR 0075）：办事侧只读本人——列表/详情/草稿保存
+ * 修改删除/提交。结束必须晚于开始且同一天内，小时数服务端计算；允许休息日加班，不与
+ * 打卡交叉校验。草稿 CAS、提交序列、同键重放与终态回写委托业务单据生命周期 module。
  */
 public interface AttendanceOvertimeService extends IService<AttendanceOvertime> {
 
@@ -27,6 +27,6 @@ public interface AttendanceOvertimeService extends IService<AttendanceOvertime> 
 
     void removeDraft(Long applicantId, Long id);
 
-    /** 提交（同一事务：校验定稿 → 状态 CAS → 起审批）；同键重放返回同一条审批。 */
+    /** 提交（生命周期 module：校验 → 状态 CAS → 起审批）；同键重放返回同一条审批。 */
     AttendanceOvertimeVo submit(Long applicantId, Long id, String idempotencyKey);
 }

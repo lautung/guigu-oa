@@ -7,7 +7,6 @@ import com.lautung.oa.process.approval.ApproverNames;
 import com.lautung.oa.process.mapper.OaBusinessTemplateMapper;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.vo.process.BusinessApprovalStart;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,8 +16,9 @@ import org.springframework.util.StringUtils;
  * {@code oa_business_template} 映射，不引用任何业务域类型。
  *
  * <p>复用 {@link ApprovalWriter} 的次序、事务与 {@code (user_id, idempotency_key)} 幂等索引
- * （ADR 0032）：写入在 writer 的事务里；唯一索引挡住的并发重放按 {@code startedOutcome}
- * 事务外重读模式返回同一条审批（与 {@code OaProcessServiceImpl.startUp} 同构）。
+ * （ADR 0032）。同键重放识别不归本类：业务发起键的语义是「同一单据的同一提交」，只有
+ * 单据自己的生命周期知道当前提交是哪一次（ADR 0075）。{@code uk_oa_process_idempotency_key}
+ * 的冲突原样上抛，调用方必须让自己的事务先回滚，再到事务外按提交标识重读。
  *
  * <p>校验先于写，所有 201 的含义都是「什么都没发生，单据侧由域自行保持草稿」：
  * 幂等键缺失/空白/超长、businessType 未注册回调、映射缺失、模板未发布、发布证据失效。
@@ -44,17 +44,7 @@ public class BusinessApprovalStarter {
 		String idempotencyKey = requireIdempotencyKey(command.idempotencyKey());
 		requireRegisteredCallback(command.businessType());
 		Long processTemplateId = requireMappedTemplate(command.businessType());
-		try {
-			return approvalWriter.startBusiness(command, idempotencyKey, processTemplateId);
-		} catch (DuplicateKeyException duplicate) {
-			// 这一层没有事务：重读落在新事务里，才能看见唯一索引挡住的那次提交。
-			Approval.StartOutcome replayed =
-					approvalWriter.startedOutcome(command.applicant(), idempotencyKey);
-			if (replayed == null) {
-				throw duplicate;
-			}
-			return replayed;
-		}
+		return approvalWriter.startBusiness(command, idempotencyKey, processTemplateId);
 	}
 
 	private static void requireCommandShape(BusinessApprovalStart command) {

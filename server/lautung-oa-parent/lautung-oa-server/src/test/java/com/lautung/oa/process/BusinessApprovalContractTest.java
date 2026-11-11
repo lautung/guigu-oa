@@ -59,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 业务键底座合同（#289，ADR 0067）：桩业务域（test.leave）注册回调 bean，覆盖
  * 发起快照与业务键行形状、三态回调同事务、同值 no-op、异值回滚（断言引擎动作也回滚）、
  * 发起 201 路径（幂等键缺失/空白/超长、无注册回调、映射缺失/未发布/证据失效）、
- * 同键重放同一条审批、办事列表与实例查询的 businessType 列、通用审批两列 NULL 回归、
+ * 同键冲突上抛与在途提交读缝、办事列表与实例查询的 businessType 列、通用审批两列 NULL 回归、
  * 回查最近一条摘要。生产装配不引用本文件的桩（桩只活在本测试上下文）。
  *
  * <p>「回调与动作同事务」的证据是桩回调日志表（business_approval_stub_callback_log）：
@@ -321,16 +321,23 @@ public class BusinessApprovalContractTest {
 	}
 
 	@Test
-	public void sameKeyReplayReturnsSameApproval() {
+	public void sameKeyConflictSurfacesToCallerAndInFlightReplayIsReadable() {
 		SysUser alice = user(2L, "alice", "小艾");
 		Approval.StartOutcome first = startLeave(alice, 705L, "biz-replay-1");
-		Approval.StartOutcome replayed = startLeave(alice, 705L, "biz-replay-1");
 
-		assertEquals(first.processId(), replayed.processId());
+		// ADR 0075：同键重放识别归业务单据生命周期，starter 把唯一索引冲突原样上抛。
+		assertThrows(org.springframework.dao.DuplicateKeyException.class,
+				() -> startLeave(alice, 705L, "biz-replay-1"));
 		Long count = jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM oa_process WHERE business_type = ? AND business_id = ?",
 				Long.class, STUB_TYPE, 705L);
 		assertEquals(1L, count);
+
+		// 在途提交读缝能认出同一条审批；别的单据读不到（由生命周期按 201 拒绝）。
+		assertEquals(first.processId(), businessApprovalReader.inFlightSubmissionProcessId(
+				STUB_TYPE, 705L, alice.getId(), "biz-replay-1"));
+		assertNull(businessApprovalReader.inFlightSubmissionProcessId(
+				STUB_TYPE, 999L, alice.getId(), "biz-replay-1"));
 	}
 
 	@Test

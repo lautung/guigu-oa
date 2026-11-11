@@ -57,8 +57,9 @@ import java.util.stream.Collectors;
  * 审批写入的唯一实现：账本、抄送、附件绑定、引擎命令的次序与事务边界都在这里。
  *
  * <p>发起带提交标识时，同一用户同一标识只对应一条审批。冲突兜底靠
- * {@code uk_oa_process_idempotency_key}；命中唯一索引的调用方必须在本类事务之外
- * 调用 {@link #startedOutcome}，否则新事务看不到对手已提交的行。
+ * {@code uk_oa_process_idempotency_key}；通用发起（{@link #startUp}）命中唯一索引的
+ * 调用方必须在本类事务之外调用 {@link #startedOutcome}，否则新事务看不到对手已提交的行。
+ * 业务发起（{@link #startBusiness}）不做重放识别，冲突交给业务单据生命周期（ADR 0075）。
  */
 @Service
 public class ApprovalWriter {
@@ -168,20 +169,19 @@ public class ApprovalWriter {
     }
 
     /**
-     * 业务发起（ADR 0067，#289）：业务域经 {@code BusinessApprovalStarter} 进入，次序与
-     * {@link #startUp} 同构（幂等重放 → 模板发布证据 → insert → 抄送 → 引擎 → 等待文案 → 账本），
-     * 差异只有三处：业务键两列随行写入、表单值是提交快照（formShowData，不校验模板表单结构与
-     * 动态必填）、不经附件绑定（单据附件由各域票自行挂 oa_attachment.process_id）。
-     * 模板按 oa_business_template 映射解析；发布证据在任何写入之前核验（201 = 什么都没发生）。
+     * 业务发起（ADR 0067，#289）：业务域经 {@code BusinessApprovalStarter} 进入，次序：
+     * 模板发布证据 → insert → 抄送 → 引擎 → 等待文案 → 账本，差异只有三处：业务键两列随行
+     * 写入、表单值是提交快照（formShowData，不校验模板表单结构与动态必填）、不经附件绑定
+     * （单据附件由各域票自行挂 oa_attachment.process_id）。模板按 oa_business_template
+     * 映射解析；发布证据在任何写入之前核验（201 = 什么都没发生）。
+     *
+     * <p>本方法不做同键重放识别（ADR 0075）：业务发起键的语义是「同一单据的同一提交」，
+     * 只有单据自己的生命周期知道当前提交是哪一次；{@code uk_oa_process_idempotency_key}
+     * 的冲突原样上抛，由调用方在事务回滚后到事务外判定。
      */
     @Transactional
     public Approval.StartOutcome startBusiness(
             BusinessApprovalStart command, String idempotencyKey, Long processTemplateId) {
-        Process started = startedProcess(command.applicant(), idempotencyKey);
-        if (started != null) {
-            return replayedOutcome(started);
-        }
-
         ApprovalTemplate.PublishedApproval publication =
                 approvalTemplate.resolveForInitiation(processTemplateId);
 
