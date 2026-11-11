@@ -1,20 +1,15 @@
 package com.lautung.oa.attendance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.lautung.oa.attendance.mapper.AttendanceGroupMapper;
-import com.lautung.oa.attendance.mapper.AttendanceGroupMemberMapper;
-import com.lautung.oa.attendance.mapper.AttendanceHolidayMapper;
+import com.lautung.oa.attendance.calendar.AttendanceCalendar;
+import com.lautung.oa.attendance.calendar.AttendanceCalendarView;
 import com.lautung.oa.attendance.mapper.AttendancePunchMapper;
-import com.lautung.oa.attendance.mapper.AttendanceShiftMapper;
 import com.lautung.oa.attendance.service.AttendanceClock;
 import com.lautung.oa.attendance.service.AttendanceDayStatusService;
-import com.lautung.oa.attendance.service.AttendanceWorkCalendar;
 import com.lautung.oa.framework.config.exception.BusinessException;
 import com.lautung.oa.model.attendance.AttendanceDayStatus;
 import com.lautung.oa.model.attendance.AttendanceDayType;
 import com.lautung.oa.model.attendance.AttendanceGroup;
-import com.lautung.oa.model.attendance.AttendanceGroupMember;
-import com.lautung.oa.model.attendance.AttendanceHoliday;
 import com.lautung.oa.model.attendance.AttendancePunch;
 import com.lautung.oa.model.attendance.AttendanceShift;
 import com.lautung.oa.vo.attendance.AttendanceDayStatusVo;
@@ -40,6 +35,10 @@ import java.util.Map;
 /**
  * 逐日推导实现（#281，ADR 0073）：所有状态都从事件流水/请假行读时算出。
  *
+ * <p>日类型与工作日判定从考勤日历取同一份口径（#293，ADR 0074）：区间打开一次
+ * 日历视图装载成员/组/班次/节假日，本类只保留九枚举状态推导、槽位极值与
+ * 补卡取值，不再有第二份工作日公式。
+ *
  * <p>槽位有效时刻：有补卡行取<b>最新一条补卡行</b>（id 最大），否则上班取最早网页行、
  * 下班取最晚网页行；补卡 append-only，原网页行保留。
  *
@@ -57,29 +56,17 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
     private static final DateTimeFormatter MONTH_FORMAT =
             DateTimeFormatter.ofPattern("uuuu-MM", Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
 
-    private final AttendanceGroupMemberMapper memberMapper;
-
-    private final AttendanceGroupMapper groupMapper;
-
-    private final AttendanceShiftMapper shiftMapper;
-
-    private final AttendanceHolidayMapper holidayMapper;
+    private final AttendanceCalendar calendar;
 
     private final AttendancePunchMapper punchMapper;
 
     private final AttendanceClock clock;
 
     @Autowired
-    public AttendanceDayStatusServiceImpl(AttendanceGroupMemberMapper memberMapper,
-                                          AttendanceGroupMapper groupMapper,
-                                          AttendanceShiftMapper shiftMapper,
-                                          AttendanceHolidayMapper holidayMapper,
+    public AttendanceDayStatusServiceImpl(AttendanceCalendar calendar,
                                           AttendancePunchMapper punchMapper,
                                           AttendanceClock clock) {
-        this.memberMapper = memberMapper;
-        this.groupMapper = groupMapper;
-        this.shiftMapper = shiftMapper;
-        this.holidayMapper = holidayMapper;
+        this.calendar = calendar;
         this.punchMapper = punchMapper;
         this.clock = clock;
     }
@@ -101,19 +88,13 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
         LocalDateTime now = now();
         LocalDate today = now.toLocalDate();
 
-        AttendanceGroupMember member = memberMapper.selectOne(
-                new LambdaQueryWrapper<AttendanceGroupMember>()
-                        .eq(AttendanceGroupMember::getUserId, userId));
-        AttendanceGroup group = member == null ? null : groupMapper.selectById(member.getGroupId());
-        AttendanceShift shift = group == null ? null : shiftMapper.selectById(group.getShiftId());
-
-        Map<LocalDate, AttendanceHoliday> holidays = holidaysBetween(beginDate, endDate);
+        AttendanceCalendarView view = calendar.open(userId, beginDate, endDate);
         Map<LocalDate, List<AttendancePunch>> punches = punchesBetween(userId, beginDate, endDate);
         List<AttendanceLeaveSpanVo> leaves = punchMapper.selectApprovedLeaves(userId, beginDate, endDate);
 
         List<AttendanceDayStatusVo> result = new ArrayList<>();
         for (LocalDate date = beginDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            result.add(derive(date, today, now, group, shift, holidays.get(date),
+            result.add(derive(date, today, now, view,
                     punches.getOrDefault(date, List.of()), leaves));
         }
         return result;
@@ -146,9 +127,7 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
     }
 
     private AttendanceDayStatusVo derive(LocalDate date, LocalDate today,
-                                         LocalDateTime now, AttendanceGroup group,
-                                         AttendanceShift shift,
-                                         AttendanceHoliday holiday,
+                                         LocalDateTime now, AttendanceCalendarView view,
                                          List<AttendancePunch> punches,
                                          List<AttendanceLeaveSpanVo> leaves) {
         AttendanceDayStatusVo vo = new AttendanceDayStatusVo();
@@ -157,19 +136,21 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
         vo.setPending(false);
         vo.setLate(false);
         vo.setEarly(false);
-        if (group == null) {
+        if (!view.hasGroup()) {
             vo.setHasGroup(false);
             vo.setWorkday(false);
             vo.setDayType(AttendanceDayType.NONE);
             return vo;
         }
+        AttendanceGroup group = view.group();
         vo.setHasGroup(true);
         vo.setGroupId(group.getId());
         vo.setGroupName(group.getName());
+        AttendanceShift shift = view.shift();
         if (shift != null) {
             vo.setShift(AttendanceShiftVo.of(shift));
         }
-        int dayType = dayType(group, holiday, date);
+        int dayType = view.dayType(date);
         vo.setDayType(dayType);
         boolean workday = AttendanceDayType.isWorkday(dayType);
         vo.setWorkday(workday);
@@ -307,18 +288,6 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
         return repairTime != null ? repairTime : webTime;
     }
 
-    private Map<LocalDate, AttendanceHoliday> holidaysBetween(LocalDate beginDate, LocalDate endDate) {
-        Map<LocalDate, AttendanceHoliday> holidays = new HashMap<>();
-        List<AttendanceHoliday> rows = holidayMapper.selectList(
-                new LambdaQueryWrapper<AttendanceHoliday>()
-                        .ge(AttendanceHoliday::getHolidayDate, beginDate)
-                        .le(AttendanceHoliday::getHolidayDate, endDate));
-        for (AttendanceHoliday row : rows) {
-            holidays.put(row.getHolidayDate(), row);
-        }
-        return holidays;
-    }
-
     private Map<LocalDate, List<AttendancePunch>> punchesBetween(Long userId,
                                                                  LocalDate beginDate,
                                                                  LocalDate endDate) {
@@ -334,20 +303,6 @@ public class AttendanceDayStatusServiceImpl implements AttendanceDayStatusServic
             punches.computeIfAbsent(row.getPunchDate(), key -> new ArrayList<>()).add(row);
         }
         return punches;
-    }
-
-    private int dayType(AttendanceGroup group, AttendanceHoliday holiday, LocalDate date) {
-        if (holiday != null && holiday.getDayType() != null) {
-            if (holiday.getDayType() == AttendanceHoliday.DAY_TYPE_HOLIDAY) {
-                return AttendanceDayType.HOLIDAY;
-            }
-            if (holiday.getDayType() == AttendanceHoliday.DAY_TYPE_WORKDAY) {
-                return AttendanceDayType.MAKEUP;
-            }
-        }
-        return AttendanceWorkCalendar.containsWorkday(group.getWorkdays(), date.getDayOfWeek().getValue())
-                ? AttendanceDayType.WORKDAY
-                : AttendanceDayType.REST;
     }
 
     private LocalDateTime now() {
