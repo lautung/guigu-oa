@@ -249,21 +249,24 @@ public class PendingWorklist {
                         .filter(task -> task != null && StringUtils.hasText(task.taskId()))
                         .toList();
 
+        // 批次标记与加签人事实同读一份按审批取回的未决快照：不再为 engineTaskIds 另查一次
+        // （后者是这份快照的子集），成员资格热路径只留一条加签表 SQL。
+        List<PendingSignTaskEvidence.SignTaskSnapshot> signTasks =
+                new ArrayList<>(signTaskEvidence.pendingForProcess(processId));
+        signTasks.removeIf(Objects::isNull);
+        Set<String> engineTaskIds = validTasks.stream()
+                .map(ApprovalEngine.CurrentTask::taskId)
+                .collect(Collectors.toSet());
+
         Map<String, Set<String>> batchTypesByEngineTask = new HashMap<>();
-        if (!validTasks.isEmpty()) {
-            List<String> engineTaskIds = validTasks.stream()
-                    .map(ApprovalEngine.CurrentTask::taskId)
-                    .distinct()
-                    .toList();
-            for (PendingSignTaskEvidence.SignTaskSnapshot batch
-                    : signTaskEvidence.pendingByEngineTaskIds(engineTaskIds)) {
-                if (batch == null || !StringUtils.hasText(batch.engineTaskId())) {
-                    continue;
-                }
-                batchTypesByEngineTask
-                        .computeIfAbsent(batch.engineTaskId(), key -> new HashSet<>())
-                        .add(batch.signType());
+        for (PendingSignTaskEvidence.SignTaskSnapshot batch : signTasks) {
+            if (!StringUtils.hasText(batch.engineTaskId())
+                    || !engineTaskIds.contains(batch.engineTaskId())) {
+                continue;
             }
+            batchTypesByEngineTask
+                    .computeIfAbsent(batch.engineTaskId(), key -> new HashSet<>())
+                    .add(batch.signType());
         }
 
         List<HandlerEntry> handlers = new ArrayList<>();
@@ -286,9 +289,6 @@ public class PendingWorklist {
             }
         }
 
-        List<PendingSignTaskEvidence.SignTaskSnapshot> signTasks =
-                new ArrayList<>(signTaskEvidence.pendingForProcess(processId));
-        signTasks.removeIf(task -> task == null);
         signTasks.sort(Comparator.comparing(
                 PendingSignTaskEvidence.SignTaskSnapshot::id,
                 Comparator.nullsLast(Comparator.naturalOrder())));

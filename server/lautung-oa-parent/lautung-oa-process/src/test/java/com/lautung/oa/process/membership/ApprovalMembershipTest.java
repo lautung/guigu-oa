@@ -272,7 +272,8 @@ class ApprovalMembershipTest {
         assertFalse(membership.canAct("9001"), "加签关系按 assignee_id 判定，不属于别人");
         assertEquals(1, world.engine.currentTaskCalls, "引擎事实由 PendingWorklist 统一读，不因用户名为空跳过");
         assertEquals(1, world.signEvidence.pendingForProcessCalls, "挂起判定只按审批读一次");
-        assertEquals(1, world.signEvidence.pendingByEngineTaskIdsCalls);
+        assertEquals(0, world.signEvidence.pendingByEngineTaskIdsCalls,
+                "批次标记复用同一次未决快照，不再按 engineTaskIds 另查");
     }
 
     @Test
@@ -307,7 +308,7 @@ class ApprovalMembershipTest {
 
         assertEquals(1, world.engine.currentTaskCalls);
         assertEquals(1, world.signEvidence.pendingForProcessCalls);
-        assertEquals(1, world.signEvidence.pendingByEngineTaskIdsCalls);
+        assertEquals(0, world.signEvidence.pendingByEngineTaskIdsCalls);
         assertEquals(1, world.ledger.decisionCalls);
         assertEquals(1, world.ledger.transferCalls);
         assertEquals(1, world.ledger.addSignCalls);

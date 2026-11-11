@@ -144,6 +144,18 @@ class PendingWorklistTest {
     }
 
     @Test
+    void pendingHandlerNamesDedupeSameAssigneeAcrossEngineTasks() {
+        // 并行网关把同一人分到两个活动任务：等待文案/摘要按 username 去重，只出现一次。
+        engine.currentTasks("instance-1", List.of(
+                new ApprovalEngine.CurrentTask("task-a", "alice"),
+                new ApprovalEngine.CurrentTask("task-b", "alice")));
+        when(userService.getUserByUserName("alice")).thenReturn(user(3L, "alice", "张三"));
+
+        assertIterableEquals(List.of("张三"),
+                worklist().pendingHandlerNames(process(42L, "instance-1")));
+    }
+
+    @Test
     void pendingSynthesizesThreeSourcesAndSortsWithinTheWindow() {
         SysUser alice = user(3L, "alice", "小艾");
         engine.pendingTasks(3, List.of(
@@ -206,6 +218,24 @@ class PendingWorklistTest {
         assertEquals(4, engine.lastMaxResults);
         assertEquals(0L, signEvidence.lastOffset);
         assertEquals(4L, signEvidence.lastLimit);
+    }
+
+    @Test
+    void pendingBreaksTiesBySourceRankThenSignIdDesc() {
+        // 同刻行：引擎源在前；同为加签源时按源内 id 倒序。V137 的 create_time 是秒精度，
+        // 同一批次的多行天然同刻，tie-break 不能只靠测试数据的日期差。
+        SysUser alice = user(3L, "alice", "小艾");
+        engine.pendingTasks(1, List.of(pendingTask("task-a", "42", "alice", date(1))));
+        signEvidence.pending.addAll(List.of(
+                signTask(9001L, 43L, "task-x", "BEFORE", 3L, date(1)),
+                signTask(9002L, 44L, "task-y", "BEFORE", 3L, date(1))));
+        rowsById(row(42), row(43), row(44));
+
+        List<ProcessVo> records = worklist().pending(new Page<>(1, 10), alice).getRecords();
+
+        assertEquals(3, records.size());
+        assertEquals(List.of("task-a", "9002", "9001"),
+                records.stream().map(ProcessVo::getTaskId).toList());
     }
 
     @Test
