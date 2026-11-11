@@ -137,7 +137,7 @@ class AttendanceApplicationContractTest {
         insertLedger(POOR_APPLICANT, TYPE_BALANCE_ID, 1, "8.00", null, null);
         insertLeave(POOR_APPLICANT, TYPE_BALANCE_ID, LocalDate.of(2026, 11, 2),
                 LocalDate.of(2026, 11, 3), 6, "6.00",
-                AttendanceApplyStatus.SUBMITTED);
+                AttendanceApplyStatus.SUBMITTED.code());
 
         publishTemplate();
         seedMapping("attendance.leave");
@@ -152,14 +152,14 @@ class AttendanceApplicationContractTest {
     @Test
     void leaveSubmitSnapshotsWorkdaysAndSupportsSameKeyReplay() throws Exception {
         long id = createLeaveDraft(APPLICANT, TYPE_BALANCE_ID, WEEK_START, WEEK_END);
-        assertLeaveStatus(id, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(id, AttendanceApplyStatus.DRAFT.code());
         assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave WHERE id = " + id
                 + " AND days = 0 AND hours = 0"));
 
         submitLeave(id, APPLICANT, "t282-leave-1")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED))
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED.code()))
                 // 周一/二/四/五 + 周六补班 = 5 天，周三休假日剔除；5 × 8 小时。
                 .andExpect(jsonPath("$.data.days").value(5))
                 .andExpect(jsonPath("$.data.hours").value(40.0))
@@ -217,24 +217,24 @@ class AttendanceApplicationContractTest {
         submitLeave(holidayOnly, APPLICANT, "t282-holiday")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("请假区间没有工作日"));
-        assertLeaveStatus(holidayOnly, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(holidayOnly, AttendanceApplyStatus.DRAFT.code());
 
         // 与本人已通过/在途请假重叠（在途 12-10 至 12-11）。
         insertLeave(APPLICANT, TYPE_NO_BALANCE_ID, LocalDate.of(2026, 12, 10),
-                LocalDate.of(2026, 12, 11), 2, "16.00", AttendanceApplyStatus.SUBMITTED);
+                LocalDate.of(2026, 12, 11), 2, "16.00", AttendanceApplyStatus.SUBMITTED.code());
         long overlap = createLeaveDraft(APPLICANT, TYPE_NO_BALANCE_ID,
                 LocalDate.of(2026, 12, 9), LocalDate.of(2026, 12, 10));
         submitLeave(overlap, APPLICANT, "t282-overlap")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("与本人已通过或在途的请假日期重叠"));
-        assertLeaveStatus(overlap, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(overlap, AttendanceApplyStatus.DRAFT.code());
 
         // 余额不足：可用 2（发放 8 − 在途 6），一天 8 小时。
         long poor = createLeaveDraft(POOR_APPLICANT, TYPE_BALANCE_ID, WEEK_START, WEEK_START);
         submitLeave(poor, POOR_APPLICANT, "t282-poor")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("可用余额不足"));
-        assertLeaveStatus(poor, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(poor, AttendanceApplyStatus.DRAFT.code());
         assertEquals(0, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
                 + "AND business_id = " + poor));
 
@@ -242,7 +242,7 @@ class AttendanceApplicationContractTest {
         insertLedger(POOR_APPLICANT, TYPE_BALANCE_ID, 1, "10.00", null, null);
         submitLeave(poor, POOR_APPLICANT, "t282-poor-retry")
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED));
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED.code()));
         mockMvc.perform(get("/admin/attendance/my/balances").header("token", tokenOf(POOR_APPLICANT)))
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[?(@.leaveTypeId == 28201)].availableHours", contains(4.0)))
@@ -256,7 +256,7 @@ class AttendanceApplicationContractTest {
         submitLeave(noReason, APPLICANT, "t282-noreason")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("请假事由不能为空"));
-        assertLeaveStatus(noReason, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(noReason, AttendanceApplyStatus.DRAFT.code());
 
         // 映射缺失
         jdbcTemplate.update("DELETE FROM oa_business_template WHERE business_type = 'attendance.leave'");
@@ -264,7 +264,7 @@ class AttendanceApplicationContractTest {
         submitLeave(unmapped, APPLICANT, "t282-unmapped")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("该业务类型未配置审批模板，不能发起"));
-        assertLeaveStatus(unmapped, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(unmapped, AttendanceApplyStatus.DRAFT.code());
         assertEquals(0, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
                 + "AND business_id = " + unmapped));
 
@@ -276,7 +276,7 @@ class AttendanceApplicationContractTest {
         submitLeave(unpublished, APPLICANT, "t282-unpublished")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("未发布的审批模板不能发起"));
-        assertLeaveStatus(unpublished, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(unpublished, AttendanceApplyStatus.DRAFT.code());
 
         // 发布证据失效（sha256 与存档内容不符）
         seedMapping("attendance.leave");
@@ -286,7 +286,7 @@ class AttendanceApplicationContractTest {
         submitLeave(broken, APPLICANT, "t282-broken")
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.message").value("暂不可发起，需核实原审批内容"));
-        assertLeaveStatus(broken, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(broken, AttendanceApplyStatus.DRAFT.code());
         assertEquals(0, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
                 + "AND business_id = " + broken));
     }
@@ -296,7 +296,7 @@ class AttendanceApplicationContractTest {
         long overtime = createOvertimeDraft(POOR_APPLICANT, WEEK_END, "18:00:00", "20:30:00");
         submitOvertime(overtime, POOR_APPLICANT, "t282-ot-1")
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED))
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED.code()))
                 .andExpect(jsonPath("$.data.hours").value(2.5))
                 .andExpect(jsonPath("$.data.approval.status").value(1));
 
@@ -325,7 +325,7 @@ class AttendanceApplicationContractTest {
                 .andExpect(jsonPath("$.code").value(200));
 
         leaveCallback.onTerminal(id, BusinessApprovalOutcome.REJECTED);
-        assertLeaveStatus(id, AttendanceApplyStatus.REJECTED);
+        assertLeaveStatus(id, AttendanceApplyStatus.REJECTED.code());
 
         mockMvc.perform(put("/admin/attendance/my/leave/update").header("token", tokenOf(APPLICANT))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -333,12 +333,12 @@ class AttendanceApplicationContractTest {
                                 + "\"startDate\":\"2026-12-08\",\"endDate\":\"2026-12-08\","
                                 + "\"reason\":\"t282改期\"}"))
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.REJECTED));
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.REJECTED.code()));
 
         submitLeave(id, APPLICANT, "t282-reject-2")
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.id").value(id))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED));
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED.code()));
         assertEquals(2, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
                 + "AND business_id = " + id));
         assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave WHERE applicant_id = "
@@ -356,7 +356,7 @@ class AttendanceApplicationContractTest {
         mockMvc.perform(delete("/admin/attendance/my/leave/remove/" + id)
                         .header("token", tokenOf(APPLICANT)))
                 .andExpect(jsonPath("$.code").value(200));
-        assertLeaveStatus(id, AttendanceApplyStatus.DRAFT);
+        assertLeaveStatus(id, AttendanceApplyStatus.DRAFT.code());
         assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave WHERE id = " + id
                 + " AND is_deleted = 1"));
 
@@ -404,7 +404,7 @@ class AttendanceApplicationContractTest {
         submitLeave(approved, APPLICANT, "t282-engine-approve")
                 .andExpect(jsonPath("$.code").value(200));
         decide(processIdOf(approved), 1);
-        assertLeaveStatus(approved, AttendanceApplyStatus.APPROVED);
+        assertLeaveStatus(approved, AttendanceApplyStatus.APPROVED.code());
         assertEquals(1, count("SELECT COUNT(*) FROM attendance_leave_ledger "
                 + "WHERE business_type = 'attendance.leave' AND business_id = " + approved
                 + " AND entry_type = 2 AND change_hours = -8.00"));
@@ -415,7 +415,7 @@ class AttendanceApplicationContractTest {
         submitLeave(rejected, APPLICANT, "t282-engine-reject")
                 .andExpect(jsonPath("$.code").value(200));
         decide(processIdOf(rejected), -1);
-        assertLeaveStatus(rejected, AttendanceApplyStatus.REJECTED);
+        assertLeaveStatus(rejected, AttendanceApplyStatus.REJECTED.code());
         assertEquals(0, count("SELECT COUNT(*) FROM attendance_leave_ledger "
                 + "WHERE business_type = 'attendance.leave' AND business_id = " + rejected));
 
@@ -425,7 +425,7 @@ class AttendanceApplicationContractTest {
         submitLeave(withdrawn, APPLICANT, "t282-engine-withdraw")
                 .andExpect(jsonPath("$.code").value(200));
         approval.withdraw(applicantUser(), processIdOf(withdrawn));
-        assertLeaveStatus(withdrawn, AttendanceApplyStatus.WITHDRAWN);
+        assertLeaveStatus(withdrawn, AttendanceApplyStatus.WITHDRAWN.code());
         assertEquals(0, count("SELECT COUNT(*) FROM attendance_leave_ledger "
                 + "WHERE business_type = 'attendance.leave' AND business_id = " + withdrawn));
     }
@@ -470,8 +470,86 @@ class AttendanceApplicationContractTest {
         } finally {
             pool.shutdownNow();
         }
-        assertLeaveStatus(id, AttendanceApplyStatus.SUBMITTED);
+        assertLeaveStatus(id, AttendanceApplyStatus.SUBMITTED.code());
         assertEquals(1, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
+                + "AND business_id = " + id));
+    }
+
+    @Test
+    void concurrentSubmitsWithTheSameKeyStillCreateOneApproval() throws Exception {
+        long id = createLeaveDraft(APPLICANT, TYPE_NO_BALANCE_ID, WEEK_START, WEEK_START);
+        String token = tokenOf(APPLICANT);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<String>> futures = new ArrayList<>();
+            for (int attempt = 0; attempt < 2; attempt++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    start.await(5, TimeUnit.SECONDS);
+                    return mockMvc.perform(post("/admin/attendance/my/leave/" + id + "/submit")
+                                    .header("token", token)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"idempotencyKey\":\"t282-same-key\"}"))
+                            .andReturn().getResponse().getContentAsString();
+                }));
+            }
+            ready.await(5, TimeUnit.SECONDS);
+            start.countDown();
+
+            int accepted = 0;
+            for (Future<String> future : futures) {
+                String body = future.get(20, TimeUnit.SECONDS);
+                if (body.contains("\"code\":200")) {
+                    accepted++;
+                } else {
+                    assertTrue(body.contains("\"code\":201"), body);
+                    assertTrue(body.contains("单据已在审批中")
+                            || body.contains("单据状态已变化，请刷新后重试"), body);
+                }
+            }
+            assertTrue(accepted >= 1, "至少一个提交拿到同一条在途审批");
+        } finally {
+            pool.shutdownNow();
+        }
+        assertLeaveStatus(id, AttendanceApplyStatus.SUBMITTED.code());
+        assertEquals(1, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
+                + "AND business_id = " + id), "同键并发只允许一条审批");
+    }
+
+    @Test
+    void reusingFinishedSubmissionKeyIsRejectedAndKeepsDocumentEditable() throws Exception {
+        long id = createLeaveDraft(APPLICANT, TYPE_NO_BALANCE_ID, WEEK_START, WEEK_START);
+        submitLeave(id, APPLICANT, "t282-cycle-key")
+                .andExpect(jsonPath("$.code").value(200));
+        leaveCallback.onTerminal(id, BusinessApprovalOutcome.REJECTED);
+        // 直接调回调绕过了审批动作：把审批行也置成终态，模拟「这条提交已经结束」。
+        jdbcTemplate.update("UPDATE oa_process SET status = -1 WHERE business_type = 'attendance.leave' "
+                + "AND business_id = ?", id);
+        assertLeaveStatus(id, AttendanceApplyStatus.REJECTED.code());
+
+        // 复用已完成的历史提交键：唯一索引拒绝，生命周期按 201 命名拒绝，单据回到拒绝态。
+        submitLeave(id, APPLICANT, "t282-cycle-key")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.message").value("提交标识已被使用"));
+        assertLeaveStatus(id, AttendanceApplyStatus.REJECTED.code());
+        assertEquals(1, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
+                + "AND business_id = " + id));
+
+        // 拒绝态仍可编辑，换新键重提成功（单据号不变，起第二条审批）。
+        mockMvc.perform(put("/admin/attendance/my/leave/update").header("token", tokenOf(APPLICANT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + id + ",\"leaveTypeId\":28202,"
+                                + "\"startDate\":\"2026-12-08\",\"endDate\":\"2026-12-08\","
+                                + "\"reason\":\"t282换键重提\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        submitLeave(id, APPLICANT, "t282-cycle-key-2")
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.id").value(id))
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.SUBMITTED.code()));
+        assertEquals(2, count("SELECT COUNT(*) FROM oa_process WHERE business_type = 'attendance.leave' "
                 + "AND business_id = " + id));
     }
 
@@ -498,7 +576,7 @@ class AttendanceApplicationContractTest {
                                 + "\",\"endDate\":\"" + end + "\",\"reason\":\"t282请假\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.DRAFT));
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.DRAFT.code()));
         Long id = jdbcTemplate.queryForObject("SELECT MAX(id) FROM attendance_leave "
                 + "WHERE applicant_id = ?", Long.class, applicant);
         assertNotNull(id);
@@ -513,7 +591,7 @@ class AttendanceApplicationContractTest {
                                 + "\",\"endTime\":\"" + end + "\",\"reason\":\"t282加班\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.DRAFT));
+                .andExpect(jsonPath("$.data.status").value(AttendanceApplyStatus.DRAFT.code()));
         Long id = jdbcTemplate.queryForObject("SELECT MAX(id) FROM attendance_overtime "
                 + "WHERE applicant_id = ?", Long.class, applicant);
         assertNotNull(id);

@@ -139,7 +139,7 @@ public class AttendanceStatServiceImpl implements AttendanceStatService {
         List<AttendanceOvertime> approved = overtimeMapper.selectList(
                 new LambdaQueryWrapper<AttendanceOvertime>()
                         .in(AttendanceOvertime::getApplicantId, userIds)
-                        .eq(AttendanceOvertime::getStatus, AttendanceApplyStatus.APPROVED)
+                        .eq(AttendanceOvertime::getStatus, AttendanceApplyStatus.APPROVED.code())
                         .ge(AttendanceOvertime::getOvertimeDate, beginDate)
                         .le(AttendanceOvertime::getOvertimeDate, endDate));
         for (AttendanceOvertime overtime : approved) {

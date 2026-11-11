@@ -24,7 +24,7 @@ public class AttendanceOvertimeSaveRequest extends AttendanceOvertimeRequest {
         overtime.setEndTime(getEndTime());
         overtime.setReason(getReason());
         overtime.setHours(BigDecimal.ZERO);
-        overtime.setStatus(AttendanceApplyStatus.DRAFT);
+        overtime.setStatus(AttendanceApplyStatus.DRAFT.code());
         return overtime;
     }
 }

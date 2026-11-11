@@ -56,13 +56,14 @@ public class BusinessApprovalReader {
 	}
 
 	/**
-	 * 同一张业务单、同一提交键对应的审批 id（#282，ADR 0067/0032）：业务域的
-	 * 「同键重放」判定读缝——单据状态已是审批中时，只有能在这里认出同键才按重放
-	 * 返回同一条审批；认不出就是不同键的并发提交，由域按 201 拒绝。
-	 * 没有对应审批返回 {@code null}。
+	 * 同一张业务单、同一提交键、且仍在审批中的审批 id（#282/#294，ADR 0067/0032/0075）：
+	 * 业务单据生命周期 module 的「同键重放」判定读缝。单据状态已是审批中、或唯一索引
+	 * 冲突回滚后重读时，只有能在这里认出同一单据的同一在途提交才按重放返回同一条审批；
+	 * 认不出（不同键、或键属于已完成的历史提交）由生命周期按 201 命名拒绝。
+	 * 没有对应在途审批返回 {@code null}。
 	 */
-	public Long processIdOfSubmission(String businessType, Long businessId,
-									  Long applicantId, String idempotencyKey) {
+	public Long inFlightSubmissionProcessId(String businessType, Long businessId,
+											Long applicantId, String idempotencyKey) {
 		if (!StringUtils.hasText(businessType) || businessId == null
 				|| applicantId == null || !StringUtils.hasText(idempotencyKey)) {
 			return null;
@@ -71,7 +72,8 @@ public class BusinessApprovalReader {
 				.eq(Process::getBusinessType, businessType)
 				.eq(Process::getBusinessId, businessId)
 				.eq(Process::getUserId, applicantId)
-				.eq(Process::getIdempotencyKey, idempotencyKey));
+				.eq(Process::getIdempotencyKey, idempotencyKey)
+				.eq(Process::getStatus, 1));
 		return rows.isEmpty() ? null : rows.get(0).getId();
 	}
 
