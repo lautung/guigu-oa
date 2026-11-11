@@ -15,6 +15,7 @@ import com.lautung.oa.process.read.ApprovalListReader;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.process.service.ApprovalTemplate;
 import com.lautung.oa.support.InMemoryRedisTemplate;
+import com.lautung.oa.vo.process.AddSignVo;
 import com.lautung.oa.vo.process.ApprovalVo;
 import com.lautung.oa.vo.process.BusinessApprovalStart;
 import com.lautung.oa.vo.process.BusinessApprovalSummary;
@@ -408,6 +409,24 @@ public class BusinessApprovalContractTest {
 		// 没有审批的业务单 / 缺失入参：null
 		assertNull(businessApprovalReader.latestSummary(STUB_TYPE, 999L));
 		assertNull(businessApprovalReader.latestSummary(null, 901L));
+	}
+
+	@Test
+	public void summaryCurrentApproverIncludesPendingAddSignAssignees() {
+		SysUser alice = user(2L, "alice", "小艾");
+		SysUser zhangsan = user(3L, "zhangsan", "张三");
+		Approval.StartOutcome started = startLeave(alice, 902L, "biz-sum-sign-1");
+
+		// 加签批次进行中：摘要的当前审批人与等待文案同吃待处理名单投影（ADR 0076），
+		// 批次里的加签人也在这件事上等着，必须出现在摘要里。
+		AddSignVo addSign = new AddSignVo();
+		addSign.setSignType(1);
+		addSign.setAssigneeIds(List.of(4L));
+		approval.addSign(zhangsan, started.processId(), addSign);
+
+		BusinessApprovalSummary summary = businessApprovalReader.latestSummary(STUB_TYPE, 902L);
+		assertNotNull(summary);
+		assertEquals("张三、李四", summary.currentApprover());
 	}
 
 	// ---------------------------------------------------------------- fixture

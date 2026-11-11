@@ -510,6 +510,25 @@ public class ApprovalTransferAddSignContractTest {
     }
 
     @Test
+    public void urgeTargetsExcludeAfterBatchOriginalHandler() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        Long processId = pending(zhangsan).getRecords().get(0).getId();
+        // 后加签：原处理人的通过已记账，引擎任务仍活动等加签人。催办对象等于待处理名单，
+        // 已无可动作面的原处理人不再被催（ADR 0076）。
+        approval.addSign(zhangsan, processId, addSignVo(2, List.of(4L)));
+
+        approval.urge(alice, processId);
+
+        String targets = jdbcTemplate.queryForObject(
+                "SELECT target_user_name FROM oa_process_record "
+                        + "WHERE process_id = ? AND action_type = 'URGE'", String.class, processId);
+        assertEquals("李四", targets, "AFTER 批次的原处理人已记账通过，不再出现在催办对象里");
+    }
+
+    @Test
     public void candidateClaimsConcurrentlyAndLatecomerIsRefused() {
         SysUser alice = user(2L, "alice", "小艾");
         SysUser lisi = user(4L, "lisi", "李四");

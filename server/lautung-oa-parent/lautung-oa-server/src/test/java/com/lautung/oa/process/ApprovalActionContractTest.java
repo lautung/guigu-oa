@@ -309,6 +309,33 @@ public class ApprovalActionContractTest {
     }
 
     @Test
+    public void urgeTargetsFallBackToUsernameWhenDisplayNameBlankOrUserMissing() {
+        SysUser alice = user(2L, "alice", "小艾");
+        SysUser zhangsan = user(3L, "zhangsan", "张三");
+
+        approval.startUp(alice, publishedLeaveForm());
+        ProcessVo started = pending(zhangsan).getRecords().get(0);
+        Long processId = started.getId();
+        try {
+            jdbcTemplate.update("INSERT INTO sys_user "
+                    + "(id, username, password, name, phone, status, is_deleted) "
+                    + "VALUES (10, 'blankname', 'x', '', '13800000010', 1, 0)");
+            // 当前处理人是空显示名的用户，另加一个查无此人的候选人：两者都退回 username。
+            taskService.setAssignee(started.getTaskId(), "blankname");
+            taskService.addUserIdentityLink(started.getTaskId(), "ghost", IdentityLinkType.CANDIDATE);
+
+            approval.urge(alice, processId);
+
+            String targets = jdbcTemplate.queryForObject(
+                    "SELECT target_user_name FROM oa_process_record "
+                            + "WHERE process_id = ? AND action_type = 'URGE'", String.class, processId);
+            assertEquals("blankname、ghost", targets, "空显示名与缺用户都退回 username");
+        } finally {
+            jdbcTemplate.update("DELETE FROM sys_user WHERE id = 10");
+        }
+    }
+
+    @Test
     public void httpWithdrawAndUrgeEnvelopesPinRefusalMessages() throws Exception {
         String aliceToken = loginToken("alice");
         String zhangsanToken = loginToken("zhangsan");

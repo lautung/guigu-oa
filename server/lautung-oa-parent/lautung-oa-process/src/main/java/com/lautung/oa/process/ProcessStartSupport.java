@@ -17,6 +17,9 @@ import java.util.Map;
  */
 public final class ProcessStartSupport {
 
+    /** 提交标识长度上限（ADR 0032）：通用发起与业务发起共用，对齐 uk_oa_process_idempotency_key 列宽。 */
+    public static final int MAX_IDEMPOTENCY_KEY_LENGTH = 64;
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<Map<String, Object>>() {};
 

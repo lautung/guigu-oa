@@ -1,12 +1,9 @@
 package com.lautung.oa.process.business;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.lautung.oa.auth.service.SysUserService;
 import com.lautung.oa.model.process.Process;
-import com.lautung.oa.model.system.SysUser;
-import com.lautung.oa.process.approval.ApprovalEngine;
-import com.lautung.oa.process.approval.ApproverNames;
 import com.lautung.oa.process.mapper.OaProcessMapper;
+import com.lautung.oa.process.pending.PendingWorklist;
 import com.lautung.oa.vo.process.BusinessApprovalSummary;
 import com.lautung.oa.vo.process.ProcessVo;
 import org.springframework.stereotype.Service;
@@ -25,16 +22,13 @@ import java.util.List;
 public class BusinessApprovalReader {
 
 	private final OaProcessMapper processMapper;
-	private final ApprovalEngine approvalEngine;
-	private final SysUserService sysUserService;
+	private final PendingWorklist pendingWorklist;
 
 	public BusinessApprovalReader(
 			OaProcessMapper processMapper,
-			ApprovalEngine approvalEngine,
-			SysUserService sysUserService) {
+			PendingWorklist pendingWorklist) {
 		this.processMapper = processMapper;
-		this.approvalEngine = approvalEngine;
-		this.sysUserService = sysUserService;
+		this.pendingWorklist = pendingWorklist;
 	}
 
 	/** 最近一条审批摘要；该业务单还没有审批（或入参缺失）时返回 {@code null}。 */
@@ -77,24 +71,14 @@ public class BusinessApprovalReader {
 		return rows.isEmpty() ? null : rows.get(0).getId();
 	}
 
-	/** 当前审批人：仅审批中读引擎当前任务（处理人/候选名单，与等待文案同口径），终态为 null。 */
+	/** 当前审批人：仅审批中读待处理名单投影（处理人/候选人/加签人，与等待文案同口径），终态为 null。 */
 	private String currentApprover(ProcessVo row) {
 		if (!Integer.valueOf(1).equals(row.getStatus())
 				|| !StringUtils.hasText(row.getProcessInstanceId())) {
 			return null;
 		}
-		List<ApprovalEngine.CurrentTask> currentTasks =
-				approvalEngine.currentTasks(row.getProcessInstanceId());
-		List<String> names = ApproverNames.of(currentTasks, this::displayName);
+		List<String> names = pendingWorklist.pendingHandlerNames(row.getId(), row.getProcessInstanceId());
 		return names.isEmpty() ? null : String.join("、", names);
-	}
-
-	/** 用户名 → 显示名（共享投影的解析缝；找不到用户或无名退回用户名）。 */
-	private String displayName(String username) {
-		SysUser assignee = sysUserService.getUserByUserName(username);
-		return assignee != null && StringUtils.hasText(assignee.getName())
-				? assignee.getName()
-				: username;
 	}
 
 	/** 终态时间：审批中的最后更新时刻不是结束时间，不下发（endTime null）。 */

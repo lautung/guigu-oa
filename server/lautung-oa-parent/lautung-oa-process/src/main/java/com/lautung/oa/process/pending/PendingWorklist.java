@@ -230,11 +230,18 @@ public class PendingWorklist {
      * （每任务 assignee 先、候选人后）+ 加签任务 id 排列。不解析姓名、不查用户。
      */
     public List<HandlerEntry> handlers(Process process) {
-        if (process == null || process.getId() == null) {
+        if (process == null) {
             return List.of();
         }
-        List<ApprovalEngine.CurrentTask> currentTasks = StringUtils.hasText(process.getProcessInstanceId())
-                ? approvalEngine.currentTasks(process.getProcessInstanceId())
+        return handlers(process.getId(), process.getProcessInstanceId());
+    }
+
+    private List<HandlerEntry> handlers(Long processId, String processInstanceId) {
+        if (processId == null) {
+            return List.of();
+        }
+        List<ApprovalEngine.CurrentTask> currentTasks = StringUtils.hasText(processInstanceId)
+                ? approvalEngine.currentTasks(processInstanceId)
                 : List.of();
         List<ApprovalEngine.CurrentTask> validTasks = currentTasks == null
                 ? List.of()
@@ -280,7 +287,7 @@ public class PendingWorklist {
         }
 
         List<PendingSignTaskEvidence.SignTaskSnapshot> signTasks =
-                new ArrayList<>(signTaskEvidence.pendingForProcess(process.getId()));
+                new ArrayList<>(signTaskEvidence.pendingForProcess(processId));
         signTasks.removeIf(task -> task == null);
         signTasks.sort(Comparator.comparing(
                 PendingSignTaskEvidence.SignTaskSnapshot::id,
@@ -305,7 +312,18 @@ public class PendingWorklist {
      * 空名退回 username；加签人按 userId 一次批查用户名，查无用户或空 username 的条目跳过。
      */
     public List<String> pendingHandlerNames(Process process) {
-        List<HandlerEntry> handlers = handlers(process);
+        if (process == null) {
+            return List.of();
+        }
+        return pendingHandlerNames(process.getId(), process.getProcessInstanceId());
+    }
+
+    /**
+     * 待处理名单显示名的窄重载（#298）：持有 {@code ProcessVo} 的读侧（业务摘要）不必为投影
+     * 构造 {@code Process} 壳，也不把 VO 类型带进本包。语义与 {@link #pendingHandlerNames(Process)} 相同。
+     */
+    public List<String> pendingHandlerNames(Long processId, String processInstanceId) {
+        List<HandlerEntry> handlers = handlers(processId, processInstanceId);
         if (handlers.isEmpty()) {
             return List.of();
         }
