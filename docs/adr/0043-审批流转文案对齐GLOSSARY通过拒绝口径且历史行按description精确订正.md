@@ -27,3 +27,5 @@ issue 提的迁移映射是「`oa_process_record`：status=1 → 通过侧新文
 - 未动：`waitingDescription`（等待审批文案）、发起行「发起申请」、客户端全部文案、GLOSSARY（「处理审批」词条本就合规）。
 
 **2026-11-06 修订（#271）**：文案扩到新动作（转办、加签、催办、撤回）与状态档 -2「已撤回」；流转时间线统一读 `oa_process_record` 的动作类型，历史行按 description 精确回填动作类型。见 ADR 0068。
+
+**2026-11-11 修订（C3，ADR 0076）**：等待文案的处理人投影与待处理/催办同源（`PendingWorklist.pendingHandlerNames`），`description` 仍是等待文案唯一 owner，文案格式（`等待X,Y审批`）不变。
