@@ -3,9 +3,9 @@ package com.lautung.oa.process.membership;
 import java.util.List;
 
 /**
- * 判定审批成员资格所需的引擎证据。生产上由 ApprovalEngine 的 Flowable 适配器实现，测试实现直接给结果。
- * 历史处理人不再读引擎历史（ADR 0068 修订 ADR 0011：改由账本动作记录供给，
- * 见 {@link MembershipLedgerEvidence}）。
+ * 审批引擎的读侧形状：当前任务的 assignee 与候选用户。生产上由 ApprovalEngine 的
+ * Flowable 适配器实现；成员资格不再单独注入本接口，而是经 PendingWorklist.handlers
+ * 读取同一份引擎事实（ADR 0076）。
  */
 public interface MembershipEvidence {
 

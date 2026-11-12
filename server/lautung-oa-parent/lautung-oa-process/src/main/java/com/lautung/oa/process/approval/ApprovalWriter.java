@@ -24,6 +24,7 @@ import com.lautung.oa.process.mapper.OaProcessAddSignTaskMapper;
 import com.lautung.oa.process.mapper.OaProcessMapper;
 import com.lautung.oa.process.membership.ApprovalMembership;
 import com.lautung.oa.process.membership.ApprovalMembershipResolver;
+import com.lautung.oa.process.pending.PendingWorklist;
 import com.lautung.oa.process.service.Approval;
 import com.lautung.oa.process.service.ApprovalTemplate;
 import com.lautung.oa.process.service.OaProcessRecordService;
@@ -79,6 +80,7 @@ public class ApprovalWriter {
     private final SysUserService sysUserService;
     private final BusinessApprovalCallbackRegistry businessCallbackRegistry;
     private final OaBusinessTemplateMapper businessTemplateMapper;
+    private final PendingWorklist pendingWorklist;
 
     public ApprovalWriter(
             ApprovalTemplate approvalTemplate,
@@ -91,7 +93,8 @@ public class ApprovalWriter {
             OaProcessRecordService processRecordService,
             SysUserService sysUserService,
             BusinessApprovalCallbackRegistry businessCallbackRegistry,
-            OaBusinessTemplateMapper businessTemplateMapper) {
+            OaBusinessTemplateMapper businessTemplateMapper,
+            PendingWorklist pendingWorklist) {
         this.approvalTemplate = approvalTemplate;
         this.approvalEngine = approvalEngine;
         this.attachmentService = attachmentService;
@@ -103,6 +106,7 @@ public class ApprovalWriter {
         this.sysUserService = sysUserService;
         this.businessCallbackRegistry = businessCallbackRegistry;
         this.businessTemplateMapper = businessTemplateMapper;
+        this.pendingWorklist = pendingWorklist;
     }
 
     /** 通用发起只接受无专用单据的模板（ADR 0066）：业务模板从域内发起页走 business key。 */
@@ -155,9 +159,9 @@ public class ApprovalWriter {
                 ProcessStartSupport.engineVariables(processFormVo.getFormValues()));
 
         List<ApprovalEngine.CurrentTask> currentTasks = approvalEngine.currentTasks(processInstanceId);
-        List<String> nameList = approverNames(currentTasks);
         process.setProcessInstanceId(processInstanceId);
-        process.setDescription(ProcessStartSupport.waitingDescription(nameList));
+        process.setDescription(ProcessStartSupport.waitingDescription(
+                pendingWorklist.pendingHandlerNames(process)));
         processMapper.updateById(process);
 
         processRecordService.record(process.getId(), ProcessApprovalSupport.ApprovalAction.initiate(), user);
@@ -206,7 +210,8 @@ public class ApprovalWriter {
 
         List<ApprovalEngine.CurrentTask> currentTasks = approvalEngine.currentTasks(processInstanceId);
         process.setProcessInstanceId(processInstanceId);
-        process.setDescription(ProcessStartSupport.waitingDescription(approverNames(currentTasks)));
+        process.setDescription(ProcessStartSupport.waitingDescription(
+                pendingWorklist.pendingHandlerNames(process)));
         processMapper.updateById(process);
 
         processRecordService.record(
@@ -280,7 +285,7 @@ public class ApprovalWriter {
         if (idempotencyKey.isEmpty()) {
             throw new BusinessException(201, "提交标识不能为空");
         }
-        if (idempotencyKey.length() > ApproverNames.MAX_IDEMPOTENCY_KEY_LENGTH) {
+        if (idempotencyKey.length() > ProcessStartSupport.MAX_IDEMPOTENCY_KEY_LENGTH) {
             throw new BusinessException(201, "提交标识过长");
         }
         return idempotencyKey;
@@ -341,7 +346,7 @@ public class ApprovalWriter {
         ProcessApprovalSupport.applyOutcome(
                 process,
                 approvalVo.getStatus(),
-                approverNames(nextTasks),
+                pendingWorklist.pendingHandlerNames(process),
                 !nextTasks.isEmpty());
         processMapper.updateById(process);
         notifyBusinessTerminal(process);
@@ -421,7 +426,7 @@ public class ApprovalWriter {
         List<ApprovalEngine.CurrentTask> nextTasks =
                 approvalEngine.currentTasks(process.getProcessInstanceId());
         ProcessApprovalSupport.applyOutcome(
-                process, 1, approverNames(nextTasks), !nextTasks.isEmpty());
+                process, 1, pendingWorklist.pendingHandlerNames(process), !nextTasks.isEmpty());
         processMapper.updateById(process);
         notifyBusinessTerminal(process);
         return new Approval.DecisionOutcome(
@@ -553,44 +558,23 @@ public class ApprovalWriter {
     }
 
     /**
-     * 催办（ADR 0068，#287）：仅申请人、仅审批中；同一审批 24 小时内最多一次。
-     * 对象是当前全部处理人（含未认领候选人与 PENDING 加签任务的加签人，ADR 0068「加签任务
-     * assignee 属当前处理人」），写 URGE 账本带对象姓名；不改状态、不发通知，
+     * 催办（ADR 0068/0076，#287/#298）：仅申请人、仅审批中；同一审批 24 小时内最多一次。
+     * 对象是待处理名单的显示名（{@link PendingWorklist#pendingHandlerNames(Process)}）——
+     * 引擎 assignee/候选人、BEFORE 挂起的原处理人、未认领候选人与 PENDING 加签人都在，
+     * AFTER 批次已记账通过的原处理人出局。写 URGE 账本带对象姓名；不改状态、不发通知，
      * 白名单保证它不进任何人的已处理。
      */
     @Transactional
     public Approval.UrgeOutcome urge(SysUser user, Long processId) {
         Process process = requireApplicantActiveProcess(user, processId, "催办审批", "催办");
         requireUrgeNotInCooldown(processId);
-        List<String> targetNames = urgeTargetNames(process);
+        List<String> targetNames = pendingWorklist.pendingHandlerNames(process);
         String joined = String.join("、", targetNames);
         processRecordService.record(
                 processId,
                 ProcessApprovalSupport.ApprovalAction.urge(joined.isEmpty() ? null : joined),
                 user);
         return new Approval.UrgeOutcome(processId);
-    }
-
-    /**
-     * 催办对象（ADR 0068）：当前全部处理人——引擎 assignee/候选人，再加本审批 PENDING
-     * 加签任务的加签人（加签人也在等这件事，不催等于漏催）。按用户名去重后转显示名。
-     */
-    private List<String> urgeTargetNames(Process process) {
-        LinkedHashSet<String> usernames = new LinkedHashSet<>();
-        for (ApprovalEngine.CurrentTask task : approvalEngine.currentTasks(process.getProcessInstanceId())) {
-            usernames.addAll(ApproverNames.taskUsernames(task));
-        }
-        for (ProcessAddSignTask signTask : addSignTaskMapper.selectList(
-                new LambdaQueryWrapper<ProcessAddSignTask>()
-                        .eq(ProcessAddSignTask::getProcessId, process.getId())
-                        .eq(ProcessAddSignTask::getStatus, AddSignStatus.PENDING.name()))) {
-            SysUser assignee = signTask.getAssigneeId() == null
-                    ? null : sysUserService.getById(signTask.getAssigneeId());
-            if (assignee != null && StringUtils.hasText(assignee.getUsername())) {
-                usernames.add(assignee.getUsername());
-            }
-        }
-        return usernames.stream().map(this::displayName).toList();
     }
 
     /** 申请人动作的共有前置（撤回/催办同族）：非申请人、非审批中都是 201 命名拒绝。 */
@@ -744,22 +728,9 @@ public class ApprovalWriter {
                 .orElse(0) + 1;
     }
 
-    /** 等待文案回写（等待文案由 description 唯一拥有，ADR 0043）：按当前任务的处理人名单重算。 */
+    /** 等待文案回写（等待文案由 description 唯一拥有，ADR 0043）：按待处理名单投影重算。 */
     private void refreshWaitingDescription(Process process) {
-        List<ApprovalEngine.CurrentTask> nextTasks =
-                approvalEngine.currentTasks(process.getProcessInstanceId());
-        process.setDescription(ProcessStartSupport.waitingDescription(approverNames(nextTasks)));
-    }
-
-    private List<String> approverNames(List<ApprovalEngine.CurrentTask> taskList) {
-        return ApproverNames.of(taskList, this::displayName);
-    }
-
-    /** 用户名 → 显示名（共享投影的解析缝，实现走 SysUserService；找不到用户或无名退回用户名）。 */
-    private String displayName(String username) {
-        SysUser assignee = sysUserService.getUserByUserName(username);
-        return assignee != null && StringUtils.hasText(assignee.getName())
-                ? assignee.getName()
-                : username;
+        process.setDescription(ProcessStartSupport.waitingDescription(
+                pendingWorklist.pendingHandlerNames(process)));
     }
 }

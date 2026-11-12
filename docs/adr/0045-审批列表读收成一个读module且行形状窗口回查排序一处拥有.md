@@ -83,4 +83,6 @@ issue。待处理回查跳过空 businessKey 与已删/缺失账本行的边界�
 
 **2026-11-06 修订（#271）**：待处理从引擎 assignee 单源改为三源合成（引擎处理人、候选人、加签任务），每人每审批一行；行形状扩动作类别、挂起与催办标记，仍由共享列清单唯一拥有；total 仍按合成行数。见 ADR 0068。
 
+**2026-11-11 修订（C3，ADR 0076）**：待处理与单行读的实现从 `LedgerApprovalListReader` 迁到 `process/pending/PendingWorklist`；`ApprovalListReader` 五方法门面与 `ProcessVo` 行类型不变，三源合成、AFTER 排除、BEFORE 挂起与 total 归新 module 一处拥有。
+
 Related: #178、#179、#180、#181、#182；ADR 0019、0024、0031、0043；GLOSSARY「审批」「已处理」「分页上限」。
